@@ -1,0 +1,224 @@
+openapi: 3.0.0
+info:
+  title: Consultant & Contractor Management API
+  version: 1.0.0
+
+paths:
+  /api/consultants/disciplines:
+    get:
+      summary: Get all consultant disciplines for a project
+      operationId: getConsultantDisciplines
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Consultant disciplines retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsultantDiscipline'
+
+    post:
+      summary: Toggle consultant discipline on/off
+      operationId: toggleConsultantDiscipline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - projectId
+                - disciplineName
+                - isEnabled
+              properties:
+                projectId:
+                  type: string
+                  format: uuid
+                disciplineName:
+                  type: string
+                isEnabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Discipline toggled successfully
+
+  /api/consultants/disciplines/{disciplineId}/status:
+    put:
+      summary: Update consultant discipline status
+      operationId: updateConsultantStatus
+      parameters:
+        - name: disciplineId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - statusType
+                - isActive
+              properties:
+                statusType:
+                  type: string
+                  enum: [brief, tender, rec, award]
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Status updated successfully
+
+  /api/contractors/trades:
+    get:
+      summary: Get all contractor trades for a project
+      operationId: getContractorTrades
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Contractor trades retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContractorTrade'
+
+    post:
+      summary: Toggle contractor trade on/off
+      operationId: toggleContractorTrade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - projectId
+                - tradeName
+                - isEnabled
+              properties:
+                projectId:
+                  type: string
+                  format: uuid
+                tradeName:
+                  type: string
+                isEnabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Trade toggled successfully
+
+  /api/contractors/trades/{tradeId}/status:
+    put:
+      summary: Update contractor trade status
+      operationId: updateContractorStatus
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - statusType
+                - isActive
+              properties:
+                statusType:
+                  type: string
+                  enum: [brief, tender, rec, award]
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Status updated successfully
+
+components:
+  schemas:
+    ConsultantDiscipline:
+      type: object
+      required:
+        - id
+        - projectId
+        - disciplineName
+        - isEnabled
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        disciplineName:
+          type: string
+        isEnabled:
+          type: boolean
+        order:
+          type: integer
+        statuses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Status'
+
+    ContractorTrade:
+      type: object
+      required:
+        - id
+        - projectId
+        - tradeName
+        - isEnabled
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        tradeName:
+          type: string
+        isEnabled:
+          type: boolean
+        order:
+          type: integer
+        statuses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Status'
+
+    Status:
+      type: object
+      required:
+        - statusType
+        - isActive
+      properties:
+        statusType:
+          type: string
+          enum: [brief, tender, rec, award]
+        isActive:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time

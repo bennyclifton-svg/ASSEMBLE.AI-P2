@@ -1,0 +1,385 @@
+openapi: 3.0.0
+info:
+  title: Planning Card API
+  version: 1.0.0
+  description: API for managing Planning Card data including details, objectives, staging, risks, and stakeholders
+
+paths:
+  /api/planning/{projectId}:
+    get:
+      summary: Get all planning data for a project
+      operationId: getPlanningData
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Planning data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanningData'
+        '404':
+          description: Project not found
+
+  /api/planning/{projectId}/details:
+    put:
+      summary: Update project details
+      operationId: updateProjectDetails
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectDetailsUpdate'
+      responses:
+        '200':
+          description: Details updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetails'
+
+  /api/planning/{projectId}/objectives:
+    put:
+      summary: Update project objectives
+      operationId: updateProjectObjectives
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectObjectivesUpdate'
+      responses:
+        '200':
+          description: Objectives updated successfully
+
+  /api/planning/{projectId}/stages:
+    put:
+      summary: Update project stages
+      operationId: updateProjectStages
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProjectStage'
+      responses:
+        '200':
+          description: Stages updated successfully
+
+  /api/planning/{projectId}/risks:
+    get:
+      summary: Get all risks for a project
+      operationId: getRisks
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Risks retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Risk'
+    post:
+      summary: Create a new risk
+      operationId: createRisk
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RiskCreate'
+      responses:
+        '201':
+          description: Risk created successfully
+
+  /api/planning/{projectId}/stakeholders:
+    get:
+      summary: Get all stakeholders for a project
+      operationId: getStakeholders
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Stakeholders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Stakeholder'
+
+components:
+  schemas:
+    PlanningData:
+      type: object
+      properties:
+        details:
+          $ref: '#/components/schemas/ProjectDetails'
+        objectives:
+          $ref: '#/components/schemas/ProjectObjectives'
+        stages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectStage'
+        risks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Risk'
+        stakeholders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Stakeholder'
+
+    ProjectDetails:
+      type: object
+      required:
+        - id
+        - projectId
+        - projectName
+        - address
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        projectName:
+          type: string
+        address:
+          type: string
+        legalAddress:
+          type: string
+        zoning:
+          type: string
+        jurisdiction:
+          type: string
+        lotArea:
+          type: number
+        numberOfStories:
+          type: integer
+        buildingClass:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProjectDetailsUpdate:
+      type: object
+      properties:
+        projectName:
+          type: string
+        address:
+          type: string
+        legalAddress:
+          type: string
+        zoning:
+          type: string
+        jurisdiction:
+          type: string
+        lotArea:
+          type: number
+        numberOfStories:
+          type: integer
+        buildingClass:
+          type: string
+
+    ProjectObjectives:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        functional:
+          type: string
+        quality:
+          type: string
+        budget:
+          type: string
+        program:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProjectObjectivesUpdate:
+      type: object
+      properties:
+        functional:
+          type: string
+        quality:
+          type: string
+        budget:
+          type: string
+        program:
+          type: string
+
+    ProjectStage:
+      type: object
+      required:
+        - id
+        - projectId
+        - stageNumber
+        - stageName
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        stageNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+        stageName:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        duration:
+          type: integer
+        status:
+          type: string
+          enum: [not_started, in_progress, completed]
+        updatedAt:
+          type: string
+          format: date-time
+
+    Risk:
+      type: object
+      required:
+        - id
+        - projectId
+        - title
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        likelihood:
+          type: string
+          enum: [low, medium, high]
+        impact:
+          type: string
+          enum: [low, medium, high]
+        mitigation:
+          type: string
+        status:
+          type: string
+          enum: [identified, mitigated, closed]
+        order:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time
+
+    RiskCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        likelihood:
+          type: string
+          enum: [low, medium, high]
+        impact:
+          type: string
+          enum: [low, medium, high]
+        mitigation:
+          type: string
+
+    Stakeholder:
+      type: object
+      required:
+        - id
+        - projectId
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        role:
+          type: string
+        organization:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        order:
+          type: integer
+        updatedAt:
+          type: string
+          format: date-time

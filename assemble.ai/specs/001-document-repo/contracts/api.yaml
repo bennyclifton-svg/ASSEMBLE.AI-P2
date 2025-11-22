@@ -1,0 +1,63 @@
+openapi: 3.0.0
+info:
+  title: Intelligent Document Repository API
+  version: 1.0.0
+paths:
+  /api/documents:
+    get:
+      summary: List documents
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: subcategory
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of documents
+    post:
+      summary: Upload new document(s)
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                category:
+                  type: string
+  /api/documents/{id}:
+    patch:
+      summary: Update document metadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: string
+                subcategory:
+                  type: string
+  /api/contexts:
+    post:
+      summary: Create a context
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                documentVersionIds:
+                  type: array
+                  items:
+                    type: string
