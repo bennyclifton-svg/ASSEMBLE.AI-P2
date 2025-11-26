@@ -1,0 +1,448 @@
+openapi: 3.0.3
+info:
+  title: Direct Drag-to-Category Upload API
+  description: API endpoints for uploading and categorizing documents via drag-and-drop tiles
+  version: 1.0.0
+  contact:
+    name: assemble.ai Development Team
+
+servers:
+  - url: http://localhost:3000/api
+    description: Local development server
+  - url: https://app.assemble.ai/api
+    description: Production server
+
+tags:
+  - name: Documents
+    description: Document upload and management endpoints
+  - name: Categories
+    description: Category and subcategory management
+
+paths:
+  /documents:
+    post:
+      summary: Upload document with optional categorization
+      description: |
+        Upload a new document file or create a new version of an existing document.
+        Optionally assign a category and subcategory during upload.
+
+        Version detection:
+        - Compares filename with existing documents in the project
+        - If match found: Creates new version (V2, V3, etc.)
+        - If no match: Creates new document (V1)
+      operationId: uploadDocument
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - projectId
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The document file to upload
+                projectId:
+                  type: string
+                  format: uuid
+                  description: The project this document belongs to
+                  example: "proj-123e4567-e89b-12d3-a456-426614174000"
+                categoryId:
+                  type: string
+                  description: Optional category ID for immediate categorization
+                  example: "consultants"
+                subcategoryId:
+                  type: string
+                  description: Optional subcategory ID (requires categoryId)
+                  example: "structural"
+            encoding:
+              file:
+                contentType: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.ms-excel, image/jpeg, image/png
+
+      responses:
+        '200':
+          description: Document uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - documentId
+                  - versionNumber
+                  - fileAssetId
+                properties:
+                  documentId:
+                    type: string
+                    format: uuid
+                    description: The ID of the document (new or existing)
+                    example: "doc-123e4567-e89b-12d3-a456-426614174000"
+                  versionNumber:
+                    type: integer
+                    minimum: 1
+                    description: Version number assigned to this upload
+                    example: 2
+                  fileAssetId:
+                    type: string
+                    format: uuid
+                    description: The ID of the uploaded file asset
+                    example: "asset-123e4567-e89b-12d3-a456-426614174000"
+                  category:
+                    type: string
+                    nullable: true
+                    description: Category assigned to document (echo of input)
+                    example: "consultants"
+                  subcategory:
+                    type: string
+                    nullable: true
+                    description: Subcategory assigned to document (echo of input)
+                    example: "structural"
+                  message:
+                    type: string
+                    description: Human-readable success message
+                    example: "Document uploaded as version 2"
+
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidFileType:
+                  summary: Invalid file type
+                  value:
+                    error: "Invalid file type"
+                    message: "Only PDF, Word, Excel, and image files are supported"
+                    code: "INVALID_FILE_TYPE"
+                fileTooLarge:
+                  summary: File exceeds size limit
+                  value:
+                    error: "File too large"
+                    message: "File size must not exceed 20MB"
+                    code: "FILE_TOO_LARGE"
+                missingField:
+                  summary: Missing required field
+                  value:
+                    error: "Missing required field"
+                    message: "projectId is required"
+                    code: "MISSING_FIELD"
+
+        '404':
+          description: Referenced entity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                categoryNotFound:
+                  summary: Category not found
+                  value:
+                    error: "Category not found"
+                    message: "No category found with ID 'invalid-id'"
+                    code: "CATEGORY_NOT_FOUND"
+                projectNotFound:
+                  summary: Project not found
+                  value:
+                    error: "Project not found"
+                    message: "No project found with ID 'proj-123'"
+                    code: "PROJECT_NOT_FOUND"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                storageError:
+                  summary: File storage error
+                  value:
+                    error: "Storage error"
+                    message: "Failed to save file to storage"
+                    code: "STORAGE_ERROR"
+                databaseError:
+                  summary: Database error
+                  value:
+                    error: "Database error"
+                    message: "Failed to create document record"
+                    code: "DATABASE_ERROR"
+
+  /documents/bulk-categorize:
+    put:
+      summary: Bulk update document categories
+      description: |
+        Update the category and subcategory for multiple documents in a single operation.
+        Used for re-categorizing selected documents by clicking on a category tile.
+
+        Security:
+        - All documentIds must belong to the same project
+        - Project ownership is verified server-side
+      operationId: bulkCategorizeDocuments
+      tags:
+        - Documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - documentIds
+                - categoryId
+              properties:
+                documentIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 100
+                  description: Array of document IDs to update
+                  example: ["doc-123", "doc-456", "doc-789"]
+                categoryId:
+                  type: string
+                  description: Category ID to assign
+                  example: "consultants"
+                subcategoryId:
+                  type: string
+                  nullable: true
+                  description: Optional subcategory ID to assign
+                  example: "structural"
+
+      responses:
+        '200':
+          description: Documents categorized successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - updated
+                properties:
+                  updated:
+                    type: integer
+                    minimum: 0
+                    description: Number of documents successfully updated
+                    example: 12
+                  message:
+                    type: string
+                    description: Human-readable success message
+                    example: "12 document(s) categorized"
+
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                emptyArray:
+                  summary: Empty document IDs array
+                  value:
+                    error: "Invalid request"
+                    message: "documentIds array cannot be empty"
+                    code: "EMPTY_DOCUMENT_IDS"
+                tooManyDocuments:
+                  summary: Too many documents
+                  value:
+                    error: "Invalid request"
+                    message: "Cannot update more than 100 documents at once"
+                    code: "TOO_MANY_DOCUMENTS"
+                subcategoryWithoutCategory:
+                  summary: Subcategory without category
+                  value:
+                    error: "Invalid request"
+                    message: "subcategoryId requires categoryId to be set"
+                    code: "INVALID_SUBCATEGORY"
+
+        '403':
+          description: Forbidden - Document ownership mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                ownershipMismatch:
+                  summary: Documents belong to different projects
+                  value:
+                    error: "Forbidden"
+                    message: "All documents must belong to the same project"
+                    code: "PROJECT_MISMATCH"
+
+        '404':
+          description: Referenced entity not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                categoryNotFound:
+                  summary: Category not found
+                  value:
+                    error: "Category not found"
+                    message: "No category found with ID 'invalid-id'"
+                    code: "CATEGORY_NOT_FOUND"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /categories/active:
+    get:
+      summary: Get active categories for a project
+      description: |
+        Returns the list of active categories and subcategories based on the
+        Planning Card configuration for the specified project.
+
+        Filtering logic:
+        - Always includes: Planning, Scheme Design, Detail Design, Cost Planning, Administration
+        - Consultants: Included if project has active disciplines
+        - Contractors: Included if project has active trades
+        - Subcategories: Only returns active disciplines/trades
+      operationId: getActiveCategories
+      tags:
+        - Categories
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The project ID to filter categories for
+          example: "proj-123e4567-e89b-12d3-a456-426614174000"
+
+      responses:
+        '200':
+          description: Active categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - categories
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CategoryWithSubcategories'
+
+        '400':
+          description: Missing or invalid projectId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Short error identifier
+          example: "Invalid file type"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Only PDF, Word, Excel, and image files are supported"
+        code:
+          type: string
+          description: Machine-readable error code (optional)
+          example: "INVALID_FILE_TYPE"
+        details:
+          type: object
+          description: Additional error context (optional)
+          additionalProperties: true
+
+    CategoryWithSubcategories:
+      type: object
+      required:
+        - id
+        - name
+        - isExpandable
+      properties:
+        id:
+          type: string
+          description: Category identifier
+          example: "consultants"
+        name:
+          type: string
+          description: Display name
+          example: "Consultants"
+        isExpandable:
+          type: boolean
+          description: Whether this category has subcategories
+          example: true
+        isSystem:
+          type: boolean
+          description: Whether this is a built-in system category
+          example: true
+        subcategories:
+          type: array
+          description: List of active subcategories (only for expandable categories)
+          items:
+            $ref: '#/components/schemas/Subcategory'
+
+    Subcategory:
+      type: object
+      required:
+        - id
+        - name
+        - categoryId
+      properties:
+        id:
+          type: string
+          description: Subcategory identifier
+          example: "structural"
+        name:
+          type: string
+          description: Display name
+          example: "Structural"
+        categoryId:
+          type: string
+          description: Parent category ID
+          example: "consultants"
+        isSystem:
+          type: boolean
+          description: Whether this is a built-in system subcategory
+          example: true
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT authentication (placeholder - auth not yet implemented).
+        Future implementation will require bearer token in Authorization header.
+
+# Future: Apply security to all endpoints
+# security:
+#   - bearerAuth: []

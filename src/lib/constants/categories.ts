@@ -1,0 +1,110 @@
+// Category constants for document categorization
+// These categories are fixed across all projects
+
+export const DOCUMENT_CATEGORIES = {
+    // Row 1 Categories
+    PLANNING: {
+        id: 'planning',
+        name: 'Planning',
+        color: '#8B7355', // Warm Brown
+        hasSubcategories: false,
+        row: 1,
+    },
+    SCHEME_DESIGN: {
+        id: 'scheme-design',
+        name: 'Scheme Design',
+        color: '#6B9BD1', // Sky Blue
+        hasSubcategories: true,
+        subcategorySource: 'consultants' as const,
+        row: 1,
+    },
+    DETAIL_DESIGN: {
+        id: 'detail-design',
+        name: 'Detail Design',
+        color: '#7B68A6', // Soft Purple
+        hasSubcategories: true,
+        subcategorySource: 'consultants' as const,
+        row: 1,
+    },
+    PROCUREMENT: {
+        id: 'procurement',
+        name: 'Procurement',
+        color: '#9B8B6E', // Taupe
+        hasSubcategories: false,
+        row: 1,
+    },
+    DELIVERY: {
+        id: 'delivery',
+        name: 'Delivery',
+        color: '#7A9B7E', // Sage Green
+        hasSubcategories: false,
+        row: 1,
+    },
+    // Row 2 Categories
+    CONSULTANTS: {
+        id: 'consultants',
+        name: 'Consultants',
+        color: '#4A9B8E', // Teal
+        hasSubcategories: true,
+        subcategorySource: 'consultants' as const,
+        row: 2,
+    },
+    CONTRACTORS: {
+        id: 'contractors',
+        name: 'Contractors',
+        color: '#D4A574', // Golden Sand
+        hasSubcategories: true,
+        subcategorySource: 'contractors' as const,
+        row: 2,
+    },
+    COST_PLANNING: {
+        id: 'cost-planning',
+        name: 'Cost Planning',
+        color: '#B85C5C', // Terracotta
+        hasSubcategories: false,
+        row: 2,
+    },
+    ADMINISTRATION: {
+        id: 'administration',
+        name: 'Administration',
+        color: '#6B7B8C', // Slate Gray
+        hasSubcategories: false,
+        row: 2,
+    },
+} as const;
+
+export type CategoryId = keyof typeof DOCUMENT_CATEGORIES;
+
+export interface Category {
+    id: string;
+    name: string;
+    color: string;
+    hasSubcategories: boolean;
+    subcategorySource?: 'consultants' | 'contractors';
+    row: number;
+}
+
+export interface Subcategory {
+    id: string;
+    name: string;
+    parentCategoryId: string;
+}
+
+export interface ActiveCategory extends Category {
+    subcategories?: Subcategory[];
+}
+
+// Helper to get all categories as an array
+export function getAllCategories(): Category[] {
+    return Object.values(DOCUMENT_CATEGORIES);
+}
+
+// Helper to get categories by row
+export function getCategoriesByRow(row: number): Category[] {
+    return Object.values(DOCUMENT_CATEGORIES).filter(cat => cat.row === row);
+}
+
+// Helper to get category by ID
+export function getCategoryById(id: string): Category | undefined {
+    return Object.values(DOCUMENT_CATEGORIES).find(cat => cat.id === id);
+}
