@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1763782759339,
+      "tag": "0000_clammy_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1763814426525,
+      "tag": "0001_loud_wraith",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1763847532490,
+      "tag": "0002_abnormal_trish_tilby",
+      "breakpoints": true
+    }
+  ]
+}
