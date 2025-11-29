@@ -4,15 +4,19 @@ import { validateExcelFile } from '@/lib/excel-validation';
 import { storage } from '@/lib/storage/local';
 import { versioning } from '@/lib/versioning';
 import { db } from '@/lib/db';
-import { documents, versions, fileAssets, categories, subcategories } from '@/lib/db/schema';
+import { documents, versions, fileAssets, categories, subcategories, projects } from '@/lib/db/schema';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
+import { getCategoryById } from '@/lib/constants/categories';
 
 export async function POST(request: NextRequest) {
     return handleApiError(async () => {
-        const formData = await request.formData();
-        const file = formData.get('file') as File | null;
-        const projectId = formData.get('projectId') as string | null;
+        try {
+            const formData = await request.formData();
+            const file = formData.get('file') as File | null;
+            const projectId = formData.get('projectId') as string | null;
+            const categoryId = formData.get('categoryId') as string | null;
+            const subcategoryId = formData.get('subcategoryId') as string | null;
 
         if (!file) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -20,6 +24,17 @@ export async function POST(request: NextRequest) {
 
         if (!projectId) {
             return NextResponse.json({ error: 'No project ID provided' }, { status: 400 });
+        }
+
+        // Ensure project exists
+        const project = await db.select().from(projects).where(eq(projects.id, projectId)).limit(1);
+        if (project.length === 0) {
+            // Project doesn't exist, create it
+            await db.insert(projects).values({
+                id: projectId,
+                name: projectId, // Use ID as name for now
+                status: 'active'
+            });
         }
 
         // 1. Save file to storage (T016)
@@ -47,6 +62,40 @@ export async function POST(request: NextRequest) {
             ocrStatus: 'PENDING',
         });
 
+        // 2.5. Ensure category exists
+        if (categoryId) {
+          const info = getCategoryById(categoryId);
+          if (info) {
+            try {
+              // Try to insert the category (will fail silently if it already exists)
+              await db.insert(categories).values({
+                id: categoryId,
+                name: info.name,
+                isSystem: true
+              });
+            } catch (err: any) {
+              console.log('Category insert error (may be normal if already exists):', {
+                code: err?.code,
+                message: err?.message,
+                categoryId
+              });
+              // Ignore UNIQUE constraint errors (category already exists)
+              // SQLite error codes can vary - check message too
+              const isConstraintError =
+                err?.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+                err?.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' ||
+                err?.code === 'SQLITE_CONSTRAINT' ||
+                err?.message?.includes('UNIQUE') ||
+                err?.message?.includes('PRIMARY');
+
+              if (!isConstraintError) {
+                console.error('Unexpected error inserting category:', err);
+                throw err;
+              }
+            }
+          }
+        }
+
         // 3. Determine Versioning (T017)
         let documentId = await versioning.findMatchingDocument(file.name, projectId);
         let versionNumber = 1;
@@ -57,10 +106,21 @@ export async function POST(request: NextRequest) {
         } else {
             // New document
             documentId = uuidv4();
+
+            // Note: We only use categoryId for now. subcategoryId has FK constraint to old subcategories table
+            // which we're not populating. We'll just store categoryId for categorization.
+            console.log('Creating new document with:', {
+                id: documentId,
+                projectId: projectId,
+                categoryId: categoryId || null,
+                filename: file.name
+            });
+
             await db.insert(documents).values({
                 id: documentId,
                 projectId: projectId,
-                // Category/Subcategory will be assigned later by user
+                categoryId: categoryId || null,
+                // Not setting subcategoryId to avoid FK constraint issues
             });
         }
 
@@ -86,6 +146,10 @@ export async function POST(request: NextRequest) {
             versionNumber,
             fileAssetId,
         });
+        } catch (error) {
+            console.error("API /documents ERROR:", error);
+            throw error; // Re-throw to let handleApiError deal with it
+        }
     });
 }
 

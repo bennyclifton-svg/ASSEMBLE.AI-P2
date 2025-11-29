@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
-import { sql } from 'drizzle-orm';
+import { sql, relations } from 'drizzle-orm';
 
 // Categories
 export const categories = sqliteTable('categories', {
@@ -20,8 +20,8 @@ export const subcategories = sqliteTable('subcategories', {
 export const documents = sqliteTable('documents', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    categoryId: text('category_id').references(() => categories.id),
-    subcategoryId: text('subcategory_id').references(() => subcategories.id),
+    categoryId: text('category_id'), // Removed FK constraint - we use string IDs directly
+    subcategoryId: text('subcategory_id'), // Removed FK constraint - we use string IDs directly
     latestVersionId: text('latest_version_id'), // Circular reference handled in logic
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
@@ -214,3 +214,66 @@ export const gisCache = sqliteTable('gis_cache', {
     cachedAt: text('cached_at').default(sql`CURRENT_TIMESTAMP`),
     expiresAt: text('expires_at').notNull(),
 });
+
+// ============================================================================
+// CONSULTANT & CONTRACTOR FIRMS (Feature 004)
+// ============================================================================
+
+// Consultants (Firms)
+export const consultants = sqliteTable('consultants', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    companyName: text('company_name').notNull(),
+    contactPerson: text('contact_person'),
+    discipline: text('discipline').notNull(), // matches consultantDisciplines.disciplineName
+    email: text('email').notNull(),
+    phone: text('phone'),
+    mobile: text('mobile'),
+    address: text('address'),
+    abn: text('abn'),
+    notes: text('notes'),
+    shortlisted: integer('shortlisted', { mode: 'boolean' }).default(false),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Contractors (Firms)
+export const contractors = sqliteTable('contractors', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    companyName: text('company_name').notNull(),
+    contactPerson: text('contact_person'),
+    trade: text('trade').notNull(), // matches contractorTrades.tradeName
+    email: text('email').notNull(),
+    phone: text('phone'),
+    address: text('address'),
+    abn: text('abn'),
+    notes: text('notes'),
+    shortlisted: integer('shortlisted', { mode: 'boolean' }).default(false),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Relations
+export const consultantDisciplinesRelations = relations(consultantDisciplines, ({ many }) => ({
+    statuses: many(consultantStatuses),
+}));
+
+export const consultantStatusesRelations = relations(consultantStatuses, ({ one }) => ({
+    discipline: one(consultantDisciplines, {
+        fields: [consultantStatuses.disciplineId],
+        references: [consultantDisciplines.id],
+    }),
+}));
+
+export const contractorTradesRelations = relations(contractorTrades, ({ many }) => ({
+    statuses: many(contractorStatuses),
+}));
+
+export const contractorStatusesRelations = relations(contractorStatuses, ({ one }) => ({
+    trade: one(contractorTrades, {
+        fields: [contractorStatuses.tradeId],
+        references: [contractorTrades.id],
+    }),
+}));
+

@@ -72,39 +72,48 @@ Users need the ability to undo recent edits to recover from mistakes without man
 
 ---
 
-### User Story 5 - Manage Consultant Disciplines (Priority: P1)
+### User Story 5 – Activate Consultant Disciplines & Track Procurement Status (Priority: P1)
 
-Users need to select which consultant disciplines are required for their project and track the status of each discipline through the procurement process.
+As a Project Manager, I need to declare which consultant disciplines are required on this project and visually track their procurement lifecycle (Brief → Tender → Recommendation → Award) so that the rest of the app (Consultant Cards, tender packages, dashboards) always reflects the correct scope.
 
-**Why this priority**: Core to project planning - knowing which consultants are needed is fundamental to project setup.
+**Why P1 because**: This list is the single source of truth for consultant scope. Every downstream feature (tabs, document categories, transmittals, reporting) depends on it.
 
-**Independent Test**: Toggle a consultant discipline on/off and verify corresponding tab appears/disappears in Consultant Card.
+**Independent Test**: Can be fully tested in the Planning → Consultants section without any other feature implemented.
 
-**Acceptance Scenarios**:
+**Acceptance Criteria**
 
-1. **Given** the Consultant List section is displayed, **When** viewing the list, **Then** all default consultant disciplines are shown in a scrollable list (AC-7.1).
-2. **Given** a consultant discipline is displayed, **When** the user clicks the toggle, **Then** the discipline is marked as needed/not needed for the project (AC-7.2).
-3. **Given** a consultant discipline is displayed, **When** viewing status indicators, **Then** 4 status icons are shown: Brief, Tender, Rec (Recommendation), Award - all defaulting to off/ghosted state (AC-7.3).
-4. **Given** a consultant discipline is toggled on, **When** the toggle completes, **Then** a corresponding tab is created in the Consultant Card (AC-7.4).
-5. **Given** a consultant discipline is toggled off, **When** the user confirms the action, **Then** the corresponding tab is removed from the Consultant Card (AC-7.5).
+1. A scrollable list shows all 12–15 standard consultant disciplines (Architectural, Structural, MEP, Civil, etc.).
+2. Each row has:
+   - Toggle switch (on = required for this project)
+   - Four status icons: Brief | Tender | Recommendation | Award (default = ghosted/off)
+3. Toggling a discipline ON → instantly creates a matching tab in the Consultant Cards section.
+4. Toggling a discipline OFF → no confirmation modal (“Remove Structural? This will hide the tab and may affect tender packages”) → on confirm, tab is removed.
+5. Clicking a status icon cycles it forward (off → Brief → Tender → Recommendation → Award → off) with clear colour states.
+6. All changes are persisted immediately and survive page reload.
 
 ---
 
-### User Story 6 - Manage Contractor Trades (Priority: P1)
+### User Story 6 – Activate Contractor Trades & Track Procurement Status (Priority: P1)
 
-Users need to select which contractor trades are required for their project and track the status of each trade through the procurement process.
+As a Project Manager, I need to declare which contractor trades/packages are required and track their procurement lifecycle so that Contractor Cards, document categories, and tender workflows stay in sync.
 
-**Why this priority**: Core to project planning - knowing which contractors are needed is fundamental to project setup.
+**Why P1**: Identical dependency pattern as consultants — this list drives scope, tabs, and packaging.
 
-**Independent Test**: Toggle a contractor trade on/off and verify corresponding tab appears/disappears in Contractor Card.
+**Independent Test**: Can be fully tested in Planning → Contractors section in isolation.
 
-**Acceptance Scenarios**:
+**Acceptance Criteria**
 
-1. **Given** the Contractor List section is displayed, **When** viewing the list, **Then** all default contractor trades are shown in a scrollable list (AC-8.1).
-2. **Given** a contractor trade is displayed, **When** the user clicks the toggle, **Then** the trade is marked as needed/not needed for the project (AC-8.2).
-3. **Given** a contractor trade is displayed, **When** viewing status indicators, **Then** 4 status icons are shown: Brief, Tender, Rec (Recommendation), Award - all defaulting to off/ghosted state (AC-8.3).
-4. **Given** a contractor trade is toggled on, **When** the toggle completes, **Then** a corresponding tab is created in the Contractor Card (AC-8.4).
-5. **Given** a contractor trade is toggled off, **When** the user confirms the action, **Then** the corresponding tab is removed from the Contractor Card (AC-8.5).
+1. A scrollable list shows the full 21 contractor trades (Concrete Finisher, Electrical, Plumbing, Roofing, etc.).
+2. Each row has:
+   - Toggle switch (on = required)
+   - Four status icons: Brief | Tender | Recommendation | Award (default = ghosted)
+3. Toggling a trade ON → instantly creates a matching tab in the Contractor Cards section.
+4. Toggling a trade OFF → confirmation modal → tab removed on confirm.
+5. Status icons cycle on click with distinct colours (same behaviour as consultants).
+6. Changes persist instantly and are reflected immediately in:
+   - Contractor Cards tabs
+   - Document upload category picker
+   - Tender package builder
 
 ---
 

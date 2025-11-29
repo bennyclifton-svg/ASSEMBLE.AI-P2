@@ -7,10 +7,10 @@
 
 ## Phase 1: Setup & Database
 
-- [ ] T001 Install new dependencies (react-hook-form, zod, AI SDK, Mapbox client)
-- [ ] T002 Create database schema in drizzle/schema/planning.ts
-- [ ] T003 Generate and run database migrations
-- [ ] T004 Create seed data for default consultant disciplines and contractor trades
+- [x] T001 Install new dependencies (react-hook-form, zod, AI SDK, Mapbox client)
+- [x] T002 Create database schema in drizzle/schema/planning.ts
+- [x] T003 Generate and run database migrations
+- [x] T004 Create seed data for default consultant disciplines and contractor trades
 - [ ] T005 Create validation schemas in lib/validations/planning-schema.ts
 
 ## Phase 2: Core API Routes
@@ -24,10 +24,10 @@
 
 ## Phase 3: Consultant/Contractor API Routes
 
-- [ ] T012 Create GET/POST /api/consultants/disciplines routes
-- [ ] T013 Create PUT /api/consultants/disciplines/[id]/status route
-- [ ] T014 Create GET/POST /api/contractors/trades routes
-- [ ] T015 Create PUT /api/contractors/trades/[id]/status route
+- [x] T012 Create GET/POST /api/consultants/disciplines routes
+- [x] T013 Create PUT /api/consultants/disciplines/[id]/status route
+- [x] T014 Create GET/POST /api/contractors/trades routes
+- [x] T015 Create PUT /api/contractors/trades/[id]/status route
 
 ## Phase 4: User Story 1 - View Project Details
 
@@ -83,24 +83,24 @@
 **Goal**: Users can toggle consultant disciplines and track status.
 **Test**: Toggle discipline, verify tab creation in Consultant Card.
 
-- [ ] T041 [US5] Create scrollable consultant disciplines list
-- [ ] T042 [US5] Add toggle control for each discipline
-- [ ] T043 [US5] Display 4 status icons (Brief, Tender, Rec, Award)
-- [ ] T044 [US5] Implement status icon click handlers
-- [ ] T045 [US5] Create tab in Consultant Card when toggled on
-- [ ] T046 [US5] Remove tab from Consultant Card when toggled off (with confirmation)
+- [x] T041 [US5] Create scrollable consultant disciplines list
+- [x] T042 [US5] Add toggle control for each discipline
+- [x] T043 [US5] Display 4 status icons (Brief, Tender, Rec, Award)
+- [x] T044 [US5] Implement status icon click handlers
+- [x] T045 [US5] Create tab in Consultant Card when toggled on
+- [x] T046 [US5] Remove tab from Consultant Card when toggled off (with confirmation)
 
 ## Phase 9: User Story 6 - Manage Contractor Trades
 
 **Goal**: Users can toggle contractor trades and track status.
 **Test**: Toggle trade, verify tab creation in Contractor Card.
 
-- [ ] T047 [US6] Create scrollable contractor trades list
-- [ ] T048 [US6] Add toggle control for each trade
-- [ ] T049 [US6] Display 4 status icons (Brief, Tender, Rec, Award)
-- [ ] T050 [US6] Implement status icon click handlers
-- [ ] T051 [US6] Create tab in Contractor Card when toggled on
-- [ ] T052 [US6] Remove tab from Contractor Card when toggled off (with confirmation)
+- [x] T047 [US6] Create scrollable contractor trades list
+- [x] T048 [US6] Add toggle control for each trade
+- [x] T049 [US6] Display 4 status icons (Brief, Tender, Rec, Award)
+- [x] T050 [US6] Implement status icon click handlers
+- [x] T051 [US6] Create tab in Contractor Card when toggled on
+- [x] T052 [US6] Remove tab from Contractor Card when toggled off (with confirmation)
 
 ## Phase 10: User Story 7 - AI-Assisted Field Filling
 
@@ -156,8 +156,8 @@
 
 ## Phase 14: Integration & Polish
 
-- [ ] T081 Modify ConsultantCard to support dynamic tabs
-- [ ] T082 Modify ContractorCard to support dynamic tabs
+- [x] T081 Modify ConsultantCard to support dynamic tabs
+- [x] T082 Modify ContractorCard to support dynamic tabs
 - [ ] T083 Create revision history tracking service
 - [ ] T084 Add loading states for all async operations
 - [ ] T085 Implement error boundaries for each section

@@ -6,6 +6,8 @@ import { ObjectivesSection } from './planning/ObjectivesSection';
 import { StagingSection } from './planning/StagingSection';
 import { RiskSection } from './planning/RiskSection';
 import { StakeholdersSection } from './planning/StakeholdersSection';
+import { ConsultantListSection } from './planning/ConsultantListSection';
+import { ContractorListSection } from './planning/ContractorListSection';
 
 interface PlanningCardProps {
     projectId: string;
@@ -73,6 +75,10 @@ export function PlanningCard({ projectId }: PlanningCardProps) {
                     data={data?.stakeholders || []}
                     onUpdate={fetchPlanningData}
                 />
+
+                <ConsultantListSection projectId={projectId} />
+
+                <ContractorListSection projectId={projectId} />
             </div>
         </div>
     );

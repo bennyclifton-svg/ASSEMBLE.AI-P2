@@ -31,7 +31,15 @@ export default function Home() {
             </div>
           )
         }
-        centerContent={<ConsultantCard />}
+        centerContent={
+          selectedProject ? (
+            <ConsultantCard projectId={selectedProject.id} />
+          ) : (
+            <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
+              <div className="text-[#858585]">Select a project to view consultants</div>
+            </div>
+          )
+        }
         rightContent={
           selectedProject ? (
             <DocumentCard projectId={selectedProject.id} />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     TableBody,
     TableCell,
@@ -15,6 +15,7 @@ import { Trash2, Send, Loader2, FileIcon, FolderIcon } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { TransmittalManager } from './TransmittalManager';
 import { cn } from '@/lib/utils';
+import { getCategoryById } from '@/lib/constants/categories';
 
 interface Document {
     id: string;
@@ -31,12 +32,15 @@ interface Document {
 interface CategorizedListProps {
     refreshTrigger: number;
     projectId: string;
+    selectedIds?: Set<string>;
+    onSelectionChange?: (selectedIds: Set<string>) => void;
+    scrollContainerRef?: React.RefObject<HTMLDivElement>;
 }
 
-export function CategorizedList({ refreshTrigger, projectId }: CategorizedListProps) {
+export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef }: CategorizedListProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(externalSelectedIds || new Set());
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showTransmittalManager, setShowTransmittalManager] = useState(false);
@@ -48,12 +52,23 @@ export function CategorizedList({ refreshTrigger, projectId }: CategorizedListPr
     }, [refreshTrigger, projectId]);
 
     const fetchData = async () => {
+        // Save scroll position before fetching
+        const scrollTop = scrollContainerRef?.current?.scrollTop ?? 0;
+
         try {
             setLoading(true);
             const res = await fetch(`/api/documents?projectId=${projectId}`);
             if (res.ok) {
                 const data = await res.json();
                 setDocuments(data);
+
+                // Restore scroll position after data is loaded
+                // Use requestAnimationFrame to ensure DOM has updated
+                requestAnimationFrame(() => {
+                    if (scrollContainerRef?.current) {
+                        scrollContainerRef.current.scrollTop = scrollTop;
+                    }
+                });
             }
         } catch (error) {
             console.error('Failed to fetch data', error);
@@ -63,11 +78,9 @@ export function CategorizedList({ refreshTrigger, projectId }: CategorizedListPr
     };
 
     const handleSelectAll = (checked: boolean) => {
-        if (checked) {
-            setSelectedIds(new Set(documents.map(d => d.id)));
-        } else {
-            setSelectedIds(new Set());
-        }
+        const newSelection = checked ? new Set(documents.map(d => d.id)) : new Set<string>();
+        setSelectedIds(newSelection);
+        onSelectionChange?.(newSelection);
         setLastSelectedId(null);
     };
 
@@ -89,20 +102,30 @@ export function CategorizedList({ refreshTrigger, projectId }: CategorizedListPr
             }
             // Update lastSelectedId to allow chaining
             setLastSelectedId(id);
-        } else {
-            // Normal click - restart selection if clicking unselected item
+        } else if (event.ctrlKey || event.metaKey) {
+            // Ctrl/Cmd+Click - Toggle selection
             if (isSelected) {
-                // If already selected, remove it (deselect)
                 newSelected.delete(id);
             } else {
-                // If not selected, clear previous selection and select only this item
-                newSelected.clear();
                 newSelected.add(id);
             }
             setLastSelectedId(id);
+        } else {
+            // Normal click
+            if (selectedIds.size === 1 && selectedIds.has(id)) {
+                // If this is the only one selected and we click it again -> deselect
+                newSelected.clear();
+                setLastSelectedId(null);
+            } else {
+                // Select only this item
+                newSelected.clear();
+                newSelected.add(id);
+                setLastSelectedId(id);
+            }
         }
 
         setSelectedIds(newSelected);
+        onSelectionChange?.(newSelected);
     };
 
     const handleDelete = async () => {
@@ -186,76 +209,81 @@ export function CategorizedList({ refreshTrigger, projectId }: CategorizedListPr
             <div className="border border-[#3e3e42] rounded-md bg-[#1e1e1e] overflow-hidden @container">
                 <div className="relative w-full">
                     <table className="w-full caption-bottom text-sm table-fixed">
-                    <TableHeader>
-                        <TableRow className="border-[#3e3e42] hover:bg-[#252526]">
-                            <TableHead className="text-[#cccccc] max-w-0">Name</TableHead>
-                            <TableHead className="text-[#cccccc] w-48 @lg:table-cell hidden">Category</TableHead>
-                            <TableHead className="text-[#cccccc] w-20 @md:table-cell hidden">Version</TableHead>
-                            <TableHead className="w-12">
-                                <Checkbox
-                                    checked={selectedIds.size === documents.length && documents.length > 0}
-                                    onCheckedChange={handleSelectAll}
-                                    className="border-[#858585] data-[state=checked]:bg-[#0e639c] data-[state=checked]:border-[#0e639c]"
-                                />
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {documents.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={4} className="text-center text-[#858585] h-24">
-                                    No documents found.
-                                </TableCell>
+                        <TableHeader>
+                            <TableRow className="border-[#3e3e42] hover:bg-[#252526]">
+                                <TableHead className="text-[#cccccc] max-w-0">Name</TableHead>
+                                <TableHead className="text-[#cccccc] w-48 @lg:table-cell hidden">Category</TableHead>
+                                <TableHead className="text-[#cccccc] w-20 @md:table-cell hidden">Version</TableHead>
+                                <TableHead className="w-12">
+                                    <Checkbox
+                                        checked={selectedIds.size === documents.length && documents.length > 0}
+                                        onCheckedChange={handleSelectAll}
+                                        className="border-[#858585] data-[state=checked]:bg-[#0e639c] data-[state=checked]:border-[#0e639c]"
+                                    />
+                                </TableHead>
                             </TableRow>
-                        ) : (
-                            documents.map((doc) => (
-                                <TableRow
-                                    key={doc.id}
-                                    className={cn(
-                                        "border-[#3e3e42] hover:bg-[#2a2d2e] transition-colors cursor-pointer select-none",
-                                        selectedIds.has(doc.id) && "bg-[#37373d]"
-                                    )}
-                                    onMouseDown={(e) => {
-                                        if (e.shiftKey) {
-                                            e.preventDefault(); // Prevent text selection on shift-click
-                                        }
-                                    }}
-                                    onClick={(e) => handleSelect(doc.id, e)}
-                                >
-                                    <TableCell className="font-medium text-[#cccccc] max-w-0">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <FileIcon className="w-4 h-4 flex-shrink-0 text-[#519aba]" />
-                                            <span className="truncate" title={doc.originalName}>
-                                                {doc.originalName}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-[#cccccc] w-48 @lg:table-cell hidden">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            {doc.categoryName ? (
-                                                <>
-                                                    <FolderIcon className="w-4 h-4 flex-shrink-0 text-[#dcb67a]" />
-                                                    <span className="truncate" title={`${doc.categoryName}${doc.subcategoryName ? ` / ${doc.subcategoryName}` : ''}`}>
-                                                        {doc.categoryName}
-                                                        {doc.subcategoryName && ` / ${doc.subcategoryName}`}
-                                                    </span>
-                                                </>
-                                            ) : (
-                                                <span className="text-[#858585] italic">Uncategorized</span>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-[#cccccc] w-20 @md:table-cell hidden">v{doc.versionNumber}</TableCell>
-                                    <TableCell className="w-12">
-                                        <Checkbox
-                                            checked={selectedIds.has(doc.id)}
-                                            className="border-[#858585] data-[state=checked]:bg-[#0e639c] data-[state=checked]:border-[#0e639c] pointer-events-none"
-                                        />
+                        </TableHeader>
+                        <TableBody>
+                            {documents.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-[#858585] h-24">
+                                        No documents found.
                                     </TableCell>
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
+                            ) : (
+                                documents.map((doc) => (
+                                    <TableRow
+                                        key={doc.id}
+                                        className={cn(
+                                            "border-[#3e3e42] hover:bg-[#2a2d2e] transition-colors cursor-pointer select-none",
+                                            selectedIds.has(doc.id) && "bg-[#37373d]"
+                                        )}
+                                        onMouseDown={(e) => {
+                                            if (e.shiftKey) {
+                                                e.preventDefault(); // Prevent text selection on shift-click
+                                            }
+                                        }}
+                                        onClick={(e) => handleSelect(doc.id, e)}
+                                    >
+                                        <TableCell className="font-medium text-[#cccccc] max-w-0">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <FileIcon className="w-4 h-4 flex-shrink-0 text-[#519aba]" />
+                                                <span className="truncate" title={doc.originalName}>
+                                                    {doc.originalName}
+                                                </span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-[#cccccc] w-48 @lg:table-cell hidden">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                {doc.categoryName ? (
+                                                    <>
+                                                        <FolderIcon
+                                                            className="w-4 h-4 flex-shrink-0"
+                                                            style={{
+                                                                color: getCategoryById(doc.categoryId || '')?.color || '#dcb67a'
+                                                            }}
+                                                        />
+                                                        <span className="truncate" title={`${doc.categoryName}${doc.subcategoryName ? ` / ${doc.subcategoryName}` : ''}`}>
+                                                            {doc.categoryName}
+                                                            {doc.subcategoryName && ` / ${doc.subcategoryName}`}
+                                                        </span>
+                                                    </>
+                                                ) : (
+                                                    <span className="text-[#858585] italic">Uncategorized</span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-[#cccccc] w-20 @md:table-cell hidden">v{doc.versionNumber}</TableCell>
+                                        <TableCell className="w-12">
+                                            <Checkbox
+                                                checked={selectedIds.has(doc.id)}
+                                                className="border-[#858585] data-[state=checked]:bg-[#0e639c] data-[state=checked]:border-[#0e639c] pointer-events-none"
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
                     </table>
                 </div>
             </div>

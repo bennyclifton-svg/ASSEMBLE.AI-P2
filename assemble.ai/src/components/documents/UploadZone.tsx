@@ -28,8 +28,8 @@ export function UploadZone({ onFilesSelected, className, disabled }: UploadZoneP
         <div
             {...getRootProps()}
             className={cn(
-                "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                isDragActive ? "border-[#0e639c] bg-[#0e639c]/10" : "border-[#3e3e42] hover:border-[#0e639c]/50",
+                "border-4 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
+                isDragActive ? "border-[#0e639c] bg-[#0e639c]/10" : "border-[#3e3e42] hover:border-[#0e639c] hover:bg-[#0e639c]/5",
                 disabled && "opacity-50 cursor-not-allowed",
                 className
             )}
