@@ -62,7 +62,7 @@ As a user, I want visual feedback when dragging files and toast notifications on
 - **FR-004**: Clicking category tiles with subcategories toggles expansion
 - **FR-005**: Clicking category tiles with selected documents performs bulk categorization
 - **FR-006**: Visual feedback on hover and drop with toast notifications
-- **FR-007**: Documents store `categoryId` and `subcategoryId` as strings with FK to categories/subcategories tables
+- **FR-007**: Documents store `categoryId` and `subcategoryId` as strings. The `subcategoryId` may reference either the legacy `subcategories` table OR `consultantDisciplines`/`contractorTrades` tables (by discipline/trade UUID). The GET API uses COALESCE to resolve names from all sources.
 
 ### Data Model
 
