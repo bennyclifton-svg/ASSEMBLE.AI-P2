@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { extractText, calculateConfidence } from '@/lib/utils/text-extraction';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 const EXTRACTION_PROMPT = `You are an AI assistant that extracts consultant/firm information from text.
@@ -33,6 +33,15 @@ Example response:
 // POST /api/consultants/extract
 export async function POST(request: NextRequest) {
   try {
+    // Check for API key first
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not configured');
+      return NextResponse.json(
+        { error: 'AI extraction is not configured. Please set ANTHROPIC_API_KEY.' },
+        { status: 500 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const textInput = formData.get('text') as string | null;
@@ -42,10 +51,13 @@ export async function POST(request: NextRequest) {
     // Extract text from file if provided
     if (file) {
       try {
+        console.log(`Extracting text from file: ${file.name}, type: ${file.type}, size: ${file.size}`);
         extractedText = await extractText(file);
+        console.log(`Extracted ${extractedText.length} characters from file`);
       } catch (error) {
+        console.error('Text extraction failed:', error);
         return NextResponse.json(
-          { error: 'Failed to extract text from file' },
+          { error: `Failed to extract text from file: ${error instanceof Error ? error.message : 'Unknown error'}` },
           { status: 400 }
         );
       }
@@ -65,23 +77,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send to OpenAI for extraction
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    // Send to Anthropic for extraction
+    const message = await anthropic.messages.create({
+      model: 'claude-3-5-haiku-latest',
+      max_tokens: 1024,
+      system: EXTRACTION_PROMPT,
       messages: [
-        {
-          role: 'system',
-          content: EXTRACTION_PROMPT,
-        },
         {
           role: 'user',
           content: `Extract consultant information from this text:\n\n${extractedText}`,
         },
       ],
-      temperature: 0.1,
     });
 
-    const aiResponse = completion.choices[0]?.message?.content;
+    const aiResponse = message.content[0]?.type === 'text' ? message.content[0].text : null;
     if (!aiResponse) {
       return NextResponse.json(
         { error: 'No response from AI' },
@@ -116,8 +125,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in consultant extraction:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to extract consultant data' },
+      { error: `Failed to extract consultant data: ${errorMessage}` },
       { status: 500 }
     );
   }

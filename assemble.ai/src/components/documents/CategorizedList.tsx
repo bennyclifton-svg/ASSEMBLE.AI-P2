@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
     TableBody,
     TableCell,
@@ -9,13 +9,40 @@ import {
     TableRow
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/components/ui/use-toast';
-import { Trash2, Send, Loader2, FileIcon, FolderIcon } from 'lucide-react';
+import { Trash2, Loader2, FileIcon, Folder, ChevronUp, ChevronDown, Trash } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
-import { TransmittalManager } from './TransmittalManager';
+import { useDocumentSyncStatus, useSyncStatus } from '@/lib/hooks/use-sync-status';
 import { cn } from '@/lib/utils';
 import { getCategoryById } from '@/lib/constants/categories';
+
+/**
+ * T032: Sync status dot indicator (compact version)
+ */
+function SyncStatusDot({ documentId }: { documentId: string }) {
+    const { statuses } = useSyncStatus([documentId]);
+    const status = statuses[documentId];
+
+    if (!status || status.status === null) {
+        return null; // Not synced
+    }
+
+    const colorMap = {
+        synced: 'bg-green-500',
+        pending: 'bg-amber-500',
+        processing: 'bg-amber-500',
+        failed: 'bg-red-500',
+    };
+
+    const color = colorMap[status.status] || 'bg-gray-500';
+
+    return (
+        <div
+            className={`w-2 h-2 rounded-full ${color} flex-shrink-0`}
+            title={status.status.charAt(0).toUpperCase() + status.status.slice(1)}
+        />
+    );
+}
 
 interface Document {
     id: string;
@@ -34,7 +61,7 @@ interface CategorizedListProps {
     projectId: string;
     selectedIds?: Set<string>;
     onSelectionChange?: (selectedIds: Set<string>) => void;
-    scrollContainerRef?: React.RefObject<HTMLDivElement>;
+    scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef }: CategorizedListProps) {
@@ -43,13 +70,102 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     const [selectedIds, setSelectedIds] = useState<Set<string>>(externalSelectedIds || new Set());
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-    const [showTransmittalManager, setShowTransmittalManager] = useState(false);
+    const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+    const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [sortColumn, setSortColumn] = useState<'name' | 'category' | 'subcategory' | 'version' | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     const { toast } = useToast();
+
+    // Sorting logic
+    const sortedDocuments = useMemo(() => {
+        if (!sortColumn) return documents;
+
+        return [...documents].sort((a, b) => {
+            let comparison = 0;
+
+            switch (sortColumn) {
+                case 'name':
+                    comparison = a.originalName.localeCompare(b.originalName);
+                    break;
+                case 'category':
+                    const catA = a.categoryName || '';
+                    const catB = b.categoryName || '';
+                    comparison = catA.localeCompare(catB);
+                    break;
+                case 'subcategory':
+                    const subA = a.subcategoryName || '';
+                    const subB = b.subcategoryName || '';
+                    comparison = subA.localeCompare(subB);
+                    break;
+                case 'version':
+                    comparison = a.versionNumber - b.versionNumber;
+                    break;
+            }
+
+            return sortDirection === 'asc' ? comparison : -comparison;
+        });
+    }, [documents, sortColumn, sortDirection]);
+
+    const handleSort = (column: 'name' | 'category' | 'subcategory' | 'version') => {
+        if (sortColumn === column) {
+            // Toggle direction or clear
+            if (sortDirection === 'asc') {
+                setSortDirection('desc');
+            } else {
+                setSortColumn(null);
+                setSortDirection('asc');
+            }
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
+        }
+    };
+
+    const SortIndicator = ({ column }: { column: 'name' | 'category' | 'subcategory' | 'version' }) => {
+        if (sortColumn !== column) return null;
+        return sortDirection === 'asc'
+            ? <ChevronUp className="w-4 h-4 inline ml-1" />
+            : <ChevronDown className="w-4 h-4 inline ml-1" />
+    };
+
+    // Sync internal state when external selection changes (e.g., from transmittal load)
+    useEffect(() => {
+        if (externalSelectedIds) {
+            setSelectedIds(externalSelectedIds);
+        }
+    }, [externalSelectedIds]);
 
     useEffect(() => {
         fetchData();
     }, [refreshTrigger, projectId]);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Ctrl+A to select all
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a' && documents.length > 0) {
+                e.preventDefault();
+                const allIds = new Set(documents.map(d => d.id));
+                setSelectedIds(allIds);
+                onSelectionChange?.(allIds);
+            }
+            // ESC to clear selection
+            if (e.key === 'Escape' && selectedIds.size > 0) {
+                setSelectedIds(new Set());
+                onSelectionChange?.(new Set());
+                setLastSelectedId(null);
+            }
+            // DELETE to delete selected items
+            if (e.key === 'Delete' && selectedIds.size > 0 && !deletingId) {
+                setShowDeleteConfirm(true);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedIds, documents, deletingId, onSelectionChange]);
 
     const fetchData = async () => {
         // Save scroll position before fetching
@@ -128,24 +244,95 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         onSelectionChange?.(newSelected);
     };
 
-    const handleDelete = async () => {
-        const fileIds = Array.from(selectedIds);
-        if (fileIds.length === 0) return;
-
+    const handleDeleteSingle = async (documentId: string) => {
+        setDeletingId(documentId);
         try {
             const res = await fetch('/api/documents/bulk', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ documentIds: fileIds, projectId }),
+                body: JSON.stringify({ documentIds: [documentId], projectId }),
+            });
+
+            if (res.ok) {
+                toast({
+                    title: "Document deleted",
+                    description: "Successfully deleted document.",
+                });
+                fetchData();
+            } else {
+                toast({
+                    title: "Error",
+                    description: "Failed to delete document.",
+                    variant: "destructive",
+                });
+            }
+        } catch (error) {
+            console.error('Failed to delete document', error);
+            toast({
+                title: "Error",
+                description: "An unexpected error occurred.",
+                variant: "destructive",
+            });
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleDeleteAll = async () => {
+        if (documents.length === 0) return;
+
+        try {
+            const allIds = documents.map(d => d.id);
+            const res = await fetch('/api/documents/bulk', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentIds: allIds, projectId }),
+            });
+
+            if (res.ok) {
+                toast({
+                    title: "All documents deleted",
+                    description: `Successfully deleted ${allIds.length} document(s).`,
+                });
+                fetchData();
+                setShowDeleteAllConfirm(false);
+            } else {
+                toast({
+                    title: "Error",
+                    description: "Failed to delete documents.",
+                    variant: "destructive",
+                });
+            }
+        } catch (error) {
+            console.error('Failed to delete documents', error);
+            toast({
+                title: "Error",
+                description: "An unexpected error occurred.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleDelete = async () => {
+        if (selectedIds.size === 0) return;
+
+        try {
+            const idsToDelete = Array.from(selectedIds);
+            const res = await fetch('/api/documents/bulk', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentIds: idsToDelete, projectId }),
             });
 
             if (res.ok) {
                 toast({
                     title: "Documents deleted",
-                    description: `Successfully deleted ${fileIds.length} document(s).`,
+                    description: `Successfully deleted ${idsToDelete.length} document(s).`,
                 });
-                setSelectedIds(new Set());
+                const newSelection = new Set<string>();
+                setSelectedIds(newSelection);
                 setLastSelectedId(null);
+                onSelectionChange?.(newSelection);
                 fetchData();
                 setShowDeleteConfirm(false);
             } else {
@@ -156,7 +343,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 });
             }
         } catch (error) {
-            console.error('Failed to delete documents', error);
+            console.error('Failed to delete selected documents', error);
             toast({
                 title: "Error",
                 description: "An unexpected error occurred.",
@@ -175,69 +362,83 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
 
     return (
         <div className="space-y-4">
-            {/* Bulk Action Bar */}
-            <div className="flex items-center gap-2 p-3 bg-[#252526] border border-[#3e3e42] rounded-md">
-                <span className="text-sm text-[#cccccc]">
-                    {selectedIds.size > 0
-                        ? `${selectedIds.size} selected`
-                        : 'No selection'}
-                </span>
-                <div className="flex-1" />
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={selectedIds.size === 0}
-                    className="text-[#cccccc] hover:bg-[#3e3e42]"
-                >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowTransmittalManager(true)}
-                    disabled={selectedIds.size === 0}
-                    className="text-[#cccccc] hover:bg-[#3e3e42]"
-                >
-                    <Send className="w-4 h-4 mr-2" />
-                    Create Transmittal
-                </Button>
-            </div>
-
             {/* Table View */}
             <div className="border border-[#3e3e42] rounded-md bg-[#1e1e1e] overflow-hidden @container">
                 <div className="relative w-full">
                     <table className="w-full caption-bottom text-sm table-fixed">
                         <TableHeader>
                             <TableRow className="border-[#3e3e42] hover:bg-[#252526]">
-                                <TableHead className="text-[#cccccc] max-w-0">Name</TableHead>
-                                <TableHead className="text-[#cccccc] w-48 @lg:table-cell hidden">Category</TableHead>
-                                <TableHead className="text-[#cccccc] w-20 @md:table-cell hidden">Version</TableHead>
-                                <TableHead className="w-12">
-                                    <Checkbox
-                                        checked={selectedIds.size === documents.length && documents.length > 0}
-                                        onCheckedChange={handleSelectAll}
-                                        className="border-[#858585] data-[state=checked]:bg-[#0e639c] data-[state=checked]:border-[#0e639c]"
-                                    />
+                                <TableHead
+                                    className="text-[#cccccc] cursor-pointer hover:text-white select-none w-[40%] @md:w-auto"
+                                    onClick={() => handleSort('name')}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span>Name</span>
+                                        {selectedIds.size > 0 ? (
+                                            <span className="text-[#4fc3f7] text-xs">({selectedIds.size} selected)</span>
+                                        ) : (
+                                            <span className="text-[#858585] text-xs">({documents.length})</span>
+                                        )}
+                                        <SortIndicator column="name" />
+                                    </div>
+                                </TableHead>
+                                <TableHead
+                                    className="text-[#cccccc] w-[45%] @md:w-36 cursor-pointer hover:text-white select-none"
+                                    onClick={() => handleSort('category')}
+                                >
+                                    Category<SortIndicator column="category" />
+                                </TableHead>
+                                <TableHead
+                                    className="text-[#cccccc] w-36 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
+                                    onClick={() => handleSort('subcategory')}
+                                >
+                                    Subcategory<SortIndicator column="subcategory" />
+                                </TableHead>
+                                <TableHead
+                                    className="text-[#cccccc] w-14 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
+                                    onClick={() => handleSort('version')}
+                                >
+                                    Ver<SortIndicator column="version" />
+                                </TableHead>
+                                <TableHead className="w-10 @sm:table-cell hidden">
+                                    {selectedIds.size > 0 ? (
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(true)}
+                                            className="p-1 hover:bg-[#3e3e42] rounded"
+                                            title={`Delete ${selectedIds.size} selected document${selectedIds.size > 1 ? 's' : ''}`}
+                                        >
+                                            <Trash className="w-4 h-4 text-red-400" />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowDeleteAllConfirm(true)}
+                                            disabled={documents.length === 0}
+                                            className="p-1 hover:bg-[#3e3e42] rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                            title="Delete all documents"
+                                        >
+                                            <Trash className="w-4 h-4 text-[#858585]" />
+                                        </button>
+                                    )}
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {documents.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-[#858585] h-24">
+                                    <TableCell colSpan={5} className="text-center text-[#858585] h-24">
                                         No documents found.
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                documents.map((doc) => (
+                                sortedDocuments.map((doc) => (
                                     <TableRow
                                         key={doc.id}
                                         className={cn(
-                                            "border-[#3e3e42] hover:bg-[#2a2d2e] transition-colors cursor-pointer select-none",
+                                            "border-[#3e3e42] hover:bg-[#2a2d2e] transition-colors cursor-pointer select-none h-12",
                                             selectedIds.has(doc.id) && "bg-[#37373d]"
                                         )}
+                                        onMouseEnter={() => setHoveredRowId(doc.id)}
+                                        onMouseLeave={() => setHoveredRowId(null)}
                                         onMouseDown={(e) => {
                                             if (e.shiftKey) {
                                                 e.preventDefault(); // Prevent text selection on shift-click
@@ -245,40 +446,71 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         }}
                                         onClick={(e) => handleSelect(doc.id, e)}
                                     >
-                                        <TableCell className="font-medium text-[#cccccc] max-w-0">
+                                        <TableCell className="font-medium text-[#cccccc] !py-2 w-[40%] @md:w-auto">
                                             <div className="flex items-center gap-2 min-w-0">
-                                                <FileIcon className="w-4 h-4 flex-shrink-0 text-[#519aba]" />
-                                                <span className="truncate" title={doc.originalName}>
+                                                <div className="w-2 flex-shrink-0">
+                                                    <SyncStatusDot documentId={doc.id} />
+                                                </div>
+                                                <span className="truncate flex-1" title={doc.originalName}>
                                                     {doc.originalName}
                                                 </span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-[#cccccc] w-48 @lg:table-cell hidden">
+                                        <TableCell className="w-[45%] @md:w-36 !py-2">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 {doc.categoryName ? (
                                                     <>
-                                                        <FolderIcon
-                                                            className="w-4 h-4 flex-shrink-0"
+                                                        <Folder
+                                                            className="w-4 h-4 flex-shrink-0 fill-current"
                                                             style={{
-                                                                color: getCategoryById(doc.categoryId || '')?.color || '#dcb67a'
+                                                                color: getCategoryById(doc.categoryId || '')?.color || '#858585'
                                                             }}
                                                         />
-                                                        <span className="truncate" title={`${doc.categoryName}${doc.subcategoryName ? ` / ${doc.subcategoryName}` : ''}`}>
+                                                        <span
+                                                            className="truncate"
+                                                            title={doc.categoryName}
+                                                            style={{
+                                                                color: getCategoryById(doc.categoryId || '')?.color || '#858585'
+                                                            }}
+                                                        >
                                                             {doc.categoryName}
-                                                            {doc.subcategoryName && ` / ${doc.subcategoryName}`}
                                                         </span>
                                                     </>
                                                 ) : (
-                                                    <span className="text-[#858585] italic">Uncategorized</span>
+                                                    <span className="text-[#858585] italic">—</span>
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-[#cccccc] w-20 @md:table-cell hidden">v{doc.versionNumber}</TableCell>
-                                        <TableCell className="w-12">
-                                            <Checkbox
-                                                checked={selectedIds.has(doc.id)}
-                                                className="border-[#858585] data-[state=checked]:bg-[#0e639c] data-[state=checked]:border-[#0e639c] pointer-events-none"
-                                            />
+                                        <TableCell className="w-36 @lg:table-cell hidden !py-2">
+                                            <span
+                                                className="truncate"
+                                                title={doc.subcategoryName || ''}
+                                                style={{
+                                                    color: doc.categoryId ? getCategoryById(doc.categoryId)?.color || '#cccccc' : '#858585'
+                                                }}
+                                            >
+                                                {doc.subcategoryName || <span className="text-[#858585]">—</span>}
+                                            </span>
+                                        </TableCell>
+                                        <TableCell className="text-[#cccccc] w-14 @lg:table-cell hidden !py-2">v{doc.versionNumber}</TableCell>
+                                        <TableCell className="w-10 @sm:table-cell hidden !py-2">
+                                            {(hoveredRowId === doc.id || deletingId === doc.id) && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteSingle(doc.id);
+                                                    }}
+                                                    disabled={deletingId === doc.id}
+                                                    className="p-1 hover:bg-[#3e3e42] rounded disabled:opacity-50"
+                                                    title="Delete document"
+                                                >
+                                                    {deletingId === doc.id ? (
+                                                        <Loader2 className="w-4 h-4 text-[#858585] animate-spin" />
+                                                    ) : (
+                                                        <Trash className="w-4 h-4 text-[#858585] hover:text-red-400" />
+                                                    )}
+                                                </button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -288,14 +520,14 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 </div>
             </div>
 
-            {/* Delete Confirmation Modal */}
+            {/* Delete Selected Confirmation Modal */}
             <Modal
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
-                title="Confirm Delete"
+                title="Delete Selected Documents"
             >
                 <div className="space-y-4">
-                    <p className="text-[#cccccc]">Are you sure you want to delete {selectedIds.size} document{selectedIds.size > 1 ? 's' : ''}?</p>
+                    <p className="text-[#cccccc]">Are you sure you want to delete {selectedIds.size} selected document{selectedIds.size !== 1 ? 's' : ''}?</p>
                     <p className="text-sm text-[#858585]">This action cannot be undone.</p>
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
@@ -308,20 +540,24 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 </div>
             </Modal>
 
-            {/* Transmittal Manager Modal */}
+            {/* Delete All Confirmation Modal */}
             <Modal
-                isOpen={showTransmittalManager}
-                onClose={() => setShowTransmittalManager(false)}
-                title="Create Transmittal"
+                isOpen={showDeleteAllConfirm}
+                onClose={() => setShowDeleteAllConfirm(false)}
+                title="Delete All Documents"
             >
-                <TransmittalManager
-                    selectedIds={Array.from(selectedIds)}
-                    onComplete={() => {
-                        setShowTransmittalManager(false);
-                        setSelectedIds(new Set());
-                    }}
-                    onCancel={() => setShowTransmittalManager(false)}
-                />
+                <div className="space-y-4">
+                    <p className="text-[#cccccc]">Are you sure you want to delete all {documents.length} document{documents.length !== 1 ? 's' : ''}?</p>
+                    <p className="text-sm text-[#858585]">This action cannot be undone.</p>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setShowDeleteAllConfirm(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeleteAll}>
+                            Delete All
+                        </Button>
+                    </div>
+                </div>
             </Modal>
         </div>
     );

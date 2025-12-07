@@ -1,21 +1,49 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { DollarSign } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useConsultantDisciplines } from '@/lib/hooks/use-consultant-disciplines';
 import { useContractorTrades } from '@/lib/hooks/use-contractor-trades';
 import { ConsultantGallery } from '@/components/consultants/ConsultantGallery';
 import { ContractorGallery } from '@/components/contractors/ContractorGallery';
+import { DisciplineRepoTiles, type GenerationMode } from '@/components/documents/DisciplineRepoTiles';
+import { CostPlanPanel } from '@/components/cost-plan/CostPlanPanel';
 
 interface ConsultantCardProps {
     projectId: string;
+    selectedDocumentIds: string[];
+    onSetSelectedDocumentIds?: (ids: string[]) => void;
 }
 
-export function ConsultantCard({ projectId }: ConsultantCardProps) {
-    const { disciplines, isLoading: isLoadingConsultants } = useConsultantDisciplines(projectId);
-    const { trades, isLoading: isLoadingContractors } = useContractorTrades(projectId);
+export function ConsultantCard({ projectId, selectedDocumentIds, onSetSelectedDocumentIds }: ConsultantCardProps) {
+    const { disciplines, isLoading: isLoadingConsultants, updateBrief } = useConsultantDisciplines(projectId);
+    const { trades, isLoading: isLoadingContractors, updateScope } = useContractorTrades(projectId);
+
+    // Track active tabs
+    const [activeMainTab, setActiveMainTab] = useState<string>('consultants');
+    const [activeDiscipline, setActiveDiscipline] = useState<string | null>(null);
+    const [activeTrade, setActiveTrade] = useState<string | null>(null);
+
+    // Track generation modes per discipline/trade
+    const [disciplineModes, setDisciplineModes] = useState<Record<string, GenerationMode>>({});
+    const [tradeModes, setTradeModes] = useState<Record<string, GenerationMode>>({});
 
     const enabledDisciplines = disciplines.filter(d => d.isEnabled);
     const enabledTrades = trades.filter(t => t.isEnabled);
+
+    // Initialize active tabs when data loads
+    useEffect(() => {
+        if (enabledDisciplines.length > 0 && !activeDiscipline) {
+            setActiveDiscipline(enabledDisciplines[0].id);
+        }
+    }, [enabledDisciplines, activeDiscipline]);
+
+    useEffect(() => {
+        if (enabledTrades.length > 0 && !activeTrade) {
+            setActiveTrade(enabledTrades[0].id);
+        }
+    }, [enabledTrades, activeTrade]);
 
     if (isLoadingConsultants || isLoadingContractors) {
         return (
@@ -26,12 +54,12 @@ export function ConsultantCard({ projectId }: ConsultantCardProps) {
     }
 
     return (
-        <div className="h-full bg-[#252526] flex flex-col">
-            <div className="p-6 pb-0">
-                <h2 className="text-2xl font-bold mb-4 text-[#cccccc]">Consultants & Contractors</h2>
-            </div>
-
-            <Tabs defaultValue="consultants" className="flex-1 flex flex-col px-6">
+        <div className="h-full bg-[#252526] flex flex-col overflow-y-auto">
+            <Tabs
+                value={activeMainTab}
+                onValueChange={setActiveMainTab}
+                className="flex-1 flex flex-col px-6 pt-4 min-h-0"
+            >
                 <TabsList className="w-full justify-start bg-[#1e1e1e] border-b border-[#3e3e42] rounded-none h-auto p-0 mb-4">
                     <TabsTrigger
                         value="consultants"
@@ -45,6 +73,13 @@ export function ConsultantCard({ projectId }: ConsultantCardProps) {
                     >
                         Contractors ({enabledTrades.length})
                     </TabsTrigger>
+                    <TabsTrigger
+                        value="cost-planning"
+                        className="data-[state=active]:bg-[#252526] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#0e639c] rounded-none px-4 py-2 text-[#858585] gap-1"
+                    >
+                        <DollarSign className="h-4 w-4" />
+                        Cost Planning
+                    </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="consultants" className="flex-1 mt-0">
@@ -57,7 +92,11 @@ export function ConsultantCard({ projectId }: ConsultantCardProps) {
                             </p>
                         </div>
                     ) : (
-                        <Tabs defaultValue={enabledDisciplines[0].id} className="h-full flex flex-col">
+                        <Tabs
+                            value={activeDiscipline || enabledDisciplines[0].id}
+                            onValueChange={(value) => setActiveDiscipline(value)}
+                            className="h-full flex flex-col"
+                        >
                             <TabsList className="w-full justify-start bg-[#1e1e1e] border-b border-[#3e3e42] rounded-none h-auto p-0 overflow-x-auto">
                                 {enabledDisciplines.map(d => (
                                     <TabsTrigger
@@ -70,8 +109,26 @@ export function ConsultantCard({ projectId }: ConsultantCardProps) {
                                 ))}
                             </TabsList>
                             {enabledDisciplines.map(d => (
-                                <TabsContent key={d.id} value={d.id} className="flex-1 mt-4">
-                                    <ConsultantGallery projectId={projectId} discipline={d.disciplineName} />
+                                <TabsContent key={d.id} value={d.id} className="flex-1 mt-4 overflow-y-auto">
+                                    <DisciplineRepoTiles
+                                        projectId={projectId}
+                                        disciplineId={d.id}
+                                        contextName={d.disciplineName}
+                                        selectedDocumentIds={selectedDocumentIds}
+                                        onSetSelectedDocumentIds={onSetSelectedDocumentIds}
+                                        generationMode={disciplineModes[d.id] || 'ai_assist'}
+                                        onGenerationModeChange={(mode) => setDisciplineModes(prev => ({ ...prev, [d.id]: mode }))}
+                                    />
+                                    <ConsultantGallery
+                                        projectId={projectId}
+                                        discipline={d.disciplineName}
+                                        disciplineId={d.id}
+                                        briefServices={d.briefServices || ''}
+                                        briefFee={d.briefFee || ''}
+                                        briefProgram={d.briefProgram || ''}
+                                        onUpdateBrief={updateBrief}
+                                        generationMode={disciplineModes[d.id] || 'ai_assist'}
+                                    />
                                 </TabsContent>
                             ))}
                         </Tabs>
@@ -88,7 +145,11 @@ export function ConsultantCard({ projectId }: ConsultantCardProps) {
                             </p>
                         </div>
                     ) : (
-                        <Tabs defaultValue={enabledTrades[0].id} className="h-full flex flex-col">
+                        <Tabs
+                            value={activeTrade || enabledTrades[0].id}
+                            onValueChange={(value) => setActiveTrade(value)}
+                            className="h-full flex flex-col"
+                        >
                             <TabsList className="w-full justify-start bg-[#1e1e1e] border-b border-[#3e3e42] rounded-none h-auto p-0 overflow-x-auto">
                                 {enabledTrades.map(t => (
                                     <TabsTrigger
@@ -101,12 +162,34 @@ export function ConsultantCard({ projectId }: ConsultantCardProps) {
                                 ))}
                             </TabsList>
                             {enabledTrades.map(t => (
-                                <TabsContent key={t.id} value={t.id} className="flex-1 mt-4">
-                                    <ContractorGallery projectId={projectId} trade={t.tradeName} />
+                                <TabsContent key={t.id} value={t.id} className="flex-1 mt-4 overflow-y-auto">
+                                    <DisciplineRepoTiles
+                                        projectId={projectId}
+                                        tradeId={t.id}
+                                        contextName={t.tradeName}
+                                        selectedDocumentIds={selectedDocumentIds}
+                                        onSetSelectedDocumentIds={onSetSelectedDocumentIds}
+                                        generationMode={tradeModes[t.id] || 'ai_assist'}
+                                        onGenerationModeChange={(mode) => setTradeModes(prev => ({ ...prev, [t.id]: mode }))}
+                                    />
+                                    <ContractorGallery
+                                        projectId={projectId}
+                                        trade={t.tradeName}
+                                        tradeId={t.id}
+                                        scopeWorks={t.scopeWorks || ''}
+                                        scopePrice={t.scopePrice || ''}
+                                        scopeProgram={t.scopeProgram || ''}
+                                        onUpdateScope={updateScope}
+                                        generationMode={tradeModes[t.id] || 'ai_assist'}
+                                    />
                                 </TabsContent>
                             ))}
                         </Tabs>
                     )}
+                </TabsContent>
+
+                <TabsContent value="cost-planning" className="flex-1 mt-0 overflow-hidden">
+                    <CostPlanPanel projectId={projectId} />
                 </TabsContent>
             </Tabs>
         </div>

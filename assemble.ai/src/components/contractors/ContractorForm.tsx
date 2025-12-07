@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
@@ -27,14 +28,18 @@ interface ContractorFormProps {
     mobile: string;
     address: string;
     abn: string;
+    notes: string;
     shortlisted: boolean;
+    awarded: boolean;
+    companyId: string | null;
   };
   onSave: (data: any) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
+  onAwardChange?: (awarded: boolean) => Promise<void>;
   trade: string;
 }
 
-export function ContractorForm({ contractor, onSave, onDelete, trade }: ContractorFormProps) {
+export function ContractorForm({ contractor, onSave, onDelete, onAwardChange, trade }: ContractorFormProps) {
   const [formData, setFormData] = useState({
     companyName: contractor?.companyName || '',
     contactPerson: contractor?.contactPerson || '',
@@ -42,11 +47,14 @@ export function ContractorForm({ contractor, onSave, onDelete, trade }: Contract
     mobile: contractor?.mobile || '',
     address: contractor?.address || '',
     abn: contractor?.abn || '',
+    notes: contractor?.notes || '',
     shortlisted: contractor?.shortlisted || false,
+    awarded: contractor?.awarded || false,
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAwarding, setIsAwarding] = useState(false);
 
   // Debounced autosave
   useEffect(() => {
@@ -81,18 +89,55 @@ export function ContractorForm({ contractor, onSave, onDelete, trade }: Contract
     }
   };
 
+  const handleAwardToggle = async (checked: boolean) => {
+    // If no callback (new unsaved contractor), just update local state
+    if (!onAwardChange) {
+      setFormData({ ...formData, awarded: checked });
+      return;
+    }
+
+    setIsAwarding(true);
+    try {
+      await onAwardChange(checked);
+      setFormData({ ...formData, awarded: checked });
+    } catch (error) {
+      console.error('Failed to update award status:', error);
+      // Revert on error - state stays as is
+    } finally {
+      setIsAwarding(false);
+    }
+  };
+
   return (
     <>
-      <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-3 space-y-2 w-64">
-        {/* Delete button at top */}
+      <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-3 space-y-2 w-64 relative">
+        {/* Awarded badge */}
+        {formData.awarded && (
+          <div className="absolute -top-2 -right-2 bg-green-600 text-white text-[10px] px-2 py-0.5 rounded-full font-medium">
+            Awarded
+          </div>
+        )}
+
+        {/* Delete button and toggles at top */}
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <Label className="text-[#cccccc] text-xs">Shortlisted</Label>
-            <Switch
-              checked={formData.shortlisted}
-              onCheckedChange={(checked) => setFormData({ ...formData, shortlisted: checked })}
-              className="scale-75"
-            />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              <Label className="text-[#cccccc] text-xs">Shortlisted</Label>
+              <Switch
+                checked={formData.shortlisted}
+                onCheckedChange={(checked) => setFormData({ ...formData, shortlisted: checked })}
+                className="scale-75"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <Label className="text-[#cccccc] text-xs">Award</Label>
+              <Switch
+                checked={formData.awarded}
+                onCheckedChange={handleAwardToggle}
+                disabled={!contractor?.id || isAwarding}
+                className="scale-75"
+              />
+            </div>
           </div>
           {contractor?.id && onDelete && (
             <Button
@@ -187,6 +232,20 @@ export function ContractorForm({ contractor, onSave, onDelete, trade }: Contract
               onChange={(e) => setFormData({ ...formData, abn: e.target.value })}
               className="bg-[#3c3c3c] border-[#3e3e42] text-[#cccccc] h-7 text-xs"
               placeholder="12 345 678 901"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="notes" className="text-[#cccccc] text-xs">
+              Notes
+            </Label>
+            <Textarea
+              id="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="bg-[#3c3c3c] border-[#3e3e42] text-[#cccccc] text-xs min-h-[60px]"
+              placeholder="Additional notes..."
+              rows={4}
             />
           </div>
         </div>

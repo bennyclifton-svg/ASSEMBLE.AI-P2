@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Loader2, CloudUpload, ChevronRight } from 'lucide-react';
+import { Loader2, CloudUpload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ActiveCategory, Subcategory } from '@/lib/constants/categories';
 
@@ -15,9 +15,11 @@ interface CategoryTileProps {
     /** Optional subcategory to display. If present, this tile represents a subcategory. */
     subcategory?: Subcategory;
     /** Callback when files are dropped or categorized. */
-    onFilesDropped: (files: File[], categoryId?: string, subcategoryId?: string) => void;
+    onFilesDropped: (files: File[], categoryId?: string, subcategoryId?: string, subcategoryName?: string) => void;
     /** Callback for click events (expansion or selection). */
     onClick?: () => void;
+    /** Callback for Ctrl+click to bulk-select all documents in this category. */
+    onBulkSelectCategory?: (categoryId: string, subcategoryId?: string) => void;
     /** Whether the category is expanded (for categories with subcategories). */
     isExpanded?: boolean;
     /** Whether this tile is a subcategory tile. */
@@ -39,6 +41,7 @@ export function CategoryTile({
     subcategory,
     onFilesDropped,
     onClick,
+    onBulkSelectCategory,
     isExpanded,
     isSubcategory = false,
     hasSelection = false,
@@ -51,7 +54,7 @@ export function CategoryTile({
             if (isUploadTile) {
                 onFilesDropped(acceptedFiles);
             } else if (subcategory) {
-                onFilesDropped(acceptedFiles, category.id, subcategory.id);
+                onFilesDropped(acceptedFiles, category.id, subcategory.id, subcategory.name);
             } else if (!category.hasSubcategories) {
                 // Categories without subcategories can always accept drops
                 onFilesDropped(acceptedFiles, category.id);
@@ -61,14 +64,25 @@ export function CategoryTile({
         noClick: true, // We handle clicks separately
     });
 
-    const handleClick = () => {
+    const handleClick = (event: React.MouseEvent) => {
         // Upload tile should not handle clicks
         if (isUploadTile) return;
+
+        // Ctrl+click (or Cmd+click on Mac) triggers bulk category selection
+        if ((event.ctrlKey || event.metaKey) && onBulkSelectCategory) {
+            event.preventDefault();
+            if (subcategory) {
+                onBulkSelectCategory(category.id, subcategory.id);
+            } else {
+                onBulkSelectCategory(category.id);
+            }
+            return;
+        }
 
         if (hasSelection) {
             // If files are selected, clicking categorizes them (no files passed)
             if (subcategory) {
-                onFilesDropped([], category.id, subcategory.id);
+                onFilesDropped([], category.id, subcategory.id, subcategory.name);
             } else if (!category.hasSubcategories) {
                 // Only allow categorizing to categories without subcategories
                 onFilesDropped([], category.id);
@@ -114,11 +128,11 @@ export function CategoryTile({
                 'relative rounded-lg transition-all duration-200 ease-in-out cursor-pointer group',
                 'flex items-center justify-center text-center overflow-hidden',
                 // Compact size
-                isSubcategory ? 'h-14 px-3 py-2' : 'h-16 px-3 py-2',
-                // Upload tile special styling
-                isUploadTile && 'border-4 border-dashed border-[#555555] bg-[#252526] hover:border-[#0e639c] hover:bg-[#0e639c]/5',
-                // Consultants and Contractors category tiles - solid border (no bg hover)
-                isConsultantsOrContractors && !isSubcategory && 'border-4 border-solid border-[#555555] bg-[#252526] hover:border-[#0e639c]',
+                isSubcategory ? 'h-10 px-3 py-1' : 'h-11 px-3 py-1',
+                // Upload tile special styling - thinner border
+                isUploadTile && 'border-2 border-dashed border-[#555555] bg-[#252526] hover:border-[#0e639c] hover:bg-[#0e639c]/5',
+                // Consultants and Contractors category tiles - solid border, thinner (no bg hover)
+                isConsultantsOrContractors && !isSubcategory && 'border-2 border-solid border-[#555555] bg-[#252526] hover:border-[#0e639c]',
                 // Consultants and Contractors subcategory tiles - solid border (no bg hover)
                 isConsultantsOrContractors && isSubcategory && 'border-2 border-solid border-[#555555] bg-[#252526] hover:border-[#0e639c]',
                 // Regular tiles - no border
@@ -153,8 +167,7 @@ export function CategoryTile({
             {isUploadTile ? (
                 <div className="flex flex-col items-center justify-center gap-1">
                     <CloudUpload
-                        className="w-8 h-8 group-hover:text-[#cccccc] transition-colors"
-                        style={{ color: brightColor }}
+                        className="w-6 h-6 text-[#aaaaaa] group-hover:text-[#0e639c] transition-colors"
                     />
                 </div>
             ) : (
@@ -162,27 +175,36 @@ export function CategoryTile({
                 <div className="flex items-center justify-between w-full relative z-10">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                         <CloudUpload
-                            className="w-4 h-4 flex-shrink-0"
-                            style={{ color: brightColor }}
+                            className={cn(
+                                'w-4 h-4 flex-shrink-0 transition-colors',
+                                isConsultantsOrContractors && 'text-[#aaaaaa] group-hover:text-[#0e639c]'
+                            )}
+                            style={!isConsultantsOrContractors ? { color: brightColor } : undefined}
                         />
                         <span
                             className={cn(
-                                'font-medium truncate',
-                                isSubcategory ? 'text-sm' : 'text-base'
+                                'font-medium truncate transition-colors',
+                                isSubcategory ? 'text-sm' : 'text-base',
+                                isConsultantsOrContractors && 'text-[#aaaaaa] group-hover:text-[#0e639c]'
                             )}
-                            style={{ color: brightColor }}
+                            style={!isConsultantsOrContractors ? { color: brightColor } : undefined}
                         >
                             {displayName}
                         </span>
                     </div>
                     {category.hasSubcategories && !isSubcategory && (
-                        <ChevronRight
+                        <svg
                             className={cn(
-                                'w-3 h-3 flex-shrink-0 ml-2 transition-transform opacity-60',
-                                isExpanded && 'rotate-90'
+                                'w-4 h-4 flex-shrink-0 ml-2 transition-transform',
+                                isExpanded && 'rotate-90',
+                                isConsultantsOrContractors ? 'text-[#aaaaaa] group-hover:text-[#0e639c]' : ''
                             )}
-                            style={{ color: brightColor }}
-                        />
+                            style={!isConsultantsOrContractors ? { color: brightColor } : undefined}
+                            viewBox="0 0 12 12"
+                            fill="currentColor"
+                        >
+                            <polygon points="2,0 12,6 2,12" />
+                        </svg>
                     )}
                 </div>
             )}

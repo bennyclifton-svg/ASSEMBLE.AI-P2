@@ -9,9 +9,10 @@ interface InlineEditFieldProps {
     label?: string;
     multiline?: boolean;
     required?: boolean;
+    rows?: number;
 }
 
-export function InlineEditField({ value, onSave, placeholder, label, multiline = false, required = false }: InlineEditFieldProps) {
+export function InlineEditField({ value, onSave, placeholder, label, multiline = false, required = false, rows = 3 }: InlineEditFieldProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(value || '');
     const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +117,7 @@ export function InlineEditField({ value, onSave, placeholder, label, multiline =
                             className="w-full px-3 py-2 bg-[#252526] border border-[#0e639c] rounded text-[#cccccc] focus:outline-none focus:ring-1 focus:ring-[#0e639c]"
                             placeholder={placeholder}
                             autoFocus
-                            rows={3}
+                            rows={rows}
                             disabled={isSaving}
                         />
                     ) : (

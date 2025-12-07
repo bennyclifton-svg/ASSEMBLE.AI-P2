@@ -23,6 +23,8 @@ export async function PUT(
       abn,
       notes,
       shortlisted,
+      awarded,
+      companyId,
     } = body;
 
     // Validate required fields
@@ -48,6 +50,8 @@ export async function PUT(
         abn,
         notes,
         shortlisted,
+        awarded,
+        companyId,
         updatedAt: now,
       })
       .where(eq(consultants.id, id));

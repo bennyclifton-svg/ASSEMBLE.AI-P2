@@ -6,10 +6,10 @@ import { projectObjectivesSchema } from '@/lib/validations/planning-schema';
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { projectId: string } }
+    { params }: { params: Promise<{ projectId: string }> }
 ) {
     try {
-        const { projectId } = params;
+        const { projectId } = await params;
         const body = await request.json();
 
         const validated = projectObjectivesSchema.parse(body);

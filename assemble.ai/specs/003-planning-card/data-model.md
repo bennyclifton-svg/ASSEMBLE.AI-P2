@@ -185,31 +185,65 @@ Project (1) ──< (N) RevisionHistory
 
 ## Default Data
 
-### Consultant Disciplines (Default List)
-1. Architect
-2. Structural Engineer
-3. Civil Engineer
-4. Mechanical Engineer
-5. Electrical Engineer
-6. Hydraulic Engineer
-7. Fire Engineer
-8. Acoustic Consultant
-9. Landscape Architect
-10. Town Planner
+> **Source of Truth**: `src/lib/constants/disciplines.ts`
 
-### Contractor Trades (Default List)
-1. Demolition
-2. Earthworks
-3. Concrete
-4. Structural Steel
-5. Brickwork
-6. Carpentry
-7. Roofing
-8. Plumbing
-9. Electrical
-10. HVAC
-11. Fire Protection
-12. Painting
-13. Flooring
-14. Glazing
-15. Landscaping
+### Consultant Disciplines (36 total)
+
+| # | Discipline | # | Discipline | # | Discipline |
+|---|------------|---|------------|---|------------|
+| 1 | Access | 13 | Electrical | 25 | NBN |
+| 2 | Acoustic | 14 | ESD | 26 | Passive Fire |
+| 3 | Arborist | 15 | Facade | 27 | Roof Access |
+| 4 | Architect | 16 | Fire Engineering | 28 | Site Investigation |
+| 5 | ASP3 | 17 | Fire Services | 29 | Stormwater |
+| 6 | BASIX | 18 | Flood | 30 | Structural |
+| 7 | Building Code Advice | 19 | Geotech | 31 | Survey |
+| 8 | Bushfire | 20 | Hazmat | 32 | Traffic |
+| 9 | Building Certifier | 21 | Hydraulic | 33 | Vertical Transport |
+| 10 | Civil | 22 | Interior Designer | 34 | Waste Management |
+| 11 | Cost Planning | 23 | Landscape | 35 | Wastewater |
+| 12 | Ecology | 24 | Mechanical | 36 | Waterproofing |
+
+### Contractor Trades (21 total)
+
+| # | Trade | # | Trade | # | Trade |
+|---|-------|---|-------|---|-------|
+| 1 | Concrete Finisher | 8 | Waterproofer | 15 | Tiler |
+| 2 | Steel Fixer | 9 | Plumber | 16 | Flooring Installer |
+| 3 | Scaffolder | 10 | Electrician | 17 | Painter |
+| 4 | Carpenter | 11 | HVAC Technician | 18 | Cabinetmaker |
+| 5 | Bricklayer | 12 | Insulation Installer | 19 | Mason |
+| 6 | Roofer | 13 | Drywaller | 20 | Welder |
+| 7 | Glazier | 14 | Plasterer | 21 | Landscaper |
+
+### Project Stages (5 default)
+
+1. **Initiation** - Project setup and stakeholder identification
+2. **Scheme Design** - Preliminary design and feasibility
+3. **Detail Design** - Detailed drawings and specifications
+4. **Procurement** - Tendering and contractor selection
+5. **Delivery** - Construction and handover
+
+### Status Types (4 per discipline/trade)
+
+- **Brief** - Scope and requirements documented
+- **Tender** - Out for tender/quotation
+- **Rec** (Recommendation) - Evaluation complete, recommendation made
+- **Award** - Contract awarded
+
+## Project Initialization
+
+When a new project is created, the following data MUST be initialized automatically:
+
+| Entity | Count | Default State |
+|--------|-------|---------------|
+| ConsultantDisciplines | 36 | isEnabled: false |
+| ConsultantStatuses | 144 (36 × 4) | isActive: false |
+| ContractorTrades | 21 | isEnabled: false |
+| ContractorStatuses | 84 (21 × 4) | isActive: false |
+| ProjectStages | 5 | status: 'not_started' |
+| ProjectDetails | 1 | all fields empty/null |
+| ProjectObjectives | 1 | all fields empty/null |
+| **Total records per project** | **292** | - |
+
+All initialization MUST occur atomically within a database transaction to ensure data integrity.

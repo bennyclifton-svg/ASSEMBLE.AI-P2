@@ -11,15 +11,18 @@ Integrate a hybrid RAG system into assemble.ai that combines exact Planning Card
 
 **Language/Version**: TypeScript 5.x / Node.js 20+
 **Primary Dependencies**:
-- Next.js 14 (App Router)
+- Next.js 16 (App Router + Turbopack)
 - LangGraph (orchestration)
 - LlamaIndex (chunking)
-- BullMQ (queue)
+- BullMQ (queue) + Upstash Redis
 - Drizzle ORM
+- pdf-parse v2.4.5 (TypeScript, ESM-compatible PDF parsing)
+- Voyage AI voyage-large-2-instruct (embeddings, 1024 dimensions)
 
 **Storage**:
-- SQLite with libsql (existing) → PostgreSQL + pgvector (new for vectors)
-- Redis (new for BullMQ queue)
+- SQLite with libsql (existing local.db) for document metadata
+- Supabase PostgreSQL + pgvector (document_chunks with 1024-dim embeddings)
+- Upstash Redis (BullMQ queue for async document processing)
 
 **Testing**: Jest + React Testing Library
 **Target Platform**: Web (Next.js), deployed to Vercel/Railway
@@ -110,7 +113,7 @@ src/
 │   │   ├── chunking.ts              # Construction-aware chunking
 │   │   ├── retrieval.ts             # 4-stage pipeline
 │   │   ├── reranking.ts             # BAAI + Cohere fallback
-│   │   └── parsing.ts               # LlamaParse + Unstructured
+│   │   └── parsing.ts               # LlamaParse → Unstructured → pdf-parse v2.4.5 (local)
 │   ├── langgraph/
 │   │   ├── graph.ts                 # Report generation graph
 │   │   ├── nodes/
@@ -158,7 +161,7 @@ tests/
 | PostgreSQL + pgvector (new DB) | pgvector required for vector similarity search with HNSW indexes | SQLite extensions for vectors are immature and lack HNSW support |
 | Redis + BullMQ (new infra) | Reliable background processing with retries, monitoring, and concurrency control | In-process queues would block Next.js server and lack persistence across restarts |
 | LangGraph (new orchestration) | Human-in-the-loop nodes with interrupt/resume, streaming, complex state management | Simple sequential code would require manual state persistence and lack proper streaming support |
-| Dual parsing (LlamaParse + Unstructured) | Construction PDFs have complex layouts; fallback ensures reliability | Single parser would fail on edge cases, reducing user trust |
+| Triple parsing (LlamaParse → Unstructured → pdf-parse) | Construction PDFs have complex layouts; 3-tier fallback ensures reliability. pdf-parse v2.4.5 (TypeScript) provides local fallback requiring no API keys. | Single parser would fail on edge cases, reducing user trust. Local fallback enables offline development. |
 | Dual reranking (BAAI + Cohere) | Reliability fallback for production stability | Single reranker would cause generation failures on API outages |
 
 ---
@@ -167,7 +170,10 @@ tests/
 
 *Completed by speckit.plan agent - see individual files for details*
 
-- [ ] `research.md` - Technology decisions and rationale
-- [ ] `data-model.md` - Entity relationships and migrations
-- [ ] `contracts/` - OpenAPI schemas for all endpoints
-- [ ] `quickstart.md` - Developer setup guide
+- [x] `research.md` - Technology decisions and rationale
+- [x] `data-model.md` - Entity relationships and migrations
+- [x] `contracts/` - OpenAPI schemas for all endpoints
+  - [x] `document-sets.yaml` - Document set CRUD and sync
+  - [x] `reports.yaml` - Report generation and streaming
+  - [x] `retrieval.yaml` - Semantic search and chunks
+- [x] `quickstart.md` - Developer setup guide

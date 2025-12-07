@@ -72,6 +72,7 @@
 - [X] T019 [US1] Test file upload to main upload zone → verify document remains uncategorized (backward compatibility)
 - [X] T020 [US1] Implement bulk re-categorization: modify handleFilesSelected to detect empty files array + selectedDocumentIds
 - [X] T021 [US1] Test multi-select documents + click category tile → verify documents update to new category
+- [X] T021a [US1] **Bug Fix**: Subcategory names not displaying after bulk categorization (Acceptance Scenario 3). Fixed GET /api/documents to join with consultantDisciplines/contractorTrades tables and use COALESCE for subcategoryName resolution.
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - drag files to tiles OR bulk re-categorize via click
 

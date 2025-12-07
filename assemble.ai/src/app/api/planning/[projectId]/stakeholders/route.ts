@@ -6,10 +6,10 @@ import { stakeholderSchema } from '@/lib/validations/planning-schema';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { projectId: string } }
+    { params }: { params: Promise<{ projectId: string }> }
 ) {
     try {
-        const { projectId } = params;
+        const { projectId } = await params;
         const projectStakeholders = await db.select().from(stakeholders).where(eq(stakeholders.projectId, projectId));
         return NextResponse.json(projectStakeholders);
     } catch (error) {
@@ -19,10 +19,10 @@ export async function GET(
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { projectId: string } }
+    { params }: { params: Promise<{ projectId: string }> }
 ) {
     try {
-        const { projectId } = params;
+        const { projectId } = await params;
         const body = await request.json();
         const validated = stakeholderSchema.parse(body);
 

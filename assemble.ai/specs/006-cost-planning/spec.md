@@ -1,8 +1,8 @@
 # Cost Planning Module Specification
 
-> **Module**: Cost Planning  
-> **Version**: 0.2.1 (Revised)  
-> **Status**: Specification  
+> **Module**: Cost Planning
+> **Version**: 0.3.0 (Implementation Update)
+> **Status**: As-Built Documentation
 > **Constitution Alignment**: Principles IV, V, VI, IX, X, XI
 
 ---
@@ -93,230 +93,180 @@ A web-based, spreadsheet-native cost planning tool that:
 |------------|------|-------------|
 | `FEES` | Fees and Charges | Council fees, levies, permits |
 | `CONSULTANTS` | Consultants | PM, engineers, certifiers |
-| `PC_ITEMS` | PC Items | Provisional cost allowances |
+| `CONSTRUCTION` | Construction | Head contractor, fitout, FF&E |
 | `CONTINGENCY` | Contingency | Risk allowances (with draw-down tracking) |
 
 ### 3.3 Database Schema
+
+**Technology**: SQLite with Drizzle ORM
+
+**Schema Patterns**:
+- Primary keys: Auto-incrementing INTEGER (SQLite standard)
+- Timestamps: ISO 8601 TEXT strings
+- Soft deletes: `deletedAt` TEXT field (NULL when active)
+- Foreign keys: Enabled via `PRAGMA foreign_keys = ON`
 
 ```sql
 -- ============================================================
 -- COMPANIES (Master List)
 -- ============================================================
 CREATE TABLE companies (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organisation_id UUID NOT NULL, -- Multi-tenancy
-  name VARCHAR(255) NOT NULL,
-  abn VARCHAR(20),
-  contact_name VARCHAR(255),
-  contact_email VARCHAR(255),
-  contact_email VARCHAR(255),
-  contact_phone VARCHAR(50),
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  abn TEXT,
+  contactName TEXT,
+  contactEmail TEXT,
+  contactPhone TEXT,
   address TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ, -- Soft delete
-  
-  UNIQUE(organisation_id, name)
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  deletedAt TEXT -- Soft delete
 );
 
 -- ============================================================
--- PROJECTS
+-- PROJECTS (Extended for Cost Planning)
 -- ============================================================
-CREATE TABLE projects (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organisation_id UUID NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  project_number VARCHAR(50),
-  current_report_month DATE NOT NULL,
-  revision VARCHAR(10) DEFAULT 'REV A',
-  currency_code VARCHAR(3) DEFAULT 'AUD',
-  show_gst BOOLEAN DEFAULT FALSE, -- Toggle GST display
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  
-  -- Ensure report month is always first of month
-  CONSTRAINT chk_report_month_first CHECK (EXTRACT(DAY FROM current_report_month) = 1)
-);
+-- Note: Projects table already exists in main schema
+-- Cost planning adds these fields:
+--   currentReportMonth TEXT (ISO 8601 date string, first of month)
+--   revision TEXT DEFAULT 'REV A'
+--   currencyCode TEXT DEFAULT 'AUD'
+--   showGst INTEGER DEFAULT 0 (SQLite boolean: 0=false, 1=true)
 
 -- ============================================================
 -- COST LINES (Rows in Project Summary)
 -- ============================================================
 CREATE TABLE cost_lines (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  company_id UUID REFERENCES companies(id) ON DELETE SET NULL,
-  section VARCHAR(50) NOT NULL, -- FEES, CONSULTANTS, PC_ITEMS, CONTINGENCY
-  cost_code VARCHAR(20),
-  description VARCHAR(500) NOT NULL,
-  reference VARCHAR(100), -- Contract number, PO reference
-  budget_cents BIGINT DEFAULT 0,
-  approved_contract_cents BIGINT DEFAULT 0,
-  sort_order INTEGER NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  
-  UNIQUE(project_id, section, sort_order)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  companyId INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+  section TEXT NOT NULL, -- FEES, CONSULTANTS, CONSTRUCTION, CONTINGENCY
+  costCode TEXT,
+  description TEXT NOT NULL,
+  reference TEXT, -- Contract number, PO reference
+  budgetCents INTEGER DEFAULT 0,
+  approvedContractCents INTEGER DEFAULT 0,
+  sortOrder INTEGER NOT NULL,
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  deletedAt TEXT
 );
 
 -- ============================================================
 -- FISCAL YEAR ALLOCATIONS (Dynamic FY columns)
 -- ============================================================
+-- Note: Table exists in schema but not yet exposed in UI/API
 CREATE TABLE cost_line_allocations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cost_line_id UUID NOT NULL REFERENCES cost_lines(id) ON DELETE CASCADE,
-  fiscal_year INTEGER NOT NULL, -- e.g., 2026 for FY2026
-  amount_cents BIGINT DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  UNIQUE(cost_line_id, fiscal_year)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  costLineId INTEGER NOT NULL REFERENCES cost_lines(id) ON DELETE CASCADE,
+  fiscalYear INTEGER NOT NULL, -- e.g., 2026 for FY2026
+  amountCents INTEGER DEFAULT 0,
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================
 -- VARIATIONS
 -- ============================================================
 CREATE TABLE variations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  cost_line_id UUID REFERENCES cost_lines(id) ON DELETE SET NULL,
-  variation_number VARCHAR(20) NOT NULL, -- e.g., "PV-001", "CV-002"
-  category VARCHAR(50) NOT NULL, -- Principal, Contractor, Lessor Works
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  costLineId INTEGER REFERENCES cost_lines(id) ON DELETE SET NULL,
+  variationNumber TEXT NOT NULL, -- e.g., "PV-001", "CV-002"
+  category TEXT NOT NULL, -- Principal, Contractor, Lessor Works
   description TEXT NOT NULL,
-  status VARCHAR(20) DEFAULT 'Forecast', -- Forecast, Approved, Rejected, Withdrawn
-  amount_forecast_cents BIGINT DEFAULT 0, -- What PM forecasts
-  amount_approved_cents BIGINT DEFAULT 0, -- What gets approved (can differ)
-  date_submitted DATE,
-  date_approved DATE,
-  requested_by VARCHAR(100),
-  approved_by VARCHAR(100),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  
-  UNIQUE(project_id, variation_number)
+  status TEXT DEFAULT 'Forecast', -- Forecast, Approved, Rejected, Withdrawn
+  amountForecastCents INTEGER DEFAULT 0, -- What PM forecasts
+  amountApprovedCents INTEGER DEFAULT 0, -- What gets approved (can differ)
+  dateSubmitted TEXT,
+  dateApproved TEXT,
+  requestedBy TEXT,
+  approvedBy TEXT,
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  deletedAt TEXT
 );
 
 -- ============================================================
 -- INVOICES
 -- ============================================================
 CREATE TABLE invoices (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  cost_line_id UUID REFERENCES cost_lines(id) ON DELETE SET NULL,
-  variation_id UUID REFERENCES variations(id) ON DELETE SET NULL, -- Optional link to variation
-  company_id UUID REFERENCES companies(id) ON DELETE SET NULL,
-  invoice_date DATE NOT NULL,
-  po_number VARCHAR(50),
-  invoice_number VARCHAR(50) NOT NULL,
-  description VARCHAR(500),
-  amount_cents BIGINT NOT NULL,
-  gst_cents BIGINT DEFAULT 0, -- Store GST separately
-  period_year INTEGER NOT NULL, -- e.g., 2025
-  period_month INTEGER NOT NULL, -- 1-12
-  paid_status VARCHAR(20) DEFAULT 'unpaid', -- unpaid, paid, partial
-  paid_date DATE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ,
-  
-  CONSTRAINT chk_period_month CHECK (period_month BETWEEN 1 AND 12)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  costLineId INTEGER REFERENCES cost_lines(id) ON DELETE SET NULL,
+  variationId INTEGER REFERENCES variations(id) ON DELETE SET NULL, -- Optional link to variation
+  companyId INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+  fileAssetId INTEGER REFERENCES file_assets(id) ON DELETE SET NULL, -- Link to uploaded PDF
+  invoiceDate TEXT NOT NULL,
+  poNumber TEXT,
+  invoiceNumber TEXT NOT NULL,
+  description TEXT,
+  amountCents INTEGER NOT NULL,
+  gstCents INTEGER DEFAULT 0, -- Store GST separately
+  periodYear INTEGER NOT NULL, -- e.g., 2025
+  periodMonth INTEGER NOT NULL, -- 1-12
+  paidStatus TEXT DEFAULT 'unpaid', -- unpaid, paid, partial
+  paidDate TEXT,
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  deletedAt TEXT
 );
 
 -- ============================================================
 -- COST LINE COMMENTS (Cell-level comments)
 -- ============================================================
+-- Note: Table exists in schema but not yet exposed in UI/API
 CREATE TABLE cost_line_comments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cost_line_id UUID NOT NULL REFERENCES cost_lines(id) ON DELETE CASCADE,
-  column_key VARCHAR(50) NOT NULL, -- e.g., 'budget', 'approved_contract'
-  comment_text TEXT NOT NULL,
-  created_by UUID NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  deleted_at TIMESTAMPTZ
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  costLineId INTEGER NOT NULL REFERENCES cost_lines(id) ON DELETE CASCADE,
+  columnKey TEXT NOT NULL, -- e.g., 'budget', 'approvedContract'
+  commentText TEXT NOT NULL,
+  createdBy INTEGER NOT NULL,
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  deletedAt TEXT
 );
 
 -- ============================================================
 -- PROJECT SNAPSHOTS (Baseline comparison)
 -- ============================================================
+-- Note: Table exists, dialogs created, but API not yet implemented
 CREATE TABLE project_snapshots (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  snapshot_name VARCHAR(100) NOT NULL, -- e.g., "REV A", "REV B", "Tender Award"
-  snapshot_date DATE NOT NULL,
-  snapshot_data JSONB NOT NULL, -- Full denormalized snapshot of cost plan
-  created_by UUID NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  UNIQUE(project_id, snapshot_name)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  snapshotName TEXT NOT NULL, -- e.g., "REV A", "REV B", "Tender Award"
+  snapshotDate TEXT NOT NULL,
+  snapshotData TEXT NOT NULL, -- JSON string with full denormalized state
+  createdBy INTEGER NOT NULL,
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================
 -- COLUMN MAPPING TEMPLATES (Import memory)
 -- ============================================================
+-- Note: Table exists but not yet exposed in UI/API
 CREATE TABLE import_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organisation_id UUID NOT NULL,
-  template_name VARCHAR(100) NOT NULL,
-  column_mappings JSONB NOT NULL, -- {"MyBudgetCol": "budget_cents", ...}
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  UNIQUE(organisation_id, template_name)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  templateName TEXT NOT NULL,
+  columnMappings TEXT NOT NULL, -- JSON string: {"MyBudgetCol": "budgetCents", ...}
+  createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================
 -- INDEXES
 -- ============================================================
-CREATE INDEX idx_companies_org ON companies(organisation_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_cost_lines_project ON cost_lines(project_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_cost_lines_section ON cost_lines(project_id, section, sort_order);
-CREATE INDEX idx_allocations_cost_line ON cost_line_allocations(cost_line_id);
-CREATE INDEX idx_invoices_project ON invoices(project_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_invoices_cost_line ON invoices(cost_line_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_invoices_variation ON invoices(variation_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_invoices_period ON invoices(period_year, period_month);
-CREATE INDEX idx_variations_project ON variations(project_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_variations_cost_line ON variations(cost_line_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_snapshots_project ON project_snapshots(project_id);
-
--- ============================================================
--- HELPER FUNCTIONS
--- ============================================================
-
--- Convert period year/month to comparable date
-CREATE FUNCTION period_to_date(p_year INTEGER, p_month INTEGER) 
-RETURNS DATE AS $$
-  SELECT make_date(p_year, p_month, 1);
-$$ LANGUAGE SQL IMMUTABLE;
-
--- Generate next variation number
-CREATE FUNCTION next_variation_number(p_project_id UUID, p_category VARCHAR)
-RETURNS VARCHAR AS $$
-DECLARE
-  prefix VARCHAR(2);
-  next_num INTEGER;
-BEGIN
-  prefix := CASE p_category
-    WHEN 'Principal' THEN 'PV'
-    WHEN 'Contractor' THEN 'CV'
-    WHEN 'Lessor Works' THEN 'LV'
-    ELSE 'V'
-  END;
-  
-  SELECT COALESCE(MAX(
-    CAST(SUBSTRING(variation_number FROM '[0-9]+') AS INTEGER)
-  ), 0) + 1
-  INTO next_num
-  FROM variations
-  WHERE project_id = p_project_id
-    AND variation_number LIKE prefix || '-%';
-    
-  RETURN prefix || '-' || LPAD(next_num::TEXT, 3, '0');
-END;
-$$ LANGUAGE plpgsql;
+-- Note: SQLite indexes use different syntax than PostgreSQL
+CREATE INDEX idx_cost_lines_project ON cost_lines(projectId) WHERE deletedAt IS NULL;
+CREATE INDEX idx_cost_lines_section ON cost_lines(projectId, section, sortOrder);
+CREATE INDEX idx_allocations_cost_line ON cost_line_allocations(costLineId);
+CREATE INDEX idx_invoices_project ON invoices(projectId) WHERE deletedAt IS NULL;
+CREATE INDEX idx_invoices_cost_line ON invoices(costLineId) WHERE deletedAt IS NULL;
+CREATE INDEX idx_invoices_variation ON invoices(variationId) WHERE deletedAt IS NULL;
+CREATE INDEX idx_invoices_period ON invoices(periodYear, periodMonth);
+CREATE INDEX idx_variations_project ON variations(projectId) WHERE deletedAt IS NULL;
+CREATE INDEX idx_variations_cost_line ON variations(costLineId) WHERE deletedAt IS NULL;
+CREATE INDEX idx_snapshots_project ON project_snapshots(projectId);
 ```
 
 ---
@@ -333,16 +283,16 @@ $$ LANGUAGE plpgsql;
 | B | Company | - | FK to companies table |
 | C | Description/Role | - | Direct input |
 | D | Reference | - | Contract/PO reference |
-| E+ | FY Allocations | - | Dynamic columns from `cost_line_allocations` |
-| G | **Budget** | - | Direct input (blue) |
-| H | **Approved Contract** | - | Direct input (blue) |
-| I | **Forecast Variations** | Sum of forecast variations (unapproved) | `SUM(variations WHERE status IN ('Forecast') AND cost_line_id = X).amount_forecast` |
-| J | **Approved Variations** | Sum of approved variations | `SUM(variations WHERE status = 'Approved' AND cost_line_id = X).amount_approved` |
-| K | **Final Forecast Cost** | `H + I + J` | `approved_contract + forecast_vars + approved_vars` |
-| L | **Variance to Budget** | `G - K` | `budget - final_forecast_cost` |
-| M | **Claimed to Date** | Sum of all invoices | `SUM(invoices WHERE cost_line_id = X).amount` |
-| N | **Current Month** | Invoices for current period | `SUM(invoices WHERE cost_line_id = X AND period = project.current_report_month)` |
-| O | **Estimate to Complete (ETC)** | `K - M` | `final_forecast_cost - claimed_to_date` |
+| E+ | FY Allocations | - | ⚠️ NOT YET IN UI (schema only) |
+| G | **Budget** | - | Direct input (editable) |
+| H | **Approved Contract** | - | Direct input (editable) |
+| I | **Forecast Variations** | Sum of forecast variations | `SUM(variations WHERE status = 'Forecast' AND costLineId = X).amountForecastCents` |
+| J | **Approved Variations** | Sum of approved variations | `SUM(variations WHERE status = 'Approved' AND costLineId = X).amountApprovedCents` |
+| K | **Final Forecast Cost** | `H + I + J` | `approvedContract + forecastVars + approvedVars` |
+| L | **Variance to Budget** | `G - K` | `budget - finalForecast` (positive = under budget) |
+| M | **Claimed to Date** | Sum of all invoices up to period | `SUM(invoices WHERE costLineId = X AND period <= currentMonth).amountCents` |
+| N | **Current Month** | Invoices for exact period | `SUM(invoices WHERE costLineId = X AND periodYear/Month = current).amountCents` |
+| O | **Estimate to Complete (ETC)** | `K - M` | `finalForecast - claimedToDate` |
 
 ### 4.2 Calculation Notes
 
@@ -378,45 +328,58 @@ const displayAmount = (amountCents: number, gstCents: number, showGst: boolean) 
 
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
-| Spreadsheet | **FortuneSheet** | Excel-like UX, row grouping, React-compatible |
-| State | **React Query** | Server state sync, optimistic updates |
-| Real-time | **WebSocket / SSE** | Live total updates across sessions |
-| Export | **SheetJS (xlsx)** | Formula-preserving Excel export |
+| UI Framework | **React 18 + Next.js 14** | Server components, modern patterns |
+| Table Component | **Custom HTML tables** | Flexible, lightweight, full control |
+| State Management | **TanStack React Query v5** | Server state sync, optimistic updates |
+| Real-time Updates | **Polling (10s interval)** | Simple, works with SQLite |
+| Database | **SQLite + Drizzle ORM** | Embedded, no server required |
+| Styling | **Tailwind CSS** | Utility-first, consistent design |
+| Export | **⚠️ NOT YET IMPLEMENTED** | Planned: ExcelJS for XLSX export |
 
 ### 5.2 Layout Structure
 
+**Three-Tab Panel Interface**
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  COST REPORT                                    [Nov 2025 ▼] REV A  [⚙️]    │
-│  OPTUS MECH PLANT UPGRADE                                                   │
-│  Note: All figures exclude GST                    [☐ Show GST]              │
+│  COST PLAN                                      [Nov 2025 ▼]  [🔄 Refresh] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Summary Bar:                                                               │
+│  Budget: $645K | Final: $645K | Variance: $0 | Claimed: $1.3K | ETC: $643K │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ ┌───────────────────────────────────────────────────────────────────────┐   │
-│ │ [Project Summary] │ [Invoices] │ [Variations] │        [📸 Snapshot ▼]│   │
+│ │ [Cost Plan] │ [Variations] │ [Invoices]                               │   │
 │ └───────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
-│ ┌─────────────────────────────────────────────────────────────────────────┐ │
-│ │ ► FEES AND CHARGES                                        Subtotal: $X │ │
-│ │   1.01 │ LSL Corp │ LSL Levy │ ... │ $16,112 │ ...                     │ │
-│ │   1.02 │ Ryde Council │ Section 7.12 │ ... │ $96,675 │ ...             │ │
-│ │                                                                         │ │
-│ │ ► CONSULTANTS                                             Subtotal: $X │ │
-│ │   2.01 │ Engine Room │ PM - Design │ ... │ $98,497 │ ...               │ │
-│ │   2.02 │ Compass │ Stage 1a Design │ ... │ $8,000 │ ...                │ │
-│ │   ...                                                                   │ │
-│ │                                                                         │ │
-│ │ ► PC ITEMS                                                Subtotal: $X │ │
-│ │   ...                                                                   │ │
-│ │                                                                         │ │
-│ │ ► CONTINGENCY                                             Subtotal: $X │ │
-│ │   ...                                                                   │ │
-│ │─────────────────────────────────────────────────────────────────────────│ │
-│ │                                              GRAND TOTAL: $X,XXX,XXX   │ │
-│ └─────────────────────────────────────────────────────────────────────────┘ │
+│ ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓ │
+│ ┃ COST PLAN TAB (Table View)                                            ┃ │
+│ ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┫ │
+│ ┃ FEES AND CHARGES                                         Total: $112K ┃ │
+│ ┃  ⣿ | 1.01 | LSL Corp | LSL Levy | ... | $16,112 | ...                ┃ │
+│ ┃  ⣿ | 1.02 | Ryde Council | Section 7.12 | ... | $96,675 | ...        ┃ │
+│ ┃                                                                        ┃ │
+│ ┃ CONSULTANTS                                              Total: $106K ┃ │
+│ ┃  ⣿ | 2.01 | Engine Room | PM - Design | ... | $98,497 | ...          ┃ │
+│ ┃  ⣿ | 2.02 | Compass | Stage 1a Design | ... | $8,000 | ...           ┃ │
+│ ┃  + Add Cost Line                                                      ┃ │
+│ ┃                                                                        ┃ │
+│ ┃ CONSTRUCTION                                             Total: $0    ┃ │
+│ ┃  + Add Cost Line                                                      ┃ │
+│ ┃                                                                        ┃ │
+│ ┃ CONTINGENCY                                              Total: $0    ┃ │
+│ ┃  + Add Cost Line                                                      ┃ │
+│ ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛ │
 │                                                                             │
-│ [+ Add Row] [Import Excel ▼] [Export Excel] [Save] [● Saved]                │
+│ [+ Add] [Import] [Export] [📸 Snapshot]                                     │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Key Features**:
+- ⣿ = Drag handle for reordering within sections
+- Inline add forms (not context menu)
+- Section headers (not collapsible)
+- Summary bar with live totals
+- Month selector for period filtering
 
 ### 5.3 Project Summary Sheet
 
@@ -458,7 +421,7 @@ const rowGroupConfig = {
   groups: [
     { start: 6, end: 9, hidden: false },   // FEES section
     { start: 13, end: 26, hidden: false }, // CONSULTANTS section
-    { start: 30, end: 38, hidden: false }, // PC_ITEMS section
+    { start: 30, end: 38, hidden: false }, // CONSTRUCTION section
     { start: 41, end: 45, hidden: false }, // CONTINGENCY section
   ]
 };
@@ -562,25 +525,28 @@ const prefixes = {
 
 ## 6. API Endpoints
 
+**Implementation Status**: ✅ = Implemented, ⚠️ = Partial, ❌ = Not Implemented
+
 ### 6.1 Projects
 
 ```
-GET    /api/projects/:id/cost-plan              # Full cost plan with calculations
-PATCH  /api/projects/:id                        # Update project (current_month, revision, etc.)
-POST   /api/projects/:id/cost-plan/snapshot     # Create baseline snapshot
-GET    /api/projects/:id/cost-plan/snapshots    # List snapshots
-GET    /api/projects/:id/cost-plan/compare/:snapshotId  # Compare to baseline
+✅ GET    /api/projects/:projectId/cost-plan              # Full cost plan with calculations
+✅ PATCH  /api/projects/:id                               # Update project settings
+❌ POST   /api/projects/:id/cost-plan/snapshot            # NOT IMPLEMENTED
+❌ GET    /api/projects/:id/cost-plan/snapshots           # NOT IMPLEMENTED
+❌ GET    /api/projects/:id/cost-plan/compare/:snapshotId # NOT IMPLEMENTED
 ```
 
 ### 6.2 Cost Lines
 
 ```
-GET    /api/projects/:id/cost-lines             # List all (with calculated fields)
-POST   /api/projects/:id/cost-lines             # Create single
-POST   /api/projects/:id/cost-lines/batch       # Batch create/update/delete
-PATCH  /api/cost-lines/:id                      # Update single
-DELETE /api/cost-lines/:id                      # Soft delete
-POST   /api/projects/:id/cost-lines/reorder     # Reorder rows within section
+✅ GET    /api/projects/:projectId/cost-lines         # List all (with calculated fields)
+✅ POST   /api/projects/:projectId/cost-lines         # Create single
+✅ GET    /api/projects/:projectId/cost-lines/:id     # Get single
+✅ PATCH  /api/projects/:projectId/cost-lines/:id     # Update single
+✅ DELETE /api/projects/:projectId/cost-lines/:id     # Soft delete
+✅ PATCH  /api/projects/:projectId/cost-lines/reorder # Batch reorder (sortOrder)
+❌ POST   /api/projects/:id/cost-lines/batch          # NOT IMPLEMENTED (batch CRUD)
 ```
 
 #### Batch Operation Format
@@ -605,67 +571,175 @@ interface BatchOperation {
 ### 6.3 Fiscal Year Allocations
 
 ```
-GET    /api/cost-lines/:id/allocations          # List allocations for cost line
-PUT    /api/cost-lines/:id/allocations          # Replace all allocations
+❌ GET    /api/projects/:projectId/cost-lines/:id/allocations  # NOT IMPLEMENTED
+❌ PUT    /api/projects/:projectId/cost-lines/:id/allocations  # NOT IMPLEMENTED
 ```
+
+**Note**: Schema exists but not yet exposed in UI/API
 
 ### 6.4 Invoices
 
 ```
-GET    /api/projects/:id/invoices               # List (paginated)
-GET    /api/projects/:id/invoices?page=1&limit=50&period=2025-11
-POST   /api/projects/:id/invoices               # Create
-POST   /api/projects/:id/invoices/batch         # Batch operations
-PATCH  /api/invoices/:id                        # Update
-DELETE /api/invoices/:id                        # Soft delete
-GET    /api/projects/:id/invoices/summary       # Aggregated by cost line
+✅ GET    /api/projects/:projectId/invoices               # List (with filters)
+✅ GET    /api/projects/:projectId/invoices?costLineId=X&periodYear=2025&periodMonth=11
+✅ POST   /api/projects/:projectId/invoices               # Create manually
+✅ POST   /api/projects/:projectId/invoices/upload        # Upload PDF + AI extraction
+✅ GET    /api/projects/:projectId/invoices/:id           # Get single
+✅ PATCH  /api/projects/:projectId/invoices/:id           # Update
+✅ DELETE /api/projects/:projectId/invoices/:id           # Soft delete
+❌ POST   /api/projects/:id/invoices/batch                # NOT IMPLEMENTED
+❌ GET    /api/projects/:id/invoices/summary              # NOT IMPLEMENTED
 ```
+
+**Invoice PDF Upload & AI Extraction:**
+
+The `/invoices/upload` endpoint accepts PDF invoices and automatically:
+1. Extracts invoice data (number, date, amounts, company name) using AI
+2. Matches the company name to existing consultants/contractors
+3. Saves the PDF to the Document Repository:
+   - **Matched companies**: Stored under `Consultants/[Discipline]` or `Contractors/[Trade]`
+   - **Unmatched companies**: Stored under `Uncategorized` category
+4. Creates an invoice record linked to the PDF file
+
+This ensures all invoice PDFs are captured in the document repository for audit trails, even when the company cannot be automatically matched.
 
 ### 6.5 Variations
 
 ```
-GET    /api/projects/:id/variations             # List (paginated)
-POST   /api/projects/:id/variations             # Create (auto-generates number)
-POST   /api/projects/:id/variations/batch       # Batch operations
-PATCH  /api/variations/:id                      # Update
-DELETE /api/variations/:id                      # Soft delete
+✅ GET    /api/projects/:projectId/variations             # List (with filters)
+✅ GET    /api/projects/:projectId/variations?costLineId=X&status=Approved&category=Principal
+✅ POST   /api/projects/:projectId/variations             # Create (auto-generates number)
+✅ GET    /api/projects/:projectId/variations/:id         # Get single
+✅ PATCH  /api/projects/:projectId/variations/:id         # Update
+✅ DELETE /api/projects/:projectId/variations/:id         # Soft delete
+❌ POST   /api/projects/:id/variations/batch              # NOT IMPLEMENTED
 ```
 
 ### 6.6 Companies (Master List)
 
+**Note**: Uses `/cost-companies` prefix (not `/companies`)
+
 ```
-GET    /api/companies                           # List with search
-GET    /api/companies?search=compass&limit=10
-POST   /api/companies                           # Create
-PATCH  /api/companies/:id                       # Update
-DELETE /api/companies/:id                       # Soft delete
+✅ GET    /api/cost-companies                      # List with search
+✅ GET    /api/cost-companies?search=compass       # Search by name/abn/contact
+✅ POST   /api/cost-companies                      # Create
+✅ POST   /api/cost-companies/find-or-create       # Find by name or create new
+✅ GET    /api/cost-companies/:id                  # Get single
+✅ PATCH  /api/cost-companies/:id                  # Update
+✅ DELETE /api/cost-companies/:id                  # Soft delete
 ```
 
 ### 6.7 Import/Export
 
 ```
-POST   /api/projects/:id/cost-plan/import       # Import from Excel
-GET    /api/projects/:id/cost-plan/export       # Export to Excel (with formulas)
-GET    /api/import-templates                    # List saved column mappings
-POST   /api/import-templates                    # Save column mapping template
+❌ POST   /api/projects/:id/cost-plan/import       # NOT IMPLEMENTED
+❌ GET    /api/projects/:id/cost-plan/export       # NOT IMPLEMENTED
+❌ GET    /api/import-templates                    # NOT IMPLEMENTED
+❌ POST   /api/import-templates                    # NOT IMPLEMENTED
 ```
 
-### 6.8 Real-Time Updates (WebSocket)
+**Note**: Dialogs exist but API not implemented
+
+### 6.8 Real-Time Updates
+
+**Implementation**: Polling (not WebSocket/Supabase)
 
 ```typescript
-// WebSocket events
-ws.on('cost_plan:updated', (data) => {
-  // { project_id, updated_totals: { section_totals, grand_total } }
-});
-
-ws.on('invoice:created', (data) => {
-  // { invoice, affected_cost_line_id, new_totals }
-});
-
-ws.on('variation:status_changed', (data) => {
-  // { variation, affected_cost_line_id, new_forecast, new_approved }
+// useCostPlan hook polls every 10 seconds
+const { data: costPlan } = useQuery({
+  queryKey: ['costPlan', projectId, reportMonth],
+  queryFn: () => fetchCostPlan(projectId, reportMonth),
+  refetchInterval: 10000, // 10 seconds
 });
 ```
+
+**Why Polling**: SQLite doesn't support real-time triggers like PostgreSQL/Supabase
+
+---
+
+## 6.9 AI-Powered Invoice Extraction (Phase 14)
+
+**Status**: ✅ FULLY IMPLEMENTED
+
+### Overview
+
+The system supports drag-and-drop PDF invoice uploads with automatic data extraction using Claude Haiku AI.
+
+### Upload Flow
+
+1. **User Action**: Drag PDF onto Invoices panel or use file picker
+2. **PDF Processing**:
+   - File validation (PDF only, max size check)
+   - Text extraction using multiple parsers:
+     - LlamaParse (preferred for complex layouts)
+     - Unstructured (fallback)
+     - pdf-parse (basic fallback)
+3. **AI Extraction**:
+   - Claude Haiku analyzes extracted text
+   - Returns structured data with confidence scores:
+     - Invoice number
+     - Invoice date
+     - Amount (ex GST)
+     - GST amount
+     - Description
+     - Company name
+     - PO number
+4. **Company Matching**:
+   - Fuzzy match extracted company name against:
+     - Existing consultants
+     - Existing contractors
+     - Cost companies master list
+   - Uses Levenshtein distance algorithm
+   - Threshold: 80% similarity
+5. **Document Storage**:
+   - PDF saved to file system
+   - FileAsset record created
+   - If company matched: Categorized under `Consultants/[Discipline]` or `Contractors/[Trade]`
+   - If no match: Stored in `Uncategorized`
+6. **Invoice Creation**:
+   - Automatically creates invoice record
+   - Links to cost line (if match found)
+   - Links to PDF file asset
+   - Pre-fills period to current month
+
+### API Endpoint
+
+```
+POST /api/projects/:projectId/invoices/upload
+Content-Type: multipart/form-data
+
+Request:
+  file: PDF file
+
+Response:
+{
+  invoice: {...},           // Created invoice record
+  extraction: {
+    invoiceNumber: string,
+    confidence: number,     // 0-1
+    parser: string,         // "llamaparse" | "unstructured" | "pdf-parse"
+    fields: {...}          // All extracted fields with confidence
+  },
+  companyMatch: {
+    matched: boolean,
+    companyId?: number,
+    disciplineId?: number,
+    tradeId?: number,
+    similarity?: number     // 0-1
+  },
+  document: {
+    documentId: number,
+    versionId: number,
+    categoryPath: string
+  }
+}
+```
+
+### Components
+
+- **InvoiceDropZone.tsx**: Drag-and-drop upload UI with progress
+- **src/lib/invoice/extract.ts**: AI extraction service
+- **src/lib/invoice/company-matcher.ts**: Fuzzy matching logic
 
 ---
 

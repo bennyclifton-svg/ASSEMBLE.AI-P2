@@ -12,6 +12,8 @@ export interface Contractor {
   abn: string | null;
   notes: string | null;
   shortlisted: boolean;
+  awarded: boolean;
+  companyId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +28,8 @@ export interface ContractorFormData {
   abn?: string;
   notes?: string;
   shortlisted?: boolean;
+  awarded?: boolean;
+  companyId?: string | null;
 }
 
 export function useContractors(projectId: string, trade?: string) {
@@ -164,6 +168,55 @@ export function useContractors(projectId: string, trade?: string) {
     }
   };
 
+  const toggleAward = async (id: string, awarded: boolean) => {
+    const contractor = contractors.find(c => c.id === id);
+    if (!contractor) return;
+
+    let companyId = contractor.companyId;
+
+    try {
+      if (awarded && !companyId) {
+        // Find or create company in master list
+        const response = await fetch('/api/cost-companies/find-or-create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: contractor.companyName,
+            abn: contractor.abn,
+            contactName: contractor.contactPerson,
+            contactEmail: contractor.email,
+            contactPhone: contractor.phone,
+            address: contractor.address,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create company record');
+        }
+
+        const company = await response.json();
+        companyId = company.id;
+      }
+
+      // Update contractor with awarded status and companyId
+      await updateContractor(id, {
+        companyName: contractor.companyName,
+        contactPerson: contractor.contactPerson || undefined,
+        trade: contractor.trade,
+        email: contractor.email,
+        phone: contractor.phone || undefined,
+        address: contractor.address || undefined,
+        abn: contractor.abn || undefined,
+        notes: contractor.notes || undefined,
+        shortlisted: contractor.shortlisted,
+        awarded,
+        companyId,
+      });
+    } catch (err) {
+      throw err;
+    }
+  };
+
   return {
     contractors,
     isLoading,
@@ -172,6 +225,7 @@ export function useContractors(projectId: string, trade?: string) {
     updateContractor,
     deleteContractor,
     toggleShortlist,
+    toggleAward,
     refetch: fetchContractors,
   };
 }

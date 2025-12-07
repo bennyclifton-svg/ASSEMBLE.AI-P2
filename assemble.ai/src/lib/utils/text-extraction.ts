@@ -1,4 +1,5 @@
 import Tesseract from 'tesseract.js';
+import mammoth from 'mammoth';
 
 /**
  * Extract text from an image file using Tesseract OCR
@@ -31,14 +32,35 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
 }
 
 /**
+ * Extract text from a Word document (.docx)
+ */
+export async function extractTextFromDocx(buffer: Buffer): Promise<string> {
+  try {
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value;
+  } catch (error) {
+    console.error('DOCX extraction failed:', error);
+    throw new Error('Failed to extract text from Word document');
+  }
+}
+
+/**
  * Extract text from various file types
  */
 export async function extractText(file: File): Promise<string> {
   const fileType = file.type;
+  const fileName = file.name.toLowerCase();
 
   if (fileType === 'application/pdf') {
     const buffer = Buffer.from(await file.arrayBuffer());
     return extractTextFromPDF(buffer);
+  }
+
+  // Word documents (.docx)
+  if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      fileName.endsWith('.docx')) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    return extractTextFromDocx(buffer);
   }
 
   if (fileType.startsWith('image/')) {
@@ -54,7 +76,7 @@ export async function extractText(file: File): Promise<string> {
 }
 
 /**
- * Calculate confidence score based on extracted fields
+ * Calculate confidence score based on extracted fields (for firm extraction)
  */
 export function calculateConfidence(extractedData: any): number {
   const requiredFields = ['companyName', 'email'];
@@ -66,7 +88,7 @@ export function calculateConfidence(extractedData: any): number {
   // Required fields are worth more
   requiredFields.forEach((field) => {
     maxScore += 50;
-    if (extractedData[field] && extractedData[field].trim()) {
+    if (extractedData[field] && String(extractedData[field]).trim()) {
       score += 50;
     }
   });
@@ -74,8 +96,37 @@ export function calculateConfidence(extractedData: any): number {
   // Optional fields add extra confidence
   optionalFields.forEach((field) => {
     maxScore += 12.5;
-    if (extractedData[field] && extractedData[field].trim()) {
+    if (extractedData[field] && String(extractedData[field]).trim()) {
       score += 12.5;
+    }
+  });
+
+  return Math.round((score / maxScore) * 100);
+}
+
+/**
+ * Calculate confidence score for project details extraction
+ */
+export function calculateProjectDetailsConfidence(extractedData: any): number {
+  const importantFields = ['projectName', 'address'];
+  const optionalFields = ['buildingClass', 'legalAddress', 'zoning', 'jurisdiction', 'lotArea', 'numberOfStories'];
+
+  let score = 0;
+  let maxScore = 0;
+
+  // Important fields are worth more
+  importantFields.forEach((field) => {
+    maxScore += 30;
+    if (extractedData[field] && String(extractedData[field]).trim()) {
+      score += 30;
+    }
+  });
+
+  // Optional fields add extra confidence
+  optionalFields.forEach((field) => {
+    maxScore += 10;
+    if (extractedData[field] !== undefined && extractedData[field] !== null && String(extractedData[field]).trim()) {
+      score += 10;
     }
   });
 

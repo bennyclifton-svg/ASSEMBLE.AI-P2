@@ -9,18 +9,68 @@ import { getCategoryById } from '@/lib/constants/categories';
 
 interface DocumentRepositoryProps {
     projectId: string;
+    selectedIds: Set<string>;
+    onSelectionChange: (ids: Set<string>) => void;
 }
 
-export function DocumentRepository({ projectId }: DocumentRepositoryProps) {
+export function DocumentRepository({ projectId, selectedIds, onSelectionChange }: DocumentRepositoryProps) {
     const [uploading, setUploading] = useState(false);
     const [uploadFiles, setUploadFiles] = useState<UploadFileStatus[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
 
+    /**
+     * T030a: Handle Ctrl+click on category tile to bulk-select all documents in that category.
+     * Selection is accumulative - multiple Ctrl+clicks add more documents.
+     */
+    const handleBulkSelectCategory = async (categoryId: string, subcategoryId?: string) => {
+        try {
+            // Fetch documents for this category
+            let url = `/api/documents?projectId=${projectId}&categoryId=${categoryId}`;
+            if (subcategoryId) {
+                url += `&subcategoryId=${subcategoryId}`;
+            }
+
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Failed to fetch documents');
+            }
+
+            const documents = await response.json();
+            const docIds = documents.map((doc: { id: string }) => doc.id);
+
+            if (docIds.length === 0) {
+                const category = getCategoryById(categoryId);
+                toast({
+                    title: 'No documents',
+                    description: `No documents found in ${category?.name || categoryId}`,
+                });
+                return;
+            }
+
+            // Add to existing selection (accumulative)
+            const newSet = new Set(selectedIds);
+            docIds.forEach((id: string) => newSet.add(id));
+            onSelectionChange(newSet);
+
+            const category = getCategoryById(categoryId);
+            toast({
+                title: 'Documents selected',
+                description: `Added ${docIds.length} document(s) from ${category?.name || categoryId}`,
+            });
+        } catch (error) {
+            console.error('Bulk select category error:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to select documents',
+                variant: 'destructive',
+            });
+        }
+    };
+
     const handleBulkCategorize = async (categoryId: string, subcategoryId?: string) => {
-        const documentIds = Array.from(selectedDocumentIds);
+        const documentIds = Array.from(selectedIds);
         if (documentIds.length === 0) return;
 
         try {
@@ -39,7 +89,7 @@ export function DocumentRepository({ projectId }: DocumentRepositoryProps) {
                     description: `${documentIds.length} file(s) → ${categoryName}`,
                 });
 
-                setSelectedDocumentIds(new Set());
+                onSelectionChange(new Set());
                 setRefreshTrigger(prev => prev + 1);
             } else {
                 toast({
@@ -58,9 +108,9 @@ export function DocumentRepository({ projectId }: DocumentRepositoryProps) {
         }
     };
 
-    const handleFilesSelected = async (files: File[], categoryId?: string, subcategoryId?: string) => {
+    const handleFilesSelected = async (files: File[], categoryId?: string, subcategoryId?: string, subcategoryName?: string) => {
         // If no files provided but we have selected documents, this is a bulk categorize action
-        if (files.length === 0 && selectedDocumentIds.size > 0 && categoryId) {
+        if (files.length === 0 && selectedIds.size > 0 && categoryId) {
             await handleBulkCategorize(categoryId, subcategoryId);
             return;
         }
@@ -95,12 +145,14 @@ export function DocumentRepository({ projectId }: DocumentRepositoryProps) {
                 formData.append('projectId', projectId);
                 if (categoryId) formData.append('categoryId', categoryId);
                 if (subcategoryId) formData.append('subcategoryId', subcategoryId);
+                if (subcategoryName) formData.append('subcategoryName', subcategoryName);
 
                 console.log('Uploading file with:', {
                     filename: file.name,
                     projectId,
                     categoryId,
-                    subcategoryId
+                    subcategoryId,
+                    subcategoryName
                 });
 
                 const res = await fetch('/api/documents', {
@@ -182,7 +234,7 @@ export function DocumentRepository({ projectId }: DocumentRepositoryProps) {
     return (
         <div className="h-full flex flex-col bg-[#1e1e1e]">
             {/* Header */}
-            <div className="p-6 pb-4 border-b border-[#3e3e42]">
+            <div className="p-6 pb-4">
                 <h2 className="text-2xl font-bold text-[#cccccc]">Documents</h2>
             </div>
 
@@ -191,7 +243,8 @@ export function DocumentRepository({ projectId }: DocumentRepositoryProps) {
                 <CategoryUploadTiles
                     projectId={projectId}
                     onFilesDropped={handleFilesSelected}
-                    selectedDocumentIds={Array.from(selectedDocumentIds)}
+                    selectedDocumentIds={Array.from(selectedIds)}
+                    onBulkSelectCategory={handleBulkSelectCategory}
                 />
             </div>
 
@@ -200,8 +253,8 @@ export function DocumentRepository({ projectId }: DocumentRepositoryProps) {
                 <CategorizedList
                     refreshTrigger={refreshTrigger}
                     projectId={projectId}
-                    selectedIds={selectedDocumentIds}
-                    onSelectionChange={setSelectedDocumentIds}
+                    selectedIds={selectedIds}
+                    onSelectionChange={onSelectionChange}
                     scrollContainerRef={scrollContainerRef}
                 />
             </div>

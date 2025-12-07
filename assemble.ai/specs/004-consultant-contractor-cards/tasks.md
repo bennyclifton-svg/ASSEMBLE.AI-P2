@@ -2,122 +2,125 @@
 
 **Feature**: 004-consultant-contractor-cards
 **Date**: 2025-11-23
-**Status**: Phase 5 Complete (AI Extraction) - Pending User Testing
-**Last Updated**: 2025-11-23
+**Status**: Phase 13 Complete - Only Duplicate Prevention Remaining (Phase 12)
+**Last Updated**: 2025-12-07
+**Implementation**: ~92% Complete
 
 ## Phase 1: Database Schema & API Foundation
 
 ### Database Schema
-- [ ] Create migration for `consultants` table
-  - [ ] Add all fields (id, projectId, companyName, contactPerson, discipline, email, phone, mobile, address, abn, notes, shortlisted)
-  - [ ] Add timestamps (createdAt, updatedAt)
-  - [ ] Add foreign key to projects table
-- [ ] Create migration for `contractors` table
-  - [ ] Add all fields (id, projectId, companyName, contactPerson, trade, email, phone, address, abn, notes, shortlisted)
-  - [ ] Add timestamps (createdAt, updatedAt)
-  - [ ] Add foreign key to projects table
-- [ ] Update schema.ts with new table definitions
-- [ ] Run migrations
+- [x] Create migration for `consultants` table
+  - [x] Add all fields (id, projectId, companyName, contactPerson, discipline, email, phone, mobile, address, abn, notes, shortlisted)
+  - [x] Add timestamps (createdAt, updatedAt)
+  - [x] Add foreign key to projects table
+- [x] Create migration for `contractors` table
+  - [x] Add all fields (id, projectId, companyName, contactPerson, trade, email, phone, address, abn, notes, shortlisted)
+  - [x] Add timestamps (createdAt, updatedAt)
+  - [x] Add foreign key to projects table
+- [x] Update schema.ts with new table definitions
+- [x] Run migrations
 
 ### API Endpoints - Consultants
-- [ ] Create `src/app/api/consultants/route.ts`
-  - [ ] Implement GET (list all for project)
-  - [ ] Implement POST (create new)
-- [ ] Create `src/app/api/consultants/[id]/route.ts`
-  - [ ] Implement PUT (update)
-  - [ ] Implement DELETE (delete)
-- [ ] Add duplicate check logic (email OR company+discipline)
-- [ ] Test all endpoints with Postman/Thunder Client
+- [x] Create `src/app/api/consultants/firms/route.ts`
+  - [x] Implement GET (list all for project)
+  - [x] Implement POST (create new)
+- [x] Create `src/app/api/consultants/firms/[id]/route.ts`
+  - [x] Implement PUT (update)
+  - [x] Implement DELETE (delete)
+- [ ] Add duplicate check logic (email OR company+discipline) - **MISSING**
+- [x] Test all endpoints
 
 ### API Endpoints - Contractors
-- [ ] Create `src/app/api/contractors/route.ts`
-  - [ ] Implement GET (list all for project)
-  - [ ] Implement POST (create new)
-- [ ] Create `src/app/api/contractors/[id]/route.ts`
-  - [ ] Implement PUT (update)
-  - [ ] Implement DELETE (delete)
-- [ ] Add duplicate check logic (company+trade)
-- [ ] Test all endpoints with Postman/Thunder Client
+- [x] Create `src/app/api/contractors/firms/route.ts`
+  - [x] Implement GET (list all for project)
+  - [x] Implement POST (create new)
+- [x] Create `src/app/api/contractors/firms/[id]/route.ts`
+  - [x] Implement PUT (update)
+  - [x] Implement DELETE (delete)
+- [ ] Add duplicate check logic (company+trade) - **MISSING**
+- [x] Test all endpoints
 
 ---
 
 ## Phase 2: Consultant Gallery UI
 
 ### Custom Hooks
-- [ ] Create `src/lib/hooks/use-consultants.ts`
-  - [ ] Implement fetch consultants for project
-  - [ ] Implement add consultant mutation
-  - [ ] Implement update consultant mutation
-  - [ ] Implement delete consultant mutation
-  - [ ] Add optimistic updates
+- [x] Create `src/lib/hooks/use-consultants.ts`
+  - [x] Implement fetch consultants for project
+  - [x] Implement add consultant mutation
+  - [x] Implement update consultant mutation
+  - [x] Implement delete consultant mutation
+  - [x] Add optimistic updates
+  - [x] Add toggleAward function for Cost Planning integration
 
 ### Components
-- [ ] Create `src/components/consultants/ConsultantGallery.tsx`
-  - [ ] Implement discipline sub-tabs (from active disciplines)
-  - [ ] Implement horizontal scrollable container
-  - [ ] Add "Add Consultant" button
-  - [ ] Add empty state for each discipline
-  - [ ] Add loading state
-- [ ] Create `src/components/consultants/ConsultantFirmCard.tsx`
-  - [ ] Design card layout (company name, contact, email, phone, etc.)
-  - [ ] Add edit/delete action buttons
-  - [ ] Add shortlist toggle
-  - [ ] Implement inline edit mode
-  - [ ] Add hover effects
-- [ ] Create `src/components/consultants/ConsultantForm.tsx`
-  - [ ] Create form fields (all consultant fields)
-  - [ ] Add field validation
-  - [ ] Add duplicate warning display
-  - [ ] Implement save/cancel actions
-- [ ] Create `src/components/consultants/DeleteConfirmModal.tsx`
-  - [ ] Design confirmation dialog
-  - [ ] Add delete action
+- [x] Create `src/components/consultants/ConsultantGallery.tsx`
+  - [x] Implement discipline sub-tabs (from active disciplines)
+  - [x] Implement horizontal scrollable container
+  - [x] Add "Add Consultant" button (dynamic empty cards)
+  - [x] Add empty state for each discipline
+  - [x] Add loading state
+  - [x] Add Brief section (Services, Fee, Program)
+  - [x] Add drag & drop extraction
+- [x] Create `src/components/consultants/ConsultantForm.tsx`
+  - [x] Create form fields (companyName, contactPerson, email, mobile, address, abn)
+  - [ ] Add phone field to UI - **MISSING**
+  - [ ] Add notes field to UI - **MISSING**
+  - [x] Add field validation
+  - [ ] Add duplicate warning display - **MISSING**
+  - [x] Implement save/cancel actions
+  - [x] Add shortlist toggle
+  - [x] Add award toggle
+- [x] Use dialog component for delete confirmation
+  - [x] Design confirmation dialog
+  - [x] Add delete action
 
 ### Integration
-- [ ] Update `ConsultantCard.tsx` to use `ConsultantGallery`
-- [ ] Test horizontal scrolling with multiple cards
-- [ ] Test responsive layout
-- [ ] Test all CRUD operations
+- [x] Update `ConsultantCard.tsx` to use `ConsultantGallery`
+- [x] Test horizontal scrolling with multiple cards
+- [x] Test responsive layout
+- [x] Test all CRUD operations
 
 ---
 
 ## Phase 3: Contractor Gallery UI
 
 ### Custom Hooks
-- [ ] Create `src/lib/hooks/use-contractors.ts`
-  - [ ] Implement fetch contractors for project
-  - [ ] Implement add contractor mutation
-  - [ ] Implement update contractor mutation
-  - [ ] Implement delete contractor mutation
-  - [ ] Add optimistic updates
+- [x] Create `src/lib/hooks/use-contractors.ts`
+  - [x] Implement fetch contractors for project
+  - [x] Implement add contractor mutation
+  - [x] Implement update contractor mutation
+  - [x] Implement delete contractor mutation
+  - [x] Add optimistic updates
+  - [x] Add toggleAward function for Cost Planning integration
 
 ### Components
-- [ ] Create `src/components/contractors/ContractorGallery.tsx`
-  - [ ] Implement trade sub-tabs (from active trades)
-  - [ ] Implement horizontal scrollable container
-  - [ ] Add "Add Contractor" button
-  - [ ] Add empty state for each trade
-  - [ ] Add loading state
-- [ ] Create `src/components/contractors/ContractorFirmCard.tsx`
-  - [ ] Design card layout (company name, contact, email, phone, etc.)
-  - [ ] Add edit/delete action buttons
-  - [ ] Add shortlist toggle
-  - [ ] Implement inline edit mode
-  - [ ] Add hover effects
-- [ ] Create `src/components/contractors/ContractorForm.tsx`
-  - [ ] Create form fields (all contractor fields)
-  - [ ] Add field validation
-  - [ ] Add duplicate warning display
-  - [ ] Implement save/cancel actions
-- [ ] Create `src/components/contractors/DeleteConfirmModal.tsx`
-  - [ ] Design confirmation dialog
-  - [ ] Add delete action
+- [x] Create `src/components/contractors/ContractorGallery.tsx`
+  - [x] Implement trade sub-tabs (from active trades)
+  - [x] Implement horizontal scrollable container
+  - [x] Add "Add Contractor" button (dynamic empty cards)
+  - [x] Add empty state for each trade
+  - [x] Add loading state
+  - [x] Add Scope section (Works, Price, Program)
+  - [x] Add drag & drop extraction
+- [x] Create `src/components/contractors/ContractorForm.tsx`
+  - [x] Create form fields (companyName, contactPerson, email, mobile, address, abn)
+  - [ ] Add phone field to UI - **MISSING**
+  - [ ] Add notes field to UI - **MISSING**
+  - [x] Add field validation
+  - [ ] Add duplicate warning display - **MISSING**
+  - [x] Implement save/cancel actions
+  - [x] Add shortlist toggle
+  - [x] Add award toggle
+- [x] Use dialog component for delete confirmation
+  - [x] Design confirmation dialog
+  - [x] Add delete action
 
 ### Integration
-- [ ] Update `ConsultantCard.tsx` to use `ContractorGallery`
-- [ ] Test horizontal scrolling with multiple cards
-- [ ] Test responsive layout
-- [ ] Test all CRUD operations
+- [x] Update `ConsultantCard.tsx` to use `ContractorGallery`
+- [x] Test horizontal scrolling with multiple cards
+- [x] Test responsive layout
+- [x] Test all CRUD operations
 
 ---
 
@@ -289,3 +292,287 @@
 - [ ] Get user acceptance sign-off
 - [ ] Deploy to production
 - [ ] Monitor for errors in first 24 hours
+
+---
+
+## Phase 8: UI Refactor - Brief/Scope Sections & Layout
+
+### Database Schema
+- [x] Add migration for Brief fields on `consultant_disciplines` table
+  - [x] Add `brief_services` TEXT column
+  - [x] Add `brief_fee` TEXT column
+  - [x] Add `brief_program` TEXT column
+- [x] Add migration for Scope fields on `contractor_trades` table
+  - [x] Add `scope_works` TEXT column
+  - [x] Add `scope_price` TEXT column
+  - [x] Add `scope_program` TEXT column
+- [x] Update `schema.ts` with new columns
+- [x] Run migration
+
+### API Updates
+- [x] Update `PUT /api/consultants/disciplines/[id]` to handle Brief fields
+- [x] Update `PUT /api/contractors/trades/[id]` to handle Scope fields
+- [x] Update hooks to include Brief/Scope data in fetch responses
+
+### UI Components
+- [x] Modify `InlineEditField.tsx` - add `rows` prop for textarea height
+- [x] Modify `ConsultantGallery.tsx`:
+  - [x] Add Brief section with Services, Fee, Program fields
+  - [x] Add "Firms" section heading
+  - [x] Use InlineEditField with rows={6}
+- [x] Modify `ContractorGallery.tsx`:
+  - [x] Add Scope section with Works, Price, Program fields
+  - [x] Add "Firms" section heading
+  - [x] Use InlineEditField with rows={6}
+- [x] Refactor `ConsultantCard.tsx`:
+  - [x] Remove header title
+  - [x] Move buttons into TabsContent (after discipline/trade tabs)
+  - [x] Stack Save/Load vertically, Sync to AI beside them
+  - [x] Select first discipline/trade by default
+
+### Testing
+- [ ] Verify Brief fields save and persist for each discipline
+- [ ] Verify Scope fields save and persist for each trade
+- [ ] Test inline editing with auto-save (blur triggers save)
+- [ ] Test first tab selection on load
+- [ ] Verify button layout matches design
+
+---
+
+## Phase 9: Award Toggle - Link Firms to Cost Planning
+
+**Purpose**: Add "Award" toggle to Firm Cards that links awarded consultants/contractors to the companies master list, making them available in the Cost Planning module.
+
+### Database Schema
+- [x] Create migration `drizzle/0010_award_toggle.sql`
+  - [x] Add `awarded` INTEGER DEFAULT 0 to consultants table
+  - [x] Add `company_id` TEXT REFERENCES companies(id) to consultants table
+  - [x] Add `awarded` INTEGER DEFAULT 0 to contractors table
+  - [x] Add `company_id` TEXT REFERENCES companies(id) to contractors table
+  - [x] Create performance indexes
+- [x] Update `schema.ts` with new columns and relations
+- [x] Create and run migration runner script
+
+### API Endpoints
+- [x] Create `POST /api/cost-companies/find-or-create`
+  - [x] Find company by name (case-insensitive)
+  - [x] Create new company if not found
+  - [x] Return company record with id
+- [x] Update `POST /api/consultants/firms` to handle `awarded`, `companyId`
+- [x] Update `PUT /api/consultants/firms/[id]` to handle `awarded`, `companyId`
+- [x] Update `POST /api/contractors/firms` to handle `awarded`, `companyId`
+- [x] Update `PUT /api/contractors/firms/[id]` to handle `awarded`, `companyId`
+
+### Hook Layer
+- [x] Update `use-consultants.ts`
+  - [x] Add `awarded`, `companyId` to interface
+  - [x] Add `toggleAward(id, awarded)` function
+  - [x] Implement find-or-create logic for awarding
+- [x] Update `use-contractors.ts`
+  - [x] Add `awarded`, `companyId` to interface
+  - [x] Add `toggleAward(id, awarded)` function
+  - [x] Implement find-or-create logic for awarding
+
+### UI Components
+- [x] Update `ConsultantForm.tsx`
+  - [x] Add Award toggle next to Shortlisted
+  - [x] Add "Awarded" badge indicator (green)
+  - [x] Award toggle disabled until card is saved
+  - [x] Add `onAwardChange` prop
+- [x] Update `ContractorForm.tsx`
+  - [x] Add Award toggle next to Shortlisted
+  - [x] Add "Awarded" badge indicator (green)
+  - [x] Award toggle disabled until card is saved
+  - [x] Add `onAwardChange` prop
+- [x] Update `ConsultantGallery.tsx`
+  - [x] Add `handleAwardChange` handler
+  - [x] Pass `onAwardChange` prop to ConsultantForm
+  - [x] Show toast on success/failure
+- [x] Update `ContractorGallery.tsx`
+  - [x] Add `handleAwardChange` handler
+  - [x] Pass `onAwardChange` prop to ContractorForm
+  - [x] Show toast on success/failure
+
+### Data Migration
+- [x] Create `scripts/migrate-existing-firms.js`
+  - [x] Find unlinked consultants/contractors
+  - [x] Find or create matching companies
+  - [x] Set companyId and awarded=true
+
+### Testing
+- [ ] Toggle Award ON for a consultant - verify company created
+- [ ] Toggle Award OFF - verify companyId preserved
+- [ ] Award same company from different project - verify reuses existing
+- [ ] Verify awarded company appears in Cost Planning autocomplete
+- [ ] Test Award toggle disabled on unsaved cards
+- [ ] Test error handling and UI reversion
+
+---
+
+## Phase 10: Bonus Features (Report Generation & Document Management)
+
+**Status**: COMPLETE (implemented beyond spec requirements)
+
+### Document Management Tiles (DisciplineRepoTiles)
+- [x] Create `src/components/documents/DisciplineRepoTiles.tsx` (392 lines)
+  - [x] Implement Sources tiles (blue) - Save/Load project repos
+  - [x] Implement Transmittal tiles (green) - Save/Load transmittals
+  - [x] Implement Generation Mode tiles (purple/orange)
+  - [x] Show document counts on tiles
+  - [x] Conditional rendering based on selection state
+  - [x] Visual color-coding and hover effects
+
+### Report Generation System
+- [x] Create `src/components/reports/ReportsSection.tsx` (286 lines)
+  - [x] Inline report generation within discipline/trade tabs
+  - [x] Report lifecycle management (draft, toc_pending, generating, complete, failed)
+  - [x] Report history display with delete capability
+- [x] Create `src/components/reports/ReportGenerator.tsx`
+  - [x] Two generation modes: Data Only and AI Assisted
+  - [x] Streaming progress updates
+  - [x] Mode selection persistence per discipline/trade
+- [x] Create `src/components/reports/SmartContextPanel.tsx`
+  - [x] Source document visibility during generation
+- [x] Create `src/components/reports/SectionViewer.tsx`
+  - [x] Report content display
+- [x] Create `src/components/reports/TocEditor.tsx`
+  - [x] Table of contents editing
+
+### Report Generation Hooks
+- [x] Create `src/lib/hooks/use-report-stream.ts`
+  - [x] Streaming report generation with progress tracking
+- [x] Create `src/lib/hooks/use-report-generation.ts`
+  - [x] Report generation state management
+- [x] Create `src/lib/hooks/use-report-lock.ts`
+  - [x] Prevent concurrent generation conflicts
+
+### Transmittal Integration
+- [x] Create `src/lib/hooks/use-transmittal.ts`
+  - [x] One transmittal per discipline/trade (upsert behavior)
+  - [x] Save selection from DocumentRepository
+  - [x] Load transmittal documents back to selection
+- [x] Integrate with 007-RAG specification
+  - [x] Transmittal appendix in reports
+  - [x] Document count tracking
+
+---
+
+## Phase 11: Fee & Price Structure Management
+
+**Status**: COMPLETE (bonus feature)
+
+### Database Schema
+- [x] Create `disciplineFeeItems` table (schema.ts lines 212-220)
+  - [x] Fields: id, disciplineId, description, order
+- [x] Create `contractorTradeItems` table (schema.ts lines 222-230)
+  - [x] Fields: id, tradeId, description, order
+
+### API Endpoints
+- [x] Create `src/app/api/consultants/disciplines/[id]/fee-items/route.ts`
+  - [x] GET (list fee items for discipline)
+  - [x] POST (create fee item)
+  - [x] PUT (update fee item)
+  - [x] DELETE (delete fee item)
+- [x] Create `src/app/api/contractors/trades/[id]/price-items/route.ts`
+  - [x] GET (list price items for trade)
+  - [x] POST (create price item)
+  - [x] PUT (update price item)
+  - [x] DELETE (delete price item)
+
+### Hooks
+- [x] Create `src/lib/hooks/use-discipline-fee-items.ts`
+  - [x] Fetch fee items
+  - [x] Add/update/delete fee items
+  - [x] Reorder items (drag-and-drop)
+- [x] Create `src/lib/hooks/use-trade-price-items.ts`
+  - [x] Fetch price items
+  - [x] Add/update/delete price items
+  - [x] Reorder items (drag-and-drop)
+
+### UI Components
+- [x] Create `src/components/consultants/FeeStructureSection.tsx` (284 lines)
+  - [x] Drag-and-drop reordering
+  - [x] Inline editing with keyboard support (Enter/Escape)
+  - [x] Add/delete fee items
+  - [x] Real-time validation
+- [x] Create `src/components/contractors/PriceStructureSection.tsx`
+  - [x] Same features as FeeStructureSection for contractors
+
+---
+
+## Phase 12: Missing Features (PRIORITY)
+
+**Status**: NOT STARTED - Critical for FR-006, FR-007 compliance
+
+### Duplicate Prevention Logic
+- [ ] Implement `checkDuplicateConsultant` in `src/app/api/consultants/firms/route.ts`
+  - [ ] Check email match (case-insensitive)
+  - [ ] Check company name + discipline match
+  - [ ] Return 409 status with existing record data
+- [ ] Implement `checkDuplicateContractor` in `src/app/api/contractors/firms/route.ts`
+  - [ ] Check company name + trade match
+  - [ ] Return 409 status with existing record data
+- [ ] Add duplicate check to PUT endpoints (exclude current record by ID)
+
+### Duplicate Warning Modal
+- [ ] Create `src/components/consultants/DuplicateWarningModal.tsx`
+  - [ ] Show existing record details (company, email, discipline)
+  - [ ] Add "Use Existing" button (cancel and highlight existing)
+  - [ ] Add "Create Anyway" button (override duplicate check)
+  - [ ] Add "Merge" button (optional - update existing with new data)
+- [ ] Integrate modal into ConsultantGallery add/edit flows
+- [ ] Create equivalent modal for ContractorGallery
+- [ ] Test duplicate detection scenarios
+
+### Missing Form Fields
+- [x] ~~Add phone field to `ConsultantForm.tsx`~~ - **NOT NEEDED** (mobile field is sufficient)
+- [x] Add notes field to `ConsultantForm.tsx`
+  - [x] Add Label and Textarea for notes (rows={4})
+  - [x] Update formData state to include notes
+  - [x] Verify persistence to database
+- [x] ~~Add phone field to `ContractorForm.tsx`~~ - **NOT NEEDED** (mobile field is sufficient)
+- [x] Add notes field to `ContractorForm.tsx`
+  - [x] Add Label and Textarea for notes (rows={4})
+  - [x] Update formData state to include notes
+  - [x] Notes already supported in API
+
+---
+
+## Phase 13: Bug Fixes (PRIORITY)
+
+**Status**: ✅ COMPLETE (2025-12-07)
+
+### Drag & Drop on All Empty Cards
+**Bug Fixed**: Drag & drop only worked on first empty card - now works on ALL empty cards
+
+**Completed Fix**:
+- [x] Update `ConsultantGallery.tsx`
+  - [x] Removed `isFirstEmpty` check on line 307
+  - [x] Allow `onDragOver` on ALL empty cards (where `!card.consultant`)
+  - [ ] Test drag & drop works on any empty card position (pending manual test)
+- [x] Update `ContractorGallery.tsx`
+  - [x] Removed `isFirstEmpty` check on line 311
+  - [x] Allow `onDragOver` on ALL empty cards (where `!card.contractor`)
+  - [ ] Test drag & drop works on any empty card position (pending manual test)
+
+**Code Change Applied** (ConsultantGallery.tsx:307 & ContractorGallery.tsx:311):
+```typescript
+// BEFORE:
+const isFirstEmpty = !card.consultant && index === cards.findIndex(c => !c.consultant);
+onDragOver={isFirstEmpty ? handleDragOver : undefined}
+
+// AFTER:
+const isEmpty = !card.consultant;
+onDragOver={isEmpty ? handleDragOver : undefined}
+```
+
+### Extraction Auto-Save Behavior (Consider)
+**Current Behavior**: Auto-saves immediately after extraction without user review
+**Spec FR-003**: "user confirms/edits before save"
+
+**Options**:
+- [ ] Option A: Keep current behavior (faster UX, user can edit after save)
+- [ ] Option B: Revert to confirmation flow (matches spec exactly)
+- [ ] Decision: User to decide
+
+---

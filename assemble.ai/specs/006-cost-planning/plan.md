@@ -24,17 +24,20 @@ The Cost Planning module provides real-time financial visibility across the proj
 
 ## Technical Context
 
+**As-Built Stack** (Updated 2025-12-07)
+
 | Aspect | Choice | Rationale |
 |--------|--------|-----------|
 | **Framework** | Next.js 14 (App Router) | Server components, API routes, modern patterns |
 | **Language** | TypeScript 5.x | Type safety for financial calculations |
-| **Database** | PostgreSQL (Supabase) | Relational integrity, soft deletes, audit trail |
-| **Real-Time** | Supabase Broadcast + Edge Functions | Server-side aggregation, low bandwidth (see below) |
-| **Spreadsheet UI** | FortuneSheet | Excel-like UX per Constitution IX |
+| **Database** | **SQLite + Drizzle ORM** | Embedded, no server required, simple setup |
+| **Real-Time** | **Polling (10s interval)** | Simple, works with SQLite |
+| **UI Components** | **Custom HTML Tables** | Flexible, lightweight, full control |
 | **State Management** | TanStack React Query v5 | Server state, optimistic updates, caching |
-| **Excel I/O** | SheetJS (xlsx) | Formula-preserving export |
-| **Testing** | Vitest + React Testing Library | Fast, modern test runner |
-| **Validation** | Zod | Runtime type checking for API |
+| **Styling** | Tailwind CSS | Utility-first, consistent design |
+| **Excel I/O** | **⚠️ NOT YET IMPLEMENTED** | Planned: ExcelJS for XLSX export |
+| **Testing** | **⚠️ MINIMAL** | Basic testing, comprehensive suite planned |
+| **Validation** | TypeScript + Drizzle | Type safety at compile time |
 
 **Performance Targets:**
 | Metric | Target |
@@ -55,65 +58,53 @@ The Cost Planning module provides real-time financial visibility across the proj
 
 ## Real-Time Architecture
 
-### Why Not postgres_changes Directly?
+**As-Built**: Polling-based updates (not WebSocket/Supabase)
 
-Supabase Realtime's `postgres_changes` broadcasts every row change:
+### Why Polling?
 
-| Scenario | postgres_changes | Our Approach |
-|----------|------------------|--------------|
-| 500 invoice import | 500 messages × ~1KB = 500KB | 1 message × 200 bytes |
-| Rapid cell edits | Every keystroke (debounced) | Single aggregated update |
-| Calculation | Client-side (slow, duplicated) | Server-side (once) |
-| Bandwidth | High | Low |
+SQLite doesn't support real-time triggers or pub/sub like PostgreSQL/Supabase, so we use simple polling:
 
-### Hybrid Approach: Supabase Broadcast + Edge Functions
+| Aspect | Implementation |
+|--------|----------------|
+| Update Frequency | Every 10 seconds |
+| Mechanism | React Query `refetchInterval` |
+| What Updates | Full cost plan data (cost lines + totals) |
+| Bandwidth | Moderate (~50KB per fetch for 100 lines) |
+| Complexity | Low - no server-side setup |
 
-```
-┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐     ┌────────────┐
-│ DB Trigger      │────>│ Edge Function        │────>│ Supabase        │────>│ Clients    │
-│ (on any change) │     │ (debounce + calc)    │     │ Broadcast       │     │ (receive)  │
-└─────────────────┘     └──────────────────────┘     └─────────────────┘     └────────────┘
-        │                         │                          │                      │
-        │                         │                          │                      │
-   Fires on:               - 500ms debounce            Broadcasts to:         Updates only
-   - invoices              - Calc totals via RPC       project channel        totals in
-   - variations            - Single broadcast                                 React Query
-   - cost_lines                                                               cache
-```
-
-### What Gets Broadcast
+### Implementation
 
 ```typescript
-// Payload: ~200 bytes (vs ~1KB per row with postgres_changes)
-interface CostPlanTotalsPayload {
-  project_id: string;
-  totals: {
-    budget_cents: number;
-    committed_cents: number;
-    final_forecast_cents: number;
-    variance_cents: number;
-    claimed_cents: number;
-    current_month_cents: number;
-    etc_cents: number;
-  };
-  section_totals: {
-    [section: string]: {
-      budget_cents: number;
-      claimed_cents: number;
-      // ... per-section aggregates
-    };
-  };
-  updated_at: string;
+// src/lib/hooks/cost-plan/use-cost-plan.ts
+export function useCostPlan(projectId: number, reportMonth?: string) {
+  return useQuery({
+    queryKey: ['costPlan', projectId, reportMonth],
+    queryFn: async () => {
+      const params = reportMonth ? `?reportMonth=${reportMonth}` : '';
+      const response = await fetch(
+        `/api/projects/${projectId}/cost-plan${params}`
+      );
+      return response.json();
+    },
+    refetchInterval: 10000, // Poll every 10 seconds
+    staleTime: 5000,        // Consider data stale after 5s
+  });
 }
 ```
 
-### Benefits
+### Optimizations
 
-1. **10× less bandwidth** - Aggregates only, not full rows
-2. **No client-side recalculation** - Server computes once
-3. **Debouncing built-in** - Batch rapid changes (500ms window)
-4. **Selective subscription** - Per-project channels
-5. **No new infrastructure** - Uses Supabase Edge Functions + Realtime
+1. **Optimistic Updates**: Mutations update cache immediately, rollback on error
+2. **Debounced Saves**: Cell edits debounced 500ms before API call
+3. **Selective Invalidation**: Only invalidate affected queries
+4. **Background Refetching**: React Query handles refetch in background
+
+### Future Enhancement Options
+
+If real-time becomes critical:
+1. Migrate to PostgreSQL + Supabase for WebSocket support
+2. Add Server-Sent Events (SSE) endpoint
+3. Implement WebSocket server with ws library
 
 ---
 

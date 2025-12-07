@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ResizableLayout } from '@/components/layout/ResizableLayout';
 import { PlanningCard } from '@/components/dashboard/PlanningCard';
 import { ConsultantCard } from '@/components/dashboard/ConsultantCard';
@@ -15,6 +15,12 @@ interface Project {
 
 export default function Home() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
+
+  // Handler to set selected document IDs from an array (for transmittal load)
+  const handleSetSelectedDocumentIds = useCallback((ids: string[]) => {
+    setSelectedDocumentIds(new Set(ids));
+  }, []);
 
   return (
     <div className="h-screen w-full bg-[#1e1e1e]">
@@ -24,7 +30,11 @@ export default function Home() {
         onSelectProject={setSelectedProject}
         leftContent={
           selectedProject ? (
-            <PlanningCard projectId={selectedProject.id} />
+            <PlanningCard
+              projectId={selectedProject.id}
+              selectedDocumentIds={Array.from(selectedDocumentIds)}
+              onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
+            />
           ) : (
             <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
               <div className="text-[#858585]">Select a project to view planning data</div>
@@ -33,7 +43,11 @@ export default function Home() {
         }
         centerContent={
           selectedProject ? (
-            <ConsultantCard projectId={selectedProject.id} />
+            <ConsultantCard
+              projectId={selectedProject.id}
+              selectedDocumentIds={Array.from(selectedDocumentIds)}
+              onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
+            />
           ) : (
             <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
               <div className="text-[#858585]">Select a project to view consultants</div>
@@ -42,7 +56,11 @@ export default function Home() {
         }
         rightContent={
           selectedProject ? (
-            <DocumentCard projectId={selectedProject.id} />
+            <DocumentCard
+              projectId={selectedProject.id}
+              selectedDocumentIds={selectedDocumentIds}
+              onSelectionChange={setSelectedDocumentIds}
+            />
           ) : (
             <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
               <div className="text-[#858585]">Select a project to view documents</div>

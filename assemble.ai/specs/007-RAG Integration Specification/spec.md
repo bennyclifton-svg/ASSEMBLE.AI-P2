@@ -8,6 +8,21 @@ Integrate RAG into assemble.ai to generate tender requests, tender evaluations, 
 
 ## Clarifications
 
+### Session 2025-12-06
+
+- Q: What observability/logging strategy is required for the RAG pipeline? → A: Structured logging with key events only (sync start/end, chunk counts, errors, latency)
+- Q: What should happen when the Voyage embedding API fails during document sync? → A: Retry with exponential backoff (3 attempts), then mark document as failed with "Retry" action
+- Q: How should report generation handle mid-stream failures? → A: Checkpoint state and allow resume from last completed section (LangGraph persistence)
+- Q: What happens when generating AI-assisted report with empty document set? → A: Prompt user to switch to Data Only mode or sync at least 1 document to use AI Assisted mode
+- Q: How should the system handle external API rate limits? → A: Per-service rate limiting with queue throttling (e.g., max 10 Voyage calls/sec, 5 Claude calls/sec)
+
+### Session 2025-12-04
+
+- Q: What is the relationship between disciplines and document groupings? → A: 1:1 for both transmittal and document set per discipline
+- Q: Should transmittal documents be used for RAG retrieval? → A: No - transmittals contain ALL docs (including drawings, potentially 100+); only the curated document set (5-20 key docs) is used for RAG
+- Q: What report generation modes are supported? → A: Two modes - "Data Only" (template-based, card data verbatim with light Brief polish) and "AI Assisted" (full AI generation with RAG context)
+- Q: For Data Only mode, should any AI polish be applied? → A: Light grammar/formatting polish on Brief section only; all other sections are pure template rendering
+
 ### Session 2025-11-29
 
 - Q: What access control model applies to RAG features? → A: All project members have full RAG access (read all synced docs, generate any report type)
@@ -63,6 +78,35 @@ Integrate RAG into assemble.ai to generate tender requests, tender evaluations, 
 | Orchestration | **LangGraph** | Agentic control, human-in-loop, streaming |
 | Queue | **BullMQ + Redis** | Proper background processing, retries, monitoring |
 | LLM | Claude (Anthropic) | Already integrated, long context |
+
+### Report Generation Modes
+
+Users select a generation mode at report start. Mode affects all sections.
+
+| Mode | Description | AI Usage | RAG | Use Case |
+|------|-------------|----------|-----|----------|
+| **Data Only** | Template-based, card data verbatim | Grammar polish on Brief section only | ❌ | Quick drafts, pre-written brief content |
+| **AI Assisted** | Full AI generation | Full section generation with streaming | ✅ Discipline's document set | Comprehensive tender requests |
+
+#### Data Only Mode - Field Mapping
+
+| Report Section | Source Fields | AI Role |
+|----------------|---------------|---------|
+| Project Details | `details.*` (projectName, address, buildingClass, numberOfStories, jurisdiction, zoning, lotArea) | None - template only |
+| Project Objectives | `objectives.*` (functional, quality, budget, program) | None - template only |
+| Project Stages | `stages[]` (stageName, startDate, endDate, duration, status) | None - template only |
+| Brief | `discipline.briefServices`, `discipline.briefProgram` | **Light polish** (grammar/formatting only) |
+| Fee Structure | `discipline.briefFee` + `disciplineFeeItems[]` | None - template only |
+| Appendix A - Transmittal | `transmittal.documents[]` (name, version, category) | None - table render |
+
+#### AI Assisted Mode
+
+Uses same Planning Card data as context, but generates professional prose for each section. RAG retrieval pulls from the discipline's curated Document Set (NOT the transmittal).
+
+**Validation**: If the discipline's document set is empty (no synced documents), show modal:
+> "AI Assisted mode requires synced documents. You can:
+> - **Switch to Data Only** - Generate using Planning Card data only
+> - **Sync Documents** - Select documents and click 'Sync to AI' first"
 
 ---
 
@@ -125,27 +169,68 @@ import Redis from 'ioredis';
 
 const redis = new Redis(process.env.REDIS_URL);
 
-// Document processing queue
-export const documentQueue = new Queue('document-processing', { connection: redis });
-
 // Worker processes documents in background
 const worker = new Worker('document-processing', async (job) => {
   const { documentId, documentSetId } = job.data;
-  
+
   // 1. Parse document (LlamaParse → Unstructured fallback)
   const content = await parseDocument(documentId);
-  
+
   // 2. Chunk with semantic splitter
   const chunks = await chunkDocument(content);
-  
-  // 3. Embed with Voyage
+
+  // 3. Embed with Voyage (retry handled by BullMQ)
   const embeddings = await embedChunks(chunks);
-  
+
   // 4. Store in pgvector
   await storeChunks(documentId, chunks, embeddings);
-  
+
   return { chunksCreated: chunks.length };
-}, { connection: redis, concurrency: 3 });
+}, {
+  connection: redis,
+  concurrency: 3,
+  // Retry with exponential backoff: 3 attempts (1s, 2s, 4s delays)
+  settings: {
+    backoffStrategy: (attemptsMade) => Math.pow(2, attemptsMade - 1) * 1000,
+  },
+});
+
+// Queue configuration with retry policy
+export const documentQueue = new Queue('document-processing', {
+  connection: redis,
+  defaultJobOptions: {
+    attempts: 3,
+    backoff: { type: 'exponential', delay: 1000 },
+    removeOnComplete: true,
+    removeOnFail: false,  // Keep failed jobs for "Retry" action
+  },
+});
+```
+
+### Rate Limiting
+
+Per-service rate limiting to prevent API throttling:
+
+| Service | Rate Limit | Rationale |
+|---------|------------|-----------|
+| Voyage (embeddings) | 10 calls/sec | Batch embedding calls, stay under tier limits |
+| Claude (generation) | 5 calls/sec | Conservative for concurrent report generation |
+| LlamaParse | 3 calls/sec | Document parsing is heavy, avoid queue buildup |
+| Cohere (rerank fallback) | 10 calls/sec | Only used on BAAI failure |
+
+```typescript
+import { RateLimiterRedis } from 'rate-limiter-flexible';
+
+const rateLimiters = {
+  voyage: new RateLimiterRedis({ storeClient: redis, points: 10, duration: 1, keyPrefix: 'rl:voyage' }),
+  claude: new RateLimiterRedis({ storeClient: redis, points: 5, duration: 1, keyPrefix: 'rl:claude' }),
+  llamaparse: new RateLimiterRedis({ storeClient: redis, points: 3, duration: 1, keyPrefix: 'rl:llamaparse' }),
+};
+
+async function withRateLimit<T>(service: keyof typeof rateLimiters, fn: () => Promise<T>): Promise<T> {
+  await rateLimiters[service].consume(1);
+  return fn();
+}
 ```
 
 ---
@@ -176,11 +261,13 @@ Documents belong to three **orthogonal** groupings. A document can belong to any
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-| Grouping | Purpose | Relationship | UI Action |
-|----------|---------|--------------|-----------|
-| **Category** | Filing/organization | One category per document | Drag to tile, or select + click tile |
-| **Transmittal** | Tender package delivery | Many-to-many | Select + "Add to Transmittal" |
-| **Synced (RAG)** | AI knowledge base | Many-to-many | Select + "Sync to AI" |
+| Grouping | Purpose | Relationship | Typical Scale | UI Action |
+|----------|---------|--------------|---------------|-----------|
+| **Category** | Filing/organization | One category per document | N/A | Drag to tile, or select + click tile |
+| **Transmittal** | Tender package delivery | **1:1 per discipline** | 50-200 docs (ALL documents including drawings) | "Save Selection As Transmittal" / "Load Transmittal" |
+| **Document Set (RAG)** | AI knowledge base | **1:1 per discipline** | 5-20 docs (CURATED key documents only) | Select + "Sync to AI" |
+
+> **⚠️ CRITICAL DISTINCTION**: Transmittals contain ALL documents being sent (specs, drawings, schedules - potentially 100+). These are NOT used for RAG retrieval as they would overwhelm context and burn tokens. Only the curated Document Set (typically 5-20 key documents) is indexed for RAG retrieval.
 
 ### Typical User Workflow
 
@@ -188,11 +275,16 @@ Documents belong to three **orthogonal** groupings. A document can belong to any
 1. UPLOAD & CATEGORIZE
    User drags files → Category tile (e.g., "Fire Services")
    Result: Files organized, colored by category
-   
-2. CREATE TRANSMITTAL
-   User selects relevant files → "Add to Transmittal" → Names it "Fire Services Tender Package"
-   Result: Files grouped for tender delivery (email/zip)
-   
+
+2. CREATE/UPDATE TRANSMITTAL
+   User selects relevant files → "Save Selection As Transmittal"
+   Result: Files saved as "{Discipline} Transmittal" (e.g., "Fire Services Transmittal")
+   Note: One transmittal per discipline - saves replace existing
+
+2a. LOAD EXISTING TRANSMITTAL (optional)
+   User clicks "Load Transmittal" → Previous selection loaded (checkboxes checked)
+   User adds/removes files → "Save Selection As Transmittal" to update
+
 3. SYNC TO RAG (refined selection)
    User reviews selection → removes less relevant files → "Sync to AI"
    Result: Curated subset queued for embedding
@@ -204,16 +296,18 @@ Documents belong to three **orthogonal** groupings. A document can belong to any
 -- Categories (existing - one per document)
 -- documents.category_id already exists
 
--- Transmittals (tender packages for delivery)
+-- Transmittals (tender packages for delivery - one per discipline)
 CREATE TABLE transmittals (
   id TEXT PRIMARY KEY,
   project_id TEXT NOT NULL REFERENCES projects(id),
-  name TEXT NOT NULL,
+  discipline_id TEXT NOT NULL,  -- Links to discipline (subcategory)
+  name TEXT NOT NULL,           -- Auto-generated: "{Discipline} Transmittal"
   description TEXT,
   tender_package_id TEXT REFERENCES tender_packages(id),
   status TEXT DEFAULT 'draft', -- 'draft', 'sent', 'acknowledged'
   sent_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(project_id, discipline_id)  -- One transmittal per discipline per project
 );
 
 CREATE TABLE transmittal_documents (
@@ -415,10 +509,13 @@ Replace LlamaIndex workflows with LangGraph for true agentic control.
 
 ```typescript
 import { StateGraph, Annotation, interrupt } from "@langchain/langgraph";
+import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 
 // State schema
 const ReportState = Annotation.Root({
   projectContext: Annotation<ProjectContext>,
+  planningContext: Annotation<PlanningContext>,  // Exact Planning Card data
+  transmittal: Annotation<TransmittalContext | null>,  // Optional transmittal for discipline
   reportType: Annotation<string>,
   documentSetIds: Annotation<string[]>,
   toc: Annotation<TableOfContents>,
@@ -428,22 +525,62 @@ const ReportState = Annotation.Root({
   userFeedback: Annotation<string | null>,
 });
 
+// Transmittal context (loaded at start if exists for discipline)
+interface TransmittalContext {
+  id: string;
+  name: string;
+  documents: Array<{
+    id: string;
+    name: string;      // Doc Name column
+    version: string;   // Version column
+    category: string;  // Category column
+  }>;
+}
+
 // Graph nodes
 const graph = new StateGraph(ReportState)
+  .addNode("fetch_planning_context", fetchPlanningContextNode)  // Loads exact Planning Card + transmittal data
   .addNode("generate_toc", generateTocNode)
   .addNode("await_toc_approval", awaitTocApprovalNode)
   .addNode("retrieve_context", retrieveContextNode)
   .addNode("generate_section", generateSectionNode)
   .addNode("await_section_feedback", awaitSectionFeedbackNode)
   .addNode("finalize", finalizeNode)
+  .addNode("generate_transmittal_section", generateTransmittalSectionNode)  // NEW: Renders transmittal table
 
-  .addEdge("__start__", "generate_toc")
+  .addEdge("__start__", "fetch_planning_context")
+  .addEdge("fetch_planning_context", "generate_toc")
   .addEdge("generate_toc", "await_toc_approval")
   .addConditionalEdges("await_toc_approval", routeAfterTocApproval)
   .addEdge("retrieve_context", "generate_section")
   .addEdge("generate_section", "await_section_feedback")
   .addConditionalEdges("await_section_feedback", routeAfterSectionFeedback)
-  .addEdge("finalize", "__end__");
+  .addConditionalEdges("finalize", routeAfterFinalize)  // NEW: Routes to transmittal if exists
+  .addEdge("generate_transmittal_section", "__end__");
+
+// Checkpointer for state persistence and resume capability
+const checkpointer = new PostgresSaver({ connectionString: process.env.DATABASE_URL });
+
+// Compile graph with checkpointing enabled
+const compiledGraph = graph.compile({ checkpointer });
+
+// Resume from checkpoint after failure
+async function resumeReport(threadId: string) {
+  const state = await compiledGraph.getState({ configurable: { thread_id: threadId } });
+  if (state.next.length > 0) {
+    // Resume from last checkpoint
+    return compiledGraph.stream(null, { configurable: { thread_id: threadId } });
+  }
+  throw new Error('Report already completed or not found');
+}
+
+// NEW: Conditional routing after finalize
+function routeAfterFinalize(state: ReportState) {
+  if (state.transmittal) {
+    return "generate_transmittal_section";  // Transmittal exists → render appendix
+  }
+  return "__end__";  // No transmittal → end report
+}
 ```
 
 ### Human-in-the-Loop Nodes
@@ -518,6 +655,93 @@ async function generateSectionNode(state: ReportState) {
     ],
   };
 }
+```
+
+### Transmittal Appendix Generation (Conditional)
+
+If a transmittal exists for the discipline, render it as "Appendix A - Transmittal" at the end of the report. This is a data-driven node (no AI generation).
+
+```typescript
+async function generateTransmittalSectionNode(state: ReportState) {
+  // Only called if state.transmittal exists (conditional edge)
+  const { transmittal } = state;
+
+  // Build markdown table
+  const tableRows = transmittal.documents.map(doc =>
+    `| ${doc.name} | ${doc.version} | ${doc.category} |`
+  );
+
+  const content = `
+## Appendix A - Transmittal
+
+The following documents are included in this tender package:
+
+| Doc Name | Version | Category |
+|----------|---------|----------|
+${tableRows.join('\n')}
+
+*Total: ${transmittal.documents.length} documents*
+`.trim();
+
+  return {
+    sections: [
+      ...state.sections,
+      {
+        title: "Appendix A - Transmittal",
+        content,
+        sourceRelevance: {},  // No AI sources - purely data-driven
+        isAppendix: true,
+      }
+    ],
+  };
+}
+```
+
+### Transmittal Workflow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    TRANSMITTAL MANAGEMENT & RFT REPORT                   │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   TRANSMITTAL BUTTONS (ConsultantCard header, next to SyncToAI):         │
+│   [Sync to AI (3)]  [Save Selection As Transmittal]  [Load Transmittal]  │
+│                                                                          │
+│   CREATING/UPDATING TRANSMITTAL:                                         │
+│   1. User selects documents in Right Panel (DocumentRepository)          │
+│   2. User clicks "Save Selection As Transmittal"                         │
+│   3. Auto-saved as "{Discipline} Transmittal" (e.g., "Fire Services")    │
+│   4. Toast: "Saved Fire Services Transmittal (5 documents)"              │
+│                                                                          │
+│   LOADING EXISTING TRANSMITTAL:                                          │
+│   1. User clicks "Load Transmittal" (shows doc count if exists)          │
+│   2. Previous selection loaded → checkboxes checked in DocumentRepository│
+│   3. User can add/remove documents, then re-save                         │
+│                                                                          │
+│   ─────────────────────────────────────────────────────────────────────  │
+│                                                                          │
+│   RFT REPORT GENERATION:                                                 │
+│   1. User starts RFT report generation                                   │
+│   2. fetch_planning_context loads transmittal data                       │
+│   3. generate_toc checks transmittal → adds "Appendix A - Transmittal"   │
+│   4. Regular sections generated via AI...                                │
+│   5. finalize → conditional: transmittal exists?                         │
+│         ├── YES: generate_transmittal_section → renders table            │
+│         └── NO: __end__                                                  │
+│   6. Report complete with transmittal appendix:                          │
+│      ┌──────────────────────────────────────────────────────────┐       │
+│      │ ## Appendix A - Transmittal                               │       │
+│      │                                                            │       │
+│      │ | Doc Name              | Version | Category             | │       │
+│      │ |-----------------------|---------|----------------------| │       │
+│      │ | A2.01-Floor-Plan.pdf  | Rev03   | Architectural Plans  | │       │
+│      │ | S1.01-Foundation.pdf  | Rev02   | Structural           | │       │
+│      │ | E1.01-Electrical.pdf  | Rev01   | Electrical           | │       │
+│      │                                                            │       │
+│      │ *Total: 12 documents*                                      │       │
+│      └──────────────────────────────────────────────────────────┘       │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -739,13 +963,34 @@ function chunkConstructionDocument(text: string, docType: string): Chunk[] {
 - [ ] Section-by-section streaming generation
 - [ ] **Smart Context panel** (source visibility + removal)
 - [ ] Citation validation
-- [ ] **Transmittal → Document schedule integration**
+- [ ] **Transmittal integration in RFT reports**:
+  - "Save Selection As Transmittal" button next to SyncToAI (auto-names as "{Discipline} Transmittal")
+  - "Load Transmittal" button to retrieve/edit existing transmittal selection
+  - One transmittal per discipline (upsert behavior)
+  - generate_toc includes "Appendix A - Transmittal" if transmittal exists
+  - generate_transmittal_section renders document table (Doc Name | Version | Category)
+  - Conditional rendering: only if discipline has saved transmittal
 
 ### Phase 3 (Week 5): Polish
 - [ ] DOCX/PDF export
 - [ ] **Memory capture on report approval**
 - [ ] Progress indicators and error handling
 - [ ] Sync status indicators on document rows
+
+---
+
+## Observability
+
+Structured logging with key events only (minimal overhead, sufficient for debugging):
+
+| Event | Logged Data |
+|-------|-------------|
+| Sync start | documentId, documentSetId, timestamp |
+| Sync complete | documentId, chunkCount, duration, status |
+| Sync error | documentId, errorType, errorMessage, retryCount |
+| Retrieval | query (truncated), documentSetIds, candidateCount, rerankDuration |
+| Generation start | reportId, sectionIndex, sectionTitle |
+| Generation complete | reportId, sectionIndex, tokenCount, duration |
 
 ---
 
@@ -778,3 +1023,4 @@ function chunkConstructionDocument(text: string, docType: string): Chunk[] {
 | Trust | **Smart Context panel** | Users see and control sources |
 | Access Control | **Project-level (all members)** | All project members have full RAG access; no per-document-set permissions |
 | Concurrency | **Report-level locking** | One user generates/edits at a time; others see "in progress" status |
+| **Transmittal in Reports** | **Appendix A (conditional)** | Transmittal rendered as data table at end of RFT; only if discipline has saved transmittal; columns: Doc Name, Version, Category |

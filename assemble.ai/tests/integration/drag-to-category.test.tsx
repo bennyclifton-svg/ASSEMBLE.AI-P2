@@ -99,7 +99,13 @@ describe('Drag-to-Category Integration', () => {
       });
     });
 
-    render(<DocumentRepository projectId={mockProjectId} />);
+    render(
+      <DocumentRepository
+        projectId={mockProjectId}
+        selectedIds={new Set()}
+        onSelectionChange={() => {}}
+      />
+    );
 
     // Click the Planning tile to trigger file upload
     const planningTile = screen.getByTestId('planning-tile');
@@ -156,7 +162,13 @@ describe('Drag-to-Category Integration', () => {
       });
     });
 
-    render(<DocumentRepository projectId={mockProjectId} />);
+    render(
+      <DocumentRepository
+        projectId={mockProjectId}
+        selectedIds={new Set()}
+        onSelectionChange={() => {}}
+      />
+    );
 
     // Click the Structural tile to trigger file upload
     const structuralTile = screen.getByTestId('structural-tile');
@@ -201,7 +213,13 @@ describe('Drag-to-Category Integration', () => {
       });
     });
 
-    render(<DocumentRepository projectId={mockProjectId} />);
+    render(
+      <DocumentRepository
+        projectId={mockProjectId}
+        selectedIds={new Set()}
+        onSelectionChange={() => {}}
+      />
+    );
 
     // Click the Multi File tile
     const multiFileTile = screen.getByTestId('multi-file-tile');
@@ -236,7 +254,13 @@ describe('Drag-to-Category Integration', () => {
       });
     });
 
-    render(<DocumentRepository projectId={mockProjectId} />);
+    render(
+      <DocumentRepository
+        projectId={mockProjectId}
+        selectedIds={new Set()}
+        onSelectionChange={() => {}}
+      />
+    );
 
     // Click the Planning tile to trigger file upload
     const planningTile = screen.getByTestId('planning-tile');

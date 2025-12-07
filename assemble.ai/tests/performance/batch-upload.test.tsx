@@ -54,7 +54,13 @@ describe('Batch Upload Performance', () => {
             };
         });
 
-        render(<DocumentRepository projectId="test-project" />);
+        render(
+            <DocumentRepository
+                projectId="test-project"
+                selectedIds={new Set()}
+                onSelectionChange={() => {}}
+            />
+        );
 
         const startTime = Date.now();
 

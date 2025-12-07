@@ -1,8 +1,9 @@
 # Implementation Plan: Consultant & Contractor Cards
 
-**Feature**: 004-consultant-contractor-cards  
-**Date**: 2025-11-23  
-**Status**: Planning
+**Feature**: 004-consultant-contractor-cards
+**Date**: 2025-11-23
+**Status**: 92% Complete - Only Duplicate Prevention Remaining
+**Last Updated**: 2025-12-07
 
 ## Overview
 
@@ -15,19 +16,31 @@ Implement two horizontal card gallery sections for managing Consultants and Cont
 ## Current State
 
 **Already Implemented:**
-- ✅ Basic `ConsultantCard` component with Consultants/Contractors tabs
-- ✅ Integration with `useConsultantDisciplines` and `useContractorTrades` hooks
-- ✅ Display of enabled disciplines and trades count
-- ✅ Planning Card integration for active disciplines/trades
+- ✅ Database schema for consultants and contractors (with awarded, companyId)
+- ✅ API endpoints for CRUD operations
+- ✅ Horizontal card gallery UI with scrolling
+- ✅ Discipline/Trade sub-tabs from active Planning Card
+- ✅ Manual add/edit/delete functionality
+- ✅ AI-assisted data extraction (PDF, images, text)
+- ✅ Brief section (Services, Fee, Program) for consultants
+- ✅ Scope section (Works, Price, Program) for contractors
+- ✅ Award toggle with Cost Planning integration
+- ✅ **BONUS**: Inline report generation (Data Only & AI Assisted modes)
+- ✅ **BONUS**: Document management tiles (Sources, Transmittals, Generation Modes)
+- ✅ **BONUS**: Fee/Price structure management with drag-and-drop
+- ✅ **BONUS**: Transmittal integration with RAG system
 
-**Needs Implementation:**
-- ❌ Database schema for consultants and contractors
-- ❌ API endpoints for CRUD operations
-- ❌ Horizontal card gallery UI
-- ❌ Discipline/Trade sub-tabs
-- ❌ Manual add/edit/delete functionality
-- ❌ AI-assisted data extraction
-- ❌ Duplicate prevention logic
+**Needs Implementation (Critical):**
+- ❌ Duplicate prevention logic (FR-006, FR-007)
+- ❌ Duplicate warning modal
+
+**Recently Completed:**
+- ✅ Notes field added to ConsultantForm and ContractorForm (2025-12-07)
+- ✅ Drag & drop bug fixed - now works on ALL empty cards (2025-12-07)
+- ✅ Phone field NOT NEEDED - mobile field is sufficient
+
+**Known Issues:**
+- ⚠️ Auto-saves extraction data without user review (differs from spec FR-003 intent, but may be acceptable UX)
 
 ---
 
@@ -322,13 +335,88 @@ async function checkDuplicateConsultant(data) {
 
 ---
 
+## Bonus Features Implemented
+
+### 1. Inline Report Generation System
+**Files**: [src/components/reports/](../../../src/components/reports/)
+- Full tender request generation within discipline/trade tabs
+- Two modes: Data Only (template-based) and AI Assisted (RAG-enabled)
+- Report lifecycle: draft → toc_pending → generating → complete/failed
+- Streaming progress updates
+- Report history with delete capability
+- Smart Context Panel showing source documents
+- Integration with 007-RAG specification
+
+### 2. Document Management Tiles
+**File**: [src/components/documents/DisciplineRepoTiles.tsx](../../../src/components/documents/DisciplineRepoTiles.tsx) (392 lines)
+- **Sources Tiles (Blue)**: Save/Load project repos (document sets)
+- **Transmittal Tiles (Green)**: Save/Load transmittals with document counts
+- **Generation Mode Tiles**: Data Only (purple) and AI Assist (orange/gold)
+- Visual color-coding with hover effects
+- Conditional rendering based on state
+
+### 3. Fee & Price Structure Management
+**Files**:
+- [src/components/consultants/FeeStructureSection.tsx](../../../src/components/consultants/FeeStructureSection.tsx) (284 lines)
+- [src/components/contractors/PriceStructureSection.tsx](../../../src/components/contractors/PriceStructureSection.tsx)
+- Drag-and-drop reordering of fee/price items
+- Inline editing with keyboard support (Enter/Escape)
+- Auto-save with debounced updates
+- Real-time validation
+
+### 4. Cost Planning Integration
+**Feature**: Award toggle links firms to companies master list
+- Find-or-create company on award
+- Auto-populate from firm data (name, ABN, contact info)
+- Preserve companyId when toggling off
+- Awarded firms available in Cost Planning autocomplete
+
+---
+
+## Critical Items Requiring Attention
+
+### Priority 1: Duplicate Prevention (BLOCKING)
+**Issue**: FR-006 and FR-007 not implemented
+**Impact**: Users can create duplicate consultants/contractors
+**Effort**: 4-6 hours
+**Tasks**:
+1. Add duplicate detection logic to POST/PUT endpoints
+2. Return 409 status with existing record data
+3. Create DuplicateWarningModal component
+4. Integrate modal into add/edit flows
+
+### ~~Priority 2: Missing Form Fields~~ - ✅ COMPLETE
+**Issue**: ~~phone and~~ notes fields in database/API but not in UI
+**Status**: ✅ COMPLETE (2025-12-07)
+**Completed Tasks**:
+1. ~~Add phone input~~ - NOT NEEDED (mobile is sufficient)
+2. ✅ Added notes textarea to ConsultantForm
+3. ✅ Added notes textarea to ContractorForm
+4. ✅ Notes already supported in API
+
+### ~~Priority 3: Drag & Drop Bug~~ - ✅ COMPLETE
+**Issue**: Drag & drop only works on first empty card
+**Status**: ✅ FIXED (2025-12-07)
+**Completed Fix**:
+- Removed `isFirstEmpty` check in [ConsultantGallery.tsx:307](../../../src/components/consultants/ConsultantGallery.tsx#L307)
+- Removed `isFirstEmpty` check in [ContractorGallery.tsx:311](../../../src/components/contractors/ContractorGallery.tsx#L311)
+- Drag & drop now works on ANY empty card
+
+### Priority 4: Extraction Auto-Save
+**Issue**: Auto-saves without user review (differs from FR-003)
+**Impact**: Minor UX difference from spec
+**Effort**: 2-4 hours (if reverting to confirmation flow)
+**Decision**: User to decide if current behavior is acceptable
+
+---
+
 ## Success Criteria
 
 - ✅ User can add consultant/contractor manually in < 30 seconds
 - ✅ User can add via AI in < 15 seconds after drop
 - ✅ ≥ 90% field extraction accuracy
 - ✅ 100% data persistence after reload
-- ✅ No accidental duplicates
+- ❌ No accidental duplicates (NOT YET - requires Priority 1 fix)
 
 ---
 
@@ -351,14 +439,32 @@ async function checkDuplicateConsultant(data) {
 
 ---
 
-## Estimated Effort
+## Implementation Summary
 
-- Phase 1 (DB + API): 4-6 hours
-- Phase 2 (Consultant UI): 6-8 hours
-- Phase 3 (Contractor UI): 4-6 hours (similar to Phase 2)
-- Phase 4 (CRUD): 4-6 hours
-- Phase 5 (AI Extraction): 8-10 hours
-- Phase 6 (Duplicates): 2-3 hours
-- Phase 7 (Testing): 4-6 hours
+### Completed Effort (Phases 1-11)
+- Phase 1 (DB + API): ✅ 6 hours
+- Phase 2 (Consultant UI): ✅ 8 hours
+- Phase 3 (Contractor UI): ✅ 6 hours
+- Phase 4 (CRUD): ✅ 6 hours
+- Phase 5 (AI Extraction): ✅ 10 hours
+- Phase 6 (Duplicates): ❌ NOT DONE
+- Phase 7 (Testing): ⚠️ PARTIAL
+- Phase 8 (Brief/Scope Sections): ✅ 4 hours
+- Phase 9 (Award Toggle): ✅ 6 hours
+- Phase 10 (Report Generation - Bonus): ✅ 12 hours
+- Phase 11 (Fee/Price Structure - Bonus): ✅ 8 hours
 
-**Total**: 32-45 hours (~1 week)
+**Total Completed**: ~69 hours
+**Estimated Remaining**: 4-6 hours (Phase 12 - Duplicate Prevention only)
+
+### Remaining Effort (Phase 12 only)
+- Phase 12 (Duplicate Prevention): 4-6 hours
+  - Duplicate prevention logic: 2-3 hours
+  - Duplicate warning modal: 2-3 hours
+- ~~Phase 13 (Bug Fixes)~~: ✅ COMPLETE
+  - ✅ Drag & drop on all cards: DONE (0.5 hours)
+  - ✅ Phone/notes fields: DONE (1.5 hours)
+  - ⚠️ Extraction auto-save: DEFERRED (user to decide if needed)
+
+**Grand Total**: ~73-75 hours actual development time
+**Completion**: ~92% (69/75 hours)

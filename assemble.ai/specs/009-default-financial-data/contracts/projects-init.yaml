@@ -1,0 +1,192 @@
+openapi: 3.0.3
+info:
+  title: Project Initialization API (Extended)
+  description: |
+    Extension to POST /api/projects to include default financial data initialization.
+    This contract documents the enhanced project creation behavior.
+  version: 1.1.0
+
+paths:
+  /api/projects:
+    post:
+      summary: Create a new project with full initialization
+      description: |
+        Creates a new project and initializes all default data in a single atomic transaction:
+        - Consultant disciplines (36)
+        - Contractor trades (21)
+        - Project stages (5)
+        - Project details (1)
+        - Project objectives (1)
+        - **NEW: Default cost lines (20)**
+        - **NEW: Sample variation (1)**
+        - **NEW: Sample invoice (1)**
+      operationId: createProject
+      tags:
+        - Projects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created successfully with all default data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateProjectResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error (transaction rolled back)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Project name
+          example: "123 Main Street Fitout"
+        code:
+          type: string
+          maxLength: 50
+          description: Optional project code
+          example: "PRJ-2024-001"
+
+    CreateProjectResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique project identifier
+          example: "1701849600000-abc123def"
+        name:
+          type: string
+          example: "123 Main Street Fitout"
+        code:
+          type: string
+          nullable: true
+          example: "PRJ-2024-001"
+        status:
+          type: string
+          enum: [active, archived, pending]
+          default: active
+        initialization:
+          $ref: '#/components/schemas/InitializationSummary'
+        createdAt:
+          type: string
+          format: date-time
+
+    InitializationSummary:
+      type: object
+      description: Summary of data initialized with project
+      properties:
+        consultantDisciplines:
+          type: integer
+          example: 36
+        contractorTrades:
+          type: integer
+          example: 21
+        projectStages:
+          type: integer
+          example: 5
+        costLines:
+          type: integer
+          example: 20
+          description: "NEW: Default cost line items created"
+        sampleVariation:
+          type: boolean
+          example: true
+          description: "NEW: Sample variation created"
+        sampleInvoice:
+          type: boolean
+          example: true
+          description: "NEW: Sample invoice created"
+        totalBudgetCents:
+          type: integer
+          example: 90000000
+          description: "NEW: Total default budget in cents ($900,000)"
+
+    CostLineSection:
+      type: string
+      enum:
+        - FEES
+        - CONSULTANTS
+        - CONSTRUCTION  # Changed from PC_ITEMS
+        - CONTINGENCY
+      description: Cost line section category
+
+    DefaultCostLine:
+      type: object
+      description: A default cost line created during project initialization
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        section:
+          $ref: '#/components/schemas/CostLineSection'
+        costCode:
+          type: string
+          pattern: '^\d+\.\d{2}$'
+          example: "2.01"
+        description:
+          type: string
+          example: "Project Manager"
+        budgetCents:
+          type: integer
+          minimum: 0
+          example: 5000000
+        approvedContractCents:
+          type: integer
+          default: 0
+        sortOrder:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Project name is required"
+        code:
+          type: string
+          description: Error code
+          example: "VALIDATION_ERROR"
+
+  examples:
+    SuccessfulCreation:
+      summary: Successful project creation
+      value:
+        id: "1701849600000-abc123def"
+        name: "123 Main Street Fitout"
+        code: "PRJ-2024-001"
+        status: "active"
+        initialization:
+          consultantDisciplines: 36
+          contractorTrades: 21
+          projectStages: 5
+          costLines: 20
+          sampleVariation: true
+          sampleInvoice: true
+          totalBudgetCents: 90000000
+        createdAt: "2025-12-06T10:30:00.000Z"

@@ -36,9 +36,8 @@ export async function PUT(request: NextRequest) {
         });
     } catch (error) {
         console.error('Error bulk categorizing documents:', error);
-        // Log the full error for debugging
         if (error instanceof Error) {
-            console.error('Error details:', error.message, error.stack);
+            console.error('Error details:', error.message);
         }
         return NextResponse.json({
             error: 'Failed to categorize documents',

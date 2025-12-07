@@ -4,9 +4,9 @@ import { validateExcelFile } from '@/lib/excel-validation';
 import { storage } from '@/lib/storage/local';
 import { versioning } from '@/lib/versioning';
 import { db } from '@/lib/db';
-import { documents, versions, fileAssets, categories, subcategories, projects } from '@/lib/db/schema';
+import { documents, versions, fileAssets, categories, subcategories, projects, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
 import { v4 as uuidv4 } from 'uuid';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { getCategoryById } from '@/lib/constants/categories';
 
 export async function POST(request: NextRequest) {
@@ -96,6 +96,35 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // 2.6. Ensure subcategory exists
+        if (subcategoryId && categoryId) {
+          const subcategoryName = formData.get('subcategoryName') as string | null;
+          if (subcategoryName) {
+            try {
+              // Try to insert the subcategory (will fail silently if it already exists)
+              await db.insert(subcategories).values({
+                id: subcategoryId,
+                categoryId: categoryId,
+                name: subcategoryName,
+                isSystem: false
+              });
+            } catch (err: any) {
+              // Ignore UNIQUE constraint errors (subcategory already exists)
+              const isConstraintError =
+                err?.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+                err?.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' ||
+                err?.code === 'SQLITE_CONSTRAINT' ||
+                err?.message?.includes('UNIQUE') ||
+                err?.message?.includes('PRIMARY');
+
+              if (!isConstraintError) {
+                console.error('Unexpected error inserting subcategory:', err);
+                throw err;
+              }
+            }
+          }
+        }
+
         // 3. Determine Versioning (T017)
         let documentId = await versioning.findMatchingDocument(file.name, projectId);
         let versionNumber = 1;
@@ -107,12 +136,11 @@ export async function POST(request: NextRequest) {
             // New document
             documentId = uuidv4();
 
-            // Note: We only use categoryId for now. subcategoryId has FK constraint to old subcategories table
-            // which we're not populating. We'll just store categoryId for categorization.
             console.log('Creating new document with:', {
                 id: documentId,
                 projectId: projectId,
                 categoryId: categoryId || null,
+                subcategoryId: subcategoryId || null,
                 filename: file.name
             });
 
@@ -120,7 +148,7 @@ export async function POST(request: NextRequest) {
                 id: documentId,
                 projectId: projectId,
                 categoryId: categoryId || null,
-                // Not setting subcategoryId to avoid FK constraint issues
+                subcategoryId: subcategoryId || null,
             });
         }
 
@@ -157,18 +185,22 @@ export async function GET(request: NextRequest) {
     return handleApiError(async () => {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
+        const categoryId = searchParams.get('categoryId');
+        const subcategoryId = searchParams.get('subcategoryId');
 
         if (!projectId) {
             return NextResponse.json({ error: 'No project ID provided' }, { status: 400 });
         }
 
-        // Fetch all documents for the specified project with their latest version and file asset
-        const docs = await db.select({
+        // Build query with filters
+        // Note: subcategoryId can reference either the legacy subcategories table,
+        // or consultantDisciplines/contractorTrades tables. We join all and use COALESCE.
+        let query = db.select({
             id: documents.id,
             categoryId: documents.categoryId,
             categoryName: categories.name,
             subcategoryId: documents.subcategoryId,
-            subcategoryName: subcategories.name,
+            subcategoryName: sql<string>`COALESCE(${subcategories.name}, ${consultantDisciplines.disciplineName}, ${contractorTrades.tradeName})`,
             updatedAt: documents.updatedAt,
             latestVersionId: documents.latestVersionId,
             originalName: fileAssets.originalName,
@@ -178,11 +210,25 @@ export async function GET(request: NextRequest) {
             ocrStatus: fileAssets.ocrStatus,
         })
             .from(documents)
-            .where(eq(documents.projectId, projectId))
             .leftJoin(versions, eq(documents.latestVersionId, versions.id))
             .leftJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
             .leftJoin(categories, eq(documents.categoryId, categories.id))
-            .leftJoin(subcategories, eq(documents.subcategoryId, subcategories.id));
+            .leftJoin(subcategories, eq(documents.subcategoryId, subcategories.id))
+            .leftJoin(consultantDisciplines, eq(documents.subcategoryId, consultantDisciplines.id))
+            .leftJoin(contractorTrades, eq(documents.subcategoryId, contractorTrades.id));
+
+        // Apply filters using and() for multiple conditions
+        const conditions = [eq(documents.projectId, projectId)];
+        if (categoryId) {
+            conditions.push(eq(documents.categoryId, categoryId));
+        }
+        if (subcategoryId) {
+            conditions.push(eq(documents.subcategoryId, subcategoryId));
+        }
+
+        // Execute with all conditions
+        const { and } = await import('drizzle-orm');
+        const docs = await query.where(and(...conditions));
 
         return NextResponse.json(docs);
     });

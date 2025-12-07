@@ -3,19 +3,38 @@
 import { useState, useEffect } from 'react';
 import { useConsultants } from '@/lib/hooks/use-consultants';
 import { ConsultantForm } from './ConsultantForm';
+import { FeeStructureSection } from './FeeStructureSection';
 import { useToast } from '@/lib/hooks/use-toast';
 import { Upload } from 'lucide-react';
+import { InlineEditField } from '@/components/dashboard/planning/InlineEditField';
+import { ReportsSection } from '@/components/reports/ReportsSection';
+import { GenerationMode } from '@/components/documents/DisciplineRepoTiles';
 
 interface ConsultantGalleryProps {
   projectId: string;
   discipline: string;
+  disciplineId?: string;
+  briefServices?: string;
+  briefFee?: string;
+  briefProgram?: string;
+  onUpdateBrief?: (disciplineId: string, field: 'briefServices' | 'briefFee' | 'briefProgram', value: string) => Promise<void>;
+  generationMode?: GenerationMode;
 }
 
-export function ConsultantGallery({ projectId, discipline }: ConsultantGalleryProps) {
-  const { consultants, isLoading, addConsultant, updateConsultant, deleteConsultant, toggleShortlist } = useConsultants(projectId, discipline);
+export function ConsultantGallery({
+  projectId,
+  discipline,
+  disciplineId,
+  briefServices = '',
+  briefFee = '',
+  briefProgram = '',
+  onUpdateBrief,
+  generationMode = 'ai_assist'
+}: ConsultantGalleryProps) {
+  const { consultants, isLoading, addConsultant, updateConsultant, deleteConsultant, toggleShortlist, toggleAward } = useConsultants(projectId, discipline);
   const { toast } = useToast();
   const [cards, setCards] = useState<Array<{ id: string; consultant?: any }>>([]);
-  const [isDragging, setIsDragging] = useState(false);
+  const [draggingOverCardId, setDraggingOverCardId] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedData, setExtractedData] = useState<any>(null);
 
@@ -38,10 +57,6 @@ export function ConsultantGallery({ projectId, discipline }: ConsultantGalleryPr
       if (card?.consultant?.id) {
         // Update existing consultant
         await updateConsultant(card.consultant.id, { ...data, discipline });
-        toast({
-          title: 'Success',
-          description: 'Consultant updated successfully',
-        });
       } else {
         // Create new consultant
         const newConsultant = await addConsultant({ ...data, discipline });
@@ -97,6 +112,25 @@ export function ConsultantGallery({ projectId, discipline }: ConsultantGalleryPr
     }
   };
 
+  const handleAwardChange = async (id: string, awarded: boolean) => {
+    try {
+      await toggleAward(id, awarded);
+      toast({
+        title: awarded ? 'Contract Awarded' : 'Award Removed',
+        description: awarded
+          ? 'Company has been added to the master list and is now available in Cost Planning.'
+          : 'Award status has been removed.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update award status',
+        variant: 'destructive',
+      });
+      throw error; // Re-throw to revert UI
+    }
+  };
+
   const handleFileExtraction = async (file: File) => {
     setIsExtracting(true);
     try {
@@ -109,7 +143,8 @@ export function ConsultantGallery({ projectId, discipline }: ConsultantGalleryPr
       });
 
       if (!response.ok) {
-        throw new Error('Failed to extract data');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to extract data');
       }
 
       const result = await response.json();
@@ -150,19 +185,26 @@ export function ConsultantGallery({ projectId, discipline }: ConsultantGalleryPr
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, cardId: string) => {
     e.preventDefault();
-    setIsDragging(true);
+    e.stopPropagation();
+    setDraggingOverCardId(cardId);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    e.stopPropagation();
+    // Only clear if leaving the card entirely (not entering a child element)
+    const relatedTarget = e.relatedTarget as Element | null;
+    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+      setDraggingOverCardId(null);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    e.stopPropagation();
+    setDraggingOverCardId(null);
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
@@ -190,11 +232,73 @@ export function ConsultantGallery({ projectId, discipline }: ConsultantGalleryPr
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-[#cccccc]">{discipline}</h3>
+  // Handle Brief field updates
+  const handleBriefUpdate = async (field: 'briefServices' | 'briefFee' | 'briefProgram', value: string) => {
+    if (disciplineId && onUpdateBrief) {
+      await onUpdateBrief(disciplineId, field, value);
+    }
+  };
 
-      <div className="relative">
+  return (
+    <div className="space-y-6">
+      {/* Reports Section - Moved up for visibility */}
+      {disciplineId && (
+        <ReportsSection
+          projectId={projectId}
+          disciplineId={disciplineId}
+          disciplineName={discipline}
+          generationMode={generationMode}
+        />
+      )}
+
+      {/* Brief Section */}
+      {disciplineId && onUpdateBrief && (
+        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
+          <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Brief</h3>
+          <div className="space-y-4">
+            <InlineEditField
+              label="Services"
+              value={briefServices}
+              onSave={(value) => handleBriefUpdate('briefServices', value)}
+              placeholder="Describe the services required..."
+              multiline
+              rows={6}
+            />
+            <InlineEditField
+              label="Fee"
+              value={briefFee}
+              onSave={(value) => handleBriefUpdate('briefFee', value)}
+              placeholder="Enter fee structure and budget..."
+              multiline
+              rows={6}
+            />
+            <InlineEditField
+              label="Program"
+              value={briefProgram}
+              onSave={(value) => handleBriefUpdate('briefProgram', value)}
+              placeholder="Enter program and timeline requirements..."
+              multiline
+              rows={6}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Fee Structure Section */}
+      {disciplineId && (
+        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
+          <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Fee Structure</h3>
+          <FeeStructureSection
+            disciplineId={disciplineId}
+            disciplineName={discipline}
+          />
+        </div>
+      )}
+
+      {/* Firms Section */}
+      <div>
+        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Firms</h3>
+        <div className="relative">
         {/* Extraction Progress Overlay */}
         {isExtracting && (
           <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
@@ -206,20 +310,21 @@ export function ConsultantGallery({ projectId, discipline }: ConsultantGalleryPr
           </div>
         )}
 
-        <div className="flex gap-3 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex gap-3 overflow-x-auto pt-3 pb-4" style={{ scrollbarWidth: 'thin' }}>
           {cards.map((card, index) => {
-            const isFirstEmpty = !card.consultant && index === cards.findIndex(c => !c.consultant);
+            const isEmpty = !card.consultant;
+            const isDraggingOver = draggingOverCardId === card.id;
 
             return (
               <div
                 key={card.id}
                 className="flex-shrink-0 relative"
-                onDragOver={isFirstEmpty ? handleDragOver : undefined}
-                onDragLeave={isFirstEmpty ? handleDragLeave : undefined}
-                onDrop={isFirstEmpty ? handleDrop : undefined}
+                onDragOver={isEmpty ? (e) => handleDragOver(e, card.id) : undefined}
+                onDragLeave={isEmpty ? handleDragLeave : undefined}
+                onDrop={isEmpty ? handleDrop : undefined}
               >
-                {/* Drag & Drop Overlay - Only on first empty card */}
-                {isFirstEmpty && isDragging && (
+                {/* Drag & Drop Overlay - Shows only on the specific card being dragged over */}
+                {isEmpty && isDraggingOver && (
                   <div className="absolute inset-0 z-50 bg-[#0e639c]/20 border-2 border-dashed border-[#0e639c] rounded-lg flex items-center justify-center">
                     <div className="bg-[#1e1e1e] border border-[#0e639c] rounded-lg p-4 flex flex-col items-center gap-2">
                       <Upload className="w-8 h-8 text-[#0e639c]" />
@@ -232,13 +337,16 @@ export function ConsultantGallery({ projectId, discipline }: ConsultantGalleryPr
                   consultant={card.consultant}
                   onSave={(data) => handleSave(card.id, data)}
                   onDelete={card.consultant?.id ? handleDelete : undefined}
+                  onAwardChange={card.consultant?.id ? (awarded) => handleAwardChange(card.consultant.id, awarded) : undefined}
                   discipline={discipline}
                 />
               </div>
             );
           })}
         </div>
+        </div>
       </div>
+
     </div>
   );
 }
