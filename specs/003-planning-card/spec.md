@@ -1,9 +1,18 @@
 # Feature Specification: Planning Card
 
-**Feature Branch**: `003-planning-card`  
-**Created**: 2025-11-22  
-**Status**: Draft  
+**Feature Branch**: `003-planning-card`
+**Created**: 2025-11-22
+**Status**: Draft
 **Input**: User description: "Planning Card with 7 sections: Details, Objectives, Staging, Risk, Stakeholders, Consultant List, Contractor List with inline editing and auto-save"
+
+## Clarifications
+
+### Session 2025-12-03
+
+- Q: Should US7 (AI-Assisted Field Filling) be standalone or leverage 007-RAG infrastructure? → A: Redesign to leverage 007-RAG infrastructure (LangGraph, Voyage embeddings, RAG retrieval pipeline)
+- Q: What technology stack for AI features? → A: Use LangGraph orchestration (same as 007-RAG) instead of standalone Vercel AI SDK
+- Q: What context should AI suggestions use? → A: Hybrid context model - Planning Card data (exact) + RAG-retrieved document content (synced docs)
+- Q: When can Phase 10 (US7) be implemented? → A: After 007-RAG Phase 2 (Foundational) is complete. **Status: Ready** - 007-RAG Phase 2 is complete as of 2025-12-03.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -72,56 +81,108 @@ Users need the ability to undo recent edits to recover from mistakes without man
 
 ---
 
-### User Story 5 - Manage Consultant Disciplines (Priority: P1)
+### User Story 5 – Activate Consultant Disciplines & Track Procurement Status (Priority: P1)
 
-Users need to select which consultant disciplines are required for their project and track the status of each discipline through the procurement process.
+As a Project Manager, I need to declare which consultant disciplines are required on this project and visually track their procurement lifecycle (Brief → Tender → Recommendation → Award) so that the rest of the app (Consultant Cards, tender packages, dashboards) always reflects the correct scope.
 
-**Why this priority**: Core to project planning - knowing which consultants are needed is fundamental to project setup.
+**Why P1 because**: This list is the single source of truth for consultant scope. Every downstream feature (tabs, document categories, transmittals, reporting) depends on it.
 
-**Independent Test**: Toggle a consultant discipline on/off and verify corresponding tab appears/disappears in Consultant Card.
+**Independent Test**: Can be fully tested in the Planning → Consultants section without any other feature implemented.
 
-**Acceptance Scenarios**:
+**Acceptance Criteria**
 
-1. **Given** the Consultant List section is displayed, **When** viewing the list, **Then** all default consultant disciplines are shown in a scrollable list (AC-7.1).
-2. **Given** a consultant discipline is displayed, **When** the user clicks the toggle, **Then** the discipline is marked as needed/not needed for the project (AC-7.2).
-3. **Given** a consultant discipline is displayed, **When** viewing status indicators, **Then** 4 status icons are shown: Brief, Tender, Rec (Recommendation), Award - all defaulting to off/ghosted state (AC-7.3).
-4. **Given** a consultant discipline is toggled on, **When** the toggle completes, **Then** a corresponding tab is created in the Consultant Card (AC-7.4).
-5. **Given** a consultant discipline is toggled off, **When** the user confirms the action, **Then** the corresponding tab is removed from the Consultant Card (AC-7.5).
+1. A scrollable list shows all 12–15 standard consultant disciplines (Architectural, Structural, MEP, Civil, etc.).
+2. Each row has:
+   - Toggle switch (on = required for this project)
+   - Four status icons: Brief | Tender | Recommendation | Award (default = ghosted/off)
+3. Toggling a discipline ON → instantly creates a matching tab in the Consultant Cards section.
+4. Toggling a discipline OFF → no confirmation modal (“Remove Structural? This will hide the tab and may affect tender packages”) → on confirm, tab is removed.
+5. Clicking a status icon cycles it forward (off → Brief → Tender → Recommendation → Award → off) with clear colour states.
+6. All changes are persisted immediately and survive page reload.
 
 ---
 
-### User Story 6 - Manage Contractor Trades (Priority: P1)
+### User Story 6 – Activate Contractor Trades & Track Procurement Status (Priority: P1)
 
-Users need to select which contractor trades are required for their project and track the status of each trade through the procurement process.
+As a Project Manager, I need to declare which contractor trades/packages are required and track their procurement lifecycle so that Contractor Cards, document categories, and tender workflows stay in sync.
 
-**Why this priority**: Core to project planning - knowing which contractors are needed is fundamental to project setup.
+**Why P1**: Identical dependency pattern as consultants — this list drives scope, tabs, and packaging.
 
-**Independent Test**: Toggle a contractor trade on/off and verify corresponding tab appears/disappears in Contractor Card.
+**Independent Test**: Can be fully tested in Planning → Contractors section in isolation.
+
+**Acceptance Criteria**
+
+1. A scrollable list shows the full 21 contractor trades (Concrete Finisher, Electrical, Plumbing, Roofing, etc.).
+2. Each row has:
+   - Toggle switch (on = required)
+   - Four status icons: Brief | Tender | Recommendation | Award (default = ghosted)
+3. Toggling a trade ON → instantly creates a matching tab in the Contractor Cards section.
+4. Toggling a trade OFF → confirmation modal → tab removed on confirm.
+5. Status icons cycle on click with distinct colours (same behaviour as consultants).
+6. Changes persist instantly and are reflected immediately in:
+   - Contractor Cards tabs
+   - Document upload category picker
+   - Tender package builder
+
+---
+
+### User Story 7a - Document Extraction for Details Section (Priority: P2)
+
+Users need to quickly populate Details section fields by dragging documents, pasting text, or dropping Outlook emails. AI extracts project information and auto-fills the relevant fields.
+
+**Why this priority**: Significant time-saver for initial project setup. Users can paste email content or drop planning documents to auto-fill 8 fields instead of manual entry.
+
+**Independent Test**: Drag a PDF onto Details section and verify fields are populated with extracted data.
 
 **Acceptance Scenarios**:
 
-1. **Given** the Contractor List section is displayed, **When** viewing the list, **Then** all default contractor trades are shown in a scrollable list (AC-8.1).
-2. **Given** a contractor trade is displayed, **When** the user clicks the toggle, **Then** the trade is marked as needed/not needed for the project (AC-8.2).
-3. **Given** a contractor trade is displayed, **When** viewing status indicators, **Then** 4 status icons are shown: Brief, Tender, Rec (Recommendation), Award - all defaulting to off/ghosted state (AC-8.3).
-4. **Given** a contractor trade is toggled on, **When** the toggle completes, **Then** a corresponding tab is created in the Contractor Card (AC-8.4).
-5. **Given** a contractor trade is toggled off, **When** the user confirms the action, **Then** the corresponding tab is removed from the Contractor Card (AC-8.5).
+1. **Given** the Details section is displayed, **When** the user drags a PDF, Word doc, image, or text file onto the section, **Then** a drop zone overlay appears with "Drop to extract project details".
+2. **Given** a file is dropped, **When** the extraction completes, **Then** relevant fields (Project Name, Address, Zoning, etc.) are auto-populated with extracted data.
+3. **Given** the Details section is displayed, **When** the user pastes text (Ctrl+V), **Then** AI extracts project information and populates fields.
+4. **Given** an Outlook email is dragged, **When** dropped onto Details section, **Then** email body text is extracted and fields are populated.
+5. **Given** extraction is in progress, **When** processing, **Then** a spinner overlay appears with "Extracting project details...".
+6. **Given** extraction completes, **When** data is populated, **Then** a toast shows extraction confidence (e.g., "Successfully extracted project details (85% confidence)").
+7. **Given** extraction has low confidence (<70%), **When** completed, **Then** a warning toast prompts user to review the data.
+
+---
+
+### User Story 7b - Document Extraction for Objectives Section (Priority: P2)
+
+Users need to quickly populate Objectives section fields by dragging documents, pasting text, or dropping Outlook emails. AI extracts functional, quality, budget, and program objectives and auto-fills the relevant fields.
+
+**Why this priority**: Significant time-saver for project setup. Users can paste project brief content or drop planning documents to auto-fill 4 objective fields.
+
+**Independent Test**: Drag a project brief PDF onto Objectives section and verify fields are populated with extracted objectives.
+
+**Acceptance Scenarios**:
+
+1. **Given** the Objectives section is displayed, **When** the user drags a PDF, Word doc, image, or text file onto the section, **Then** a drop zone overlay appears with "Drop to extract objectives".
+2. **Given** a file is dropped, **When** the extraction completes, **Then** relevant fields (Functional, Quality, Budget, Program) are auto-populated with extracted objectives.
+3. **Given** the Objectives section is displayed, **When** the user pastes text (Ctrl+V), **Then** AI extracts objectives and populates fields.
+4. **Given** an Outlook email is dragged, **When** dropped onto Objectives section, **Then** email body text is extracted and objectives fields are populated.
+5. **Given** extraction is in progress, **When** processing, **Then** a spinner overlay appears with "Extracting objectives...".
+6. **Given** extraction completes, **When** data is populated, **Then** a toast shows extraction confidence (e.g., "Successfully extracted project objectives (85% confidence)").
+7. **Given** extraction has low confidence (<70%), **When** completed, **Then** a warning toast prompts user to review the objectives.
 
 ---
 
 ### User Story 7 - AI-Assisted Field Filling (Priority: P2)
 
-Users need AI assistance to quickly populate Objectives, Staging, and Risk fields based on project type and address, reducing manual data entry and ensuring comprehensive planning.
+Users need AI assistance to quickly populate Objectives, Staging, and Risk fields based on project context and synced documents (RAG), reducing manual data entry and ensuring comprehensive planning informed by actual project documentation.
 
 **Why this priority**: Valuable time-saver, but manual entry still works. AI assistance enhances UX but isn't blocking.
 
-**Independent Test**: Click "Suggest" button next to Objectives and verify AI fills in relevant content.
+**Dependency**: Requires 007-RAG infrastructure (document sync, retrieval pipeline). Can be implemented after RAG Phase 2 (Foundational) is complete.
+
+**Independent Test**: Sync project brief documents to AI → Click "Suggest" button next to Objectives → Verify AI fills fields with content informed by synced documents.
 
 **Acceptance Scenarios**:
 
-1. **Given** the Objectives section is displayed, **When** the user clicks "Suggest", **Then** AI fills Functional, Quality, Budget, and Program fields based on project type and address.
-2. **Given** the Staging section is displayed, **When** the user clicks "Suggest", **Then** AI suggests appropriate timeline and milestones based on project scope.
-3. **Given** the Risk section is displayed, **When** the user clicks "Suggest", **Then** AI identifies potential risks based on project location, type, and scope.
+1. **Given** the Objectives section is displayed and project documents are synced to AI, **When** the user clicks "Suggest", **Then** AI fills Functional, Quality, Budget, and Program fields using hybrid context (Planning Card data + retrieved RAG content from synced documents).
+2. **Given** the Staging section is displayed, **When** the user clicks "Suggest", **Then** AI suggests appropriate timeline and milestones based on project scope and any synced program/schedule documents.
+3. **Given** the Risk section is displayed, **When** the user clicks "Suggest", **Then** AI identifies potential risks informed by project location, type, scope, and any risk-related synced documents.
 4. **Given** AI suggestions are displayed, **When** the user reviews them, **Then** all suggestions are editable and can be accepted or modified.
+5. **Given** no documents are synced to AI, **When** the user clicks "Suggest", **Then** AI provides basic suggestions using only Planning Card context (project details, address) with a note that syncing documents would improve suggestions.
 
 ---
 
@@ -216,14 +277,38 @@ Directors need to export the Planning Card as a professionally formatted PDF wit
 - **FR-028**: System MUST create a corresponding tab in the Contractor Card when a trade is toggled on (AC-8.4).
 - **FR-029**: System MUST remove the corresponding tab from the Contractor Card when a trade is toggled off, with user confirmation (AC-8.5).
 
-**AI-Assisted Field Filling**:
+**Document Extraction for Details Section** *(Uses Anthropic Claude 3.5 Haiku)*:
+- **FR-027a**: System MUST provide drag-and-drop support on the Details section for PDF, Word (.docx), image (JPG/PNG), and text files.
+- **FR-027b**: System MUST display a drop zone overlay when a file is dragged over the Details section.
+- **FR-027c**: System MUST support paste (Ctrl+V) to extract text content (including HTML from Outlook emails).
+- **FR-027d**: System MUST support native Outlook email drag (extracts email body text).
+- **FR-027e**: System MUST display a spinner overlay during extraction with "Extracting project details..." message.
+- **FR-027f**: System MUST use Claude 3.5 Haiku to extract project information from text content.
+- **FR-027g**: System MUST auto-populate Details fields (Project Name, Address, Legal Address, Zoning, Jurisdiction, Lot Area, Number of Stories, Building Class) with extracted data.
+- **FR-027h**: System MUST display a toast notification with extraction confidence percentage.
+- **FR-027i**: System MUST display a warning toast when confidence is below 70%.
+
+**Document Extraction for Objectives Section** *(Uses Anthropic Claude 3.5 Haiku)*:
+- **FR-029a**: System MUST provide drag-and-drop support on the Objectives section for PDF, Word (.docx), image (JPG/PNG), and text files.
+- **FR-029b**: System MUST display a drop zone overlay when a file is dragged over the Objectives section.
+- **FR-029c**: System MUST support paste (Ctrl+V) to extract text content (including HTML from Outlook emails).
+- **FR-029d**: System MUST support native Outlook email drag (extracts email body text).
+- **FR-029e**: System MUST display a spinner overlay during extraction with "Extracting objectives..." message.
+- **FR-029f**: System MUST use Claude 3.5 Haiku to extract project objectives from text content.
+- **FR-029g**: System MUST auto-populate Objectives fields (Functional, Quality, Budget, Program) with extracted data.
+- **FR-029h**: System MUST display a toast notification with extraction confidence percentage.
+- **FR-029i**: System MUST display a warning toast when confidence is below 70%.
+
+**AI-Assisted Field Filling** *(Leverages 007-RAG Infrastructure)*:
 - **FR-030**: System MUST provide a "Suggest" button next to the Objectives section.
-- **FR-031**: System MUST use AI to fill Functional, Quality, Budget, and Program fields based on project type and address when "Suggest" is clicked.
+- **FR-031**: System MUST use AI with hybrid context (Planning Card data + RAG-retrieved document content) to fill Functional, Quality, Budget, and Program fields when "Suggest" is clicked.
 - **FR-032**: System MUST provide a "Suggest" button next to the Staging section.
-- **FR-033**: System MUST use AI to suggest appropriate timeline and milestones based on project scope.
+- **FR-033**: System MUST use AI with hybrid context to suggest appropriate timeline and milestones based on project scope and synced schedule/program documents.
 - **FR-034**: System MUST provide a "Suggest" button next to the Risk section.
-- **FR-035**: System MUST use AI to identify potential risks based on project location, type, and scope.
+- **FR-035**: System MUST use AI with hybrid context to identify potential risks informed by project details and synced risk-related documents.
 - **FR-036**: System MUST make all AI suggestions editable and allow users to accept or modify them.
+- **FR-036a**: System MUST gracefully degrade when no documents are synced, using Planning Card context only with a prompt to sync documents for better suggestions.
+- **FR-036b**: System MUST use LangGraph orchestration (from 007-RAG) for AI suggestion workflows.
 
 **Smart Defaults from Address**:
 - **FR-037**: System MUST query public GIS APIs when a user enters a project address.
@@ -270,6 +355,16 @@ Directors need to export the Planning Card as a professionally formatted PDF wit
 **Undo Capability (AC-5.8)**:
 - **FR-018**: System MUST support Ctrl+Z (Cmd+Z on Mac) to undo recent edits.
 - **FR-019**: System MUST maintain an undo history for the current session.
+
+**Project Initialization (AC-9.x)**:
+- **FR-051**: System MUST initialize all 36 consultant disciplines when a project is created (see [data-model.md](data-model.md) for full list).
+- **FR-052**: System MUST initialize all 21 contractor trades when a project is created (see [data-model.md](data-model.md) for full list).
+- **FR-053**: System MUST initialize 5 default project stages when a project is created (Initiation, Scheme Design, Detail Design, Procurement, Delivery).
+- **FR-054**: System MUST initialize empty ProjectDetails and ProjectObjectives records when a project is created.
+- **FR-055**: All project initialization MUST occur atomically within a database transaction.
+- **FR-056**: All consultant disciplines MUST be created with `isEnabled: false` by default.
+- **FR-057**: All contractor trades MUST be created with `isEnabled: false` by default.
+- **FR-058**: All status records (brief, tender, rec, award) MUST be created with `isActive: false` by default.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -322,3 +417,8 @@ Directors need to export the Planning Card as a professionally formatted PDF wit
 - **SC-019**: PDF generation completes within 5 seconds for typical projects.
 - **SC-020**: Exported PDFs are professionally formatted and include all 7 sections.
 - **SC-021**: Revision history in PDF is accurate and complete.
+
+**Project Initialization**:
+- **SC-022**: 100% of new projects have complete planning data (292 records) immediately after creation.
+- **SC-023**: Project creation including initialization completes in < 2 seconds.
+- **SC-024**: Transaction rollback works correctly on simulated failure (no partial data).

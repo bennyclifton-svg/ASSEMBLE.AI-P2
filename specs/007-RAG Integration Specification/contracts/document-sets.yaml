@@ -1,0 +1,354 @@
+openapi: 3.1.0
+info:
+  title: Document Sets API
+  description: API for managing document sets used in RAG context
+  version: 1.0.0
+
+paths:
+  /api/document-sets:
+    get:
+      summary: List document sets
+      description: Get all document sets for the current project
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of document sets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documentSets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentSet'
+
+    post:
+      summary: Create document set
+      description: Create a new document set for RAG context
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - projectId
+                - name
+              properties:
+                projectId:
+                  type: string
+                name:
+                  type: string
+                description:
+                  type: string
+                discipline:
+                  type: string
+                isDefault:
+                  type: boolean
+                  default: false
+                autoSyncCategoryIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Document set created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSet'
+
+  /api/document-sets/{id}:
+    get:
+      summary: Get document set
+      description: Get a single document set with its members
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document set with members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSetWithMembers'
+
+    patch:
+      summary: Update document set
+      description: Update document set properties
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                discipline:
+                  type: string
+                isDefault:
+                  type: boolean
+                autoSyncCategoryIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Document set updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSet'
+
+    delete:
+      summary: Delete document set
+      description: Delete a document set and all its members (chunks are preserved)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Document set deleted
+
+  /api/document-sets/{id}/members:
+    post:
+      summary: Add documents to set
+      description: Add documents to a document set and queue for processing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - documentIds
+              properties:
+                documentIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of document IDs to add
+      responses:
+        '201':
+          description: Documents added and queued for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added:
+                    type: integer
+                    description: Number of documents added
+                  alreadyExists:
+                    type: integer
+                    description: Number of documents already in set
+                  queuedJobs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        documentId:
+                          type: string
+                        jobId:
+                          type: string
+
+    delete:
+      summary: Remove documents from set
+      description: Remove documents from a document set
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - documentIds
+              properties:
+                documentIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Documents removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed:
+                    type: integer
+
+  /api/document-sets/{id}/members/{documentId}/retry:
+    post:
+      summary: Retry failed sync
+      description: Retry processing for a failed document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Retry queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending]
+
+  /api/document-sets/sync-status:
+    get:
+      summary: Get sync status
+      description: Get sync status for documents across all sets
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: documentIds
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Sync status map
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    sets:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          setId:
+                            type: string
+                          setName:
+                            type: string
+                          status:
+                            type: string
+                            enum: [pending, processing, synced, failed]
+                          error:
+                            type: string
+
+components:
+  schemas:
+    DocumentSet:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        discipline:
+          type: string
+        isDefault:
+          type: boolean
+        autoSyncCategoryIds:
+          type: array
+          items:
+            type: string
+        memberCount:
+          type: integer
+        syncedCount:
+          type: integer
+        failedCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DocumentSetWithMembers:
+      allOf:
+        - $ref: '#/components/schemas/DocumentSet'
+        - type: object
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/DocumentSetMember'
+
+    DocumentSetMember:
+      type: object
+      properties:
+        id:
+          type: string
+        documentSetId:
+          type: string
+        documentId:
+          type: string
+        documentTitle:
+          type: string
+          description: From SQLite documents table
+        syncStatus:
+          type: string
+          enum: [pending, processing, synced, failed]
+        errorMessage:
+          type: string
+        syncedAt:
+          type: string
+          format: date-time
+        chunksCreated:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time

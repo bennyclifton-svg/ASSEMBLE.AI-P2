@@ -56,6 +56,8 @@ export async function POST(request: NextRequest) {
       abn,
       notes,
       shortlisted = false,
+      awarded = false,
+      companyId = null,
     } = body;
 
     // Validate required fields
@@ -83,6 +85,8 @@ export async function POST(request: NextRequest) {
       abn,
       notes,
       shortlisted,
+      awarded,
+      companyId,
       createdAt: now,
       updatedAt: now,
     });

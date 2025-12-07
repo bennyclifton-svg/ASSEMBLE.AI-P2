@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 
 interface InlineEditFieldProps {
     value: string;
@@ -9,24 +9,72 @@ interface InlineEditFieldProps {
     label?: string;
     multiline?: boolean;
     required?: boolean;
+    minRows?: number;
 }
 
-export function InlineEditField({ value, onSave, placeholder, label, multiline = false, required = false }: InlineEditFieldProps) {
-    const [isEditing, setIsEditing] = useState(false);
+export function InlineEditField({
+    value,
+    onSave,
+    placeholder,
+    label,
+    multiline = false,
+    required = false,
+    minRows = 1
+}: InlineEditFieldProps) {
     const [editValue, setEditValue] = useState(value || '');
     const [isSaving, setIsSaving] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [savedValue, setSavedValue] = useState(value || '');
+    const [isFocused, setIsFocused] = useState(false);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Only sync with prop value on initial mount or when prop changes while not saving
+    // Auto-resize textarea to fit content
+    const autoResize = () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        // Store scroll position
+        const scrollTop = window.scrollY;
+
+        // Reset to minimum to get accurate scrollHeight
+        textarea.style.height = '0px';
+
+        // Calculate heights
+        const computed = window.getComputedStyle(textarea);
+        const paddingTop = parseFloat(computed.paddingTop);
+        const paddingBottom = parseFloat(computed.paddingBottom);
+        const lineHeight = parseFloat(computed.lineHeight) || 20;
+        const minHeight = (lineHeight * minRows) + paddingTop + paddingBottom;
+
+        // Set to the larger of scrollHeight or minHeight
+        const newHeight = Math.max(textarea.scrollHeight, minHeight);
+        textarea.style.height = `${newHeight}px`;
+
+        // Restore scroll position
+        window.scrollTo(0, scrollTop);
+    };
+
+    // Only sync with prop value when not focused and not saving
     useEffect(() => {
-        if (!isEditing && !isSaving && !showSuccess) {
+        if (!isFocused && !isSaving && !showSuccess) {
             setEditValue(value || '');
             setSavedValue(value || '');
         }
-    }, [value]); // Removed isEditing from dependencies to prevent reversion
+    }, [value]);
+
+    // Auto-resize on value change - use layoutEffect to prevent flicker
+    useLayoutEffect(() => {
+        autoResize();
+    }, [editValue, minRows]);
+
+    // Resize on window resize
+    useEffect(() => {
+        const handleResize = () => autoResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [minRows]);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -45,7 +93,6 @@ export function InlineEditField({ value, onSave, placeholder, label, multiline =
         }
 
         if (editValue === savedValue) {
-            setIsEditing(false);
             return;
         }
 
@@ -63,8 +110,7 @@ export function InlineEditField({ value, onSave, placeholder, label, multiline =
 
         try {
             await onSave(editValue);
-            // Successfully saved - keep the new value
-            setIsEditing(false);
+            // Successfully saved
             setShowSuccess(true);
             setTimeout(() => setShowSuccess(false), 2000);
         } catch (error) {
@@ -73,85 +119,75 @@ export function InlineEditField({ value, onSave, placeholder, label, multiline =
             setSavedValue(previousValue);
             setEditValue(previousValue);
             setError('Failed to save. Please try again.');
-            // Keep in edit mode on error so user can retry
         } finally {
             setIsSaving(false);
         }
     };
 
-    const debouncedHandleSave = () => {
-        // Clear existing timeout
+    const handleBlur = () => {
+        setIsFocused(false);
+        // Debounce save slightly to prevent rapid saves
         if (saveTimeoutRef.current) {
             clearTimeout(saveTimeoutRef.current);
         }
-
-        // Debounce for 300ms to prevent rapid saves
         saveTimeoutRef.current = setTimeout(() => {
             handleSave();
-        }, 300);
+        }, 150);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
+        // For single-line fields, Enter saves and blurs
         if (e.key === 'Enter' && !multiline) {
             e.preventDefault();
-            handleSave();
+            textareaRef.current?.blur();
         } else if (e.key === 'Escape') {
             setEditValue(savedValue);
-            setIsEditing(false);
             setError(null);
+            textareaRef.current?.blur();
         }
     };
 
-    if (isEditing) {
-        return (
-            <div>
-                {label && <label className="block text-sm font-medium text-[#858585] mb-1">{label}</label>}
-                <div className="relative">
-                    {multiline ? (
-                        <textarea
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={debouncedHandleSave}
-                            onKeyDown={handleKeyDown}
-                            className="w-full px-3 py-2 bg-[#252526] border border-[#0e639c] rounded text-[#cccccc] focus:outline-none focus:ring-1 focus:ring-[#0e639c]"
-                            placeholder={placeholder}
-                            autoFocus
-                            rows={3}
-                            disabled={isSaving}
-                        />
-                    ) : (
-                        <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onBlur={debouncedHandleSave}
-                            onKeyDown={handleKeyDown}
-                            className="w-full px-3 py-2 bg-[#252526] border border-[#0e639c] rounded text-[#cccccc] focus:outline-none focus:ring-1 focus:ring-[#0e639c]"
-                            placeholder={placeholder}
-                            autoFocus
-                            disabled={isSaving}
-                        />
-                    )}
-                    {isSaving && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                            <div className="w-4 h-4 border-2 border-[#0e639c] border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                    )}
-                </div>
-                {error && (
-                    <div className="text-red-500 text-sm mt-1">{error}</div>
-                )}
-            </div>
-        );
-    }
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setEditValue(e.target.value);
+    };
+
+    // Base styles - transparent by default, shows border on focus
+    const baseStyles = `
+        w-full px-3 py-2 rounded text-[#cccccc] leading-normal
+        bg-transparent border border-transparent
+        transition-colors duration-150
+        focus:outline-none focus:bg-[#252526] focus:border-[#0e639c] focus:ring-1 focus:ring-[#0e639c]
+        hover:border-[#3e3e42]
+        disabled:opacity-50
+        resize-none overflow-hidden
+    `;
+
+    const focusedBorderClass = isFocused ? 'border-[#0e639c] bg-[#252526]' : '';
 
     return (
-        <div onClick={() => setIsEditing(true)} className="cursor-pointer group">
+        <div className="relative">
             {label && <label className="block text-sm font-medium text-[#858585] mb-1">{label}</label>}
-            <div className="px-3 py-2 bg-[#252526] border border-transparent group-hover:border-[#3e3e42] rounded text-[#cccccc] min-h-[38px] flex items-center relative">
-                {savedValue || <span className="text-[#858585]">{placeholder || 'Click to edit'}</span>}
-                {showSuccess && (
-                    <span className="absolute right-2 text-green-500">✓</span>
+            <div className="relative">
+                <textarea
+                    ref={textareaRef}
+                    value={editValue}
+                    onChange={handleChange}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={handleBlur}
+                    onKeyDown={handleKeyDown}
+                    className={`${baseStyles} ${focusedBorderClass}`}
+                    placeholder={placeholder || 'Click to edit'}
+                    disabled={isSaving}
+                    rows={1}
+                />
+                {/* Save indicator */}
+                {isSaving && (
+                    <div className="absolute right-2 top-2 pointer-events-none">
+                        <div className="w-4 h-4 border-2 border-[#0e639c] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                )}
+                {showSuccess && !isSaving && (
+                    <span className="absolute right-2 top-2 text-green-500 text-sm pointer-events-none">✓</span>
                 )}
             </div>
             {error && (

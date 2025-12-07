@@ -22,6 +22,20 @@
       "when": 1763847532490,
       "tag": "0002_abnormal_trish_tilby",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1763890051260,
+      "tag": "0003_tranquil_archangel",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1764155163626,
+      "tag": "0004_wandering_alex_wilder",
+      "breakpoints": true
     }
   ]
 }

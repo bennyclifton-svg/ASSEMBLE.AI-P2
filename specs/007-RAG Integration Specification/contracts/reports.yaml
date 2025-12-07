@@ -1,0 +1,491 @@
+openapi: 3.1.0
+info:
+  title: Reports API
+  description: API for generating and managing RAG-powered reports
+  version: 1.0.0
+
+paths:
+  /api/reports/generate:
+    post:
+      summary: Start report generation
+      description: Initialize a new report and start TOC generation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - projectId
+                - reportType
+                - title
+                - documentSetIds
+              properties:
+                projectId:
+                  type: string
+                reportType:
+                  type: string
+                  enum: [tender_request]
+                title:
+                  type: string
+                discipline:
+                  type: string
+                  description: Target discipline (e.g., "Fire Services")
+                documentSetIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Document sets to use for context
+                transmittalId:
+                  type: string
+                  description: Transmittal for document schedule (optional)
+      responses:
+        '201':
+          description: Report created and TOC generation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportTemplate'
+        '409':
+          description: Another report is being generated for this project
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  lockedBy:
+                    type: string
+                  lockedByName:
+                    type: string
+
+  /api/reports:
+    get:
+      summary: List reports
+      description: Get all reports for a project
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [draft, toc_pending, generating, complete, failed]
+      responses:
+        '200':
+          description: List of reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReportSummary'
+
+  /api/reports/{id}:
+    get:
+      summary: Get report
+      description: Get full report with sections and current state
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report with sections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportWithSections'
+
+    delete:
+      summary: Delete report
+      description: Delete a report and all its sections
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Report deleted
+
+  /api/reports/{id}/approve-toc:
+    post:
+      summary: Approve TOC
+      description: Approve (optionally edited) table of contents and start section generation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tableOfContents
+              properties:
+                tableOfContents:
+                  $ref: '#/components/schemas/TableOfContents'
+      responses:
+        '200':
+          description: TOC approved, section generation starting
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [generating]
+                  nextSection:
+                    type: integer
+        '409':
+          description: Report is locked by another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LockError'
+
+  /api/reports/{id}/section-feedback:
+    post:
+      summary: Provide section feedback
+      description: Approve, regenerate, or skip a generated section
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - sectionIndex
+                - action
+              properties:
+                sectionIndex:
+                  type: integer
+                action:
+                  type: string
+                  enum: [approve, regenerate, skip]
+                feedback:
+                  type: string
+                  description: Instructions for regeneration
+                excludeSourceIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Chunk IDs to exclude on regeneration
+      responses:
+        '200':
+          description: Feedback processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [generating, complete]
+                  nextSection:
+                    type: integer
+                  isComplete:
+                    type: boolean
+
+  /api/reports/{id}/lock:
+    post:
+      summary: Acquire report lock
+      description: Acquire exclusive lock for editing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lock acquired
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  locked:
+                    type: boolean
+                  expiresAt:
+                    type: string
+                    format: date-time
+        '409':
+          description: Report is locked by another user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LockError'
+
+    delete:
+      summary: Release report lock
+      description: Release exclusive lock
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Lock released
+
+  /api/reports/{id}/export:
+    post:
+      summary: Export report
+      description: Export report to DOCX or PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - format
+              properties:
+                format:
+                  type: string
+                  enum: [docx, pdf]
+                includeSourceCitations:
+                  type: boolean
+                  default: true
+                includeDocumentSchedule:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Export file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename="Tender-Request-Fire-Services.docx"
+
+  /api/reports/{id}/stream:
+    get:
+      summary: Stream generation events
+      description: SSE stream for real-time generation updates
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  event:
+                    type: string
+                    enum: [toc_generated, section_start, section_chunk, section_complete, sources_updated, complete, error]
+                  data:
+                    type: object
+
+components:
+  schemas:
+    ReportTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        documentSetIds:
+          type: array
+          items:
+            type: string
+        transmittalId:
+          type: string
+        reportType:
+          type: string
+          enum: [tender_request]
+        title:
+          type: string
+        discipline:
+          type: string
+        tableOfContents:
+          $ref: '#/components/schemas/TableOfContents'
+        status:
+          type: string
+          enum: [draft, toc_pending, generating, complete, failed]
+        lockedBy:
+          type: string
+        lockedByName:
+          type: string
+        lockedAt:
+          type: string
+          format: date-time
+        currentSectionIndex:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReportSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        discipline:
+          type: string
+        status:
+          type: string
+        completedSections:
+          type: integer
+        totalSections:
+          type: integer
+        lockedBy:
+          type: string
+        lockedByName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReportWithSections:
+      allOf:
+        - $ref: '#/components/schemas/ReportTemplate'
+        - type: object
+          properties:
+            sections:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReportSection'
+
+    ReportSection:
+      type: object
+      properties:
+        id:
+          type: string
+        reportId:
+          type: string
+        sectionIndex:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        sourceChunkIds:
+          type: array
+          items:
+            type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmartContextSource'
+        status:
+          type: string
+          enum: [pending, generating, complete, regenerating]
+        generatedAt:
+          type: string
+          format: date-time
+        regenerationCount:
+          type: integer
+
+    TableOfContents:
+      type: object
+      properties:
+        version:
+          type: integer
+        source:
+          type: string
+          enum: [memory, generated]
+        sections:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              level:
+                type: integer
+                description: 1=section, 2=subsection
+              description:
+                type: string
+              estimatedTokens:
+                type: integer
+
+    SmartContextSource:
+      type: object
+      properties:
+        chunkId:
+          type: string
+        documentId:
+          type: string
+        documentTitle:
+          type: string
+        sectionTitle:
+          type: string
+        relevanceScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        excerpt:
+          type: string
+        isActive:
+          type: boolean
+          description: User can toggle off sources
+
+    LockError:
+      type: object
+      properties:
+        error:
+          type: string
+        lockedBy:
+          type: string
+        lockedByName:
+          type: string
+        lockedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time

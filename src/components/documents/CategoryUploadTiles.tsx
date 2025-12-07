@@ -7,14 +7,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface CategoryUploadTilesProps {
     projectId: string;
-    onFilesDropped: (files: File[], categoryId: string, subcategoryId?: string) => void;
+    onFilesDropped: (files: File[], categoryId?: string, subcategoryId?: string, subcategoryName?: string) => void;
     selectedDocumentIds?: string[];
+    /** Callback for Ctrl+click to bulk-select all documents in a category. */
+    onBulkSelectCategory?: (categoryId: string, subcategoryId?: string) => void;
 }
 
 export function CategoryUploadTiles({
     projectId,
     onFilesDropped,
     selectedDocumentIds = [],
+    onBulkSelectCategory,
 }: CategoryUploadTilesProps) {
     const { categories, isLoading } = useActiveCategories(projectId);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -35,7 +38,7 @@ export function CategoryUploadTiles({
         return (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-2">
                 {[1, 2, 3, 4, 5, 6].map(i => (
-                    <Skeleton key={i} className="h-16 w-full" />
+                    <Skeleton key={i} className="h-11 w-full" />
                 ))}
             </div>
         );
@@ -71,6 +74,7 @@ export function CategoryUploadTiles({
                         category={category}
                         onFilesDropped={onFilesDropped}
                         onClick={category.hasSubcategories ? () => toggleCategory(category.id) : undefined}
+                        onBulkSelectCategory={onBulkSelectCategory}
                         isExpanded={expandedCategories.has(category.id)}
                         hasSelection={hasSelection}
                     />
@@ -95,6 +99,7 @@ export function CategoryUploadTiles({
                                         category={category}
                                         subcategory={subcategory}
                                         onFilesDropped={onFilesDropped}
+                                        onBulkSelectCategory={onBulkSelectCategory}
                                         isSubcategory
                                         hasSelection={hasSelection}
                                     />

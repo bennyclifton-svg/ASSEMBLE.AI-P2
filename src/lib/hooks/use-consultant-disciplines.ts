@@ -15,6 +15,10 @@ export interface ConsultantDiscipline {
     isEnabled: boolean;
     order: number;
     statuses: ConsultantStatus[];
+    // Brief fields (Phase 8)
+    briefServices?: string | null;
+    briefFee?: string | null;
+    briefProgram?: string | null;
 }
 
 export function useConsultantDisciplines(projectId: string) {
@@ -115,11 +119,43 @@ export function useConsultantDisciplines(projectId: string) {
         }
     };
 
+    const updateBrief = async (
+        disciplineId: string,
+        field: 'briefServices' | 'briefFee' | 'briefProgram',
+        value: string
+    ) => {
+        // Optimistic update
+        setDisciplines(prev => prev.map(d =>
+            d.id === disciplineId ? { ...d, [field]: value } : d
+        ));
+
+        try {
+            const response = await fetch(`/api/consultants/disciplines/${disciplineId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ [field]: value }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update brief field');
+            }
+        } catch (err) {
+            console.error(err);
+            // Refresh data on error to get correct state
+            const refreshResponse = await fetch(`/api/consultants/disciplines?projectId=${projectId}`);
+            if (refreshResponse.ok) {
+                const data = await refreshResponse.json();
+                setDisciplines(data);
+            }
+        }
+    };
+
     return {
         disciplines,
         isLoading,
         error,
         toggleDiscipline,
-        updateStatus
+        updateStatus,
+        updateBrief
     };
 }

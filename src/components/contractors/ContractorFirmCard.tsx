@@ -5,7 +5,7 @@ import { Contractor } from '@/lib/hooks/use-contractors';
 import { ContractorForm } from './ContractorForm';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Pencil, Trash2, Mail, Phone, MapPin, Building2 } from 'lucide-react';
+import { Pencil, Trash2, Mail, Phone, MapPin, Building2, UploadCloud } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,6 +91,7 @@ export function ContractorFirmCard({
               >
                 <Pencil className="h-3.5 w-3.5" />
               </Button>
+              <UploadCloud className="h-3.5 w-3.5 text-[#858585]" />
               <Button
                 variant="ghost"
                 size="icon"

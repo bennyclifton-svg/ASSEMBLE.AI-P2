@@ -13,6 +13,8 @@ export interface Consultant {
   abn: string | null;
   notes: string | null;
   shortlisted: boolean;
+  awarded: boolean;
+  companyId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -28,6 +30,8 @@ export interface ConsultantFormData {
   abn?: string;
   notes?: string;
   shortlisted?: boolean;
+  awarded?: boolean;
+  companyId?: string | null;
 }
 
 export function useConsultants(projectId: string, discipline?: string) {
@@ -167,6 +171,56 @@ export function useConsultants(projectId: string, discipline?: string) {
     }
   };
 
+  const toggleAward = async (id: string, awarded: boolean) => {
+    const consultant = consultants.find(c => c.id === id);
+    if (!consultant) return;
+
+    let companyId = consultant.companyId;
+
+    try {
+      if (awarded && !companyId) {
+        // Find or create company in master list
+        const response = await fetch('/api/cost-companies/find-or-create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: consultant.companyName,
+            abn: consultant.abn,
+            contactName: consultant.contactPerson,
+            contactEmail: consultant.email,
+            contactPhone: consultant.mobile || consultant.phone,
+            address: consultant.address,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create company record');
+        }
+
+        const company = await response.json();
+        companyId = company.id;
+      }
+
+      // Update consultant with awarded status and companyId
+      await updateConsultant(id, {
+        companyName: consultant.companyName,
+        contactPerson: consultant.contactPerson || undefined,
+        discipline: consultant.discipline,
+        email: consultant.email,
+        phone: consultant.phone || undefined,
+        mobile: consultant.mobile || undefined,
+        address: consultant.address || undefined,
+        abn: consultant.abn || undefined,
+        notes: consultant.notes || undefined,
+        shortlisted: consultant.shortlisted,
+        awarded,
+        companyId,
+      });
+    } catch (err) {
+      throw err;
+    }
+  };
+
   return {
     consultants,
     isLoading,
@@ -175,6 +229,7 @@ export function useConsultants(projectId: string, discipline?: string) {
     updateConsultant,
     deleteConsultant,
     toggleShortlist,
+    toggleAward,
     refetch: fetchConsultants,
   };
 }

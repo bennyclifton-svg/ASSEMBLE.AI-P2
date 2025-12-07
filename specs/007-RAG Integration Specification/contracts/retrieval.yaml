@@ -1,0 +1,292 @@
+openapi: 3.1.0
+info:
+  title: Retrieval API
+  description: API for RAG retrieval operations
+  version: 1.0.0
+
+paths:
+  /api/retrieval/search:
+    post:
+      summary: Search documents
+      description: Perform semantic search across document chunks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+                - documentSetIds
+              properties:
+                query:
+                  type: string
+                  description: Natural language query
+                documentSetIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Document sets to search within
+                excludeChunkIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Chunk IDs to exclude from results
+                topK:
+                  type: integer
+                  default: 5
+                  minimum: 1
+                  maximum: 20
+                  description: Number of results to return after reranking
+                includeParentContext:
+                  type: boolean
+                  default: true
+                  description: Include parent chunks for hierarchy context
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RetrievalResult'
+                  query:
+                    type: string
+                  totalCandidates:
+                    type: integer
+                    description: Number of candidates before reranking
+                  rerankerUsed:
+                    type: string
+                    enum: [baai, cohere]
+                    description: Which reranker was used
+
+  /api/retrieval/chunks/{chunkId}:
+    get:
+      summary: Get chunk
+      description: Get a single chunk by ID with full context
+      parameters:
+        - name: chunkId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: includeParent
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: includeSiblings
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Chunk with context
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChunkWithContext'
+
+  /api/retrieval/documents/{documentId}/chunks:
+    get:
+      summary: Get document chunks
+      description: Get all chunks for a document
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: hierarchyLevel
+          in: query
+          required: false
+          schema:
+            type: integer
+            description: Filter by hierarchy level
+      responses:
+        '200':
+          description: Document chunks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documentId:
+                    type: string
+                  totalChunks:
+                    type: integer
+                  chunks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DocumentChunk'
+
+  /api/retrieval/embed:
+    post:
+      summary: Embed text
+      description: Generate embedding for arbitrary text (for debugging/testing)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  maxLength: 8000
+      responses:
+        '200':
+          description: Embedding vector
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  embedding:
+                    type: array
+                    items:
+                      type: number
+                  dimensions:
+                    type: integer
+                  tokenCount:
+                    type: integer
+
+  /api/retrieval/health:
+    get:
+      summary: Check retrieval health
+      description: Check status of retrieval dependencies
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  components:
+                    type: object
+                    properties:
+                      pgvector:
+                        $ref: '#/components/schemas/ComponentHealth'
+                      voyage:
+                        $ref: '#/components/schemas/ComponentHealth'
+                      baaiReranker:
+                        $ref: '#/components/schemas/ComponentHealth'
+                      cohereReranker:
+                        $ref: '#/components/schemas/ComponentHealth'
+
+components:
+  schemas:
+    RetrievalResult:
+      type: object
+      properties:
+        chunkId:
+          type: string
+        documentId:
+          type: string
+        documentTitle:
+          type: string
+        sectionTitle:
+          type: string
+        clauseNumber:
+          type: string
+        hierarchyLevel:
+          type: integer
+        hierarchyPath:
+          type: string
+        content:
+          type: string
+        excerpt:
+          type: string
+          description: First 200 characters
+        relevanceScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Reranker score (0-100)
+        vectorSimilarity:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Raw cosine similarity
+        tokenCount:
+          type: integer
+        parentContext:
+          type: string
+          description: Parent chunk content if includeParentContext=true
+
+    DocumentChunk:
+      type: object
+      properties:
+        id:
+          type: string
+        documentId:
+          type: string
+        parentChunkId:
+          type: string
+        hierarchyLevel:
+          type: integer
+        hierarchyPath:
+          type: string
+        sectionTitle:
+          type: string
+        clauseNumber:
+          type: string
+        content:
+          type: string
+        tokenCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ChunkWithContext:
+      allOf:
+        - $ref: '#/components/schemas/DocumentChunk'
+        - type: object
+          properties:
+            document:
+              type: object
+              properties:
+                id:
+                  type: string
+                title:
+                  type: string
+                category:
+                  type: string
+            parentChunk:
+              $ref: '#/components/schemas/DocumentChunk'
+            siblingChunks:
+              type: array
+              items:
+                $ref: '#/components/schemas/DocumentChunk'
+            childChunks:
+              type: array
+              items:
+                $ref: '#/components/schemas/DocumentChunk'
+
+    ComponentHealth:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        latencyMs:
+          type: integer
+        error:
+          type: string
+        lastChecked:
+          type: string
+          format: date-time

@@ -29,7 +29,7 @@ export const DOCUMENT_CATEGORIES = {
     PROCUREMENT: {
         id: 'procurement',
         name: 'Procurement',
-        color: '#9B8B6E', // Taupe
+        color: '#D4A574', // Golden Sand (more distinct from brown)
         hasSubcategories: false,
         row: 1,
     },
@@ -44,7 +44,7 @@ export const DOCUMENT_CATEGORIES = {
     CONSULTANTS: {
         id: 'consultants',
         name: 'Consultants',
-        color: '#4A9B8E', // Teal
+        color: '#555555', // Gray (same as upload tile border)
         hasSubcategories: true,
         subcategorySource: 'consultants' as const,
         row: 2,
@@ -52,7 +52,7 @@ export const DOCUMENT_CATEGORIES = {
     CONTRACTORS: {
         id: 'contractors',
         name: 'Contractors',
-        color: '#D4A574', // Golden Sand
+        color: '#555555', // Gray (same as upload tile border)
         hasSubcategories: true,
         subcategorySource: 'contractors' as const,
         row: 2,

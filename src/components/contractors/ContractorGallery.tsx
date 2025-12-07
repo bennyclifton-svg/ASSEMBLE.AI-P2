@@ -3,19 +3,38 @@
 import { useState, useEffect } from 'react';
 import { useContractors } from '@/lib/hooks/use-contractors';
 import { ContractorForm } from './ContractorForm';
+import { PriceStructureSection } from './PriceStructureSection';
 import { useToast } from '@/lib/hooks/use-toast';
 import { Upload } from 'lucide-react';
+import { InlineEditField } from '@/components/dashboard/planning/InlineEditField';
+import { ReportsSection } from '@/components/reports/ReportsSection';
+import { GenerationMode } from '@/components/documents/DisciplineRepoTiles';
 
 interface ContractorGalleryProps {
   projectId: string;
   trade: string;
+  tradeId?: string;
+  scopeWorks?: string;
+  scopePrice?: string;
+  scopeProgram?: string;
+  onUpdateScope?: (tradeId: string, field: 'scopeWorks' | 'scopePrice' | 'scopeProgram', value: string) => Promise<void>;
+  generationMode?: GenerationMode;
 }
 
-export function ContractorGallery({ projectId, trade }: ContractorGalleryProps) {
-  const { contractors, isLoading, addContractor, updateContractor, deleteContractor } = useContractors(projectId, trade);
+export function ContractorGallery({
+  projectId,
+  trade,
+  tradeId,
+  scopeWorks = '',
+  scopePrice = '',
+  scopeProgram = '',
+  onUpdateScope,
+  generationMode = 'ai_assisted'
+}: ContractorGalleryProps) {
+  const { contractors, isLoading, addContractor, updateContractor, deleteContractor, toggleAward } = useContractors(projectId, trade);
   const { toast } = useToast();
   const [cards, setCards] = useState<Array<{ id: string; contractor?: any }>>([]);
-  const [isDragging, setIsDragging] = useState(false);
+  const [draggingOverCardId, setDraggingOverCardId] = useState<string | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractedData, setExtractedData] = useState<any>(null);
 
@@ -97,6 +116,25 @@ export function ContractorGallery({ projectId, trade }: ContractorGalleryProps) 
     }
   };
 
+  const handleAwardChange = async (id: string, awarded: boolean) => {
+    try {
+      await toggleAward(id, awarded);
+      toast({
+        title: awarded ? 'Contract Awarded' : 'Award Removed',
+        description: awarded
+          ? 'Company has been added to the master list and is now available in Cost Planning.'
+          : 'Award status has been removed.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update award status',
+        variant: 'destructive',
+      });
+      throw error; // Re-throw to revert UI
+    }
+  };
+
   const handleFileExtraction = async (file: File) => {
     setIsExtracting(true);
     try {
@@ -109,7 +147,8 @@ export function ContractorGallery({ projectId, trade }: ContractorGalleryProps) 
       });
 
       if (!response.ok) {
-        throw new Error('Failed to extract data');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to extract data');
       }
 
       const result = await response.json();
@@ -150,19 +189,26 @@ export function ContractorGallery({ projectId, trade }: ContractorGalleryProps) 
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, cardId: string) => {
     e.preventDefault();
-    setIsDragging(true);
+    e.stopPropagation();
+    setDraggingOverCardId(cardId);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    e.stopPropagation();
+    // Only clear if leaving the card entirely (not entering a child element)
+    const relatedTarget = e.relatedTarget as Element | null;
+    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
+      setDraggingOverCardId(null);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    e.stopPropagation();
+    setDraggingOverCardId(null);
 
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
@@ -190,11 +236,73 @@ export function ContractorGallery({ projectId, trade }: ContractorGalleryProps) 
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-[#cccccc]">{trade}</h3>
+  // Handle Scope field updates
+  const handleScopeUpdate = async (field: 'scopeWorks' | 'scopePrice' | 'scopeProgram', value: string) => {
+    if (tradeId && onUpdateScope) {
+      await onUpdateScope(tradeId, field, value);
+    }
+  };
 
-      <div className="relative">
+  return (
+    <div className="space-y-6">
+      {/* Reports Section - Moved up for visibility */}
+      {tradeId && (
+        <ReportsSection
+          projectId={projectId}
+          tradeId={tradeId}
+          tradeName={trade}
+          generationMode={generationMode}
+        />
+      )}
+
+      {/* Scope Section */}
+      {tradeId && onUpdateScope && (
+        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
+          <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Scope</h3>
+          <div className="space-y-4">
+            <InlineEditField
+              label="Works"
+              value={scopeWorks}
+              onSave={(value) => handleScopeUpdate('scopeWorks', value)}
+              placeholder="Describe the scope of works..."
+              multiline
+              rows={6}
+            />
+            <InlineEditField
+              label="Price"
+              value={scopePrice}
+              onSave={(value) => handleScopeUpdate('scopePrice', value)}
+              placeholder="Enter price range and budget..."
+              multiline
+              rows={6}
+            />
+            <InlineEditField
+              label="Program"
+              value={scopeProgram}
+              onSave={(value) => handleScopeUpdate('scopeProgram', value)}
+              placeholder="Enter program and timeline requirements..."
+              multiline
+              rows={6}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Price Structure Section */}
+      {tradeId && (
+        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
+          <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Price Structure</h3>
+          <PriceStructureSection
+            tradeId={tradeId}
+            tradeName={trade}
+          />
+        </div>
+      )}
+
+      {/* Firms Section */}
+      <div>
+        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Firms</h3>
+        <div className="relative">
         {/* Extraction Progress Overlay */}
         {isExtracting && (
           <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
@@ -206,20 +314,21 @@ export function ContractorGallery({ projectId, trade }: ContractorGalleryProps) 
           </div>
         )}
 
-        <div className="flex gap-3 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex gap-3 overflow-x-auto pt-3 pb-4" style={{ scrollbarWidth: 'thin' }}>
           {cards.map((card, index) => {
-            const isFirstEmpty = !card.contractor && index === cards.findIndex(c => !c.contractor);
+            const isEmpty = !card.contractor;
+            const isDraggingOver = draggingOverCardId === card.id;
 
             return (
               <div
                 key={card.id}
                 className="flex-shrink-0 relative"
-                onDragOver={isFirstEmpty ? handleDragOver : undefined}
-                onDragLeave={isFirstEmpty ? handleDragLeave : undefined}
-                onDrop={isFirstEmpty ? handleDrop : undefined}
+                onDragOver={isEmpty ? (e) => handleDragOver(e, card.id) : undefined}
+                onDragLeave={isEmpty ? handleDragLeave : undefined}
+                onDrop={isEmpty ? handleDrop : undefined}
               >
-                {/* Drag & Drop Overlay - Only on first empty card */}
-                {isFirstEmpty && isDragging && (
+                {/* Drag & Drop Overlay - Shows only on the specific card being dragged over */}
+                {isEmpty && isDraggingOver && (
                   <div className="absolute inset-0 z-50 bg-[#0e639c]/20 border-2 border-dashed border-[#0e639c] rounded-lg flex items-center justify-center">
                     <div className="bg-[#1e1e1e] border border-[#0e639c] rounded-lg p-4 flex flex-col items-center gap-2">
                       <Upload className="w-8 h-8 text-[#0e639c]" />
@@ -232,13 +341,16 @@ export function ContractorGallery({ projectId, trade }: ContractorGalleryProps) 
                   contractor={card.contractor}
                   onSave={(data) => handleSave(card.id, data)}
                   onDelete={card.contractor?.id ? handleDelete : undefined}
+                  onAwardChange={card.contractor?.id ? (awarded) => handleAwardChange(card.contractor.id, awarded) : undefined}
                   trade={trade}
                 />
               </div>
             );
           })}
         </div>
+        </div>
       </div>
+
     </div>
   );
 }

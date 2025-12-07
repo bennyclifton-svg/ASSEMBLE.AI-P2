@@ -15,6 +15,10 @@ export interface ContractorTrade {
     isEnabled: boolean;
     order: number;
     statuses: ContractorStatus[];
+    // Scope fields (Phase 8)
+    scopeWorks?: string | null;
+    scopePrice?: string | null;
+    scopeProgram?: string | null;
 }
 
 export function useContractorTrades(projectId: string) {
@@ -113,11 +117,43 @@ export function useContractorTrades(projectId: string) {
         }
     };
 
+    const updateScope = async (
+        tradeId: string,
+        field: 'scopeWorks' | 'scopePrice' | 'scopeProgram',
+        value: string
+    ) => {
+        // Optimistic update
+        setTrades(prev => prev.map(t =>
+            t.id === tradeId ? { ...t, [field]: value } : t
+        ));
+
+        try {
+            const response = await fetch(`/api/contractors/trades/${tradeId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ [field]: value }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update scope field');
+            }
+        } catch (err) {
+            console.error(err);
+            // Refresh data on error to get correct state
+            const refreshResponse = await fetch(`/api/contractors/trades?projectId=${projectId}`);
+            if (refreshResponse.ok) {
+                const data = await refreshResponse.json();
+                setTrades(data);
+            }
+        }
+    };
+
     return {
         trades,
         isLoading,
         error,
         toggleTrade,
-        updateStatus
+        updateStatus,
+        updateScope
     };
 }

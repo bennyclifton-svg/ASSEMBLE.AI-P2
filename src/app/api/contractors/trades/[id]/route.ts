@@ -11,14 +11,28 @@ export async function PUT(
 
     try {
         const body = await request.json();
-        const { isEnabled } = body;
+        const { isEnabled, scopeWorks, scopePrice, scopeProgram } = body;
 
-        if (typeof isEnabled !== 'boolean') {
-            return NextResponse.json({ error: 'isEnabled must be a boolean' }, { status: 400 });
+        // Build update object with only provided fields
+        const updateData: Record<string, unknown> = {
+            updatedAt: new Date().toISOString(),
+        };
+
+        if (typeof isEnabled === 'boolean') {
+            updateData.isEnabled = isEnabled;
+        }
+        if (scopeWorks !== undefined) {
+            updateData.scopeWorks = scopeWorks;
+        }
+        if (scopePrice !== undefined) {
+            updateData.scopePrice = scopePrice;
+        }
+        if (scopeProgram !== undefined) {
+            updateData.scopeProgram = scopeProgram;
         }
 
         const updated = await db.update(contractorTrades)
-            .set({ isEnabled })
+            .set(updateData)
             .where(eq(contractorTrades.id, id))
             .returning();
 
