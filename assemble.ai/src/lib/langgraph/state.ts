@@ -11,7 +11,7 @@
 
 import { Annotation } from '@langchain/langgraph';
 import type { PlanningContext, TransmittalContext } from '../services/planning-context';
-import type { GenerationMode } from '../db/rag-schema';
+import type { GenerationMode, ContentLength } from '../db/rag-schema';
 
 // ============================================
 // Type Definitions
@@ -121,6 +121,12 @@ export const ReportState = Annotation.Root({
     /** T099: Report generation mode */
     generationMode: Annotation<GenerationMode>,
 
+    /** T099l: Content length for Long RFT AI generation */
+    contentLength: Annotation<ContentLength | null>,
+
+    /** T099k: Template baseline content from Short RFT (used as base for Long RFT) */
+    templateBaseline: Annotation<string | null>,
+
     // ---- Hybrid Context ----
     /** EXACT Planning Card data (fetched once at start) */
     planningContext: Annotation<PlanningContext | null>,
@@ -186,6 +192,7 @@ export function createInitialReportState(input: {
     documentSetIds: string[];
     reportId?: string;
     generationMode?: GenerationMode;
+    contentLength?: ContentLength; // T099l
     lockedBy?: string;
     lockedByName?: string;
 }): ReportStateType {
@@ -198,6 +205,8 @@ export function createInitialReportState(input: {
         documentSetIds: input.documentSetIds,
         reportId: input.reportId ?? null,
         generationMode: input.generationMode ?? 'ai_assisted',
+        contentLength: input.contentLength ?? null, // T099l
+        templateBaseline: null, // T099k: Set during generation
         planningContext: null,
         transmittal: null,
         toc: null,

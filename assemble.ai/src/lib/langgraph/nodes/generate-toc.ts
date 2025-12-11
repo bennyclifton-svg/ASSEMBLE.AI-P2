@@ -1,25 +1,28 @@
 /**
- * T040 & T074 & T075: Generate TOC Node
- * Generates table of contents using fixed Planning Card structure
- * with optional memory pre-fill
+ * T040 & T099a: Generate TOC Node
+ * Generates table of contents using FIXED 7-section Planning Card structure
  *
- * Per user requirements, the TOC structure is:
- * 1. Project Details (from planningContext.details)
- * 2. Project Objectives (from planningContext.objectives)
- * 3. Project Stages (from planningContext.stages)
- * 4. Brief/Scope (from selected discipline's briefServices OR trade's scopeWorks)
- * 5. Fee Structure (Consultant) OR Price Structure (Contractor)
- * 6. Transmittal (if transmittal exists)
+ * HARDCODED 7-SECTION TOC (used by BOTH Short RFT and Long RFT):
+ * ┌───┬───────────────────────────┬─────────────────────────────────────────┐
+ * │ # │ Section Title             │ Notes                                   │
+ * ├───┼───────────────────────────┼─────────────────────────────────────────┤
+ * │ 1 │ Project Details           │ From planningContext.details            │
+ * │ 2 │ Project Objectives        │ From planningContext.objectives         │
+ * │ 3 │ Project Staging           │ From planningContext.stages             │
+ * │ 4 │ Project Risks             │ From planningContext.risks              │
+ * │ 5 │ Consultant Brief          │ OR "Contractor Scope" for trades        │
+ * │ 6 │ Consultant Fee            │ OR "Contractor Price" for trades        │
+ * │ 7 │ Transmittal               │ ONLY if transmittal.documents.length > 0│
+ * └───┴───────────────────────────┴─────────────────────────────────────────┘
  *
- * Memory System (T074-T075):
- * - Checks for previously approved TOCs for the same discipline
- * - Pre-fills TOC with learned patterns if available
- * - Falls back to fixed structure if no memory exists
+ * Short RFT (data_only): Template-based rendering, NO RAG, NO AI (except Brief polish)
+ * Long RFT (ai_assisted): RAG retrieval + AI generation for all sections except Transmittal
+ *
+ * IMPORTANT: Memory system (T074-T075) is for CONTENT pattern learning only, NOT TOC override.
  */
 
 import type { ReportStateType, TableOfContents, TocSection } from '../state';
 import { v4 as uuidv4 } from 'uuid';
-import { generateTocWithMemory as fetchMemoryToc } from '@/lib/rag/memory';
 
 export interface GenerateTocResult {
     toc: TableOfContents;
@@ -138,64 +141,40 @@ function getFixedTocSections(state: ReportStateType): TocSection[] {
 
 /**
  * Generate TOC node
- * Creates table of contents with memory pre-fill if available
+ * Creates table of contents using FIXED 7-section structure
  *
- * T075: Memory lookup before AI generation
- * 1. Check for memory using organizationId (default: 'org_default')
- * 2. If memory exists: Use memory TOC with frequency-based ordering
- * 3. If no memory: Use fixed Planning Card structure
+ * T099a: ALWAYS use fixed structure for BOTH modes (Data Only and AI Assisted)
+ * - Memory system is for content pattern learning, NOT TOC structure override
+ * - This ensures consistent report structure across all generations
+ * - Transmittal section always uses data-only rendering (no RAG)
  */
 export async function generateTocNode(
     state: ReportStateType
 ): Promise<GenerateTocResult> {
-    console.log('[generate-toc] Generating TOC for:', state.title);
+    console.log('[generate-toc] Generating fixed TOC for:', state.title);
+    console.log('[generate-toc] Generation mode:', state.generationMode);
+    console.log('[generate-toc] Discipline:', state.discipline || 'none');
+    console.log('[generate-toc] Trade:', state.trade || 'none');
+    console.log('[generate-toc] Has transmittal:', state.transmittal ? `${state.transmittal.documents.length} docs` : 'none');
 
     if (!state.planningContext) {
         console.error('[generate-toc] No planning context available');
         throw new Error('Planning context is required for TOC generation');
     }
 
-    // T075: Try memory lookup first
-    // Note: Using 'org_default' as organizationId since it's not in current schema
-    // In production, this should be derived from user context
-    const organizationId = 'org_default';
-    const discipline = state.discipline || state.trade || null;
-
-    try {
-        const memoryResult = await fetchMemoryToc({
-            organizationId,
-            reportType: state.reportType,
-            discipline,
-        });
-
-        if (memoryResult.fromMemory && memoryResult.toc.sections.length > 0) {
-            console.log('[generate-toc] Using memory TOC (used', memoryResult.timesUsed, 'times)');
-
-            // T077: Include timesUsed in the TOC for UI display
-            const tocWithMetadata: TableOfContents = {
-                ...memoryResult.toc,
-                timesUsed: memoryResult.timesUsed,
-            };
-
-            return {
-                toc: tocWithMetadata,
-                status: 'toc_pending',
-            };
-        }
-    } catch (error) {
-        console.warn('[generate-toc] Memory lookup failed, falling back to fixed structure:', error);
-    }
-
-    // Fallback to fixed structure
+    // T099a: ALWAYS use fixed 7-section structure (no memory override)
+    // Memory system is for content learning, NOT TOC structure
     const sections = getFixedTocSections(state);
 
     const toc: TableOfContents = {
         version: 1,
-        source: 'fixed', // Changed from 'generated' to indicate this is a fixed structure
+        source: 'fixed',
         sections,
     };
 
-    console.log('[generate-toc] Created fixed TOC with', sections.length, 'sections');
+    // Log section titles for debugging
+    console.log('[generate-toc] Created fixed TOC with', sections.length, 'sections:');
+    sections.forEach((s, i) => console.log(`  [${i + 1}] ${s.title}`));
 
     return {
         toc,
@@ -204,33 +183,17 @@ export async function generateTocNode(
 }
 
 /**
- * Generate TOC with memory pre-fill
- * Used when memory system is available (T074)
- * For fixed structure, this just returns the fixed TOC with any memory-based customizations
+ * Generate TOC with memory pre-fill (DEPRECATED for TOC structure)
+ *
+ * T099a: Memory system no longer overrides TOC structure.
+ * This function now simply delegates to generateTocNode for fixed structure.
+ * Memory system is reserved for content pattern learning only.
  */
 export async function generateTocWithMemory(
     state: ReportStateType,
-    memoryToc?: TableOfContents
+    _memoryToc?: TableOfContents
 ): Promise<GenerateTocResult> {
-    if (memoryToc && memoryToc.source === 'memory') {
-        console.log('[generate-toc] Using memory-based TOC customizations');
-
-        // Start with fixed structure
-        const sections = getFixedTocSections(state);
-
-        // Memory system could customize descriptions or add subsections here in future
-        // For now, just use fixed structure
-
-        return {
-            toc: {
-                version: 1,
-                source: 'memory',
-                sections,
-            },
-            status: 'toc_pending',
-        };
-    }
-
-    // Use fixed TOC structure
+    // T099a: Always use fixed TOC structure regardless of memory
+    // Memory parameter is ignored - kept for API compatibility
     return generateTocNode(state);
 }

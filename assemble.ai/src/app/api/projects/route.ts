@@ -12,13 +12,30 @@ import {
     costLines,
     variations,
     invoices,
+    organizations,
 } from '@/lib/db/schema';
 import { CONSULTANT_DISCIPLINES, CONTRACTOR_TRADES, STATUS_TYPES } from '@/lib/constants/disciplines';
 import { DEFAULT_COST_LINES, getTotalDefaultBudget } from '@/lib/constants/default-cost-lines';
+import { getCurrentUser, AuthError } from '@/lib/auth/get-user';
+import { eq, desc } from 'drizzle-orm';
 
 export async function GET() {
     try {
-        const projectsList = await db.select().from(projects);
+        // Get authenticated user
+        const authResult = await getCurrentUser();
+        if (!authResult.user) {
+            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+        }
+
+        // Filter projects by user's organization
+        const projectsList = authResult.user.organizationId
+            ? await db
+                .select()
+                .from(projects)
+                .where(eq(projects.organizationId, authResult.user.organizationId))
+                .orderBy(desc(projects.updatedAt))
+            : [];
+
         return NextResponse.json(projectsList);
     } catch (error) {
         console.error('Error fetching projects:', error);
@@ -28,6 +45,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        // Get authenticated user
+        const authResult = await getCurrentUser();
+        if (!authResult.user) {
+            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+        }
+
+        if (!authResult.user.organizationId) {
+            return NextResponse.json(
+                { error: 'User has no organization' },
+                { status: 400 }
+            );
+        }
+
         const { name, code, status = 'active' } = await request.json();
 
         if (!name || name.trim() === '') {
@@ -37,27 +67,39 @@ export async function POST(request: Request) {
             );
         }
 
+        const organizationId = authResult.user.organizationId;
+
+        // Get organization default settings
+        const org = await db
+            .select()
+            .from(organizations)
+            .where(eq(organizations.id, organizationId))
+            .get();
+        const defaultSettings = org ? JSON.parse(org.defaultSettings || '{}') : {};
+
         // Use transaction to ensure atomic initialization (FR-055)
         // Note: better-sqlite3 is synchronous, so we use sync transaction
         const result = db.transaction((tx) => {
-            // 1. Create project
+            // 1. Create project with organizationId
             const projectId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             const newProject = {
                 id: projectId,
                 name: name.trim(),
                 code: code?.trim(),
                 status: status || 'active',
+                organizationId,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };
             tx.insert(projects).values(newProject).run();
 
-            // 2. Initialize consultant disciplines (36) with isEnabled: false (FR-051, FR-056)
+            // 2. Initialize consultant disciplines (36) with org defaults (FR-051, FR-056)
+            const enabledDisciplines: string[] = defaultSettings.enabledDisciplines || [];
             const disciplineRecords = CONSULTANT_DISCIPLINES.map((d) => ({
                 id: crypto.randomUUID(),
                 projectId,
                 disciplineName: d.name,
-                isEnabled: false,
+                isEnabled: enabledDisciplines.includes(d.name),
                 order: d.order,
             }));
             const createdDisciplines = tx.insert(consultantDisciplines).values(disciplineRecords).returning().all();
@@ -73,12 +115,13 @@ export async function POST(request: Request) {
             );
             tx.insert(consultantStatuses).values(disciplineStatusRecords).run();
 
-            // 4. Initialize contractor trades (21) with isEnabled: false (FR-052, FR-057)
+            // 4. Initialize contractor trades (21) with org defaults (FR-052, FR-057)
+            const enabledTrades: string[] = defaultSettings.enabledTrades || [];
             const tradeRecords = CONTRACTOR_TRADES.map((t) => ({
                 id: crypto.randomUUID(),
                 projectId,
                 tradeName: t.name,
-                isEnabled: false,
+                isEnabled: enabledTrades.includes(t.name),
                 order: t.order,
             }));
             const createdTrades = tx.insert(contractorTrades).values(tradeRecords).returning().all();

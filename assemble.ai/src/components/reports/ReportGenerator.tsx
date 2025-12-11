@@ -5,13 +5,13 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { useReportGeneration, useReport, type GenerateReportRequest } from '@/lib/hooks/use-report-generation';
 import { useReportStream, getStreamProgress } from '@/lib/hooks/use-report-stream';
 import { useReportLock } from '@/lib/hooks/use-report-lock';
 import { useRAGRepos, useRepoSelection, type RAGRepo } from '@/lib/hooks/use-rag-repos';
-import { REPO_TYPE_LABELS, type RepoType, type GenerationMode } from '@/lib/db/rag-schema';
-import { TocEditor } from './TocEditor';
+import { REPO_TYPE_LABELS, type RepoType, type GenerationMode, type ContentLength } from '@/lib/db/rag-schema';
+import { TocEditor, type TocEditorHandle } from './TocEditor';
 import { SectionViewer } from './SectionViewer';
 import UnifiedReportEditor from './UnifiedReportEditor';
 import { sectionsToHTML, formatTransmittalAsHTML } from '@/lib/utils/report-formatting';
@@ -33,15 +33,25 @@ interface ReportGeneratorProps {
     contextType?: 'discipline' | 'trade';
     /** Generation mode from DisciplineRepoTiles */
     generationMode?: GenerationMode;
+    /** Content length for Long RFT (T099l) */
+    contentLength?: ContentLength;
     onComplete?: (reportId: string) => void;
     onCancel?: () => void;
     /** Render in compact inline mode */
     inline?: boolean;
 }
 
+// Expose methods to parent via ref
+export interface ReportGeneratorHandle {
+    startTocGeneration: (mode?: GenerationMode, length?: ContentLength) => Promise<void>;
+    cancel: () => void;
+    isSubmitting: boolean;
+    sectionCount: number;
+}
+
 type GenerationStep = 'config' | 'toc_approval' | 'generating' | 'complete';
 
-export function ReportGenerator({
+export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGeneratorProps>(function ReportGenerator({
     projectId,
     initialReportId,
     discipline: initialDiscipline,
@@ -49,10 +59,18 @@ export function ReportGenerator({
     tradeId,
     contextType = 'discipline',
     generationMode: externalGenerationMode,
+    contentLength: externalContentLength, // T099l
     onComplete,
     onCancel,
     inline = false,
-}: ReportGeneratorProps) {
+}, ref) {
+    // Ref to TocEditor for external control
+    const tocEditorRef = useRef<TocEditorHandle>(null);
+    // Ref to track generation mode for approval flow (avoids async state race)
+    const currentGenerationModeRef = useRef<GenerationMode | undefined>(externalGenerationMode);
+    // Ref to track content length for approval flow (T099l)
+    const currentContentLengthRef = useRef<ContentLength | undefined>(externalContentLength);
+
     // State
     const [step, setStep] = useState<GenerationStep>(initialReportId ? 'toc_approval' : 'config');
     const [reportId, setReportId] = useState<string | null>(initialReportId ?? null);
@@ -165,7 +183,13 @@ export function ReportGenerator({
         if (!reportId) return;
 
         try {
-            await approveToc(reportId, toc);
+            // Pass generation mode and content length from refs (set by startTocGeneration)
+            await approveToc(
+                reportId,
+                toc,
+                currentGenerationModeRef.current,
+                currentContentLengthRef.current // T099l
+            );
             setStep('generating');
         } catch (err) {
             // Error handled by hook
@@ -180,6 +204,21 @@ export function ReportGenerator({
         onCancel?.();
     };
 
+    // Expose methods to parent via ref
+    useImperativeHandle(ref, () => ({
+        startTocGeneration: async (mode?: GenerationMode, length?: ContentLength) => {
+            // Store mode and length in refs before approval (avoids async state race condition)
+            currentGenerationModeRef.current = mode ?? externalGenerationMode ?? 'ai_assisted';
+            currentContentLengthRef.current = length ?? externalContentLength ?? 'concise'; // T099l
+            if (tocEditorRef.current) {
+                await tocEditorRef.current.approve();
+            }
+        },
+        cancel: handleCancel,
+        isSubmitting: tocEditorRef.current?.isSubmitting ?? false,
+        sectionCount: tocEditorRef.current?.sectionCount ?? 0,
+    }), [handleCancel, externalGenerationMode, externalContentLength, tocEditorRef.current?.isSubmitting, tocEditorRef.current?.sectionCount]);
+
     // Render based on step
     const renderStep = () => {
         switch (step) {
@@ -192,7 +231,7 @@ export function ReportGenerator({
                         <div className="flex items-center gap-2">
                             <input
                                 type="text"
-                                className="flex-1 px-3 py-2 border rounded bg-[#3c3c3c] border-[#3e3e42] text-[#cccccc]"
+                                className="flex-1 px-3 py-2 border rounded bg-[#3c3c3c] border-[#3e3e42] text-[#cccccc] focus:outline-none focus:border-[#3e3e42]"
                                 value={formData.title}
                                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                                 placeholder={`e.g., Request For Tender ${initialDiscipline || 'Fire Services'}`}
@@ -251,13 +290,12 @@ export function ReportGenerator({
 
                 return (
                     <TocEditor
+                        ref={tocEditorRef}
                         initialToc={report.tableOfContents}
                         onApprove={handleTocApproval}
                         onCancel={handleCancel}
                         isLocked={lock.locked && !lock.isOwner}
                         lockOwner={lock.lockedByName ?? undefined}
-                        reportTitle={report.title}
-                        timesUsed={report.tableOfContents.timesUsed}
                     />
                 );
 
@@ -309,8 +347,6 @@ export function ReportGenerator({
                                 reportId={report.id}
                                 reportTitle={report.title}
                                 initialContent={initialHTML}
-                                reportChain={report.reportChain || 'short'}
-                                parentReportId={report.parentReportId}
                                 isEdited={report.isEdited || false}
                                 onSave={async (content) => {
                                     // Save edited content to database
@@ -330,10 +366,6 @@ export function ReportGenerator({
                                         method: 'POST',
                                     });
                                     refresh();
-                                }}
-                                onGenerateLong={() => {
-                                    // TODO: Implement generate long RFT modal (T149-T156)
-                                    console.log('Generate Long RFT clicked');
                                 }}
                             />
                         </div>
@@ -383,7 +415,7 @@ export function ReportGenerator({
             {renderStep()}
         </div>
     );
-}
+});
 
 // ============================================
 // Helper Components

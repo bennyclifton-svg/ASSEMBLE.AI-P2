@@ -133,6 +133,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             updateData.detailLevel = body.detailLevel;
         }
 
+        // TOC auto-save support
+        if (body.tableOfContents !== undefined) {
+            updateData.tableOfContents = body.tableOfContents;
+        }
+
         // Update report
         await ragDb.update(reportTemplates)
             .set(updateData)

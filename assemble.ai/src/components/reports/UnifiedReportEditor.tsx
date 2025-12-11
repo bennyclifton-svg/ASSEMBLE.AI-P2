@@ -14,35 +14,23 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import EditableContentArea from './EditableContentArea';
-import HeadingToolbar from './HeadingToolbar';
-import TransmittalTableEditor from './TransmittalTableEditor';
-import ExportButton from './ExportButton';
 import RefreshConfirmationModal from './RefreshConfirmationModal';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, Sparkles, FileText, Save } from 'lucide-react';
 
 interface UnifiedReportEditorProps {
   reportId: string;
   reportTitle: string;
   initialContent?: string;
-  reportChain: 'short' | 'long';
-  parentReportId?: string | null;
   isEdited?: boolean;
   onSave?: (content: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
-  onGenerateLong?: () => void;
 }
 
 export default function UnifiedReportEditor({
-  reportId,
   reportTitle,
   initialContent = '',
-  reportChain,
-  parentReportId,
   isEdited = false,
   onSave,
   onRefresh,
-  onGenerateLong,
 }: UnifiedReportEditorProps) {
   const [content, setContent] = useState(initialContent);
   const [isSaving, setSaving] = useState(false);
@@ -176,98 +164,6 @@ export default function UnifiedReportEditor({
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] text-gray-100">
-      {/* Header with actions */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
-        <div className="flex items-center gap-4">
-          <FileText className="w-5 h-5 text-gray-400" />
-          <div>
-            <h2 className="text-lg font-semibold">
-              {reportChain === 'short' ? 'Short RFT (Data Only)' : 'Long RFT (AI Assisted)'}
-            </h2>
-            {lastSaved && (
-              <p className="text-xs text-gray-400">
-                Last saved: {lastSaved.toLocaleTimeString()}
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Save button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSave}
-            disabled={isSaving}
-            title="Save report (Ctrl+S)"
-          >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 mr-2 border-2 border-t-transparent border-current rounded-full animate-spin" />
-                Saving...
-              </>
-            ) : showSavedIndicator ? (
-              <>
-                <svg className="w-4 h-4 mr-2 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                Saved
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Save
-              </>
-            )}
-          </Button>
-
-          {/* Refresh button (Short RFT only) */}
-          {reportChain === 'short' && onRefresh && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh RFT'}
-            </Button>
-          )}
-
-          {/* Generate Long RFT button (Short RFT only) */}
-          {reportChain === 'short' && onGenerateLong && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={onGenerateLong}
-              className="bg-gradient-to-r from-purple-600 to-orange-600 hover:from-purple-700 hover:to-orange-700"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Generate Long RFT
-            </Button>
-          )}
-
-          {/* Export button */}
-          <ExportButton reportId={reportId} content={content} />
-
-          {/* Parent report link (Long RFT only) */}
-          {reportChain === 'long' && parentReportId && (
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-            >
-              <a href={`/reports/${parentReportId}`}>
-                ← View Parent Report
-              </a>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Heading Toolbar */}
-      <HeadingToolbar />
-
       {/* Editable Content Area */}
       <div className="flex-1 overflow-auto">
         <EditableContentArea

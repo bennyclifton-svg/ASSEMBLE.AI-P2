@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { InlineEditField } from './InlineEditField';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Upload } from 'lucide-react';
+import { Upload, UploadCloud } from 'lucide-react';
 
 interface ObjectivesSectionProps {
     projectId: string;
@@ -249,7 +249,7 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
 
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-[#cccccc]">Objectives</h3>
-                <p className="text-xs text-[#858585]">Drop file or paste text to auto-fill</p>
+                <UploadCloud className="w-5 h-5 text-[#858585]" />
             </div>
             <div className="space-y-4">
                 <InlineEditField
@@ -258,6 +258,7 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
                     onSave={(v) => updateField('functional', v)}
                     placeholder="Enter functional objectives"
                     multiline
+                    minRows={2}
                 />
                 <InlineEditField
                     label="Quality"
@@ -265,6 +266,7 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
                     onSave={(v) => updateField('quality', v)}
                     placeholder="Enter quality objectives"
                     multiline
+                    minRows={2}
                 />
                 <InlineEditField
                     label="Budget"
@@ -272,6 +274,7 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
                     onSave={(v) => updateField('budget', v)}
                     placeholder="Enter budget objectives"
                     multiline
+                    minRows={2}
                 />
                 <InlineEditField
                     label="Program"
@@ -279,6 +282,7 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
                     onSave={(v) => updateField('program', v)}
                     placeholder="Enter program objectives"
                     multiline
+                    minRows={2}
                 />
             </div>
         </div>

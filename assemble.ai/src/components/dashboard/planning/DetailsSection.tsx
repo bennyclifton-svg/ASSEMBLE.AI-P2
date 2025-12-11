@@ -3,15 +3,16 @@
 import { useState } from 'react';
 import { InlineEditField } from './InlineEditField';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Upload } from 'lucide-react';
+import { Upload, UploadCloud } from 'lucide-react';
 
 interface DetailsSectionProps {
     projectId: string;
     data: any;
     onUpdate: () => void;
+    onProjectNameChange?: () => void;
 }
 
-export function DetailsSection({ projectId, data, onUpdate }: DetailsSectionProps) {
+export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange }: DetailsSectionProps) {
     const { toast } = useToast();
     const [isDragging, setIsDragging] = useState(false);
     const [isExtracting, setIsExtracting] = useState(false);
@@ -47,6 +48,11 @@ export function DetailsSection({ projectId, data, onUpdate }: DetailsSectionProp
 
         console.log('Save successful');
         onUpdate();
+
+        // Notify parent if project name was changed
+        if (field === 'projectName' && onProjectNameChange) {
+            onProjectNameChange();
+        }
     };
 
     const updateMultipleFields = async (extractedData: any) => {
@@ -73,6 +79,11 @@ export function DetailsSection({ projectId, data, onUpdate }: DetailsSectionProp
         }
 
         onUpdate();
+
+        // Notify parent if project name was changed
+        if (extractedData.projectName && onProjectNameChange) {
+            onProjectNameChange();
+        }
     };
 
     const handleExtraction = async (input: File | string) => {
@@ -230,7 +241,7 @@ export function DetailsSection({ projectId, data, onUpdate }: DetailsSectionProp
 
     return (
         <div
-            className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42] relative"
+            className="bg-[#252526] rounded-lg p-4 border border-[#3e3e42] relative"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -259,23 +270,17 @@ export function DetailsSection({ projectId, data, onUpdate }: DetailsSectionProp
                 </div>
             )}
 
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-[#cccccc]">Details</h3>
-                <p className="text-xs text-[#858585]">Drop file or paste text to auto-fill</p>
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-[#cccccc]">Details</h3>
+                <UploadCloud className="w-4 h-4 text-[#858585]" />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
                 <InlineEditField
                     label="Project Name"
                     value={data?.projectName || ''}
                     onSave={(v) => updateField('projectName', v)}
                     placeholder="Enter project name"
-                />
-                <InlineEditField
-                    label="Building Class"
-                    value={data?.buildingClass || ''}
-                    onSave={(v) => updateField('buildingClass', v)}
-                    placeholder="Enter building class"
                 />
                 <InlineEditField
                     label="Address"
@@ -284,22 +289,10 @@ export function DetailsSection({ projectId, data, onUpdate }: DetailsSectionProp
                     placeholder="Enter address"
                 />
                 <InlineEditField
-                    label="Legal Address"
-                    value={data?.legalAddress || ''}
-                    onSave={(v) => updateField('legalAddress', v)}
-                    placeholder="Enter legal address"
-                />
-                <InlineEditField
                     label="Zoning"
                     value={data?.zoning || ''}
                     onSave={(v) => updateField('zoning', v)}
                     placeholder="Enter zoning"
-                />
-                <InlineEditField
-                    label="Jurisdiction"
-                    value={data?.jurisdiction || ''}
-                    onSave={(v) => updateField('jurisdiction', v)}
-                    placeholder="Enter jurisdiction"
                 />
                 <InlineEditField
                     label="Lot Area (m²)"
@@ -308,10 +301,28 @@ export function DetailsSection({ projectId, data, onUpdate }: DetailsSectionProp
                     placeholder="Enter lot area"
                 />
                 <InlineEditField
+                    label="Building Class"
+                    value={data?.buildingClass || ''}
+                    onSave={(v) => updateField('buildingClass', v)}
+                    placeholder="Enter building class"
+                />
+                <InlineEditField
                     label="Number of Stories"
                     value={data?.numberOfStories?.toString() || ''}
                     onSave={(v) => updateField('numberOfStories', v)}
                     placeholder="Enter number of stories"
+                />
+                <InlineEditField
+                    label="Legal Address"
+                    value={data?.legalAddress || ''}
+                    onSave={(v) => updateField('legalAddress', v)}
+                    placeholder="Enter legal address"
+                />
+                <InlineEditField
+                    label="Jurisdiction"
+                    value={data?.jurisdiction || ''}
+                    onSave={(v) => updateField('jurisdiction', v)}
+                    placeholder="Enter jurisdiction"
                 />
             </div>
         </div>

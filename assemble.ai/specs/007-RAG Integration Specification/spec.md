@@ -108,6 +108,98 @@ Uses same Planning Card data as context, but generates professional prose for ea
 > - **Switch to Data Only** - Generate using Planning Card data only
 > - **Sync Documents** - Select documents and click 'Sync to AI' first"
 
+### Fixed 7-Section TOC Structure (T099a)
+
+**CRITICAL**: Both modes (Short RFT and Long RFT) use the **same fixed 7-section TOC structure**.
+
+#### Hardcoded 7-Section TOC
+
+| # | Section Title | Description |
+|---|--------------|-------------|
+| 1 | **Project Details** | Project identification, location, building class, zoning |
+| 2 | **Project Objectives** | Functional, quality, budget, program objectives |
+| 3 | **Project Staging** | Timeline, stages, program requirements |
+| 4 | **Project Risks** | Risk assessment and mitigation strategies |
+| 5 | **Consultant Brief** OR **Contractor Scope** | Services required (consultant) or scope of works (contractor) |
+| 6 | **Consultant Fee** OR **Contractor Price** | Fee schedule (consultant) or price schedule (contractor) |
+| 7 | **Transmittal** (if exists) | Document schedule table (only if transmittal has documents) |
+
+#### Short RFT (Data Only Mode) - `generationMode: 'data_only'`
+
+| Section | Source | RAG Used? | AI Used? |
+|---------|--------|-----------|----------|
+| Project Details | `planningContext.details` | ❌ NO | ❌ NO |
+| Project Objectives | `planningContext.objectives` | ❌ NO | ❌ NO |
+| Project Staging | `planningContext.stages` | ❌ NO | ❌ NO |
+| Project Risks | `planningContext.risks` | ❌ NO | ❌ NO |
+| Consultant Brief | `discipline.briefServices` | ❌ NO | ⚠️ Light polish only |
+| Consultant Fee | `discipline.feeItems` | ❌ NO | ❌ NO |
+| Transmittal | `transmittal.documents[]` | ❌ NO | ❌ NO |
+
+**Short RFT key behaviors:**
+- NO RAG retrieval (`retrieveContextNode` is skipped)
+- NO AI generation for most sections (template-based rendering)
+- Brief section gets light grammar polish only (no content expansion)
+- All headings use same H1 styling (no H2/H3 hierarchy)
+
+#### Long RFT (AI Assisted Mode) - `generationMode: 'ai_assisted'`
+
+| Section | Source | RAG Used? | AI Used? |
+|---------|--------|-----------|----------|
+| Project Details | Planning + RAG context | ✅ YES | ✅ YES |
+| Project Objectives | Planning + RAG context | ✅ YES | ✅ YES |
+| Project Staging | Planning + RAG context | ✅ YES | ✅ YES |
+| Project Risks | Planning + RAG context | ✅ YES | ✅ YES |
+| Consultant Brief | Planning + RAG context | ✅ YES | ✅ YES |
+| Consultant Fee | Planning + RAG context | ✅ YES | ✅ YES |
+| Transmittal | `transmittal.documents[]` | ❌ NO | ❌ NO |
+
+**Long RFT key behaviors:**
+- RAG retrieval from discipline's Document Set
+- AI generates professional prose for each section
+- Planning Card data used as primary context
+- RAG chunks provide additional technical context
+- **Transmittal section ALWAYS uses data-only table** (no RAG/AI)
+
+**Key Implementation Points:**
+- The memory system (T074-T075) is for **content pattern learning**, NOT for TOC structure
+- TOC structure is ALWAYS the fixed 7-section structure from `getFixedTocSections()`
+- `generationMode` must be passed through `startReportGeneration()` correctly
+- Section 7 (Transmittal) only appears if `transmittal.documents.length > 0`
+
+#### Long RFT Generation Sequence
+
+**CRITICAL**: Long RFT is NOT a separate path from Short RFT. It is a **sequential extension**:
+
+```
+Short RFT Output → RAG Retrieval → AI Enhancement (with length control)
+```
+
+| Step | Description | Output |
+|------|-------------|--------|
+| 1. Template Render | Identical to Short RFT - generate template-based sections from Planning Card data | Baseline content (same as Short RFT) |
+| 2. RAG Retrieval | Fetch relevant chunks from discipline's Document Set | Retrieved technical context |
+| 3. AI Enhancement | Claude generates professional prose using template output as baseline + RAG chunks as context | Enhanced sections (length based on user selection) |
+
+#### Long RFT Length Control
+
+Users select content length when generating Long RFT:
+
+| Option | Label | Description | Target Words/Section |
+|--------|-------|-------------|---------------------|
+| `concise` | **Concise** | Brief, focused expansion of template content | ~500-800 words |
+| `lengthy` | **Lengthy** | Comprehensive, detailed expansion with thorough analysis | ~1500-2500 words |
+
+**UI**: Radio button selector shown before Long RFT generation starts.
+
+**Key Points:**
+- Steps 1-2 of Short RFT and Long RFT are IDENTICAL
+- Long RFT adds Step 3 (RAG + AI enhancement)
+- The template output serves as the "baseline" or "prompt seed" for AI generation
+- AI should EXPAND and ENHANCE the template content, not replace it entirely
+- Length option controls how much AI expands beyond the template baseline
+- Transmittal section uses data-only rendering in BOTH modes (no AI)
+
 ---
 
 ## Data Model

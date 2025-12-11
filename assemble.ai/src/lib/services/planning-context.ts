@@ -278,6 +278,8 @@ export async function fetchTransmittalForDiscipline(
     projectId: string,
     disciplineId: string
 ): Promise<TransmittalContext | null> {
+    console.log('[fetchTransmittalForDiscipline] Looking up transmittal for projectId:', projectId, 'disciplineId:', disciplineId);
+
     // Find transmittal for this discipline
     const transmittal = await db.query.transmittals.findFirst({
         where: and(
@@ -287,8 +289,17 @@ export async function fetchTransmittalForDiscipline(
     });
 
     if (!transmittal) {
+        console.log('[fetchTransmittalForDiscipline] No transmittal found');
         return null;
     }
+
+    console.log('[fetchTransmittalForDiscipline] Found transmittal:', transmittal.id, transmittal.name);
+
+    // First, check how many transmittal items exist (without joins)
+    const rawItems = await db.select()
+        .from(transmittalItems)
+        .where(eq(transmittalItems.transmittalId, transmittal.id));
+    console.log('[fetchTransmittalForDiscipline] Raw transmittal items count:', rawItems.length);
 
     // Fetch transmittal items with document and version info
     const items = await db.select({
@@ -302,6 +313,8 @@ export async function fetchTransmittalForDiscipline(
         .innerJoin(versions, eq(transmittalItems.versionId, versions.id))
         .innerJoin(documents, eq(versions.documentId, documents.id))
         .where(eq(transmittalItems.transmittalId, transmittal.id));
+
+    console.log('[fetchTransmittalForDiscipline] Joined items count:', items.length);
 
     // Fetch file assets and categories for each item
     const documentsWithDetails = await Promise.all(

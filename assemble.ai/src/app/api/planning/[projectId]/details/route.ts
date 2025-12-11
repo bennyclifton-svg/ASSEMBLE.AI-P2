@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { projectDetails } from '@/lib/db/schema';
+import { projectDetails, projects } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { projectDetailsSchema } from '@/lib/validations/planning-schema';
 
@@ -36,6 +36,16 @@ export async function PUT(
                 projectId,
                 ...validated,
             });
+        }
+
+        // Also update the main projects table name if projectName changed
+        if (validated.projectName) {
+            await db.update(projects)
+                .set({
+                    name: validated.projectName,
+                    updatedAt: new Date().toISOString(),
+                })
+                .where(eq(projects.id, projectId));
         }
 
         const [updated] = await db.select().from(projectDetails).where(eq(projectDetails.projectId, projectId));

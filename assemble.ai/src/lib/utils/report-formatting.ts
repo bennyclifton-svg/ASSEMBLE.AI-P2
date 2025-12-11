@@ -6,11 +6,14 @@
 import type { ReportSection } from '@/lib/hooks/use-report-generation';
 import type { TableOfContents } from '@/lib/langgraph/state';
 
-// Heading color scheme (print-safe design)
+// Single heading color (consistent, clean look)
+export const HEADING_COLOR = '#9CDCFE'; // Soft cyan - VS Code variable color
+
+// Legacy export for compatibility (all same color now)
 export const HEADING_COLORS = {
-  H1: '#5B9BD5', // Professional Blue
-  H2: '#70AD47', // Fresh Green
-  H3: '#ED7D31', // Warm Amber
+  H1: HEADING_COLOR,
+  H2: HEADING_COLOR,
+  H3: HEADING_COLOR,
 } as const;
 
 /**
@@ -39,10 +42,11 @@ export function sectionsToHTML(
     const level = levelMap.get(section.sectionIndex) || 2;
     const headingTag = `h${level}`;
     const color = HEADING_COLORS[`H${level}` as keyof typeof HEADING_COLORS] || HEADING_COLORS.H2;
+    const title = section.title || 'Untitled Section';
 
     // Add heading with inline color style
     htmlParts.push(
-      `<${headingTag} style="color: ${color}">${escapeHTML(section.title)}</${headingTag}>`
+      `<${headingTag} style="color: ${color}">${escapeHTML(title)}</${headingTag}>`
     );
 
     // Add content (convert markdown to HTML)
@@ -51,14 +55,16 @@ export function sectionsToHTML(
 
       // Remove duplicate heading if content starts with ## SectionTitle
       // This prevents "Project Objectives" appearing twice
-      const duplicateHeadingPattern = new RegExp(`^##\\s*${escapeRegExp(section.title)}\\s*\\n`, 'i');
-      content = content.replace(duplicateHeadingPattern, '');
+      if (title) {
+        const duplicateHeadingPattern = new RegExp(`^##\\s*${escapeRegExp(title)}\\s*\\n`, 'i');
+        content = content.replace(duplicateHeadingPattern, '');
+      }
 
       // If content already contains HTML tags (e.g., transmittal table), use as-is
       // Otherwise convert markdown to HTML
       const contentHTML = content.includes('<table') || content.includes('<h2')
         ? content
-        : markdownToHTML(content, section.title);
+        : markdownToHTML(content, title);
 
       htmlParts.push(contentHTML);
     }
@@ -75,7 +81,8 @@ export function sectionsToHTML(
 /**
  * Escape HTML special characters to prevent XSS
  */
-function escapeHTML(text: string): string {
+function escapeHTML(text: string | undefined | null): string {
+  if (!text) return '';
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -87,7 +94,8 @@ function escapeHTML(text: string): string {
 /**
  * Escape special regex characters in a string
  */
-function escapeRegExp(text: string): string {
+function escapeRegExp(text: string | undefined | null): string {
+  if (!text) return '';
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
@@ -226,7 +234,8 @@ function buildKeyValueTable(items: Array<{ label: string; value: string }>): str
  * @param markdown - The markdown content to convert
  * @param sectionTitle - Optional section title to help detect duplicates
  */
-export function markdownToHTML(markdown: string, sectionTitle?: string): string {
+export function markdownToHTML(markdown: string | undefined | null, sectionTitle?: string): string {
+  if (!markdown) return '';
   let html = markdown;
 
   // Collapse multiple blank lines to single blank line

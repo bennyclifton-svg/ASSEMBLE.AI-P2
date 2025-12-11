@@ -14,9 +14,9 @@ Both support manual entry, edit, delete, and AI-assisted creation via drag & dro
 
 ## User Stories (P1)
 
-**US-01** As a Project Manager, I want discipline tabs at the top of the Consultant section so that I can instantly filter and view only Firms for the active disciplines defined in the Planning Card.
+**US-01** As a Project Manager, I want a unified "Procurement" tab that combines both consultant disciplines and contractor trades so that I can manage all procurement activities from a single location.
 
-**US-02** As a Project Manager, I want trade tabs at the top of the Contractors section so that I can instantly filter Firms by their trade/specialty.
+**US-02** As a Project Manager, I want to see discipline tabs (with briefcase icon) and trade tabs (with wrench icon) separated by a visual divider so that I can easily distinguish between consultants and contractors.
 
 **US-03** As a Project Manager, I want to drag & drop an email, vCard, PDF, or business card image (or paste text) anywhere on the Firm card  so that the AI extracts and auto-populates a the firm card with Name/Company, Role/Trade, Email, Phone, Organization, etc., dramatically reducing data entry time.
 
@@ -38,8 +38,8 @@ Both support manual entry, edit, delete, and AI-assisted creation via drag & dro
 
 | ID    | Requirement |
 |------|------------|
-| FR-001 | System MUST display Firms as horizontal, scrollable cards grouped/filtered by Discipline tabs (tabs = active disciplines from Planning Card) |
-| FR-002 | System MUST display Firms as horizontal, scrollable cards grouped/filtered by Trade tabs (tabs = only active trades as selected in the Planning Card do not show empty tabs for trades that are not active) |
+| FR-001 | System MUST display a unified "Procurement" tab combining consultant disciplines and contractor trades as Tier 2 tabs |
+| FR-002 | Tier 2 tabs MUST show disciplines (Briefcase icon, blue accent) and trades (Wrench icon, orange accent) with a visual separator between them |
 | FR-003 | System MUST allow drag & drop of files (PDF, images, .msg, .eml) or pasted text → AI parses and suggests a new card (user confirms/edits before save) |
 | FR-004 | System MUST support manual "Add Firm" button that creates a blank editable card at the end of the current tab |
 | FR-005 | System MUST allow inline editing and deletion of any card (with confirmation on delete) |

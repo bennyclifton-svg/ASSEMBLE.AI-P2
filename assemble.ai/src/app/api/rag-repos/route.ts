@@ -93,10 +93,13 @@ export async function GET(request: NextRequest) {
             (type) => !globalRepos.find((repo: { repoType: string }) => repo.repoType === type)
         );
 
+        // Also need initialization if project repo is missing
+        const needsProjectRepo = !projectRepo;
+
         return NextResponse.json({
             globalRepos,
             projectRepo,
-            needsInitialization: missingGlobalRepoTypes.length > 0,
+            needsInitialization: missingGlobalRepoTypes.length > 0 || needsProjectRepo,
             missingTypes: missingGlobalRepoTypes,
         });
     } catch (error) {

@@ -8,7 +8,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Save, FolderOpen, Loader2, Database, Sparkles } from 'lucide-react';
+import { Save, FolderOpen, Loader2 } from 'lucide-react';
 import { useRAGRepos } from '@/lib/hooks/use-rag-repos';
 import { useTransmittal } from '@/lib/hooks/use-transmittal';
 import { useToast } from '@/lib/hooks/use-toast';
@@ -34,14 +34,12 @@ const brightenColor = (hex: string, amount: number = 80) => {
 const TILE_COLORS = {
     sources: '#0e639c',      // Blue - matches accent
     transmittal: '#2e7d32',  // Green
-    dataOnly: '#7b4bb3',     // Purple
-    aiAssist: '#c9860d',     // Gold/Orange
 };
 
 // Default organization ID until organization management is implemented
 const DEFAULT_ORGANIZATION_ID = 'default-org';
 
-export type GenerationMode = 'data_only' | 'ai_assist';
+export type GenerationMode = 'data_only' | 'ai_assisted';
 
 interface DisciplineRepoTilesProps {
     projectId: string;
@@ -61,14 +59,13 @@ export function DisciplineRepoTiles({
     contextName,
     selectedDocumentIds,
     onSetSelectedDocumentIds,
-    generationMode = 'ai_assist',
+    generationMode = 'ai_assisted',
     onGenerationModeChange,
 }: DisciplineRepoTilesProps) {
     const { toast } = useToast();
     const [isSavingProject, setIsSavingProject] = useState(false);
     const [isLoadingProject, setIsLoadingProject] = useState(false);
     const [isSavingTransmittal, setIsSavingTransmittal] = useState(false);
-    const [localMode, setLocalMode] = useState<GenerationMode>(generationMode);
 
     // Project repo hook
     const {
@@ -98,12 +95,6 @@ export function DisciplineRepoTiles({
     if (needsInitialization && !isFetching) {
         initializeRepos();
     }
-
-    // Handle mode change
-    const handleModeChange = useCallback((mode: GenerationMode) => {
-        setLocalMode(mode);
-        onGenerationModeChange?.(mode);
-    }, [onGenerationModeChange]);
 
     // Handle save to project repo
     const handleSaveToProject = useCallback(async () => {
@@ -179,13 +170,10 @@ export function DisciplineRepoTiles({
     }, [loadTransmittal, onSetSelectedDocumentIds, toast]);
 
     const hasSelection = selectedDocumentIds.length > 0;
-    const currentMode = onGenerationModeChange ? generationMode : localMode;
 
     // Compute bright colors for text/icons
     const brightSources = brightenColor(TILE_COLORS.sources);
     const brightTransmittal = brightenColor(TILE_COLORS.transmittal);
-    const brightDataOnly = brightenColor(TILE_COLORS.dataOnly);
-    const brightAiAssist = brightenColor(TILE_COLORS.aiAssist);
 
     // Common tile classes for uniform sizing
     const tileBaseClasses = cn(
@@ -207,7 +195,7 @@ export function DisciplineRepoTiles({
                         !hasSelection && 'opacity-50 cursor-not-allowed'
                     )}
                     style={{
-                        backgroundColor: hexToRgba(TILE_COLORS.sources, hasSelection ? 0.3 : 0.15),
+                        backgroundColor: hexToRgba(TILE_COLORS.sources, hasSelection ? 0.45 : 0.25),
                     }}
                     title={hasSelection ? 'Save selected documents as sources' : 'Select documents first'}
                 >
@@ -215,7 +203,7 @@ export function DisciplineRepoTiles({
                     <div
                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                         style={{
-                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.sources, 0.3)} 0%, transparent 70%)`,
+                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.sources, 0.4)} 0%, transparent 70%)`,
                         }}
                     />
                     <div className="relative z-10 flex flex-col items-center">
@@ -240,7 +228,7 @@ export function DisciplineRepoTiles({
                         (!projectRepo || projectRepo.memberCount === 0) && 'opacity-50 cursor-not-allowed'
                     )}
                     style={{
-                        backgroundColor: hexToRgba(TILE_COLORS.sources, projectRepo?.memberCount ? 0.3 : 0.15),
+                        backgroundColor: hexToRgba(TILE_COLORS.sources, projectRepo?.memberCount ? 0.45 : 0.25),
                     }}
                     title={projectRepo?.memberCount ? `Load ${projectRepo.memberCount} saved sources` : 'No sources saved'}
                 >
@@ -248,7 +236,7 @@ export function DisciplineRepoTiles({
                     <div
                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                         style={{
-                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.sources, 0.3)} 0%, transparent 70%)`,
+                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.sources, 0.4)} 0%, transparent 70%)`,
                         }}
                     />
                     <div className="relative z-10 flex flex-col items-center">
@@ -259,61 +247,6 @@ export function DisciplineRepoTiles({
                         )}
                         <span className="text-xs font-medium" style={{ color: brightSources }}>Sources</span>
                         <span className="text-[10px]" style={{ color: brightSources }}>({projectRepo?.memberCount || 0})</span>
-                    </div>
-                </button>
-            </div>
-
-            {/* Generation Mode Tiles (Purple/Orange) */}
-            <div className="flex gap-2">
-                {/* Data Only Tile */}
-                <button
-                    onClick={() => handleModeChange('data_only')}
-                    className={cn(
-                        tileBaseClasses,
-                        currentMode === 'data_only' && 'ring-2 ring-offset-1 ring-offset-[#252526]'
-                    )}
-                    style={{
-                        backgroundColor: hexToRgba(TILE_COLORS.dataOnly, currentMode === 'data_only' ? 0.4 : 0.3),
-                        ...(currentMode === 'data_only' && { ringColor: TILE_COLORS.dataOnly }),
-                    }}
-                    title="Generate report using planning data only"
-                >
-                    {/* Hover glow effect */}
-                    <div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-                        style={{
-                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.dataOnly, 0.3)} 0%, transparent 70%)`,
-                        }}
-                    />
-                    <div className="relative z-10 flex flex-col items-center">
-                        <Database className="h-4 w-4 mb-1" style={{ color: brightDataOnly }} />
-                        <span className="text-xs font-medium" style={{ color: brightDataOnly }}>Data Only</span>
-                    </div>
-                </button>
-
-                {/* AI Assist Tile */}
-                <button
-                    onClick={() => handleModeChange('ai_assist')}
-                    className={cn(
-                        tileBaseClasses,
-                        currentMode === 'ai_assist' && 'ring-2 ring-offset-1 ring-offset-[#252526]'
-                    )}
-                    style={{
-                        backgroundColor: hexToRgba(TILE_COLORS.aiAssist, currentMode === 'ai_assist' ? 0.4 : 0.3),
-                        ...(currentMode === 'ai_assist' && { ringColor: TILE_COLORS.aiAssist }),
-                    }}
-                    title="Generate report with AI assistance using synced documents"
-                >
-                    {/* Hover glow effect */}
-                    <div
-                        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-                        style={{
-                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.aiAssist, 0.3)} 0%, transparent 70%)`,
-                        }}
-                    />
-                    <div className="relative z-10 flex flex-col items-center">
-                        <Sparkles className="h-4 w-4 mb-1" style={{ color: brightAiAssist }} />
-                        <span className="text-xs font-medium" style={{ color: brightAiAssist }}>AI Assist</span>
                     </div>
                 </button>
             </div>
@@ -332,7 +265,7 @@ export function DisciplineRepoTiles({
                         !hasSelection && 'opacity-50 cursor-not-allowed'
                     )}
                     style={{
-                        backgroundColor: hexToRgba(TILE_COLORS.transmittal, hasSelection ? 0.3 : 0.15),
+                        backgroundColor: hexToRgba(TILE_COLORS.transmittal, hasSelection ? 0.45 : 0.25),
                     }}
                     title={hasSelection ? 'Save as transmittal' : 'Select documents first'}
                 >
@@ -340,7 +273,7 @@ export function DisciplineRepoTiles({
                     <div
                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                         style={{
-                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.transmittal, 0.3)} 0%, transparent 70%)`,
+                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.transmittal, 0.4)} 0%, transparent 70%)`,
                         }}
                     />
                     <div className="relative z-10 flex flex-col items-center">
@@ -365,7 +298,7 @@ export function DisciplineRepoTiles({
                         !hasTransmittal && 'opacity-50 cursor-not-allowed'
                     )}
                     style={{
-                        backgroundColor: hexToRgba(TILE_COLORS.transmittal, hasTransmittal ? 0.3 : 0.15),
+                        backgroundColor: hexToRgba(TILE_COLORS.transmittal, hasTransmittal ? 0.45 : 0.25),
                     }}
                     title={hasTransmittal ? `Load ${transmittal?.documentCount || 0} documents` : 'No transmittal saved'}
                 >
@@ -373,7 +306,7 @@ export function DisciplineRepoTiles({
                     <div
                         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
                         style={{
-                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.transmittal, 0.3)} 0%, transparent 70%)`,
+                            background: `radial-gradient(circle at center, ${hexToRgba(TILE_COLORS.transmittal, 0.4)} 0%, transparent 70%)`,
                         }}
                     />
                     <div className="relative z-10 flex flex-col items-center">

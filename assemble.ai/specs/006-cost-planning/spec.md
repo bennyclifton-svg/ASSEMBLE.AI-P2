@@ -440,8 +440,48 @@ const contextMenuItems = [
   { separator: true },
   { key: 'add_comment', label: 'Add Comment', icon: 'message-square' },
   { key: 'delete_row', label: 'Delete Row', icon: 'trash', danger: true },
+  // Bulk actions (shown when multiple rows selected)
+  { key: 'delete_selected', label: 'Delete Selected ({n} rows)', icon: 'trash', danger: true, bulk: true },
+  { key: 'move_to_section', label: 'Move to Section...', icon: 'folder', bulk: true },
 ];
 ```
+
+#### Bulk Selection Behavior
+
+**Selection Methods:**
+| Action | Behavior |
+|--------|----------|
+| Click row | Select single row, deselect others |
+| Ctrl+Click row | Toggle row selection (add/remove from selection) |
+| Shift+Click row | Select range from last clicked row to current row |
+| Ctrl+A | Select all rows in current section |
+| Escape | Clear all selection |
+
+**Selection Indicator:**
+- Selected rows show with highlighted background (light blue)
+- Selection count badge appears in toolbar: "3 rows selected"
+- Bulk action buttons appear when selection > 1 row
+
+**Bulk Actions Toolbar:**
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  ☑ 3 rows selected    [Delete Selected] [Move to Section ▼] [Clear Selection] │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Bulk Delete Flow:**
+1. User selects multiple rows
+2. Clicks "Delete Selected" or presses Delete key
+3. Confirmation dialog shows: "Delete 3 cost lines? This will also remove linked invoices and variations."
+4. On confirm: Soft-delete all selected rows via batch API
+5. Show success toast: "3 cost lines deleted"
+
+**Bulk Move to Section Flow:**
+1. User selects multiple rows (can be from different sections)
+2. Clicks "Move to Section" dropdown
+3. Selects target section (FEES, CONSULTANTS, CONSTRUCTION, CONTINGENCY)
+4. Rows move to end of target section, sortOrder updated
+5. Show success toast: "3 cost lines moved to CONSULTANTS"
 
 ### 5.4 Invoices Sheet
 
@@ -903,6 +943,9 @@ interface ContingencyLine extends CostLine {
 | F19 | Drag-to-link invoices/variations | P2 |
 | F20 | Undo/redo support | P2 |
 | F21 | WebSocket live totals | P2 |
+| F22 | **Bulk row selection** (Shift+Click range, Ctrl+Click toggle) | P1 |
+| F23 | **Bulk delete** selected rows with confirmation | P1 |
+| F24 | **Bulk section assignment** (move selected rows to different section) | P2 |
 
 ### 10.2 Performance Requirements
 
@@ -977,6 +1020,55 @@ Feature: Snapshot Comparison
     And the current budget total = $550,000
     When I select "Compare to REV A"
     Then I see a variance column showing +$50,000 difference
+
+Feature: Bulk Row Selection
+
+  Scenario: Select multiple rows with Shift+Click
+    Given I am viewing the Project Summary with 10 cost lines
+    When I click on row 3
+    And I Shift+Click on row 7
+    Then rows 3, 4, 5, 6, 7 are selected
+    And the toolbar shows "5 rows selected"
+    And bulk action buttons are visible
+
+  Scenario: Toggle selection with Ctrl+Click
+    Given rows 3 and 5 are selected
+    When I Ctrl+Click on row 4
+    Then rows 3, 4, 5 are selected
+    When I Ctrl+Click on row 3
+    Then rows 4, 5 are selected (row 3 deselected)
+
+  Scenario: Clear selection with Escape
+    Given 5 rows are selected
+    When I press Escape
+    Then no rows are selected
+    And bulk action buttons are hidden
+
+Feature: Bulk Delete
+
+  Scenario: Delete multiple cost lines
+    Given I have selected 3 cost lines in CONSULTANTS section
+    When I click "Delete Selected"
+    Then I see a confirmation dialog "Delete 3 cost lines?"
+    When I confirm the deletion
+    Then all 3 cost lines are soft-deleted
+    And the section total updates immediately
+    And I see toast "3 cost lines deleted"
+
+  Scenario: Bulk delete includes linked items warning
+    Given I select 2 cost lines that have linked invoices
+    When I click "Delete Selected"
+    Then the confirmation shows "This will also remove linked invoices and variations"
+
+Feature: Bulk Move to Section
+
+  Scenario: Move cost lines to different section
+    Given I have selected 2 cost lines in FEES section
+    When I click "Move to Section" and select "CONSULTANTS"
+    Then the 2 cost lines appear at the end of CONSULTANTS section
+    And FEES section total decreases
+    And CONSULTANTS section total increases
+    And I see toast "2 cost lines moved to CONSULTANTS"
 ```
 
 ---
@@ -1103,6 +1195,8 @@ const parseCurrency = (display: string): number => {
 | Invoice Matching | **Explicit dropdown**, fuzzy only on import | Auto-linking on edit too dangerous |
 | Variation Numbering | **Project-scoped with category prefix** | PV-001, CV-001 is industry standard |
 | Amount Storage | **Store in cents (BIGINT)** | Avoids DECIMAL rounding issues |
+| Bulk Selection | **Excel-style Shift/Ctrl+Click** | Constitution IX requires spreadsheet-native UX; standard Excel behavior |
+| Bulk Actions Scope | **Delete + Move Section only** | Most common bulk needs; avoid complexity of bulk cell editing |
 
 ---
 
@@ -1172,8 +1266,8 @@ For existing Excel-based projects, migration script should:
 
 ---
 
-**Document Version**: 0.2.1  
-**Author**: Claude  
-**Date**: 2025-11-26  
-**Status**: Revised - Removed Committed Column  
+**Document Version**: 0.3.0
+**Author**: Claude
+**Date**: 2025-12-09
+**Status**: Revised - Added Bulk Selection Requirements (F22-F24)
 **Reviewers**: [Pending]

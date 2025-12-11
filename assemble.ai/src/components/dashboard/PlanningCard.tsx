@@ -17,12 +17,14 @@ interface PlanningCardProps {
     projectId: string;
     selectedDocumentIds?: string[];
     onSetSelectedDocumentIds?: (ids: string[]) => void;
+    onProjectNameChange?: () => void;
 }
 
 export function PlanningCard({
     projectId,
     selectedDocumentIds = [],
     onSetSelectedDocumentIds,
+    onProjectNameChange,
 }: PlanningCardProps) {
     const [data, setData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -63,6 +65,7 @@ export function PlanningCard({
                     projectId={projectId}
                     data={data?.details}
                     onUpdate={fetchPlanningData}
+                    onProjectNameChange={onProjectNameChange}
                 />
 
                 <ObjectivesSection

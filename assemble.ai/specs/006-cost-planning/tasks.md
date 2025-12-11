@@ -1,9 +1,9 @@
 # Tasks: Cost Planning Module
 
 **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md) | **Research**: [research.md](research.md)
-**Status**: Implemented (Core Features Complete)
-**Estimate**: 18-24.5 days (Actual: ~18 days)
-**Progress**: Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅ | Phase 5 ✅ | Phase 7 ✅ | Phase 8 ✅ | Phase 9 ✅ | Phase 10 ✅ | Phase 14 ✅
+**Status**: Implemented (Core Features Complete), Bulk Selection Pending
+**Estimate**: 20-26.5 days (Actual: ~18 days + Phase 15 pending)
+**Progress**: Phase 0 ✅ | Phase 1 ✅ | Phase 2 ✅ | Phase 3 ✅ | Phase 4 ✅ | Phase 5 ✅ | Phase 7 ✅ | Phase 8 ✅ | Phase 9 ✅ | Phase 10 ✅ | Phase 14 ✅ | **Phase 15 ⏳**
 **Architecture**: SQLite + Custom Tables (not PostgreSQL + FortuneSheet)
 
 ---
@@ -663,10 +663,63 @@ Phase 8 (Cells)  Phase 9 (Menus) Phase 10 (Dialogs)        │
 | Phase 12: Testing | 2-3 | Yes |
 | Phase 13: Polish | 1-2 | Yes |
 | Phase 14: AI Invoice Extraction | 2-2.5 | Partial |
+| Phase 15: Bulk Selection & Operations | 1-2 | Partial |
 
-**Total**: 18-24.5 days (with parallelization)
+**Total**: 20-26.5 days (with parallelization)
 
 ---
+
+---
+
+## Phase 15: Bulk Selection & Operations (1-2 days)
+
+> **Dependency**: Phase 7 Core UI complete
+> **Feature**: Multi-row selection with bulk delete and move operations
+> **Priority**: P1
+
+### Selection Infrastructure
+- [ ] T150 `[B]` Create `src/lib/hooks/cost-plan/use-row-selection.ts`
+  - Track selected row IDs in state
+  - Implement Shift+Click range selection logic
+  - Implement Ctrl+Click toggle selection
+  - Clear selection on Escape key
+  - Select all in section with Ctrl+A
+
+- [ ] T151 `[B]` Update `src/components/cost-plan/CostPlanSheet.tsx`
+  - Add selection highlight styling to selected rows
+  - Wire up click handlers for selection
+  - Pass selection state to context menu
+
+### Bulk Actions UI
+- [ ] T152 `[P]` Create `src/components/cost-plan/BulkActionsToolbar.tsx`
+  - Show when selection.length > 1
+  - Display selection count badge
+  - Delete Selected button
+  - Move to Section dropdown
+  - Clear Selection button
+
+- [ ] T153 `[P]` Create `src/components/cost-plan/dialogs/BulkDeleteDialog.tsx`
+  - Confirmation dialog with count
+  - Warning about linked invoices/variations
+  - Call batch delete API
+
+- [ ] T154 `[P]` Create `src/components/cost-plan/dialogs/BulkMoveSectionDialog.tsx`
+  - Section dropdown (FEES, CONSULTANTS, CONSTRUCTION, CONTINGENCY)
+  - Preview of affected rows
+  - Call batch update API
+
+### API Support
+- [ ] T155 `[B]` Implement `POST /api/projects/:projectId/cost-lines/batch`
+  - Support delete operations array
+  - Support update operations (section change)
+  - Atomic transaction for all operations
+  - Return updated totals
+
+### Context Menu Updates
+- [ ] T156 `[P]` Update context menu for bulk actions
+  - Show "Delete Selected (n rows)" when multiple selected
+  - Show "Move to Section..." when multiple selected
+  - Hide single-row actions when bulk selected
 
 ---
 
@@ -762,7 +815,7 @@ The following features were originally specified but deferred for future impleme
 
 ---
 
-**Tasks Version**: 1.1.0
+**Tasks Version**: 1.2.0
 **Author**: Claude
-**Date**: 2025-12-07 (Updated)
-**Status**: Core Implementation Complete, Deferred Features Documented
+**Date**: 2025-12-09 (Updated)
+**Status**: Core Implementation Complete, Bulk Selection Tasks Added (Phase 15)

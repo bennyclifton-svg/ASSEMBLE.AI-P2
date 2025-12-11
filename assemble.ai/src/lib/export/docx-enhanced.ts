@@ -19,6 +19,7 @@ import {
   WidthType,
   BorderStyle,
 } from 'docx';
+import { JSDOM } from 'jsdom';
 
 // Heading colors (same as editor)
 const HEADING_COLORS = {
@@ -38,14 +39,15 @@ function hexToRgb(hex: string): string {
 
 /**
  * Export report HTML to DOCX
+ * Returns Buffer for Node.js compatibility
  */
 export async function exportToDOCX(
   htmlContent: string,
   reportTitle: string
-): Promise<Blob> {
-  // Parse HTML content
-  const parser = new DOMParser();
-  const htmlDoc = parser.parseFromString(htmlContent, 'text/html');
+): Promise<Buffer> {
+  // Parse HTML content using jsdom (works on server)
+  const dom = new JSDOM(htmlContent);
+  const htmlDoc = dom.window.document;
 
   const children: (Paragraph | Table)[] = [];
 
@@ -234,7 +236,7 @@ export async function exportToDOCX(
     ],
   });
 
-  // Generate blob
-  const buffer = await Packer.toBlob(doc);
+  // Generate Buffer for Node.js compatibility
+  const buffer = await Packer.toBuffer(doc);
   return buffer;
 }

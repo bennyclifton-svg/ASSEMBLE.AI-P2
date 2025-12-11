@@ -2,9 +2,9 @@
 
 **Feature**: 004-consultant-contractor-cards
 **Date**: 2025-11-23
-**Status**: Phase 13 Complete - Only Duplicate Prevention Remaining (Phase 12)
-**Last Updated**: 2025-12-07
-**Implementation**: ~92% Complete
+**Status**: Phase 14 Complete - Procurement Tab Consolidation Done
+**Last Updated**: 2025-12-10
+**Implementation**: ~95% Complete (Duplicate Prevention - Phase 12 - Still Pending)
 
 ## Phase 1: Database Schema & API Foundation
 
@@ -574,5 +574,56 @@ onDragOver={isEmpty ? handleDragOver : undefined}
 - [ ] Option A: Keep current behavior (faster UX, user can edit after save)
 - [ ] Option B: Revert to confirmation flow (matches spec exactly)
 - [ ] Decision: User to decide
+
+---
+
+## Phase 14: Procurement Tab Consolidation
+
+**Status**: ✅ COMPLETE (2025-12-10)
+
+**Purpose**: Combine separate "Consultants" and "Contractors" Tier 1 tabs into a unified "Procurement" tab for streamlined navigation.
+
+### UI Refactor
+- [x] Combine Consultants/Contractors Tier 1 tabs into single "Procurement" tab
+- [x] Create unified Tier 2 tab bar with disciplines + trades
+- [x] Add visual separator between disciplines and trades
+- [x] Add Briefcase icon to discipline tabs (blue accent #4fc1ff)
+- [x] Add Wrench icon to trade tabs (orange accent #ffa726)
+- [x] Add ShoppingCart icon to Procurement Tier 1 tab
+- [x] Update state management (single `activeTab` instead of separate `activeDiscipline`/`activeTrade`)
+- [x] Unify `generationModes` state (combined record instead of separate `disciplineModes`/`tradeModes`)
+
+### File Updates
+- [x] Rename `ConsultantCard.tsx` → `ProcurementCard.tsx`
+- [x] Update `page.tsx` import to use `ProcurementCard`
+- [x] Update `spec.md` with new FR-001/FR-002 and US-01/US-02
+
+### Key Changes Made
+
+**ProcurementCard.tsx** (formerly ConsultantCard.tsx):
+```typescript
+// Tier 1: Single Procurement tab replaces Consultants + Contractors
+<TabsTrigger value="procurement">
+    <ShoppingCart className="h-4 w-4" />
+    Procurement ({enabledDisciplines.length + enabledTrades.length})
+</TabsTrigger>
+
+// Tier 2: Combined disciplines and trades with separator
+{enabledDisciplines.map(d => (
+    <TabsTrigger value={`discipline-${d.id}`}>
+        <Briefcase className="h-3 w-3" />
+        {d.disciplineName}
+    </TabsTrigger>
+))}
+{enabledDisciplines.length > 0 && enabledTrades.length > 0 && (
+    <div className="h-6 w-px bg-[#3e3e42] mx-2" />
+)}
+{enabledTrades.map(t => (
+    <TabsTrigger value={`trade-${t.id}`}>
+        <Wrench className="h-3 w-3" />
+        {t.tradeName}
+    </TabsTrigger>
+))}
+```
 
 ---

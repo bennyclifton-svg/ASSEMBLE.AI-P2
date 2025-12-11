@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronDown, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus, Home } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -16,9 +18,11 @@ interface Project {
 interface ProjectSwitcherProps {
     selectedProject: Project | null;
     onSelectProject: (project: Project | null) => void;
+    refreshTrigger?: number;
 }
 
-export function ProjectSwitcher({ selectedProject, onSelectProject }: ProjectSwitcherProps) {
+export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigger }: ProjectSwitcherProps) {
+    const router = useRouter();
     const [projects, setProjects] = useState<Project[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,7 +39,13 @@ export function ProjectSwitcher({ selectedProject, onSelectProject }: ProjectSwi
             const res = await fetch('/api/projects');
             const data = await res.json();
             setProjects(data);
-            if (data.length > 0 && !selectedProject) {
+            // Update selected project with latest data if it exists
+            if (selectedProject) {
+                const updated = data.find((p: Project) => p.id === selectedProject.id);
+                if (updated && updated.name !== selectedProject.name) {
+                    onSelectProject(updated);
+                }
+            } else if (data.length > 0) {
                 onSelectProject(data[0]);
             }
         } catch (error) {
@@ -46,6 +56,13 @@ export function ProjectSwitcher({ selectedProject, onSelectProject }: ProjectSwi
     useEffect(() => {
         refreshProjects();
     }, []);
+
+    // Refresh when trigger changes
+    useEffect(() => {
+        if (refreshTrigger !== undefined && refreshTrigger > 0) {
+            refreshProjects();
+        }
+    }, [refreshTrigger]);
 
     const handleSelectProject = (project: Project) => {
         onSelectProject(project);
@@ -92,16 +109,34 @@ export function ProjectSwitcher({ selectedProject, onSelectProject }: ProjectSwi
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-[#3e3e42] border border-[#3e3e42] rounded hover:bg-[#4e4e52] text-[#cccccc] text-sm"
+                className="flex items-center justify-center w-8 h-8 hover:bg-[#3e3e42] rounded transition-colors"
+                title={selectedProject ? selectedProject.name : 'Select Project'}
             >
-                <span className="font-medium">
-                    {selectedProject ? selectedProject.name : 'Select Project'}
-                </span>
-                <ChevronDown className="w-4 h-4" />
+                <svg
+                    className={cn(
+                        'w-4 h-4 text-[#aaaaaa] hover:text-[#cccccc] transition-transform',
+                        isOpen && 'rotate-90'
+                    )}
+                    viewBox="0 0 12 12"
+                    fill="currentColor"
+                >
+                    <polygon points="2,0 12,6 2,12" />
+                </svg>
             </button>
 
             {isOpen && (
                 <div className="absolute top-full right-0 mt-1 w-64 bg-[#252526] border border-[#3e3e42] rounded shadow-lg z-10">
+                    {/* Home option */}
+                    <button
+                        onClick={() => {
+                            setIsOpen(false);
+                            router.push('/');
+                        }}
+                        className="w-full px-4 py-2 text-left hover:bg-[#2a2d2e] flex items-center gap-2 border-b border-[#3e3e42]"
+                    >
+                        <Home className="w-4 h-4 text-[#808080]" />
+                        <span className="text-sm text-[#cccccc]">Home</span>
+                    </button>
                     {projects.map(project => (
                         <button
                             key={project.id}

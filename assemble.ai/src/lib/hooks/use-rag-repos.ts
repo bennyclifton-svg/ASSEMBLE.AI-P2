@@ -57,7 +57,9 @@ const fetcher = async (url: string) => {
     const res = await fetch(url);
     if (!res.ok) {
         const error = await res.json().catch(() => ({ error: 'Request failed' }));
-        throw new Error(error.error || 'Request failed');
+        const errorMessage = error.error || 'Request failed';
+        console.error('[useRAGRepos] Fetch error:', errorMessage, { url, status: res.status });
+        throw new Error(errorMessage);
     }
     return res.json();
 };
@@ -209,6 +211,14 @@ export function useRAGRepos(projectId: string | null, organizationId: string | n
         }
     }, []);
 
+    /**
+     * Manual retry - clears error state and revalidates
+     */
+    const retry = useCallback(() => {
+        setError(null);
+        revalidate();
+    }, [revalidate]);
+
     return {
         // Data
         globalRepos: data?.globalRepos || [],
@@ -221,6 +231,7 @@ export function useRAGRepos(projectId: string | null, organizationId: string | n
         isSaving,
         isLoading,
         error: fetchError?.message || error,
+        hasError: !!fetchError || !!error,
 
         // Actions
         initializeRepos,
@@ -228,6 +239,7 @@ export function useRAGRepos(projectId: string | null, organizationId: string | n
         loadFromRepo,
         getRepoInfo,
         revalidate,
+        retry,
     };
 }
 

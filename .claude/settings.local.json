@@ -61,7 +61,11 @@
       "Bash(npm info:*)",
       "Bash(del:*)",
       "Bash(if exist \"d:\\assemble.ai P2\\assemble.ai\\.next\" rmdir /s /q \"d:\\assemble.ai P2\\assemble.ai\\.next\")",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(xargs cat:*)",
+      "Bash(if not exist \"d:\\assemble.ai P2\\assemble.ai\\src\\lib\\constants\" mkdir \"d:\\assemble.ai P2\\assemble.ai\\src\\lib\\constants\")",
+      "Bash(cmd /c \"taskkill /F /IM node.exe 2>nul & echo Done\")",
+      "Bash(cmd /c \"taskkill /F /PID 27616 2>nul & del /F \"\"d:\\assemble.ai P2\\assemble.ai\\.next\\dev\\lock\"\" 2>nul & echo Done\")"
     ],
     "deny": [],
     "ask": []

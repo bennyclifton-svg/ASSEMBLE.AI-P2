@@ -17,12 +17,8 @@ interface EditableContentAreaProps {
   onSave: () => Promise<void>;
 }
 
-// Heading color scheme (print-safe)
-const HEADING_COLORS = {
-  H1: '#5B9BD5', // Professional Blue
-  H2: '#70AD47', // Fresh Green
-  H3: '#ED7D31', // Warm Amber
-};
+// Single heading color (consistent, clean look)
+const HEADING_COLOR = '#4fc3f7'; // Cyan blue - matches document selection highlight
 
 export default function EditableContentArea({
   content,
@@ -32,11 +28,20 @@ export default function EditableContentArea({
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalUpdate = useRef(false);
 
+  // Track whether we've done the initial render
+  const hasInitialized = useRef(false);
+
   /**
-   * Update editor content when prop changes
+   * Update editor content when prop changes (after initial render)
    */
   useEffect(() => {
     if (!editorRef.current || isInternalUpdate.current) return;
+
+    // Skip the first update since we use dangerouslySetInnerHTML for initial render
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      return;
+    }
 
     // Only update if content differs to avoid cursor jumps
     if (editorRef.current.innerHTML !== content) {
@@ -60,7 +65,40 @@ export default function EditableContentArea({
   }, [onChange]);
 
   /**
-   * Keyboard shortcuts
+   * Apply heading style to selection or current line
+   */
+  const applyHeading = useCallback((level: 1 | 2 | 3, textContent?: string) => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const headingTag = `H${level}`;
+
+    // Create heading element
+    const heading = document.createElement(headingTag);
+    heading.style.color = HEADING_COLOR;
+    heading.textContent = textContent ?? range.toString() ?? '';
+
+    // Replace selection with heading
+    range.deleteContents();
+    range.insertNode(heading);
+
+    // Move cursor inside heading for typing
+    if (!heading.textContent) {
+      range.setStart(heading, 0);
+      range.setEnd(heading, 0);
+    } else {
+      range.setStartAfter(heading);
+      range.setEndAfter(heading);
+    }
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    handleInput();
+  }, [handleInput]);
+
+  /**
+   * Keyboard shortcuts and markdown prefix detection
    */
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -74,41 +112,52 @@ export default function EditableContentArea({
       // Ctrl+1/2/3: Apply headings
       if (e.ctrlKey && ['1', '2', '3'].includes(e.key)) {
         e.preventDefault();
-        applyHeading(parseInt(e.key));
+        applyHeading(parseInt(e.key) as 1 | 2 | 3);
         return;
       }
+
+      // Markdown-style prefix detection: # , ## , ### at line start
+      if (e.key === ' ') {
+        const selection = window.getSelection();
+        if (!selection || !selection.anchorNode) return;
+
+        const node = selection.anchorNode;
+        if (node.nodeType !== Node.TEXT_NODE) return;
+
+        const text = node.textContent || '';
+        const offset = selection.anchorOffset;
+
+        // Get text before cursor on current line
+        const beforeCursor = text.slice(0, offset);
+        const lineStart = beforeCursor.lastIndexOf('\n') + 1;
+        const lineContent = beforeCursor.slice(lineStart);
+
+        // Check for heading patterns (must be at start of line/node)
+        let level: 1 | 2 | 3 | null = null;
+        if (lineContent === '###') {
+          level = 3;
+        } else if (lineContent === '##') {
+          level = 2;
+        } else if (lineContent === '#') {
+          level = 1;
+        }
+
+        if (level !== null) {
+          e.preventDefault();
+
+          // Delete the # characters
+          const range = selection.getRangeAt(0);
+          range.setStart(node, lineStart);
+          range.setEnd(node, offset);
+          range.deleteContents();
+
+          // Apply heading
+          applyHeading(level);
+        }
+      }
     },
-    [onSave]
+    [onSave, applyHeading]
   );
-
-  /**
-   * Apply heading style to selection
-   */
-  const applyHeading = (level: 1 | 2 | 3) => {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-    const headingTag = `H${level}`;
-    const color = HEADING_COLORS[headingTag as keyof typeof HEADING_COLORS];
-
-    // Create heading element
-    const heading = document.createElement(headingTag);
-    heading.style.color = color;
-    heading.textContent = range.toString() || `Heading ${level}`;
-
-    // Replace selection with heading
-    range.deleteContents();
-    range.insertNode(heading);
-
-    // Move cursor after heading
-    range.setStartAfter(heading);
-    range.setEndAfter(heading);
-    selection.removeAllRanges();
-    selection.addRange(range);
-
-    handleInput();
-  };
 
   /**
    * Paste handler - sanitize and preserve heading styles
@@ -124,12 +173,11 @@ export default function EditableContentArea({
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = html;
 
-      // Re-apply heading colors
+      // Re-apply single heading color
       ['H1', 'H2', 'H3'].forEach((tag) => {
         const headings = tempDiv.querySelectorAll(tag);
         headings.forEach((heading) => {
-          (heading as HTMLElement).style.color =
-            HEADING_COLORS[tag as keyof typeof HEADING_COLORS];
+          (heading as HTMLElement).style.color = HEADING_COLOR;
         });
       });
 
@@ -149,10 +197,11 @@ export default function EditableContentArea({
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
+        dangerouslySetInnerHTML={{ __html: content }}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        className="min-h-screen max-w-4xl mx-auto prose prose-invert prose-lg focus:outline-none [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:mb-2 [&_h1]:mt-6 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h3]:text-xl [&_h3]:font-medium [&_h3]:mb-1 [&_h3]:mt-3 [&_p]:mb-2 [&_p]:leading-relaxed [&_table]:w-full [&_table]:border-collapse [&_table]:my-3 [&_th]:border [&_th]:border-gray-600 [&_th]:px-4 [&_th]:py-2 [&_th]:bg-gray-800 [&_td]:border [&_td]:border-gray-600 [&_td]:px-4 [&_td]:py-2 selection:bg-blue-500/30"
+        className="min-h-screen max-w-4xl mx-auto prose prose-invert prose-base focus:outline-none [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h3]:text-base [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_p]:mb-1 [&_p]:leading-normal [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[#1a4a5a] [&_th]:px-4 [&_th]:py-2 [&_th]:bg-[#0d3347] [&_td]:border [&_td]:border-[#1a4a5a] [&_td]:px-4 [&_td]:py-2 selection:bg-[#4fc3f7]/30"
         style={{
           whiteSpace: 'pre-wrap',
           wordWrap: 'break-word',

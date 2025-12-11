@@ -79,7 +79,15 @@ function SectionCard({
                     <div className="p-4">
                         {content ? (
                             <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <div className="whitespace-pre-wrap">{content}</div>
+                                {/* Render as HTML if content contains HTML tags, otherwise as text */}
+                                {content.includes('<') ? (
+                                    <div
+                                        className="[&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[#3e3e42] [&_th]:px-3 [&_th]:py-2 [&_th]:bg-[#2a2d2e] [&_th]:text-left [&_td]:border [&_td]:border-[#3e3e42] [&_td]:px-3 [&_td]:py-2"
+                                        dangerouslySetInnerHTML={{ __html: content }}
+                                    />
+                                ) : (
+                                    <div className="whitespace-pre-wrap">{content}</div>
+                                )}
                             </div>
                         ) : (
                             <p className="text-muted-foreground italic">

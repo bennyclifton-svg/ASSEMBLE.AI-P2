@@ -66,34 +66,35 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       htmlContent = sectionsToHTML(sections, tableOfContents);
     }
 
-    // Generate export blob
-    let blob: Blob;
+    // Generate export buffer
+    let buffer: Buffer;
     let mimeType: string;
     let fileExtension: string;
 
+    // Get report title with fallback
+    const title = report.title || 'Untitled Report';
+
     if (format === 'pdf') {
-      blob = await exportToPDF(htmlContent, report.reportTitle);
+      const arrayBuffer = await exportToPDF(htmlContent, title);
+      buffer = Buffer.from(arrayBuffer);
       mimeType = 'application/pdf';
       fileExtension = 'pdf';
     } else {
-      blob = await exportToDOCX(htmlContent, report.reportTitle);
+      buffer = await exportToDOCX(htmlContent, title);
       mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       fileExtension = 'docx';
     }
 
-    // Create filename (sanitize report title)
-    const sanitizedTitle = report.reportTitle
-      .replace(/[^a-zA-Z0-9-_]/g, '_')
-      .replace(/_{2,}/g, '_')
-      .substring(0, 100);
+    // Create filename (sanitize report title - only remove unsafe characters)
+    const sanitizedTitle = title
+      .replace(/[/\\:*?"<>|]/g, '-')  // Replace unsafe chars with dash
+      .replace(/\s+/g, ' ')           // Normalize whitespace
+      .trim()
+      .substring(0, 100) || 'Report';
     const filename = `${sanitizedTitle}.${fileExtension}`;
 
-    // Convert blob to buffer
-    const arrayBuffer = await blob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
     // Return binary response
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         'Content-Type': mimeType,
@@ -104,8 +105,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   } catch (error) {
     console.error('Export error:', error);
+    console.error('Export error stack:', (error as Error).stack);
     return NextResponse.json(
-      { error: 'Failed to export report', details: (error as Error).message },
+      {
+        error: 'Failed to export report',
+        details: (error as Error).message,
+        stack: (error as Error).stack
+      },
       { status: 500 }
     );
   }

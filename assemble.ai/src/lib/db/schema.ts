@@ -83,6 +83,8 @@ export const projects = sqliteTable('projects', {
     name: text('name').notNull(),
     code: text('code'),
     status: text('status', { enum: ['active', 'archived', 'pending'] }).default('active'),
+    // Organization association (Feature 010)
+    organizationId: text('organization_id').references(() => organizations.id),
     // Cost Planning fields (Feature 006)
     currentReportMonth: text('current_report_month'), // ISO date string (first of month)
     revision: text('revision').default('REV A'),
@@ -538,6 +540,123 @@ export const projectSnapshotsRelations = relations(projectSnapshots, ({ one }) =
     project: one(projects, {
         fields: [projectSnapshots.projectId],
         references: [projects.id],
+    }),
+}));
+
+// ============================================================================
+// AUTHENTICATION & LANDING PAGE SCHEMA (Feature 010)
+// ============================================================================
+
+// Organizations (Tenant/Company)
+export const organizations = sqliteTable('organizations', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    defaultSettings: text('default_settings').default('{}'), // JSON string
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Users
+export const users = sqliteTable('users', {
+    id: text('id').primaryKey(),
+    email: text('email').notNull().unique(),
+    passwordHash: text('password_hash').notNull(),
+    displayName: text('display_name').notNull(),
+    organizationId: text('organization_id').references(() => organizations.id),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Sessions
+export const sessions = sqliteTable('sessions', {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: integer('expires_at').notNull(),
+    createdAt: integer('created_at').notNull(),
+});
+
+// Login Attempts (Rate Limiting)
+export const loginAttempts = sqliteTable('login_attempts', {
+    id: text('id').primaryKey(),
+    email: text('email').notNull().unique(),
+    attempts: integer('attempts').notNull().default(0),
+    lockedUntil: integer('locked_until'),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Knowledge Libraries
+export const knowledgeLibraries = sqliteTable('knowledge_libraries', {
+    id: text('id').primaryKey(),
+    organizationId: text('organization_id').notNull().references(() => organizations.id),
+    type: text('type').notNull(), // 'due-diligence' | 'house' | 'apartments' | 'fitout' | 'industrial' | 'remediation'
+    documentCount: integer('document_count').notNull().default(0),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Library Documents
+export const libraryDocuments = sqliteTable('library_documents', {
+    id: text('id').primaryKey(),
+    libraryId: text('library_id').notNull().references(() => knowledgeLibraries.id, { onDelete: 'cascade' }),
+    fileAssetId: text('file_asset_id').notNull().references(() => fileAssets.id),
+    addedAt: integer('added_at').notNull(),
+    addedBy: text('added_by').references(() => users.id, { onDelete: 'set null' }),
+    syncStatus: text('sync_status', { enum: ['pending', 'processing', 'synced', 'failed'] }).default('pending'),
+});
+
+// ============================================================================
+// AUTHENTICATION RELATIONS
+// ============================================================================
+
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+    users: many(users),
+    knowledgeLibraries: many(knowledgeLibraries),
+    projects: many(projects),
+}));
+
+export const projectsRelations = relations(projects, ({ one }) => ({
+    organization: one(organizations, {
+        fields: [projects.organizationId],
+        references: [organizations.id],
+    }),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+    organization: one(organizations, {
+        fields: [users.organizationId],
+        references: [organizations.id],
+    }),
+    sessions: many(sessions),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+    user: one(users, {
+        fields: [sessions.userId],
+        references: [users.id],
+    }),
+}));
+
+export const knowledgeLibrariesRelations = relations(knowledgeLibraries, ({ one, many }) => ({
+    organization: one(organizations, {
+        fields: [knowledgeLibraries.organizationId],
+        references: [organizations.id],
+    }),
+    documents: many(libraryDocuments),
+}));
+
+export const libraryDocumentsRelations = relations(libraryDocuments, ({ one }) => ({
+    library: one(knowledgeLibraries, {
+        fields: [libraryDocuments.libraryId],
+        references: [knowledgeLibraries.id],
+    }),
+    fileAsset: one(fileAssets, {
+        fields: [libraryDocuments.fileAssetId],
+        references: [fileAssets.id],
+    }),
+    addedByUser: one(users, {
+        fields: [libraryDocuments.addedBy],
+        references: [users.id],
     }),
 }));
 

@@ -485,7 +485,9 @@ Phase 2 (Foundational) ──────────── BLOCKS ALL USER STOR
      │
      ├─── Phase 10 (Global & Project Repos) ←── depends on Phase 3 (US1)
      │
-     └─── Phase 11 (Unified Report Editor) ←── depends on Phase 4 (US2) for report generation
+     ├─── Phase 11 (Unified Report Editor) ←── depends on Phase 4 (US2) for report generation
+     │
+     └─── Phase 12 (RFT Tabbed Interface) ←── depends on Phase 11 for editor components
                ↓
          Phase 8 (Polish)
 ```
@@ -570,9 +572,10 @@ T036, T037, T038
 | Phase 9: RAG Filtering & Modes | 10 | 10 ✅ | 0 |
 | Phase 10: Global & Project Repos | 27 | 19 | 8 |
 | Phase 11: Unified Report Editor | 45 | 25 | 20 |
-| **Total** | **182** | **126** | **56** |
+| Phase 12: RFT Tabbed Interface | 13 | 13 ✅ | 0 |
+| **Total** | **195** | **139** | **56** |
 
-**Overall Progress: 69% Complete** (126/182 tasks)
+**Overall Progress: 71% Complete** (139/195 tasks)
 
 ---
 
@@ -656,13 +659,93 @@ T036, T037, T038
   - Route to structured vs AI generation based on mode
   - generateAllSections() checks mode and calls appropriate generator
   - **IMPLEMENTED**: Mode-based routing in generateAllSections function
+  - **CLARIFICATION NEEDED**: For `ai_assisted` mode, the sequence should be:
+    1. FIRST call `generateDataOnlySection(state)` to get template baseline
+    2. THEN call `retrieveContextNode(state)` for RAG chunks
+    3. FINALLY call `generateSectionNode(state)` with BOTH template output AND RAG chunks
+  - **CURRENT BUG**: Code skips step 1, going directly to RAG → AI generation
 - [X] T099g [US2] Add migration script for generationMode column (scripts/run-migration-0010.js)
   - **IMPLEMENTED**: Migration SQL created at drizzle/rag/0002_generation_mode.sql
   - **APPLIED**: Migration runner created at scripts/run-rag-migration-0002.js
   - **APPLIED**: Successfully executed on Supabase PostgreSQL database
   - Column added to report_templates: generation_mode TEXT DEFAULT 'ai_assisted'
+- [X] T099h [US2] Fix generate-toc.ts to ALWAYS use fixed 7-section structure:
+  - Remove memory lookup that was overriding TOC structure with cached AI-generated patterns
+  - Both data_only AND ai_assisted modes use same fixed TOC structure
+  - Memory system (T074-T075) reserved for content pattern learning ONLY, not TOC override
+  - Fixed 7-section TOC: Project Details, Project Objectives, Project Staging, Project Risks, Consultant Brief/Contractor Scope, Consultant Fee/Contractor Price, Transmittal
+  - Transmittal section ALWAYS uses data-only rendering (no RAG) in both modes
+  - **IMPLEMENTED**: generate-toc.ts updated to skip memory lookup and always use getFixedTocSections()
+  - **DOCUMENTED**: spec.md updated with Fixed TOC Structure (T099a) section
+- [X] T099i [BUGFIX] Fix generationMode not passed through startReportGeneration():
+  - **BUG**: graph.ts startReportGeneration() function signature was missing `generationMode` parameter
+  - **IMPACT**: Short RFT was using AI-assisted mode (RAG) instead of data-only mode
+  - **ROOT CAUSE**: generationMode was passed from generate/route.ts and refresh/route.ts but silently ignored
+  - **FIX**: Added `generationMode?: 'data_only' | 'ai_assisted'` to startReportGeneration input type
+  - **FIX**: Added `trade?: string` to startReportGeneration input type for contractor support
+  - **IMPLEMENTED**: graph.ts updated to pass generationMode through to createInitialReportState()
+- [X] T099j [BUGFIX] Fix wrong 5-section TOC in /api/reports/route.ts:
+  - **BUG**: POST /api/reports was creating reports with wrong 5-section TOC (Executive Summary, Scope of Works, Technical Requirements, Commercial Terms, Attachments)
+  - **IMPACT**: Users saw AI-generated section titles instead of the fixed 7-section structure
+  - **ROOT CAUSE**: Hardcoded wrong sections at lines 139-149 in route.ts
+  - **FIX**: Replaced with correct 7-section TOC: Project Details, Project Objectives, Project Staging, Project Risks, Consultant Brief/Contractor Scope, Consultant Fee/Contractor Price
+  - **FIX**: Added discipline vs trade detection to use correct section titles (Consultant Brief vs Contractor Scope, etc.)
+  - **FIX**: Added transmittal check - fetches transmittal for disciplineId and adds 7th "Transmittal" section if documents exist
+  - **IMPLEMENTED**: src/app/api/reports/route.ts updated with fixed 7-section structure and transmittal check
+- [ ] T099k [BUGFIX] Fix Long RFT to use Short RFT as baseline:
+  - **BUG**: Long RFT (ai_assisted mode) skips template rendering step
+  - **IMPACT**: AI generation doesn't have template baseline content as context
+  - **EXPECTED SEQUENCE**:
+    1. Call `generateDataOnlySection(state)` to render template output (same as Short RFT)
+    2. Call `retrieveContextNode(state)` to get RAG chunks
+    3. Call `generateSectionNode(state)` with both template baseline AND RAG chunks
+  - **FILES TO UPDATE**:
+    - `src/app/api/reports/[id]/approve-toc/route.ts`: Add template step before RAG
+    - `src/lib/langgraph/nodes/generate-section.ts`: Accept templateBaseline parameter in prompt
+  - **ACCEPTANCE CRITERIA**:
+    - Long RFT section content includes all data from Short RFT templates
+    - AI enhances/expands the template content rather than generating from scratch
+    - RAG chunks provide additional technical context for AI enhancement
+- [ ] T099l [US2] Add Long RFT length control option:
+  - **FEATURE**: User selects content length when generating Long RFT
+  - **OPTIONS**:
+    - `concise`: Brief, focused expansion (~500-800 words/section)
+    - `lengthy`: Comprehensive, detailed expansion (~1500-2500 words/section)
+  - **UI CHANGES**:
+    - Add radio button selector in Long RFT generation modal/config
+    - Show before generation starts (next to RAG source selection)
+  - **SCHEMA CHANGES**:
+    - Add `contentLength: enum('concise', 'lengthy')` to report_templates table
+    - Default: 'concise' for faster generation
+  - **FILES TO UPDATE**:
+    - `src/lib/db/rag-schema.ts`: Add contentLength field
+    - `src/components/reports/ReportGenerator.tsx`: Add length selector UI
+    - `src/app/api/reports/generate/route.ts`: Accept contentLength parameter
+    - `src/lib/langgraph/nodes/generate-section.ts`: Adjust prompt based on length
+  - **PROMPT ADJUSTMENTS**:
+    - Concise: "Expand the template content with focused, essential details. Target 500-800 words."
+    - Lengthy: "Provide comprehensive analysis with thorough technical details. Target 1500-2500 words."
 
-**Checkpoint**: Both modes work - verify Data Only produces template output, AI Assisted uses RAG
+#### Hardcoded 7-Section TOC Structure
+
+**IMPORTANT**: Both Short RFT and Long RFT use the **same fixed 7-section TOC**:
+
+| # | Section Title | Short RFT (Data Only) | Long RFT (AI Assisted) |
+|---|--------------|----------------------|------------------------|
+| 1 | **Project Details** | Template (no AI) | Template → RAG → AI Enhancement |
+| 2 | **Project Objectives** | Template (no AI) | Template → RAG → AI Enhancement |
+| 3 | **Project Staging** | Template (no AI) | Template → RAG → AI Enhancement |
+| 4 | **Project Risks** | Template (no AI) | Template → RAG → AI Enhancement |
+| 5 | **Consultant Brief** / **Contractor Scope** | Light polish only | Template → RAG → AI Enhancement |
+| 6 | **Consultant Fee** / **Contractor Price** | Template (no AI) | Template → RAG → AI Enhancement |
+| 7 | **Transmittal** (if exists) | Table (no AI) | Table (no AI) - ALWAYS data-only |
+
+**Note**: "Template → RAG → AI Enhancement" means:
+1. First render template output (identical to Short RFT)
+2. Then retrieve RAG chunks from Document Set
+3. Finally generate AI-enhanced content using template as baseline + RAG as context
+
+**Checkpoint**: Both modes work - verify Data Only produces template output, AI Assisted uses RAG with template baseline
 
 ### Additional UI Integration Tasks (Post-Implementation)
 
@@ -984,14 +1067,15 @@ The following integration tasks were completed to connect the existing purple/or
   - Migration applied: last_edited_at TIMESTAMP, is_edited BOOLEAN DEFAULT false
   - Verified via run-rag-migration-0003.js (already applied)
 - [X] T147 Create src/app/api/reports/[id]/refresh/route.ts POST handler:
-  - Accept { preserveEdits?: boolean } parameter
-  - Validates report is Short RFT (reportChain === 'short')
+  - Accept { preserveEdits?: boolean } parameter (handles empty body gracefully)
+  - Validates report is Short RFT (reportChain === 'short' or null/undefined for legacy)
   - Checks if report.isEdited === true, returns 409 if edited without preserveEdits flag
-  - Re-fetches planning context, consultants, transmittals via startReportGeneration
-  - Re-generates sections in data_only mode (forced generationMode)
-  - Clears existing sections, updates with new TOC and graph state
+  - Deletes existing report sections from database
+  - Resets report status to 'toc_pending' (UI triggers regeneration via handleShortRFT)
+  - Clears graphState so fresh generation can occur
   - Optionally clears editedContent if preserveEdits=false
   - Returns { success: true, report, message } with updated report object
+  - **UI Flow**: RFTTab.handleRefresh calls refresh API then auto-triggers handleShortRFT
 - [X] T148 Create src/components/reports/RefreshConfirmationModal.tsx:
   - Modal component with backdrop and click-outside-to-close
   - Shows warning when report.isEdited === true
@@ -1171,6 +1255,138 @@ The following integration tasks were completed to connect the existing purple/or
 - **Export DOCX**: docx.js (~250KB new dependency)
 - **Color Scheme**: H1 #5B9BD5 (Blue), H2 #70AD47 (Green), H3 #ED7D31 (Amber)
 - **Storage**: HTML strings with inline styles in PostgreSQL text column
+
+---
+
+## Phase 12: RFT Tabbed Interface Refactoring
+
+**Purpose**: Refactor "Create Report" section within Procurement tab (Consultant/Contractor) to a new tabbed interface titled "RFT [Discipline/Trade Name]" with 3 tabs: Brief/Scope, TOC, RFT.
+
+**Prerequisites**: Phase 11 (Unified Report Editor) for editor components
+
+### Requirements Summary
+
+1. **Title**: "RFT [Name]" (e.g., "RFT Fire Services")
+2. **3 Tabs**:
+   - Tab 1: "Brief" (consultants) / "Scope" (contractors) - dynamic
+   - Tab 2: "TOC" - editable table of contents with linked indicators
+   - Tab 3: "RFT" - generation and editing
+3. **TOC Tab**:
+   - Default 7 fixed sections with **linked icon** (🔗) showing data connection
+   - Users can add/remove/reorder sections
+   - Custom sections have NO linked icon
+   - Auto-save on changes
+4. **RFT Tab**:
+   - "Short RFT" button = `data_only` mode
+   - "Long RFT" button = `ai_assisted` mode with content length selector
+   - Report editor + export within same tab
+   - Only 1 RFT per discipline/trade
+5. **Collapsible Interface**:
+   - Collapsed by default (header + tabs only visible)
+   - Click tab to expand, click active tab to collapse
+   - Full-width tab underline border
+   - Transmittal tiles in header row (far right)
+
+### Subphase 12.1: Supporting Infrastructure
+
+- [X] T200 Create src/lib/constants/default-toc-sections.ts:
+  - Define DEFAULT_TOC_SECTION_IDS with 9 section constants
+  - LinkedTocSection interface extending TocSection
+  - getDefaultTocSections(contextType, hasTransmittal) function
+  - isLinkedSection(sectionId) helper function
+  - getLinkedSectionSource(sectionId) for tooltip display
+- [X] T201 Create src/lib/hooks/use-auto-save.ts:
+  - Debounced auto-save hook for TOC changes (1500ms default)
+  - Returns: isSaving, hasUnsavedChanges, error, saveNow, cancel, lastSavedAt
+  - Handles beforeunload warning for unsaved changes
+- [X] T202 Add tableOfContents support to PATCH /api/reports/[id]:
+  - Extended existing PATCH handler to accept tableOfContents field
+  - Updates report's TOC in database
+
+### Subphase 12.2: RFT Tab Components
+
+- [X] T203 Create src/components/reports/rft/BriefScopeTab.tsx:
+  - Displays Brief fields (Services, Fee, Program) for consultants
+  - Displays Scope fields (Works, Price, Program) for contractors
+  - Uses InlineEditField components with multiline support
+  - Dynamic labels based on contextType prop
+- [X] T204 Create src/components/reports/rft/TocEditorStandalone.tsx:
+  - Based on existing TocEditor.tsx with @dnd-kit drag-drop
+  - **Linked icon** (Link2) next to default 7 sections
+  - Tooltip showing data source (e.g., "Planning Card › Details")
+  - Add/remove/reorder sections with level toggle
+  - Legend explaining linked icons
+- [X] T205 Create src/components/reports/rft/TocTab.tsx:
+  - Wrapper for TocEditorStandalone with auto-save integration
+  - Initializes default 7 sections based on context type
+  - Uses useAutoSave hook for debounced saving
+- [X] T206 Create src/components/reports/rft/RFTTab.tsx:
+  - "Short RFT" button → data_only mode generation
+  - "Long RFT" button → ai_assisted mode with content length selector
+  - Content length dropdown (Concise/Lengthy) for Long RFT
+  - Progress indicator during generation
+  - UnifiedReportEditor for viewing/editing generated report
+  - Export buttons (PDF/DOCX)
+- [X] T207 Create src/components/reports/rft/RFTTabInterface.tsx:
+  - **Collapsible by default** - only header and tabs visible
+  - Click tab to expand content, click same tab to collapse
+  - Custom button-based tabs (not Radix UI Tabs) for toggle behavior
+  - Full-width tab underline border
+  - Save/Load Transmittal tiles in header row (far right)
+  - Uses useTransmittal hook for transmittal operations
+  - Dynamic first tab label: "Brief" for disciplines, "Scope" for trades
+  - Title: "RFT {name}" styled header
+- [X] T208 Create src/components/reports/rft/RFTSection.tsx:
+  - Main container component replacing ReportsSection + Brief section
+  - Manages tab state and report state
+  - Fetches existing report for initial TOC
+  - Props: projectId, disciplineId/tradeId, name, brief/scope data + handlers
+- [X] T209 Create src/components/reports/rft/index.ts:
+  - Barrel export for all RFT components
+
+### Subphase 12.3: Integration
+
+- [X] T210 Update src/components/consultants/ConsultantGallery.tsx:
+  - Replace ReportsSection + inline Brief section with RFTSection
+  - Remove handleBriefUpdate function (handled in RFTSection)
+  - Import RFTSection from @/components/reports/rft
+  - Pass briefData object and onBriefChange handler
+- [X] T211 Update src/components/contractors/ContractorGallery.tsx:
+  - Replace ReportsSection + inline Scope section with RFTSection
+  - Remove handleScopeUpdate function (handled in RFTSection)
+  - Import RFTSection from @/components/reports/rft
+  - Pass scopeData object and onScopeChange handler
+- [X] T212 Remove duplicate transmittal tiles from ProcurementCard:
+  - Removed DisciplineRepoTiles import and usage
+  - Removed generationModes state (no longer needed)
+  - Pass selectedDocumentIds to galleries for RFTSection transmittal
+
+### Default 7 TOC Sections (with linked indicators)
+
+| # | Section | Linked To | Icon |
+|---|---------|-----------|------|
+| 1 | Project Details | `planning.details` | 🔗 |
+| 2 | Project Objectives | `planning.objectives` | 🔗 |
+| 3 | Project Staging | `planning.stages` | 🔗 |
+| 4 | Project Risks | `planning.risks` | 🔗 |
+| 5 | Consultant Brief / Contractor Scope | `discipline.brief` / `trade.scope` | 🔗 |
+| 6 | Consultant Fee / Contractor Price | `discipline.feeStructure` / `trade.priceStructure` | 🔗 |
+| 7 | Transmittal (conditional) | `transmittal` | 🔗 |
+
+Custom user-added sections: **No icon** (helps differentiate)
+
+### Estimated Task Counts for Phase 12
+
+| Subphase | Tasks | Completed | Remaining |
+|----------|-------|-----------|-----------|
+| 12.1: Infrastructure | 3 | 3 ✅ | 0 |
+| 12.2: Components | 7 | 7 ✅ | 0 |
+| 12.3: Integration | 3 | 3 ✅ | 0 |
+| **Total Phase 12** | **13** | **13** | **0** |
+
+**Phase 12 Progress: 100% Complete** (13/13 tasks)
+
+**Checkpoint**: RFT tabbed interface works - verify Brief/Scope tab edits, TOC tab with linked indicators and auto-save, RFT tab with Short/Long generation modes
 
 ---
 

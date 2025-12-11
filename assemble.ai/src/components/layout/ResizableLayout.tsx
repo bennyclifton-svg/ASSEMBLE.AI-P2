@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import Link from 'next/link';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ProjectSwitcher } from '@/components/dashboard/ProjectSwitcher';
 
@@ -17,6 +18,7 @@ interface ResizableLayoutProps {
     leftContent: ReactNode;
     centerContent: ReactNode;
     rightContent: ReactNode;
+    refreshTrigger?: number;
 }
 
 export function ResizableLayout({
@@ -24,7 +26,8 @@ export function ResizableLayout({
     onSelectProject,
     leftContent,
     centerContent,
-    rightContent
+    rightContent,
+    refreshTrigger
 }: ResizableLayoutProps) {
     return (
         <PanelGroup direction="horizontal" className="h-full w-full">
@@ -32,15 +35,16 @@ export function ResizableLayout({
                 <div className="h-full flex flex-col">
                     {/* Left Panel Header */}
                     <header className="flex items-center justify-between px-6 py-3 border-b border-[#3e3e42] bg-[#252526] flex-shrink-0 min-h-[57px]">
-                        <div className="flex items-center gap-3">
+                        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                             <div className="w-8 h-8 rounded-full bg-[#0e639c] flex items-center justify-center">
                                 <span className="text-white font-bold text-sm">A</span>
                             </div>
                             <h1 className="text-lg font-semibold text-[#cccccc]">assemble.ai</h1>
-                        </div>
+                        </Link>
                         <ProjectSwitcher
                             selectedProject={selectedProject}
                             onSelectProject={onSelectProject}
+                            refreshTrigger={refreshTrigger}
                         />
                     </header>
                     {/* Left Panel Content */}

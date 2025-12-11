@@ -1,14 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useConsultants } from '@/lib/hooks/use-consultants';
-import { ConsultantForm } from './ConsultantForm';
+import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
 import { FeeStructureSection } from './FeeStructureSection';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Upload } from 'lucide-react';
-import { InlineEditField } from '@/components/dashboard/planning/InlineEditField';
-import { ReportsSection } from '@/components/reports/ReportsSection';
-import { GenerationMode } from '@/components/documents/DisciplineRepoTiles';
+import { RFTSection } from '@/components/reports/rft';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ConsultantGalleryProps {
   projectId: string;
@@ -18,7 +25,8 @@ interface ConsultantGalleryProps {
   briefFee?: string;
   briefProgram?: string;
   onUpdateBrief?: (disciplineId: string, field: 'briefServices' | 'briefFee' | 'briefProgram', value: string) => Promise<void>;
-  generationMode?: GenerationMode;
+  selectedDocumentIds?: string[];
+  onSetSelectedDocumentIds?: (ids: string[]) => void;
 }
 
 export function ConsultantGallery({
@@ -29,51 +37,75 @@ export function ConsultantGallery({
   briefFee = '',
   briefProgram = '',
   onUpdateBrief,
-  generationMode = 'ai_assist'
+  selectedDocumentIds = [],
+  onSetSelectedDocumentIds,
 }: ConsultantGalleryProps) {
   const { consultants, isLoading, addConsultant, updateConsultant, deleteConsultant, toggleShortlist, toggleAward } = useConsultants(projectId, discipline);
   const { toast } = useToast();
-  const [cards, setCards] = useState<Array<{ id: string; consultant?: any }>>([]);
-  const [draggingOverCardId, setDraggingOverCardId] = useState<string | null>(null);
+
+  // Accordion state - only one card expanded at a time
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+
+  // New firm state - for creating a new firm
+  const [newFirm, setNewFirm] = useState<FirmData | null>(null);
+
+  // Extraction state
   const [isExtracting, setIsExtracting] = useState(false);
-  const [extractedData, setExtractedData] = useState<any>(null);
 
-  // Initialize with 3 empty cards or existing consultants
-  useEffect(() => {
-    const existingCards = consultants.map(c => ({ id: c.id, consultant: c }));
-    const emptyCardsNeeded = Math.max(0, 3 - existingCards.length);
-    const emptyCards = Array.from({ length: emptyCardsNeeded }, (_, i) => ({
-      id: `empty-${i}`,
-      consultant: undefined
-    }));
+  // Delete confirmation state
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string; name: string }>({
+    open: false,
+    id: '',
+    name: '',
+  });
 
-    setCards([...existingCards, ...emptyCards]);
-  }, [consultants]);
+  const handleToggleExpand = (id: string) => {
+    setExpandedCardId(prev => prev === id ? null : id);
+  };
 
-  const handleSave = async (cardId: string, data: any) => {
+  const handleSave = async (id: string, data: Partial<FirmData>) => {
     try {
-      const card = cards.find(c => c.id === cardId);
+      // Find existing consultant to merge with partial updates
+      const existingConsultant = consultants.find(c => c.id === id);
 
-      if (card?.consultant?.id) {
-        // Update existing consultant
-        await updateConsultant(card.consultant.id, { ...data, discipline });
+      // Build form data with only the fields ConsultantFormData expects
+      // Use nullish coalescing to preserve existing values when fields aren't provided
+      const formData = {
+        companyName: data.companyName ?? existingConsultant?.companyName ?? '',
+        contactPerson: data.contactPerson ?? existingConsultant?.contactPerson ?? '',
+        email: data.email ?? existingConsultant?.email ?? '',
+        mobile: data.mobile ?? existingConsultant?.mobile ?? '',
+        address: data.address ?? existingConsultant?.address ?? '',
+        abn: data.abn ?? existingConsultant?.abn ?? '',
+        notes: data.notes ?? existingConsultant?.notes ?? '',
+        shortlisted: data.shortlisted ?? existingConsultant?.shortlisted,
+        awarded: data.awarded ?? existingConsultant?.awarded,
+        discipline,
+      };
+
+      if (id === 'new' && newFirm) {
+        // Creating new consultant
+        const mergedData = {
+          ...formData,
+          companyName: data.companyName || newFirm.companyName || '',
+          email: data.email || newFirm.email || '',
+        };
+
+        if (mergedData.companyName && mergedData.email) {
+          const newConsultant = await addConsultant(mergedData);
+          toast({
+            title: 'Success',
+            description: 'Consultant added successfully',
+          });
+          setNewFirm(null);
+          setExpandedCardId(newConsultant.id);
+        } else {
+          // Just update local state for new firm
+          setNewFirm({ ...newFirm, ...data });
+        }
       } else {
-        // Create new consultant
-        const newConsultant = await addConsultant({ ...data, discipline });
-        toast({
-          title: 'Success',
-          description: 'Consultant added successfully',
-        });
-
-        // Replace empty card with new consultant and add a new empty card
-        setCards(prev => {
-          const newCards = prev.map(c =>
-            c.id === cardId ? { id: newConsultant.id, consultant: newConsultant } : c
-          );
-          // Add a new empty card at the end
-          newCards.push({ id: `empty-${Date.now()}`, consultant: undefined });
-          return newCards;
-        });
+        // Updating existing consultant
+        await updateConsultant(id, formData);
       }
     } catch (error) {
       toast({
@@ -81,28 +113,26 @@ export function ConsultantGallery({
         description: error instanceof Error ? error.message : 'Failed to save consultant',
         variant: 'destructive',
       });
+      throw error;
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (id === 'new') {
+      setNewFirm(null);
+      setExpandedCardId(null);
+      return;
+    }
+
     try {
       await deleteConsultant(id);
       toast({
         title: 'Success',
         description: 'Consultant deleted successfully',
       });
-
-      // Remove the deleted card
-      setCards(prev => {
-        const filtered = prev.filter(c => c.consultant?.id !== id);
-        // Ensure at least 3 cards
-        const emptyCardsNeeded = Math.max(0, 3 - filtered.length);
-        const emptyCards = Array.from({ length: emptyCardsNeeded }, (_, i) => ({
-          id: `empty-${Date.now()}-${i}`,
-          consultant: undefined
-        }));
-        return [...filtered, ...emptyCards];
-      });
+      if (expandedCardId === id) {
+        setExpandedCardId(null);
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -110,9 +140,27 @@ export function ConsultantGallery({
         variant: 'destructive',
       });
     }
+    setDeleteDialog({ open: false, id: '', name: '' });
   };
 
-  const handleAwardChange = async (id: string, awarded: boolean) => {
+  const handleShortlistToggle = async (id: string, shortlisted: boolean) => {
+    if (id === 'new' && newFirm) {
+      setNewFirm({ ...newFirm, shortlisted });
+      return;
+    }
+
+    try {
+      await toggleShortlist(id, shortlisted);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update shortlist',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleAwardToggle = async (id: string, awarded: boolean) => {
     try {
       await toggleAward(id, awarded);
       toast({
@@ -127,11 +175,11 @@ export function ConsultantGallery({
         description: error instanceof Error ? error.message : 'Failed to update award status',
         variant: 'destructive',
       });
-      throw error; // Re-throw to revert UI
+      throw error;
     }
   };
 
-  const handleFileExtraction = async (file: File) => {
+  const handleFileExtraction = async (file: File): Promise<FirmData> => {
     setIsExtracting(true);
     try {
       const formData = new FormData();
@@ -150,17 +198,6 @@ export function ConsultantGallery({
       const result = await response.json();
       const { data, confidence } = result;
 
-      // Add discipline to extracted data
-      data.discipline = discipline;
-      setExtractedData({ ...data, confidence });
-
-      // Find first empty card and pre-fill it
-      const firstEmptyCardId = cards.find(c => !c.consultant)?.id;
-      if (firstEmptyCardId) {
-        // Trigger save on first empty card with extracted data
-        await handleSave(firstEmptyCardId, data);
-      }
-
       if (confidence < 70) {
         toast({
           title: 'Low Confidence',
@@ -173,45 +210,34 @@ export function ConsultantGallery({
           description: `Data extracted with ${confidence}% confidence`,
         });
       }
+
+      return {
+        companyName: data.companyName || '',
+        contactPerson: data.contactPerson || '',
+        email: data.email || '',
+        mobile: data.mobile || '',
+        address: data.address || '',
+        abn: data.abn || '',
+        notes: data.notes || '',
+        shortlisted: false,
+        awarded: false,
+        companyId: null,
+        discipline,
+      };
     } catch (error) {
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to extract data',
         variant: 'destructive',
       });
+      throw error;
     } finally {
       setIsExtracting(false);
-      setExtractedData(null);
     }
   };
 
-  const handleDragOver = (e: React.DragEvent, cardId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggingOverCardId(cardId);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only clear if leaving the card entirely (not entering a child element)
-    const relatedTarget = e.relatedTarget as Element | null;
-    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
-      setDraggingOverCardId(null);
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggingOverCardId(null);
-
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
-
-    const file = files[0];
+  const handleFileDrop = async (id: string, file: File, action: 'replace' | 'add') => {
     const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'text/plain'];
-
     if (!validTypes.includes(file.type)) {
       toast({
         title: 'Invalid File Type',
@@ -221,7 +247,120 @@ export function ConsultantGallery({
       return;
     }
 
-    await handleFileExtraction(file);
+    try {
+      const extractedData = await handleFileExtraction(file);
+
+      // Build form data from extracted data
+      const formData = {
+        companyName: extractedData.companyName || '',
+        contactPerson: extractedData.contactPerson || '',
+        email: extractedData.email || '',
+        mobile: extractedData.mobile || '',
+        address: extractedData.address || '',
+        abn: extractedData.abn || '',
+        notes: extractedData.notes || '',
+        discipline,
+      };
+
+      if (action === 'replace') {
+        if (id === 'new') {
+          setNewFirm(extractedData);
+        } else {
+          await updateConsultant(id, formData);
+        }
+      } else {
+        // Add as new
+        const newConsultant = await addConsultant(formData);
+        toast({
+          title: 'Success',
+          description: 'New consultant added from extracted data',
+        });
+        setExpandedCardId(newConsultant.id);
+      }
+    } catch {
+      // Error already handled in handleFileExtraction
+    }
+  };
+
+  const handleAddNewFileDrop = async (file: File) => {
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'text/plain'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload a PDF, image (JPG/PNG), or text file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const extractedData = await handleFileExtraction(file);
+      const formData = {
+        companyName: extractedData.companyName || '',
+        contactPerson: extractedData.contactPerson || '',
+        email: extractedData.email || '',
+        mobile: extractedData.mobile || '',
+        address: extractedData.address || '',
+        abn: extractedData.abn || '',
+        notes: extractedData.notes || '',
+        discipline,
+      };
+      const newConsultant = await addConsultant(formData);
+      toast({
+        title: 'Success',
+        description: 'New consultant added from extracted data',
+      });
+      setExpandedCardId(newConsultant.id);
+    } catch {
+      // Error already handled
+    }
+  };
+
+  const handleAddNew = async () => {
+    // If there's an existing newFirm with a company name, save it first
+    if (newFirm && newFirm.companyName && newFirm.companyName.trim()) {
+      try {
+        const formData = {
+          companyName: newFirm.companyName,
+          contactPerson: newFirm.contactPerson || '',
+          email: newFirm.email || '',
+          mobile: newFirm.mobile || '',
+          address: newFirm.address || '',
+          abn: newFirm.abn || '',
+          notes: newFirm.notes || '',
+          discipline,
+        };
+        await addConsultant(formData);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to save consultant',
+          variant: 'destructive',
+        });
+        return; // Don't create new if save failed
+      }
+    }
+
+    // Create a new empty firm (collapsed by default)
+    setNewFirm({
+      companyName: '',
+      contactPerson: '',
+      email: '',
+      mobile: '',
+      address: '',
+      abn: '',
+      notes: '',
+      shortlisted: false,
+      awarded: false,
+      companyId: null,
+      discipline,
+    });
+    // Collapse any expanded card
+    setExpandedCardId(null);
+  };
+
+  const openDeleteDialog = (id: string, name: string) => {
+    setDeleteDialog({ open: true, id, name });
   };
 
   if (isLoading) {
@@ -232,56 +371,103 @@ export function ConsultantGallery({
     );
   }
 
-  // Handle Brief field updates
-  const handleBriefUpdate = async (field: 'briefServices' | 'briefFee' | 'briefProgram', value: string) => {
-    if (disciplineId && onUpdateBrief) {
-      await onUpdateBrief(disciplineId, field, value);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Reports Section - Moved up for visibility */}
-      {disciplineId && (
-        <ReportsSection
-          projectId={projectId}
-          disciplineId={disciplineId}
-          disciplineName={discipline}
-          generationMode={generationMode}
-        />
-      )}
+      {/* Firms Section */}
+      <div>
+        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Firms</h3>
+        <div className="relative">
+          {/* Extraction Progress Overlay */}
+          {isExtracting && (
+            <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
+              <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-6 flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0e639c]"></div>
+                <p className="text-[#cccccc] font-semibold">Extracting consultant data...</p>
+                <p className="text-xs text-[#858585]">This may take a few moments</p>
+              </div>
+            </div>
+          )}
 
-      {/* Brief Section */}
-      {disciplineId && onUpdateBrief && (
-        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
-          <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Brief</h3>
-          <div className="space-y-4">
-            <InlineEditField
-              label="Services"
-              value={briefServices}
-              onSave={(value) => handleBriefUpdate('briefServices', value)}
-              placeholder="Describe the services required..."
-              multiline
-              rows={6}
-            />
-            <InlineEditField
-              label="Fee"
-              value={briefFee}
-              onSave={(value) => handleBriefUpdate('briefFee', value)}
-              placeholder="Enter fee structure and budget..."
-              multiline
-              rows={6}
-            />
-            <InlineEditField
-              label="Program"
-              value={briefProgram}
-              onSave={(value) => handleBriefUpdate('briefProgram', value)}
-              placeholder="Enter program and timeline requirements..."
-              multiline
-              rows={6}
+          <div className="flex gap-3 overflow-x-auto pt-3 pb-4 items-start" style={{ scrollbarWidth: 'thin' }}>
+            {/* Existing consultants */}
+            {consultants.map((consultant) => (
+              <FirmCard
+                key={consultant.id}
+                type="consultant"
+                firm={{
+                  id: consultant.id,
+                  companyName: consultant.companyName,
+                  contactPerson: consultant.contactPerson,
+                  email: consultant.email,
+                  mobile: consultant.mobile,
+                  address: consultant.address,
+                  abn: consultant.abn,
+                  notes: consultant.notes,
+                  shortlisted: consultant.shortlisted,
+                  awarded: consultant.awarded,
+                  companyId: consultant.companyId,
+                  discipline: consultant.discipline,
+                }}
+                category={discipline}
+                isExpanded={expandedCardId === consultant.id}
+                onToggleExpand={() => handleToggleExpand(consultant.id)}
+                onSave={(data) => handleSave(consultant.id, data)}
+                onDelete={() => openDeleteDialog(consultant.id, consultant.companyName)}
+                onShortlistToggle={(shortlisted) => handleShortlistToggle(consultant.id, shortlisted)}
+                onAwardToggle={(awarded) => handleAwardToggle(consultant.id, awarded)}
+                onFileDrop={(file, action) => handleFileDrop(consultant.id, file, action)}
+              />
+            ))}
+
+            {/* New firm (if adding) */}
+            {newFirm && (
+              <FirmCard
+                key="new"
+                type="consultant"
+                firm={newFirm}
+                category={discipline}
+                isExpanded={expandedCardId === 'new'}
+                onToggleExpand={() => handleToggleExpand('new')}
+                onSave={(data) => handleSave('new', data)}
+                onDelete={() => handleDelete('new')}
+                onShortlistToggle={(shortlisted) => handleShortlistToggle('new', shortlisted)}
+                onAwardToggle={() => Promise.resolve()}
+                onFileDrop={(file, action) => handleFileDrop('new', file, action)}
+              />
+            )}
+
+            {/* Add button - always visible */}
+            <AddFirmButton
+              onAdd={handleAddNew}
+              onFileDrop={handleAddNewFileDrop}
             />
           </div>
         </div>
+      </div>
+
+      {/* RFT Section - contains Brief, TOC, and RFT tabs */}
+      {disciplineId && onUpdateBrief && (
+        <RFTSection
+          projectId={projectId}
+          disciplineId={disciplineId}
+          name={discipline}
+          contextType="discipline"
+          briefData={{
+            services: briefServices,
+            fee: briefFee,
+            program: briefProgram,
+          }}
+          onBriefChange={async (field, value) => {
+            const fieldMap = {
+              services: 'briefServices',
+              fee: 'briefFee',
+              program: 'briefProgram',
+            } as const;
+            await onUpdateBrief(disciplineId, fieldMap[field], value);
+          }}
+          selectedDocumentIds={selectedDocumentIds}
+          onSetSelectedDocumentIds={onSetSelectedDocumentIds}
+        />
       )}
 
       {/* Fee Structure Section */}
@@ -295,58 +481,28 @@ export function ConsultantGallery({
         </div>
       )}
 
-      {/* Firms Section */}
-      <div>
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Firms</h3>
-        <div className="relative">
-        {/* Extraction Progress Overlay */}
-        {isExtracting && (
-          <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
-            <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-6 flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0e639c]"></div>
-              <p className="text-[#cccccc] font-semibold">Extracting consultant data...</p>
-              <p className="text-xs text-[#858585]">This may take a few moments</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-3 overflow-x-auto pt-3 pb-4" style={{ scrollbarWidth: 'thin' }}>
-          {cards.map((card, index) => {
-            const isEmpty = !card.consultant;
-            const isDraggingOver = draggingOverCardId === card.id;
-
-            return (
-              <div
-                key={card.id}
-                className="flex-shrink-0 relative"
-                onDragOver={isEmpty ? (e) => handleDragOver(e, card.id) : undefined}
-                onDragLeave={isEmpty ? handleDragLeave : undefined}
-                onDrop={isEmpty ? handleDrop : undefined}
-              >
-                {/* Drag & Drop Overlay - Shows only on the specific card being dragged over */}
-                {isEmpty && isDraggingOver && (
-                  <div className="absolute inset-0 z-50 bg-[#0e639c]/20 border-2 border-dashed border-[#0e639c] rounded-lg flex items-center justify-center">
-                    <div className="bg-[#1e1e1e] border border-[#0e639c] rounded-lg p-4 flex flex-col items-center gap-2">
-                      <Upload className="w-8 h-8 text-[#0e639c]" />
-                      <p className="text-[#cccccc] font-semibold text-xs">Drop to extract</p>
-                    </div>
-                  </div>
-                )}
-
-                <ConsultantForm
-                  consultant={card.consultant}
-                  onSave={(data) => handleSave(card.id, data)}
-                  onDelete={card.consultant?.id ? handleDelete : undefined}
-                  onAwardChange={card.consultant?.id ? (awarded) => handleAwardChange(card.consultant.id, awarded) : undefined}
-                  discipline={discipline}
-                />
-              </div>
-            );
-          })}
-        </div>
-        </div>
-      </div>
-
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
+        <AlertDialogContent className="bg-[#1e1e1e] border-[#3e3e42]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#cccccc]">Delete Consultant</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#858585]">
+              Are you sure you want to delete {deleteDialog.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#3e3e42] text-[#cccccc] border-[#3e3e42] hover:bg-[#505050]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDelete(deleteDialog.id)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

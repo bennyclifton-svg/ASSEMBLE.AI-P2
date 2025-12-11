@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -28,7 +28,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import type { TableOfContents, TocSection } from '@/lib/langgraph/state';
 import { v4 as uuidv4 } from 'uuid';
-import { GripVertical, Trash2, Plus, ChevronsRight, ChevronsLeft, Brain } from 'lucide-react';
+import { GripVertical, Trash, Plus, ChevronsRight, ChevronsLeft, Link2 } from 'lucide-react';
 
 interface TocEditorProps {
     initialToc: TableOfContents;
@@ -36,10 +36,14 @@ interface TocEditorProps {
     onCancel: () => void;
     isLocked?: boolean;
     lockOwner?: string;
-    /** Report title to display as heading */
-    reportTitle?: string;
-    /** Times this TOC pattern has been used (for memory-based TOCs) */
-    timesUsed?: number;
+}
+
+// Expose methods to parent via ref
+export interface TocEditorHandle {
+    approve: () => Promise<void>;
+    cancel: () => void;
+    isSubmitting: boolean;
+    sectionCount: number;
 }
 
 interface SortableSectionProps {
@@ -71,24 +75,22 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
         <div
             ref={setNodeRef}
             style={style}
-            className={`flex items-center gap-2 p-2 border border-[#3e3e42] rounded bg-[#2d2d30] ${
-                isSubsection ? 'ml-6' : ''
-            } ${isDragging ? 'shadow-lg ring-1 ring-[#0e639c]' : ''}`}
+            className={`group flex items-center gap-2 h-9 px-2 hover:bg-[#2a2d2e] transition-colors ${isDragging ? 'bg-[#37373d]' : ''}`}
         >
             <button
-                className="cursor-grab active:cursor-grabbing text-[#858585] hover:text-[#cccccc] transition-colors"
+                className="cursor-grab active:cursor-grabbing text-[#4a4a4a] hover:text-[#858585] transition-colors flex-shrink-0"
                 {...attributes}
                 {...listeners}
                 disabled={disabled}
             >
-                <GripVertical className="w-4 h-4" />
+                <GripVertical className="w-3.5 h-3.5" />
             </button>
 
             <button
-                className={`p-1 rounded transition-colors ${
+                className={`flex-shrink-0 transition-colors ${
                     isSubsection
-                        ? 'text-[#4fc1ff] bg-[#0e639c]/20 hover:bg-[#0e639c]/30'
-                        : 'text-[#858585] hover:text-[#cccccc] hover:bg-[#3e3e42]'
+                        ? 'text-[#4fc1ff]'
+                        : 'text-[#858585] hover:text-[#cccccc]'
                 }`}
                 onClick={() => onUpdate(section.id, { level: isSubsection ? 1 : 2 })}
                 disabled={disabled}
@@ -99,7 +101,7 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
 
             <input
                 type="text"
-                className="flex-1 px-2 py-1 border border-[#3e3e42] rounded bg-[#1e1e1e] text-[#cccccc] placeholder-[#858585] focus:border-[#0e639c] focus:outline-none"
+                className={`flex-1 min-w-0 px-2 py-1 bg-transparent text-[#cccccc] placeholder-[#858585] border-0 focus:outline-none focus:bg-[#1e1e1e] rounded transition-colors ${isSubsection ? 'ml-4' : ''}`}
                 value={section.title}
                 onChange={e => onUpdate(section.id, { title: e.target.value })}
                 placeholder="Section title"
@@ -107,31 +109,41 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
             />
 
             <button
-                className="p-1.5 text-[#858585] hover:text-[#f14c4c] hover:bg-[#f14c4c]/10 rounded transition-colors"
+                className="flex-shrink-0 text-[#4a4a4a] hover:text-[#858585] transition-colors"
+                title="Link section"
+            >
+                <Link2 className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+                className="flex-shrink-0 text-[#4a4a4a] hover:text-[#f14c4c] transition-colors"
                 onClick={() => onDelete(section.id)}
                 disabled={disabled}
                 title="Delete section"
             >
-                <Trash2 className="w-4 h-4" />
+                <Trash className="w-3.5 h-3.5" />
             </button>
         </div>
     );
 }
 
-export function TocEditor({
+export const TocEditor = forwardRef<TocEditorHandle, TocEditorProps>(function TocEditor({
     initialToc,
     onApprove,
     onCancel,
     isLocked,
     lockOwner,
-    reportTitle,
-    timesUsed,
-}: TocEditorProps) {
+}, ref) {
     const [sections, setSections] = useState<TocSection[]>(initialToc.sections);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // T076: Determine if TOC is from memory
-    const isFromMemory = initialToc.source === 'memory';
+    // Expose methods to parent via ref
+    useImperativeHandle(ref, () => ({
+        approve: handleApprove,
+        cancel: onCancel,
+        isSubmitting,
+        sectionCount: sections.length,
+    }), [sections, isSubmitting, onCancel]);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -208,79 +220,38 @@ export function TocEditor({
     }
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-lg font-semibold text-[#cccccc]">{reportTitle || 'Report'}</h2>
-                    <span className="text-sm text-[#858585]">
-                        {sections.length} sections
-                    </span>
-                    {/* T076 & T077: Memory indicator with times_used count */}
-                    {isFromMemory && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-[#4a3f5f] border border-[#9c6ce0]">
-                            <Brain className="w-3.5 h-3.5 text-[#9c6ce0]" />
-                            <span className="text-xs font-medium text-[#9c6ce0]">
-                                From memory
-                            </span>
-                            {timesUsed && timesUsed > 1 && (
-                                <span className="text-xs text-[#858585]">
-                                    ({timesUsed}x)
-                                </span>
-                            )}
-                        </div>
-                    )}
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        className="px-4 py-1.5 bg-[#0e639c] text-white text-sm rounded hover:bg-[#1177bb] disabled:opacity-50 transition-colors"
-                        onClick={handleApprove}
-                        disabled={isSubmitting || sections.length === 0}
-                    >
-                        {isSubmitting ? 'Starting...' : 'Start'}
-                    </button>
-                    <button
-                        className="px-3 py-1.5 text-sm border border-[#3e3e42] rounded text-[#858585] hover:text-[#cccccc] hover:bg-[#3e3e42] transition-colors"
-                        onClick={onCancel}
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </div>
-
-            <p className="text-xs text-[#858585]">
-                Edit Table of Contents, drag to reorder and toggle subsection.
-                {isFromMemory && ' This TOC structure was learned from previous reports.'}
-            </p>
-
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <SortableContext
-                    items={sections.map(s => s.id)}
-                    strategy={verticalListSortingStrategy}
+        <div className="space-y-2">
+            <div className="border border-[#3e3e42] rounded-md bg-[#1e1e1e] overflow-hidden">
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
                 >
-                    <div className="space-y-2">
-                        {sections.map(section => (
-                            <SortableSection
-                                key={section.id}
-                                section={section}
-                                onUpdate={handleUpdate}
-                                onDelete={handleDelete}
-                            />
-                        ))}
-                    </div>
-                </SortableContext>
-            </DndContext>
+                    <SortableContext
+                        items={sections.map(s => s.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <div className="divide-y divide-[#2d2d30]">
+                            {sections.map(section => (
+                                <SortableSection
+                                    key={section.id}
+                                    section={section}
+                                    onUpdate={handleUpdate}
+                                    onDelete={handleDelete}
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
 
-            <button
-                className="flex items-center gap-2 px-3 py-1.5 border border-dashed border-[#3e3e42] rounded text-[#858585] text-sm hover:text-[#cccccc] hover:border-[#0e639c] transition-colors"
-                onClick={handleAddSection}
-            >
-                <Plus className="w-4 h-4" />
-                Add Section
-            </button>
+                <button
+                    className="flex items-center gap-2 w-full px-3 h-9 text-[#858585] text-sm hover:text-[#cccccc] hover:bg-[#2a2d2e] border-t border-[#2d2d30] transition-colors"
+                    onClick={handleAddSection}
+                >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Section
+                </button>
+            </div>
         </div>
     );
-}
+});
