@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ragDb } from '@/lib/db/rag-client';
-import { reportTemplates, type GenerationMode } from '@/lib/db/rag-schema';
+import { reportTemplates, type GenerationMode, type ContentLength } from '@/lib/db/rag-schema';
 import { startReportGeneration } from '@/lib/langgraph/graph';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, isNotNull } from 'drizzle-orm';
@@ -20,6 +20,7 @@ interface GenerateRequest {
     documentSetIds: string[];
     transmittalId?: string;
     generationMode?: GenerationMode; // T099c: Report generation mode
+    contentLength?: ContentLength; // T099l: Content length for Long RFT
 }
 
 export async function POST(request: NextRequest) {
@@ -45,12 +46,24 @@ export async function POST(request: NextRequest) {
         // Lock timeout in milliseconds (15 minutes)
         const LOCK_TIMEOUT_MS = 15 * 60 * 1000;
 
-        // Check for existing lock on any report for this project
+        // Build conditions for lock check - discipline/trade specific
+        // Each discipline/trade can have its own independent RFT
+        const lockConditions = [
+            eq(reportTemplates.projectId, body.projectId),
+            isNotNull(reportTemplates.lockedBy)
+        ];
+
+        // Add discipline/trade filter if provided
+        if (body.disciplineId) {
+            lockConditions.push(eq(reportTemplates.disciplineId, body.disciplineId));
+        }
+        if (body.tradeId) {
+            lockConditions.push(eq(reportTemplates.tradeId, body.tradeId));
+        }
+
+        // Check for existing lock on reports for this discipline/trade
         const lockedReport = await ragDb.query.reportTemplates.findFirst({
-            where: and(
-                eq(reportTemplates.projectId, body.projectId),
-                isNotNull(reportTemplates.lockedBy)
-            ),
+            where: and(...lockConditions),
         });
 
         // Only block if lock exists and hasn't expired
@@ -60,7 +73,7 @@ export async function POST(request: NextRequest) {
             if (lockAge < LOCK_TIMEOUT_MS) {
                 return NextResponse.json(
                     {
-                        error: 'Another report is being generated for this project',
+                        error: 'Another report is being generated for this discipline/trade',
                         lockedBy: lockedReport.lockedBy,
                         lockedByName: lockedReport.lockedByName,
                     },
@@ -99,6 +112,7 @@ export async function POST(request: NextRequest) {
             tableOfContents: [],
             status: 'draft',
             generationMode: body.generationMode ?? 'ai_assisted', // T099c: Default to AI assisted
+            contentLength: body.contentLength ?? 'concise', // T099l: Default to concise
             lockedBy: userId,
             lockedByName: userName,
             lockedAt: now,
@@ -116,6 +130,7 @@ export async function POST(request: NextRequest) {
             documentSetIds: body.documentSetIds,
             reportId,
             generationMode: body.generationMode ?? 'ai_assisted', // T099c: Pass generation mode
+            contentLength: body.contentLength ?? 'concise', // T099l: Pass content length
             lockedBy: userId,
             lockedByName: userName,
         });

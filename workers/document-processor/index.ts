@@ -14,7 +14,7 @@ config({ path: '.env.local' });
 // Verify required env vars
 console.log('[worker] Checking environment variables...');
 console.log('[worker] SUPABASE_POSTGRES_URL:', process.env.SUPABASE_POSTGRES_URL ? 'set' : 'NOT SET');
-console.log('[worker] UPSTASH_REDIS_REST_URL:', process.env.UPSTASH_REDIS_REST_URL ? 'set' : 'NOT SET');
+console.log('[worker] REDIS_URL:', process.env.REDIS_URL ? 'set' : 'NOT SET');
 console.log('[worker] VOYAGE_API_KEY:', process.env.VOYAGE_API_KEY ? 'set' : 'NOT SET');
 
 if (!process.env.SUPABASE_POSTGRES_URL) {

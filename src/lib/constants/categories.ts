@@ -108,3 +108,11 @@ export function getCategoriesByRow(row: number): Category[] {
 export function getCategoryById(id: string): Category | undefined {
     return Object.values(DOCUMENT_CATEGORIES).find(cat => cat.id === id);
 }
+
+// Helper to get category by name (case-insensitive)
+export function getCategoryByName(name: string): Category | undefined {
+    const normalizedName = name.toLowerCase();
+    return Object.values(DOCUMENT_CATEGORIES).find(
+        cat => cat.name.toLowerCase() === normalizedName
+    );
+}

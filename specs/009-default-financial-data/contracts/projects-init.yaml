@@ -12,7 +12,7 @@ paths:
       summary: Create a new project with full initialization
       description: |
         Creates a new project and initializes all default data in a single atomic transaction:
-        - Consultant disciplines (36)
+        - Consultant disciplines (37)
         - Contractor trades (21)
         - Project stages (5)
         - Project details (1)
@@ -182,7 +182,7 @@ components:
         code: "PRJ-2024-001"
         status: "active"
         initialization:
-          consultantDisciplines: 36
+          consultantDisciplines: 37
           contractorTrades: 21
           projectStages: 5
           costLines: 20

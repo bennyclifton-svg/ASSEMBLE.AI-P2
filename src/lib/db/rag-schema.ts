@@ -191,6 +191,10 @@ export const reportTemplates = pgTable(
         detailLevel: text('detail_level', {
             enum: ['standard', 'comprehensive'],
         }), // For Long RFT
+        // T099l: Content length for Long RFT AI generation
+        contentLength: text('content_length', {
+            enum: ['concise', 'lengthy'],
+        }).default('concise'), // Default to concise for faster generation
         viewMode: text('view_mode', {
             enum: ['sections', 'unified'],
         }).default('unified'), // Display mode for backward compatibility
@@ -314,6 +318,9 @@ export const REPO_TYPE_LABELS: Record<RepoType, string> = {
 
 // T099a: Generation Mode Type
 export type GenerationMode = 'data_only' | 'ai_assisted';
+
+// T099l: Content Length for Long RFT
+export type ContentLength = 'concise' | 'lengthy';
 
 // T127: Phase 11 - Unified Report Editor Types
 export type ReportChain = 'short' | 'long';

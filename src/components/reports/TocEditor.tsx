@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { useState, useImperativeHandle, forwardRef } from 'react';
 import {
     DndContext,
     closestCenter,
@@ -28,7 +28,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import type { TableOfContents, TocSection } from '@/lib/langgraph/state';
 import { v4 as uuidv4 } from 'uuid';
-import { GripVertical, Trash, Plus, ChevronsRight, ChevronsLeft } from 'lucide-react';
+import { GripVertical, Trash, Plus, ChevronsRight, ChevronsLeft, Link2 } from 'lucide-react';
 
 interface TocEditorProps {
     initialToc: TableOfContents;
@@ -75,24 +75,22 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
         <div
             ref={setNodeRef}
             style={style}
-            className={`flex items-center gap-2 p-2 border border-[#3e3e42] rounded bg-[#2d2d30] ${
-                isSubsection ? 'ml-6' : ''
-            } ${isDragging ? 'shadow-lg ring-1 ring-[#0e639c]' : ''}`}
+            className={`group flex items-center gap-2 h-9 px-2 hover:bg-[#2a2d2e] transition-colors ${isDragging ? 'bg-[#37373d]' : ''}`}
         >
             <button
-                className="cursor-grab active:cursor-grabbing text-[#858585] hover:text-[#cccccc] transition-colors"
+                className="cursor-grab active:cursor-grabbing text-[#4a4a4a] hover:text-[#858585] transition-colors flex-shrink-0"
                 {...attributes}
                 {...listeners}
                 disabled={disabled}
             >
-                <GripVertical className="w-4 h-4" />
+                <GripVertical className="w-3.5 h-3.5" />
             </button>
 
             <button
-                className={`p-1 rounded transition-colors ${
+                className={`flex-shrink-0 transition-colors ${
                     isSubsection
-                        ? 'text-[#4fc1ff] bg-[#0e639c]/20 hover:bg-[#0e639c]/30'
-                        : 'text-[#858585] hover:text-[#cccccc] hover:bg-[#3e3e42]'
+                        ? 'text-[#4fc1ff]'
+                        : 'text-[#858585] hover:text-[#cccccc]'
                 }`}
                 onClick={() => onUpdate(section.id, { level: isSubsection ? 1 : 2 })}
                 disabled={disabled}
@@ -103,7 +101,7 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
 
             <input
                 type="text"
-                className="flex-1 px-2 py-1 border border-[#3e3e42] rounded bg-[#1e1e1e] text-[#cccccc] placeholder-[#858585] focus:border-[#0e639c] focus:outline-none"
+                className={`flex-1 min-w-0 px-2 py-1 bg-transparent text-[#cccccc] placeholder-[#858585] border-0 focus:outline-none focus:bg-[#1e1e1e] rounded transition-colors ${isSubsection ? 'ml-4' : ''}`}
                 value={section.title}
                 onChange={e => onUpdate(section.id, { title: e.target.value })}
                 placeholder="Section title"
@@ -111,12 +109,19 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
             />
 
             <button
-                className="p-1.5 text-[#858585] hover:text-[#f14c4c] hover:bg-[#f14c4c]/10 rounded transition-colors"
+                className="flex-shrink-0 text-[#4a4a4a] hover:text-[#858585] transition-colors"
+                title="Link section"
+            >
+                <Link2 className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+                className="flex-shrink-0 text-[#4a4a4a] hover:text-[#f14c4c] transition-colors"
                 onClick={() => onDelete(section.id)}
                 disabled={disabled}
                 title="Delete section"
             >
-                <Trash className="w-4 h-4" />
+                <Trash className="w-3.5 h-3.5" />
             </button>
         </div>
     );
@@ -216,35 +221,37 @@ export const TocEditor = forwardRef<TocEditorHandle, TocEditorProps>(function To
 
     return (
         <div className="space-y-2">
-            <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-            >
-                <SortableContext
-                    items={sections.map(s => s.id)}
-                    strategy={verticalListSortingStrategy}
+            <div className="border border-[#3e3e42] rounded-md bg-[#1e1e1e] overflow-hidden">
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
                 >
-                    <div className="space-y-2">
-                        {sections.map(section => (
-                            <SortableSection
-                                key={section.id}
-                                section={section}
-                                onUpdate={handleUpdate}
-                                onDelete={handleDelete}
-                            />
-                        ))}
-                    </div>
-                </SortableContext>
-            </DndContext>
+                    <SortableContext
+                        items={sections.map(s => s.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <div className="divide-y divide-[#2d2d30]">
+                            {sections.map(section => (
+                                <SortableSection
+                                    key={section.id}
+                                    section={section}
+                                    onUpdate={handleUpdate}
+                                    onDelete={handleDelete}
+                                />
+                            ))}
+                        </div>
+                    </SortableContext>
+                </DndContext>
 
-            <button
-                className="flex items-center gap-2 px-3 py-1.5 border border-dashed border-[#3e3e42] rounded text-[#858585] text-sm hover:text-[#cccccc] hover:border-[#0e639c] transition-colors"
-                onClick={handleAddSection}
-            >
-                <Plus className="w-4 h-4" />
-                Add Section
-            </button>
+                <button
+                    className="flex items-center gap-2 w-full px-3 h-9 text-[#858585] text-sm hover:text-[#cccccc] hover:bg-[#2a2d2e] border-t border-[#2d2d30] transition-colors"
+                    onClick={handleAddSection}
+                >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add Section
+                </button>
+            </div>
         </div>
     );
 });

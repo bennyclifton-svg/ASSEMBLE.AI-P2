@@ -83,6 +83,8 @@ export const projects = sqliteTable('projects', {
     name: text('name').notNull(),
     code: text('code'),
     status: text('status', { enum: ['active', 'archived', 'pending'] }).default('active'),
+    // Organization association (Feature 010)
+    organizationId: text('organization_id').references(() => organizations.id),
     // Cost Planning fields (Feature 006)
     currentReportMonth: text('current_report_month'), // ISO date string (first of month)
     revision: text('revision').default('REV A'),
@@ -167,6 +169,7 @@ export const consultantDisciplines = sqliteTable('consultant_disciplines', {
     order: integer('order').notNull(),
     // Brief fields (Phase 8)
     briefServices: text('brief_services'),
+    briefDeliverables: text('brief_deliverables'),
     briefFee: text('brief_fee'),
     briefProgram: text('brief_program'),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
@@ -191,6 +194,7 @@ export const contractorTrades = sqliteTable('contractor_trades', {
     order: integer('order').notNull(),
     // Scope fields (Phase 8)
     scopeWorks: text('scope_works'),
+    scopeDeliverables: text('scope_deliverables'),
     scopePrice: text('scope_price'),
     scopeProgram: text('scope_program'),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
@@ -372,10 +376,11 @@ export const companies = sqliteTable('companies', {
 export const costLines = sqliteTable('cost_lines', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    companyId: text('company_id').references(() => companies.id),
+    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
+    tradeId: text('trade_id').references(() => contractorTrades.id),
     section: text('section', { enum: ['FEES', 'CONSULTANTS', 'CONSTRUCTION', 'CONTINGENCY'] }).notNull(),
     costCode: text('cost_code'),
-    description: text('description').notNull(),
+    activity: text('activity').notNull(),
     reference: text('reference'), // Contract number, PO reference
     budgetCents: integer('budget_cents').default(0),
     approvedContractCents: integer('approved_contract_cents').default(0),
@@ -479,9 +484,13 @@ export const costLinesRelations = relations(costLines, ({ one, many }) => ({
         fields: [costLines.projectId],
         references: [projects.id],
     }),
-    company: one(companies, {
-        fields: [costLines.companyId],
-        references: [companies.id],
+    discipline: one(consultantDisciplines, {
+        fields: [costLines.disciplineId],
+        references: [consultantDisciplines.id],
+    }),
+    trade: one(contractorTrades, {
+        fields: [costLines.tradeId],
+        references: [contractorTrades.id],
     }),
     allocations: many(costLineAllocations),
     variations: many(variations),
@@ -538,6 +547,232 @@ export const projectSnapshotsRelations = relations(projectSnapshots, ({ one }) =
     project: one(projects, {
         fields: [projectSnapshots.projectId],
         references: [projects.id],
+    }),
+}));
+
+// ============================================================================
+// AUTHENTICATION & LANDING PAGE SCHEMA (Feature 010)
+// ============================================================================
+
+// Organizations (Tenant/Company)
+export const organizations = sqliteTable('organizations', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    defaultSettings: text('default_settings').default('{}'), // JSON string
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Users
+export const users = sqliteTable('users', {
+    id: text('id').primaryKey(),
+    email: text('email').notNull().unique(),
+    passwordHash: text('password_hash').notNull(),
+    displayName: text('display_name').notNull(),
+    organizationId: text('organization_id').references(() => organizations.id),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Sessions
+export const sessions = sqliteTable('sessions', {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: integer('expires_at').notNull(),
+    createdAt: integer('created_at').notNull(),
+});
+
+// Login Attempts (Rate Limiting)
+export const loginAttempts = sqliteTable('login_attempts', {
+    id: text('id').primaryKey(),
+    email: text('email').notNull().unique(),
+    attempts: integer('attempts').notNull().default(0),
+    lockedUntil: integer('locked_until'),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Knowledge Libraries
+export const knowledgeLibraries = sqliteTable('knowledge_libraries', {
+    id: text('id').primaryKey(),
+    organizationId: text('organization_id').notNull().references(() => organizations.id),
+    type: text('type').notNull(), // 'due-diligence' | 'house' | 'apartments' | 'fitout' | 'industrial' | 'remediation'
+    documentCount: integer('document_count').notNull().default(0),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Library Documents
+export const libraryDocuments = sqliteTable('library_documents', {
+    id: text('id').primaryKey(),
+    libraryId: text('library_id').notNull().references(() => knowledgeLibraries.id, { onDelete: 'cascade' }),
+    fileAssetId: text('file_asset_id').notNull().references(() => fileAssets.id),
+    addedAt: integer('added_at').notNull(),
+    addedBy: text('added_by').references(() => users.id, { onDelete: 'set null' }),
+    syncStatus: text('sync_status', { enum: ['pending', 'processing', 'synced', 'failed'] }).default('pending'),
+});
+
+// ============================================================================
+// AUTHENTICATION RELATIONS
+// ============================================================================
+
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+    users: many(users),
+    knowledgeLibraries: many(knowledgeLibraries),
+    projects: many(projects),
+}));
+
+export const projectsRelations = relations(projects, ({ one }) => ({
+    organization: one(organizations, {
+        fields: [projects.organizationId],
+        references: [organizations.id],
+    }),
+}));
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+    organization: one(organizations, {
+        fields: [users.organizationId],
+        references: [organizations.id],
+    }),
+    sessions: many(sessions),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+    user: one(users, {
+        fields: [sessions.userId],
+        references: [users.id],
+    }),
+}));
+
+export const knowledgeLibrariesRelations = relations(knowledgeLibraries, ({ one, many }) => ({
+    organization: one(organizations, {
+        fields: [knowledgeLibraries.organizationId],
+        references: [organizations.id],
+    }),
+    documents: many(libraryDocuments),
+}));
+
+export const libraryDocumentsRelations = relations(libraryDocuments, ({ one }) => ({
+    library: one(knowledgeLibraries, {
+        fields: [libraryDocuments.libraryId],
+        references: [knowledgeLibraries.id],
+    }),
+    fileAsset: one(fileAssets, {
+        fields: [libraryDocuments.fileAssetId],
+        references: [fileAssets.id],
+    }),
+    addedByUser: one(users, {
+        fields: [libraryDocuments.addedBy],
+        references: [users.id],
+    }),
+}));
+
+// ============================================================================
+// ADDENDUM SCHEMA (Feature 004 - Phase 15)
+// ============================================================================
+
+// Addenda (Addendum reports per discipline/trade)
+export const addenda = sqliteTable('addenda', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
+    tradeId: text('trade_id').references(() => contractorTrades.id),
+    addendumNumber: integer('addendum_number').notNull(),
+    content: text('content'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Addendum Transmittals (Links addenda to documents - independent from RFT transmittals)
+export const addendumTransmittals = sqliteTable('addendum_transmittals', {
+    id: text('id').primaryKey(),
+    addendumId: text('addendum_id').references(() => addenda.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
+// ADDENDUM RELATIONS
+// ============================================================================
+
+export const addendaRelations = relations(addenda, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [addenda.projectId],
+        references: [projects.id],
+    }),
+    discipline: one(consultantDisciplines, {
+        fields: [addenda.disciplineId],
+        references: [consultantDisciplines.id],
+    }),
+    trade: one(contractorTrades, {
+        fields: [addenda.tradeId],
+        references: [contractorTrades.id],
+    }),
+    transmittals: many(addendumTransmittals),
+}));
+
+export const addendumTransmittalsRelations = relations(addendumTransmittals, ({ one }) => ({
+    addendum: one(addenda, {
+        fields: [addendumTransmittals.addendumId],
+        references: [addenda.id],
+    }),
+    document: one(documents, {
+        fields: [addendumTransmittals.documentId],
+        references: [documents.id],
+    }),
+}));
+
+// ============================================================================
+// RFT NEW SCHEMA (Feature 004 - Procurement - RFT NEW)
+// ============================================================================
+
+// RFT NEW reports (one per discipline/trade, comprehensive RFT documents)
+export const rftNew = sqliteTable('rft_new', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
+    tradeId: text('trade_id').references(() => contractorTrades.id),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// RFT NEW Transmittals (Links RFT NEW to documents)
+export const rftNewTransmittals = sqliteTable('rft_new_transmittals', {
+    id: text('id').primaryKey(),
+    rftNewId: text('rft_new_id').references(() => rftNew.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
+// RFT NEW RELATIONS
+// ============================================================================
+
+export const rftNewRelations = relations(rftNew, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [rftNew.projectId],
+        references: [projects.id],
+    }),
+    discipline: one(consultantDisciplines, {
+        fields: [rftNew.disciplineId],
+        references: [consultantDisciplines.id],
+    }),
+    trade: one(contractorTrades, {
+        fields: [rftNew.tradeId],
+        references: [contractorTrades.id],
+    }),
+    transmittals: many(rftNewTransmittals),
+}));
+
+export const rftNewTransmittalsRelations = relations(rftNewTransmittals, ({ one }) => ({
+    rftNew: one(rftNew, {
+        fields: [rftNewTransmittals.rftNewId],
+        references: [rftNew.id],
+    }),
+    document: one(documents, {
+        fields: [rftNewTransmittals.documentId],
+        references: [documents.id],
     }),
 }));
 

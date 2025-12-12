@@ -19,7 +19,27 @@ export const SECTION_NAMES: Record<CostLineSection, string> = {
 export const SECTION_ORDER: CostLineSection[] = ['FEES', 'CONSULTANTS', 'CONSTRUCTION', 'CONTINGENCY'];
 
 // ============================================================================
-// COMPANY TYPES
+// DISCIPLINE TYPES
+// ============================================================================
+
+export interface Discipline {
+  id: string;
+  projectId: string;
+  disciplineName: string;
+  isEnabled: boolean;
+  order: number;
+}
+
+export interface Trade {
+  id: string;
+  projectId: string;
+  tradeName: string;
+  isEnabled: boolean;
+  order: number;
+}
+
+// ============================================================================
+// COMPANY TYPES (retained for invoices)
 // ============================================================================
 
 export interface Company {
@@ -60,10 +80,11 @@ export interface UpdateCompanyInput {
 export interface CostLine {
   id: string;
   projectId: string;
-  companyId?: string | null;
+  disciplineId?: string | null;
+  tradeId?: string | null;
   section: CostLineSection;
   costCode?: string | null;
-  description: string;
+  activity: string;
   reference?: string | null;
   budgetCents: number;
   approvedContractCents: number;
@@ -73,8 +94,9 @@ export interface CostLine {
   deletedAt?: string | null;
 }
 
-export interface CostLineWithCompany extends CostLine {
-  company?: Company | null;
+export interface CostLineWithDiscipline extends CostLine {
+  discipline?: Discipline | null;
+  trade?: Trade | null;
 }
 
 export interface CostLineAllocation {
@@ -87,7 +109,7 @@ export interface CostLineAllocation {
 }
 
 // Cost line with all calculated fields
-export interface CostLineWithCalculations extends CostLineWithCompany {
+export interface CostLineWithCalculations extends CostLineWithDiscipline {
   allocations: CostLineAllocation[];
   calculated: {
     forecastVariationsCents: number;
@@ -102,10 +124,11 @@ export interface CostLineWithCalculations extends CostLineWithCompany {
 
 export interface CreateCostLineInput {
   projectId: string;
-  companyId?: string;
+  disciplineId?: string;
+  tradeId?: string;
   section: CostLineSection;
   costCode?: string;
-  description: string;
+  activity: string;
   reference?: string;
   budgetCents?: number;
   approvedContractCents?: number;
@@ -113,10 +136,11 @@ export interface CreateCostLineInput {
 }
 
 export interface UpdateCostLineInput {
-  companyId?: string | null;
+  disciplineId?: string | null;
+  tradeId?: string | null;
   section?: CostLineSection;
   costCode?: string | null;
-  description?: string;
+  activity?: string;
   reference?: string | null;
   budgetCents?: number;
   approvedContractCents?: number;

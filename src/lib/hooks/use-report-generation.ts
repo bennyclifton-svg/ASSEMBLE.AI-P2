@@ -6,7 +6,7 @@
 import { useState, useCallback } from 'react';
 import useSWR, { mutate } from 'swr';
 import type { TableOfContents } from '@/lib/langgraph/state';
-import type { GenerationMode } from '@/lib/db/rag-schema';
+import type { GenerationMode, ContentLength } from '@/lib/db/rag-schema';
 
 // Types
 export interface ReportSummary {
@@ -123,7 +123,10 @@ export function useReportGeneration(projectId: string) {
     const approveToc = useCallback(async (
         reportId: string,
         tableOfContents: TableOfContents,
-        generationMode?: GenerationMode
+        generationMode?: GenerationMode,
+        contentLength?: ContentLength, // T099l
+        disciplineId?: string, // For legacy reports missing disciplineId
+        tradeId?: string // For legacy reports missing tradeId
     ) => {
         setError(null);
 
@@ -131,7 +134,7 @@ export function useReportGeneration(projectId: string) {
             const res = await fetch(`/api/reports/${reportId}/approve-toc`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tableOfContents, generationMode }),
+                body: JSON.stringify({ tableOfContents, generationMode, contentLength, disciplineId, tradeId }),
             });
 
             if (!res.ok) {

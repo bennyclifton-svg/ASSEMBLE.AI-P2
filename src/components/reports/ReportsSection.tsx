@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import useSWR from 'swr';
 import { ReportGenerator, type ReportGeneratorHandle } from './ReportGenerator';
 import {
@@ -33,7 +33,7 @@ interface Report {
     updatedAt: string;
 }
 
-import { type GenerationMode } from '@/lib/db/rag-schema';
+import { type GenerationMode, type ContentLength } from '@/lib/db/rag-schema';
 
 interface ReportsSectionProps {
     projectId: string;
@@ -83,9 +83,21 @@ export function ReportsSection({
     const [newReportTitle, setNewReportTitle] = useState('');
     const [startingGeneration, setStartingGeneration] = useState(false);
     const [selectedGenerationMode, setSelectedGenerationMode] = useState<GenerationMode>(generationMode);
+    const [selectedContentLength, setSelectedContentLength] = useState<ContentLength>('concise'); // T099l
 
     // Ref to the currently viewing ReportGenerator
     const generatorRef = useRef<ReportGeneratorHandle>(null);
+    // Ref to track if we've done the initial title select (to avoid re-selecting on every render)
+    const hasSelectedTitleRef = useRef(false);
+
+    // Reset the selection flag when editing a different report
+    const handleTitleInputRef = useCallback((input: HTMLInputElement | null) => {
+        if (input && !hasSelectedTitleRef.current) {
+            input.focus();
+            input.select();
+            hasSelectedTitleRef.current = true;
+        }
+    }, []);
 
     // Determine context type and name
     const contextType = disciplineId ? 'discipline' : 'trade';
@@ -130,6 +142,7 @@ export function ReportsSection({
     };
 
     const handleTitleEdit = (reportId: string, currentTitle: string) => {
+        hasSelectedTitleRef.current = false; // Reset so the new input will select its text
         setEditingTitleId(reportId);
         setEditingTitleValue(currentTitle);
     };
@@ -218,8 +231,8 @@ export function ReportsSection({
 
     const handleStartCreating = (type: 'rft' | 'trr') => {
         const defaultTitle = type === 'rft'
-            ? 'Request For Tender Access'
-            : 'Tender Recommendation Report Access';
+            ? `Request For Tender ${contextName}`
+            : `Tender Recommendation Report ${contextName}`;
         setCreatingReportType(type);
         setNewReportTitle(defaultTitle);
     };
@@ -284,8 +297,10 @@ export function ReportsSection({
         if (generatorRef.current) {
             setStartingGeneration(true);
             try {
-                // Pass mode explicitly to avoid async state race condition
-                await generatorRef.current.startTocGeneration(mode);
+                // Pass mode and content length explicitly to avoid async state race condition
+                // T099l: Content length only applies to Long RFT (ai_assisted mode)
+                const lengthToUse = mode === 'ai_assisted' ? selectedContentLength : undefined;
+                await generatorRef.current.startTocGeneration(mode, lengthToUse);
                 mutate();
             } catch (err) {
                 console.error('Failed to start generation:', err);
@@ -359,13 +374,7 @@ export function ReportsSection({
                                                         onChange={e => setEditingTitleValue(e.target.value)}
                                                         onKeyDown={e => handleTitleKeyDown(e, report.id)}
                                                         onBlur={() => handleTitleSave(report.id)}
-                                                        ref={(input) => {
-                                                            if (input) {
-                                                                input.focus();
-                                                                // Select all text so user can start typing or click to position
-                                                                input.select();
-                                                            }
-                                                        }}
+                                                        ref={handleTitleInputRef}
                                                     />
                                                 ) : (
                                                     <p
@@ -445,12 +454,39 @@ export function ReportsSection({
                                                         <Database className="w-3 h-3" />
                                                         {startingGeneration && selectedGenerationMode === 'data_only' ? 'Starting...' : 'Short RFT'}
                                                     </button>
+
+                                                    {/* T099l: Content Length Selector for Long RFT */}
+                                                    <div className="flex items-center gap-1 px-1 py-0.5 bg-[#2a2d2e] rounded border border-[#3e3e42]">
+                                                        <button
+                                                            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                                                                selectedContentLength === 'concise'
+                                                                    ? 'bg-[#c9860d] text-white'
+                                                                    : 'text-[#858585] hover:text-[#cccccc]'
+                                                            }`}
+                                                            onClick={() => setSelectedContentLength('concise')}
+                                                            title="Concise (~500-800 words/section)"
+                                                        >
+                                                            Concise
+                                                        </button>
+                                                        <button
+                                                            className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                                                                selectedContentLength === 'lengthy'
+                                                                    ? 'bg-[#c9860d] text-white'
+                                                                    : 'text-[#858585] hover:text-[#cccccc]'
+                                                            }`}
+                                                            onClick={() => setSelectedContentLength('lengthy')}
+                                                            title="Lengthy (~1500-2500 words/section)"
+                                                        >
+                                                            Lengthy
+                                                        </button>
+                                                    </div>
+
                                                     <button
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs text-white rounded hover:brightness-110 disabled:opacity-50"
                                                         style={{ backgroundColor: '#c9860d' }}
                                                         onClick={() => handleStartWithMode('ai_assisted')}
                                                         disabled={startingGeneration}
-                                                        title="Generate Long RFT (AI Assisted)"
+                                                        title={`Generate Long RFT (AI Assisted - ${selectedContentLength === 'lengthy' ? 'Lengthy' : 'Concise'})`}
                                                     >
                                                         <Sparkles className="w-3 h-3" />
                                                         {startingGeneration && selectedGenerationMode === 'ai_assisted' ? 'Starting...' : 'Long RFT'}
@@ -537,6 +573,7 @@ export function ReportsSection({
                                         tradeId={tradeId}
                                         contextType={contextType}
                                         generationMode={selectedGenerationMode}
+                                        contentLength={selectedContentLength} // T099l
                                         onComplete={() => {
                                             mutate();
                                         }}

@@ -6,10 +6,12 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRAGRepos, type RAGRepo } from '@/lib/hooks/use-rag-repos';
 import { REPO_TYPE_LABELS, type RepoType } from '@/lib/db/rag-schema';
 import { useToast } from '@/lib/hooks/use-toast';
+
+const MAX_INIT_ATTEMPTS = 3;
 
 interface KnowledgeLibrariesSectionProps {
     projectId: string;
@@ -25,6 +27,7 @@ export function KnowledgeLibrariesSection({
     onLoadDocuments,
 }: KnowledgeLibrariesSectionProps) {
     const { toast } = useToast();
+    const [initAttempts, setInitAttempts] = useState(0);
     const {
         globalRepos,
         needsInitialization,
@@ -32,17 +35,27 @@ export function KnowledgeLibrariesSection({
         isSaving,
         isLoading,
         error,
+        hasError,
         initializeRepos,
         saveToRepo,
         loadFromRepo,
+        retry,
     } = useRAGRepos(projectId, organizationId);
 
-    // Initialize global repos if missing
+    // Initialize global repos if missing (with retry limit)
     useEffect(() => {
-        if (needsInitialization && !isFetching) {
+        if (needsInitialization && !isFetching && !hasError && initAttempts < MAX_INIT_ATTEMPTS) {
+            console.log('[KnowledgeLibraries] Initializing repos, attempt:', initAttempts + 1);
+            setInitAttempts((prev) => prev + 1);
             initializeRepos();
         }
-    }, [needsInitialization, isFetching, initializeRepos]);
+    }, [needsInitialization, isFetching, hasError, initAttempts, initializeRepos]);
+
+    // Reset init attempts when retry is triggered
+    const handleRetry = () => {
+        setInitAttempts(0);
+        retry();
+    };
 
     const handleSave = async (repo: RAGRepo) => {
         if (selectedDocumentIds.length === 0) {
@@ -98,6 +111,29 @@ export function KnowledgeLibrariesSection({
             <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
                 <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Knowledge Libraries</h3>
                 <div className="text-[#858585] text-sm">Loading knowledge libraries...</div>
+            </div>
+        );
+    }
+
+    // Show error state when fetch failed or repos failed to initialize
+    if (hasError || (globalRepos.length === 0 && !isFetching && !needsInitialization)) {
+        return (
+            <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
+                <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Knowledge Libraries</h3>
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                    <div className="text-red-400 text-sm font-medium mb-2">
+                        Failed to load knowledge libraries
+                    </div>
+                    <p className="text-[#858585] text-xs mb-4 max-w-xs">
+                        {error || 'Database connection unavailable. Please check your configuration.'}
+                    </p>
+                    <button
+                        onClick={handleRetry}
+                        className="px-4 py-2 text-sm bg-[#0e639c] hover:bg-[#1177bb] text-white rounded transition-colors"
+                    >
+                        Retry
+                    </button>
+                </div>
             </div>
         );
     }

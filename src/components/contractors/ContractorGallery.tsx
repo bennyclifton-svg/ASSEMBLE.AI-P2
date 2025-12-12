@@ -1,14 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useContractors } from '@/lib/hooks/use-contractors';
-import { ContractorForm } from './ContractorForm';
+import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
 import { PriceStructureSection } from './PriceStructureSection';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Upload } from 'lucide-react';
-import { InlineEditField } from '@/components/dashboard/planning/InlineEditField';
-import { ReportsSection } from '@/components/reports/ReportsSection';
-import { GenerationMode } from '@/components/documents/DisciplineRepoTiles';
+import { RFTSection } from '@/components/reports/rft';
+import { RFTNewSection } from '@/components/rft-new';
+import { AddendumSection } from '@/components/addendum';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface ContractorGalleryProps {
   projectId: string;
@@ -18,7 +27,8 @@ interface ContractorGalleryProps {
   scopePrice?: string;
   scopeProgram?: string;
   onUpdateScope?: (tradeId: string, field: 'scopeWorks' | 'scopePrice' | 'scopeProgram', value: string) => Promise<void>;
-  generationMode?: GenerationMode;
+  selectedDocumentIds?: string[];
+  onSetSelectedDocumentIds?: (ids: string[]) => void;
 }
 
 export function ContractorGallery({
@@ -29,55 +39,70 @@ export function ContractorGallery({
   scopePrice = '',
   scopeProgram = '',
   onUpdateScope,
-  generationMode = 'ai_assisted'
+  selectedDocumentIds = [],
+  onSetSelectedDocumentIds,
 }: ContractorGalleryProps) {
-  const { contractors, isLoading, addContractor, updateContractor, deleteContractor, toggleAward } = useContractors(projectId, trade);
+  const { contractors, isLoading, addContractor, updateContractor, deleteContractor, toggleShortlist, toggleAward } = useContractors(projectId, trade);
   const { toast } = useToast();
-  const [cards, setCards] = useState<Array<{ id: string; contractor?: any }>>([]);
-  const [draggingOverCardId, setDraggingOverCardId] = useState<string | null>(null);
+
+  // Accordion state - only one card expanded at a time
+  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+
+  // New firm state - for creating a new firm
+  const [newFirm, setNewFirm] = useState<FirmData | null>(null);
+
+  // Extraction state
   const [isExtracting, setIsExtracting] = useState(false);
-  const [extractedData, setExtractedData] = useState<any>(null);
 
-  // Initialize with 3 empty cards or existing contractors
-  useEffect(() => {
-    const existingCards = contractors.map(c => ({ id: c.id, contractor: c }));
-    const emptyCardsNeeded = Math.max(0, 3 - existingCards.length);
-    const emptyCards = Array.from({ length: emptyCardsNeeded }, (_, i) => ({
-      id: `empty-${i}`,
-      contractor: undefined
-    }));
+  // Delete confirmation state
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id: string; name: string }>({
+    open: false,
+    id: '',
+    name: '',
+  });
 
-    setCards([...existingCards, ...emptyCards]);
-  }, [contractors]);
+  const handleToggleExpand = (id: string) => {
+    setExpandedCardId(prev => prev === id ? null : id);
+  };
 
-  const handleSave = async (cardId: string, data: any) => {
+  const handleSave = async (id: string, data: Partial<FirmData>) => {
     try {
-      const card = cards.find(c => c.id === cardId);
-
-      if (card?.contractor?.id) {
-        // Update existing contractor
-        await updateContractor(card.contractor.id, { ...data, trade });
-        toast({
-          title: 'Success',
-          description: 'Contractor updated successfully',
-        });
+      if (id === 'new' && newFirm) {
+        // Creating new contractor
+        if (data.companyName && data.email) {
+          const newContractor = await addContractor({
+            ...newFirm,
+            ...data,
+            trade,
+          });
+          toast({
+            title: 'Success',
+            description: 'Contractor added successfully',
+          });
+          setNewFirm(null);
+          setExpandedCardId(newContractor.id);
+        } else {
+          // Just update local state for new firm
+          setNewFirm({ ...newFirm, ...data });
+        }
       } else {
-        // Create new contractor
-        const newContractor = await addContractor({ ...data, trade });
-        toast({
-          title: 'Success',
-          description: 'Contractor added successfully',
-        });
+        // Find existing contractor to merge with partial updates
+        const existingContractor = contractors.find(c => c.id === id);
 
-        // Replace empty card with new contractor and add a new empty card
-        setCards(prev => {
-          const newCards = prev.map(c =>
-            c.id === cardId ? { id: newContractor.id, contractor: newContractor } : c
-          );
-          // Add a new empty card at the end
-          newCards.push({ id: `empty-${Date.now()}`, contractor: undefined });
-          return newCards;
-        });
+        // Build form data - use nullish coalescing to preserve existing values when fields aren't provided
+        const formData = {
+          companyName: data.companyName ?? existingContractor?.companyName ?? '',
+          contactPerson: data.contactPerson ?? existingContractor?.contactPerson ?? '',
+          email: data.email ?? existingContractor?.email ?? '',
+          address: data.address ?? existingContractor?.address ?? '',
+          abn: data.abn ?? existingContractor?.abn ?? '',
+          notes: data.notes ?? existingContractor?.notes ?? '',
+          shortlisted: data.shortlisted ?? existingContractor?.shortlisted,
+          awarded: data.awarded ?? existingContractor?.awarded,
+          trade,
+        };
+
+        await updateContractor(id, formData);
       }
     } catch (error) {
       toast({
@@ -85,28 +110,26 @@ export function ContractorGallery({
         description: error instanceof Error ? error.message : 'Failed to save contractor',
         variant: 'destructive',
       });
+      throw error;
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (id === 'new') {
+      setNewFirm(null);
+      setExpandedCardId(null);
+      return;
+    }
+
     try {
       await deleteContractor(id);
       toast({
         title: 'Success',
         description: 'Contractor deleted successfully',
       });
-
-      // Remove the deleted card
-      setCards(prev => {
-        const filtered = prev.filter(c => c.contractor?.id !== id);
-        // Ensure at least 3 cards
-        const emptyCardsNeeded = Math.max(0, 3 - filtered.length);
-        const emptyCards = Array.from({ length: emptyCardsNeeded }, (_, i) => ({
-          id: `empty-${Date.now()}-${i}`,
-          contractor: undefined
-        }));
-        return [...filtered, ...emptyCards];
-      });
+      if (expandedCardId === id) {
+        setExpandedCardId(null);
+      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -114,9 +137,27 @@ export function ContractorGallery({
         variant: 'destructive',
       });
     }
+    setDeleteDialog({ open: false, id: '', name: '' });
   };
 
-  const handleAwardChange = async (id: string, awarded: boolean) => {
+  const handleShortlistToggle = async (id: string, shortlisted: boolean) => {
+    if (id === 'new' && newFirm) {
+      setNewFirm({ ...newFirm, shortlisted });
+      return;
+    }
+
+    try {
+      await toggleShortlist(id, shortlisted);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update shortlist',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleAwardToggle = async (id: string, awarded: boolean) => {
     try {
       await toggleAward(id, awarded);
       toast({
@@ -131,11 +172,11 @@ export function ContractorGallery({
         description: error instanceof Error ? error.message : 'Failed to update award status',
         variant: 'destructive',
       });
-      throw error; // Re-throw to revert UI
+      throw error;
     }
   };
 
-  const handleFileExtraction = async (file: File) => {
+  const handleFileExtraction = async (file: File): Promise<FirmData> => {
     setIsExtracting(true);
     try {
       const formData = new FormData();
@@ -154,17 +195,6 @@ export function ContractorGallery({
       const result = await response.json();
       const { data, confidence } = result;
 
-      // Add trade to extracted data
-      data.trade = trade;
-      setExtractedData({ ...data, confidence });
-
-      // Find first empty card and pre-fill it
-      const firstEmptyCardId = cards.find(c => !c.contractor)?.id;
-      if (firstEmptyCardId) {
-        // Trigger save on first empty card with extracted data
-        await handleSave(firstEmptyCardId, data);
-      }
-
       if (confidence < 70) {
         toast({
           title: 'Low Confidence',
@@ -177,45 +207,33 @@ export function ContractorGallery({
           description: `Data extracted with ${confidence}% confidence`,
         });
       }
+
+      return {
+        companyName: data.companyName || '',
+        contactPerson: data.contactPerson || '',
+        email: data.email || '',
+        address: data.address || '',
+        abn: data.abn || '',
+        notes: data.notes || '',
+        shortlisted: false,
+        awarded: false,
+        companyId: null,
+        trade,
+      };
     } catch (error) {
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to extract data',
         variant: 'destructive',
       });
+      throw error;
     } finally {
       setIsExtracting(false);
-      setExtractedData(null);
     }
   };
 
-  const handleDragOver = (e: React.DragEvent, cardId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggingOverCardId(cardId);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only clear if leaving the card entirely (not entering a child element)
-    const relatedTarget = e.relatedTarget as Element | null;
-    if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
-      setDraggingOverCardId(null);
-    }
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDraggingOverCardId(null);
-
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
-
-    const file = files[0];
+  const handleFileDrop = async (id: string, file: File, action: 'replace' | 'add') => {
     const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'text/plain'];
-
     if (!validTypes.includes(file.type)) {
       toast({
         title: 'Invalid File Type',
@@ -225,7 +243,116 @@ export function ContractorGallery({
       return;
     }
 
-    await handleFileExtraction(file);
+    try {
+      const extractedData = await handleFileExtraction(file);
+
+      // Build form data from extracted data
+      const formData = {
+        companyName: extractedData.companyName || '',
+        contactPerson: extractedData.contactPerson || '',
+        email: extractedData.email || '',
+        address: extractedData.address || '',
+        abn: extractedData.abn || '',
+        notes: extractedData.notes || '',
+        trade,
+      };
+
+      if (action === 'replace') {
+        if (id === 'new') {
+          setNewFirm(extractedData);
+        } else {
+          await updateContractor(id, formData);
+        }
+      } else {
+        // Add as new
+        const newContractor = await addContractor(formData);
+        toast({
+          title: 'Success',
+          description: 'New contractor added from extracted data',
+        });
+        setExpandedCardId(newContractor.id);
+      }
+    } catch {
+      // Error already handled in handleFileExtraction
+    }
+  };
+
+  const handleAddNewFileDrop = async (file: File) => {
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'text/plain'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload a PDF, image (JPG/PNG), or text file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const extractedData = await handleFileExtraction(file);
+      const formData = {
+        companyName: extractedData.companyName || '',
+        contactPerson: extractedData.contactPerson || '',
+        email: extractedData.email || '',
+        address: extractedData.address || '',
+        abn: extractedData.abn || '',
+        notes: extractedData.notes || '',
+        trade,
+      };
+      const newContractor = await addContractor(formData);
+      toast({
+        title: 'Success',
+        description: 'New contractor added from extracted data',
+      });
+      setExpandedCardId(newContractor.id);
+    } catch {
+      // Error already handled
+    }
+  };
+
+  const handleAddNew = async () => {
+    // If there's an existing newFirm with a company name, save it first
+    if (newFirm && newFirm.companyName && newFirm.companyName.trim()) {
+      try {
+        const formData = {
+          companyName: newFirm.companyName,
+          contactPerson: newFirm.contactPerson || '',
+          email: newFirm.email || '',
+          address: newFirm.address || '',
+          abn: newFirm.abn || '',
+          notes: newFirm.notes || '',
+          trade,
+        };
+        await addContractor(formData);
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: error instanceof Error ? error.message : 'Failed to save contractor',
+          variant: 'destructive',
+        });
+        return; // Don't create new if save failed
+      }
+    }
+
+    // Create a new empty firm (collapsed by default)
+    setNewFirm({
+      companyName: '',
+      contactPerson: '',
+      email: '',
+      address: '',
+      abn: '',
+      notes: '',
+      shortlisted: false,
+      awarded: false,
+      companyId: null,
+      trade,
+    });
+    // Collapse any expanded card
+    setExpandedCardId(null);
+  };
+
+  const openDeleteDialog = (id: string, name: string) => {
+    setDeleteDialog({ open: true, id, name });
   };
 
   if (isLoading) {
@@ -236,56 +363,126 @@ export function ContractorGallery({
     );
   }
 
-  // Handle Scope field updates
-  const handleScopeUpdate = async (field: 'scopeWorks' | 'scopePrice' | 'scopeProgram', value: string) => {
-    if (tradeId && onUpdateScope) {
-      await onUpdateScope(tradeId, field, value);
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Reports Section - Moved up for visibility */}
-      {tradeId && (
-        <ReportsSection
-          projectId={projectId}
-          tradeId={tradeId}
-          tradeName={trade}
-          generationMode={generationMode}
-        />
-      )}
+      {/* Firms Section */}
+      <div>
+        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Firms</h3>
+        <div className="relative">
+          {/* Extraction Progress Overlay */}
+          {isExtracting && (
+            <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
+              <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-6 flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0e639c]"></div>
+                <p className="text-[#cccccc] font-semibold">Extracting contractor data...</p>
+                <p className="text-xs text-[#858585]">This may take a few moments</p>
+              </div>
+            </div>
+          )}
 
-      {/* Scope Section */}
-      {tradeId && onUpdateScope && (
-        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
-          <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Scope</h3>
-          <div className="space-y-4">
-            <InlineEditField
-              label="Works"
-              value={scopeWorks}
-              onSave={(value) => handleScopeUpdate('scopeWorks', value)}
-              placeholder="Describe the scope of works..."
-              multiline
-              rows={6}
-            />
-            <InlineEditField
-              label="Price"
-              value={scopePrice}
-              onSave={(value) => handleScopeUpdate('scopePrice', value)}
-              placeholder="Enter price range and budget..."
-              multiline
-              rows={6}
-            />
-            <InlineEditField
-              label="Program"
-              value={scopeProgram}
-              onSave={(value) => handleScopeUpdate('scopeProgram', value)}
-              placeholder="Enter program and timeline requirements..."
-              multiline
-              rows={6}
+          <div className="flex gap-3 overflow-x-auto pt-3 pb-4 items-start" style={{ scrollbarWidth: 'thin' }}>
+            {/* Existing contractors */}
+            {contractors.map((contractor) => (
+              <FirmCard
+                key={contractor.id}
+                type="contractor"
+                firm={{
+                  id: contractor.id,
+                  companyName: contractor.companyName,
+                  contactPerson: contractor.contactPerson,
+                  email: contractor.email,
+                  address: contractor.address,
+                  abn: contractor.abn,
+                  notes: contractor.notes,
+                  shortlisted: contractor.shortlisted,
+                  awarded: contractor.awarded,
+                  companyId: contractor.companyId,
+                  trade: contractor.trade,
+                }}
+                category={trade}
+                isExpanded={expandedCardId === contractor.id}
+                onToggleExpand={() => handleToggleExpand(contractor.id)}
+                onSave={(data) => handleSave(contractor.id, data)}
+                onDelete={() => openDeleteDialog(contractor.id, contractor.companyName)}
+                onShortlistToggle={(shortlisted) => handleShortlistToggle(contractor.id, shortlisted)}
+                onAwardToggle={(awarded) => handleAwardToggle(contractor.id, awarded)}
+                onFileDrop={(file, action) => handleFileDrop(contractor.id, file, action)}
+              />
+            ))}
+
+            {/* New firm (if adding) */}
+            {newFirm && (
+              <FirmCard
+                key="new"
+                type="contractor"
+                firm={newFirm}
+                category={trade}
+                isExpanded={expandedCardId === 'new'}
+                onToggleExpand={() => handleToggleExpand('new')}
+                onSave={(data) => handleSave('new', data)}
+                onDelete={() => handleDelete('new')}
+                onShortlistToggle={(shortlisted) => handleShortlistToggle('new', shortlisted)}
+                onAwardToggle={() => Promise.resolve()}
+                onFileDrop={(file, action) => handleFileDrop('new', file, action)}
+              />
+            )}
+
+            {/* Add button - always visible */}
+            <AddFirmButton
+              onAdd={handleAddNew}
+              onFileDrop={handleAddNewFileDrop}
             />
           </div>
         </div>
+      </div>
+
+      {/* RFT Section - contains Scope, TOC, and RFT tabs */}
+      {tradeId && onUpdateScope && (
+        <RFTSection
+          projectId={projectId}
+          tradeId={tradeId}
+          name={trade}
+          contextType="trade"
+          scopeData={{
+            works: scopeWorks,
+            price: scopePrice,
+            program: scopeProgram,
+          }}
+          onScopeChange={async (field, value) => {
+            const fieldMap = {
+              works: 'scopeWorks',
+              price: 'scopePrice',
+              program: 'scopeProgram',
+            } as const;
+            await onUpdateScope(tradeId, fieldMap[field], value);
+          }}
+          selectedDocumentIds={selectedDocumentIds}
+          onSetSelectedDocumentIds={onSetSelectedDocumentIds}
+        />
+      )}
+
+      {/* RFT NEW Section - comprehensive RFT documents per trade */}
+      {tradeId && (
+        <RFTNewSection
+          projectId={projectId}
+          tradeId={tradeId}
+          tradeName={trade}
+          selectedDocumentIds={selectedDocumentIds}
+          onLoadTransmittal={onSetSelectedDocumentIds}
+          onSaveTransmittal={() => selectedDocumentIds}
+        />
+      )}
+
+      {/* Addendum Section - independent transmittals per addendum */}
+      {tradeId && (
+        <AddendumSection
+          projectId={projectId}
+          tradeId={tradeId}
+          tradeName={trade}
+          selectedDocumentIds={selectedDocumentIds}
+          onLoadTransmittal={onSetSelectedDocumentIds}
+          onSaveTransmittal={() => selectedDocumentIds}
+        />
       )}
 
       {/* Price Structure Section */}
@@ -299,58 +496,28 @@ export function ContractorGallery({
         </div>
       )}
 
-      {/* Firms Section */}
-      <div>
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Firms</h3>
-        <div className="relative">
-        {/* Extraction Progress Overlay */}
-        {isExtracting && (
-          <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
-            <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-6 flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0e639c]"></div>
-              <p className="text-[#cccccc] font-semibold">Extracting contractor data...</p>
-              <p className="text-xs text-[#858585]">This may take a few moments</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-3 overflow-x-auto pt-3 pb-4" style={{ scrollbarWidth: 'thin' }}>
-          {cards.map((card, index) => {
-            const isEmpty = !card.contractor;
-            const isDraggingOver = draggingOverCardId === card.id;
-
-            return (
-              <div
-                key={card.id}
-                className="flex-shrink-0 relative"
-                onDragOver={isEmpty ? (e) => handleDragOver(e, card.id) : undefined}
-                onDragLeave={isEmpty ? handleDragLeave : undefined}
-                onDrop={isEmpty ? handleDrop : undefined}
-              >
-                {/* Drag & Drop Overlay - Shows only on the specific card being dragged over */}
-                {isEmpty && isDraggingOver && (
-                  <div className="absolute inset-0 z-50 bg-[#0e639c]/20 border-2 border-dashed border-[#0e639c] rounded-lg flex items-center justify-center">
-                    <div className="bg-[#1e1e1e] border border-[#0e639c] rounded-lg p-4 flex flex-col items-center gap-2">
-                      <Upload className="w-8 h-8 text-[#0e639c]" />
-                      <p className="text-[#cccccc] font-semibold text-xs">Drop to extract</p>
-                    </div>
-                  </div>
-                )}
-
-                <ContractorForm
-                  contractor={card.contractor}
-                  onSave={(data) => handleSave(card.id, data)}
-                  onDelete={card.contractor?.id ? handleDelete : undefined}
-                  onAwardChange={card.contractor?.id ? (awarded) => handleAwardChange(card.contractor.id, awarded) : undefined}
-                  trade={trade}
-                />
-              </div>
-            );
-          })}
-        </div>
-        </div>
-      </div>
-
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
+        <AlertDialogContent className="bg-[#1e1e1e] border-[#3e3e42]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#cccccc]">Delete Contractor</AlertDialogTitle>
+            <AlertDialogDescription className="text-[#858585]">
+              Are you sure you want to delete {deleteDialog.name}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#3e3e42] text-[#cccccc] border-[#3e3e42] hover:bg-[#505050]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => handleDelete(deleteDialog.id)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

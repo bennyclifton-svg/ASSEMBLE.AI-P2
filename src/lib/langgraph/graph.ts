@@ -213,6 +213,7 @@ export async function startReportGeneration(input: {
     documentSetIds: string[];
     reportId?: string;
     generationMode?: 'data_only' | 'ai_assisted'; // T099: Generation mode for Short/Long RFT
+    contentLength?: 'concise' | 'lengthy'; // T099l: Content length for Long RFT
     lockedBy?: string;
     lockedByName?: string;
 }): Promise<{ threadId: string; state: ReportStateType }> {
@@ -221,6 +222,7 @@ export async function startReportGeneration(input: {
     const initialState = createInitialReportState({
         ...input,
         generationMode: input.generationMode ?? 'ai_assisted',
+        contentLength: input.contentLength ?? 'concise', // T099l
     });
 
     console.log('[graph] Starting report generation for:', input.title);

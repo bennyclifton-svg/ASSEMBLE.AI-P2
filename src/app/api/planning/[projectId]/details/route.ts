@@ -1,8 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { projectDetails } from '@/lib/db/schema';
+import { projectDetails, projects } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { projectDetailsSchema } from '@/lib/validations/planning-schema';
+
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ projectId: string }> }
+) {
+    try {
+        const { projectId } = await params;
+
+        // Try to get project details
+        const [details] = await db.select().from(projectDetails).where(eq(projectDetails.projectId, projectId));
+
+        if (details) {
+            return NextResponse.json(details);
+        }
+
+        // Fall back to project name if no details exist
+        const [project] = await db.select().from(projects).where(eq(projects.id, projectId));
+
+        if (project) {
+            return NextResponse.json({
+                projectId,
+                projectName: project.name,
+                address: '',
+            });
+        }
+
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    } catch (error) {
+        console.error('Error fetching project details:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch project details' },
+            { status: 500 }
+        );
+    }
+}
 
 export async function PUT(
     request: NextRequest,
@@ -36,6 +71,16 @@ export async function PUT(
                 projectId,
                 ...validated,
             });
+        }
+
+        // Also update the main projects table name if projectName changed
+        if (validated.projectName) {
+            await db.update(projects)
+                .set({
+                    name: validated.projectName,
+                    updatedAt: new Date().toISOString(),
+                })
+                .where(eq(projects.id, projectId));
         }
 
         const [updated] = await db.select().from(projectDetails).where(eq(projectDetails.projectId, projectId));

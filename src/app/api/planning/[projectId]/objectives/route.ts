@@ -4,6 +4,27 @@ import { projectObjectives } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { projectObjectivesSchema } from '@/lib/validations/planning-schema';
 
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ projectId: string }> }
+) {
+    try {
+        const { projectId } = await params;
+        const [objectives] = await db
+            .select()
+            .from(projectObjectives)
+            .where(eq(projectObjectives.projectId, projectId));
+
+        return NextResponse.json(objectives || {});
+    } catch (error) {
+        console.error('Error fetching project objectives:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch project objectives' },
+            { status: 500 }
+        );
+    }
+}
+
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ projectId: string }> }

@@ -6,8 +6,8 @@
 import type { ReportSection } from '@/lib/hooks/use-report-generation';
 import type { TableOfContents } from '@/lib/langgraph/state';
 
-// Single heading color (consistent, clean look)
-export const HEADING_COLOR = '#9CDCFE'; // Soft cyan - VS Code variable color
+// Single heading color (consistent, clean look) - matches Addendum styling
+export const HEADING_COLOR = '#4fc1ff'; // Highlight blue - matches Addendum reports
 
 // Legacy export for compatibility (all same color now)
 export const HEADING_COLORS = {
@@ -42,10 +42,11 @@ export function sectionsToHTML(
     const level = levelMap.get(section.sectionIndex) || 2;
     const headingTag = `h${level}`;
     const color = HEADING_COLORS[`H${level}` as keyof typeof HEADING_COLORS] || HEADING_COLORS.H2;
+    const title = section.title || 'Untitled Section';
 
     // Add heading with inline color style
     htmlParts.push(
-      `<${headingTag} style="color: ${color}">${escapeHTML(section.title)}</${headingTag}>`
+      `<${headingTag} style="color: ${color}">${escapeHTML(title)}</${headingTag}>`
     );
 
     // Add content (convert markdown to HTML)
@@ -54,14 +55,16 @@ export function sectionsToHTML(
 
       // Remove duplicate heading if content starts with ## SectionTitle
       // This prevents "Project Objectives" appearing twice
-      const duplicateHeadingPattern = new RegExp(`^##\\s*${escapeRegExp(section.title)}\\s*\\n`, 'i');
-      content = content.replace(duplicateHeadingPattern, '');
+      if (title) {
+        const duplicateHeadingPattern = new RegExp(`^##\\s*${escapeRegExp(title)}\\s*\\n`, 'i');
+        content = content.replace(duplicateHeadingPattern, '');
+      }
 
       // If content already contains HTML tags (e.g., transmittal table), use as-is
       // Otherwise convert markdown to HTML
       const contentHTML = content.includes('<table') || content.includes('<h2')
         ? content
-        : markdownToHTML(content, section.title);
+        : markdownToHTML(content, title);
 
       htmlParts.push(contentHTML);
     }
@@ -78,7 +81,8 @@ export function sectionsToHTML(
 /**
  * Escape HTML special characters to prevent XSS
  */
-function escapeHTML(text: string): string {
+function escapeHTML(text: string | undefined | null): string {
+  if (!text) return '';
   return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -90,7 +94,8 @@ function escapeHTML(text: string): string {
 /**
  * Escape special regex characters in a string
  */
-function escapeRegExp(text: string): string {
+function escapeRegExp(text: string | undefined | null): string {
+  if (!text) return '';
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
@@ -229,7 +234,8 @@ function buildKeyValueTable(items: Array<{ label: string; value: string }>): str
  * @param markdown - The markdown content to convert
  * @param sectionTitle - Optional section title to help detect duplicates
  */
-export function markdownToHTML(markdown: string, sectionTitle?: string): string {
+export function markdownToHTML(markdown: string | undefined | null, sectionTitle?: string): string {
+  if (!markdown) return '';
   let html = markdown;
 
   // Collapse multiple blank lines to single blank line
@@ -295,6 +301,10 @@ export function markdownToHTML(markdown: string, sectionTitle?: string): string 
 
 /**
  * Format transmittal data as HTML table with category colors
+ * Matches Addendum report styling:
+ * - Header row with "TRANSMITTAL DOCUMENT SCHEDULE" and document count
+ * - 5 columns: #, Document, Rev, Category, Subcategory
+ * - Inline SVG folder icons with category colors
  */
 export function formatTransmittalAsHTML(
   transmittal: Array<{
@@ -302,37 +312,60 @@ export function formatTransmittalAsHTML(
     version: string;
     category: string;
     categoryColor?: string;
+    subcategory?: string;
+    subcategoryColor?: string;
   }>
 ): string {
   if (!transmittal || transmittal.length === 0) {
     return '';
   }
 
+  // Inline SVG folder icon (from Lucide) - must be inline for contentEditable compatibility
+  const folderIcon = (color: string) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+
   const rows = transmittal
-    .map(
-      (doc) => `
-    <tr>
-      <td>${escapeHTML(doc.name)}</td>
-      <td>${escapeHTML(doc.version)}</td>
-      <td style="color: ${doc.categoryColor || '#cccccc'}">${escapeHTML(doc.category)}</td>
-    </tr>
-  `
-    )
+    .map((doc, index) => {
+      const categoryColor = doc.categoryColor || '#858585';
+      const subcategoryColor = doc.subcategoryColor || categoryColor;
+
+      // Category cell with folder icon
+      const categoryCell = `<span style="display: inline-flex; align-items: center; gap: 6px; color: ${categoryColor};">${folderIcon(categoryColor)} ${escapeHTML(doc.category)}</span>`;
+
+      // Subcategory cell with folder icon (if exists)
+      const subcategoryCell = doc.subcategory
+        ? `<span style="display: inline-flex; align-items: center; gap: 6px; color: ${subcategoryColor};">${folderIcon(subcategoryColor)} ${escapeHTML(doc.subcategory)}</span>`
+        : '';
+
+      return `
+    <tr style="border-top: 1px solid #3e3e42;">
+      <td style="padding: 10px 16px; color: #6e6e6e;">${index + 1}</td>
+      <td style="padding: 10px 16px; color: #cccccc;">${escapeHTML(doc.name)}</td>
+      <td style="padding: 10px 16px; text-align: center; color: #cccccc;">${escapeHTML(doc.version.replace('Rev ', ''))}</td>
+      <td style="padding: 10px 16px;">${categoryCell}</td>
+      <td style="padding: 10px 16px;">${subcategoryCell}</td>
+    </tr>`;
+    })
     .join('');
 
-  return `<table class="transmittal-table">
+  return `
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+  <span style="font-size: 12px; font-weight: 500; color: #858585; text-transform: uppercase; letter-spacing: 0.05em;">Transmittal Document Schedule</span>
+  <span style="font-size: 12px; color: #6e6e6e;">${transmittal.length} document${transmittal.length !== 1 ? 's' : ''}</span>
+</div>
+<table class="transmittal-table" style="width: 100%; border-collapse: collapse;">
   <thead>
-    <tr>
-      <th>Document Name</th>
-      <th>Version</th>
-      <th>Category</th>
+    <tr style="background-color: #2d2d30;">
+      <th style="width: 40px; text-align: left; padding: 10px 16px; font-weight: 500; color: #858585;">#</th>
+      <th style="text-align: left; padding: 10px 16px; font-weight: 500; color: #858585;">Document</th>
+      <th style="width: 64px; text-align: center; padding: 10px 16px; font-weight: 500; color: #858585;">Rev</th>
+      <th style="width: 144px; text-align: left; padding: 10px 16px; font-weight: 500; color: #858585;">Category</th>
+      <th style="width: 160px; text-align: left; padding: 10px 16px; font-weight: 500; color: #858585;">Subcategory</th>
     </tr>
   </thead>
   <tbody>
     ${rows}
   </tbody>
-</table>
-  `.trim();
+</table>`.trim();
 }
 
 /**

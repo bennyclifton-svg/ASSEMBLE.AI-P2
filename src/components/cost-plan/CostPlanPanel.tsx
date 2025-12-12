@@ -22,9 +22,12 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useCostPlan, useCostLineMutations } from '@/lib/hooks/cost-plan';
+import { useConsultantDisciplines } from '@/lib/hooks/use-consultant-disciplines';
+import { useContractorTrades } from '@/lib/hooks/use-contractor-trades';
 import { formatCurrency } from '@/lib/calculations/cost-plan-formulas';
 import { VariationsPanel } from './VariationsPanel';
 import { InvoicesPanel } from './InvoicesPanel';
+import { DisciplineDropdown } from './cells/DisciplineDropdown';
 import type { CostLineSection, CostLineWithCalculations } from '@/types/cost-plan';
 
 // App color palette - consistent with global styles
@@ -133,9 +136,27 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     const { costLines, totals, isLoading, error, refetch } = useCostPlan(projectId, selectedMonth);
     const { createCostLine, updateCostLine, deleteCostLine, reorderCostLines, isSubmitting } = useCostLineMutations(projectId);
 
+    // Fetch disciplines and trades for dropdown
+    const { disciplines } = useConsultantDisciplines(projectId);
+    const { trades } = useContractorTrades(projectId);
+
+    // Map disciplines and trades for dropdown component
+    const disciplineOptions = disciplines.map(d => ({
+        id: d.id,
+        name: d.disciplineName,
+        isEnabled: d.isEnabled,
+        order: d.order,
+    }));
+    const tradeOptions = trades.map(t => ({
+        id: t.id,
+        name: t.tradeName,
+        isEnabled: t.isEnabled,
+        order: t.order,
+    }));
+
     const [showAddRow, setShowAddRow] = useState<CostLineSection | null>(null);
     const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
-    const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; description: string } | null>(null);
+    const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; activity: string } | null>(null);
 
     // Drag and drop state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -159,10 +180,10 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         setShowAddRow(section);
     };
 
-    const handleCreateLine = async (section: CostLineSection, data: { description: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => {
+    const handleCreateLine = async (section: CostLineSection, data: { activity: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => {
         await createCostLine({
             section,
-            description: data.description,
+            activity: data.activity,
             costCode: data.costCode,
             budgetCents: data.budgetCents,
             approvedContractCents: data.approvedContractCents,
@@ -172,14 +193,15 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         refetch();
     };
 
-    const handleCellChange = async (id: string, field: string, value: string | number) => {
-        let processedValue: string | number = value;
+    const handleCellChange = async (id: string, field: string, value: string | number | null) => {
+        let processedValue: string | number | null = value;
 
         if (['budgetCents', 'approvedContractCents'].includes(field)) {
             const numValue = typeof value === 'string' ? parseFloat(value) : value;
-            processedValue = Math.round(numValue * 100);
+            processedValue = numValue !== null ? Math.round(numValue * 100) : null;
         }
 
+        // disciplineId can be null (to clear)
         await updateCostLine(id, { [field]: processedValue });
         setEditingCell(null);
         refetch();
@@ -449,7 +471,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                             <tr style={{ backgroundColor: COLORS.accent.costPlan }}>
                                 <th className="border border-[#8a4a4a] px-0.5 py-1.5 w-6" rowSpan={2}></th>
                                 <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-left w-16" rowSpan={2}>Code</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-left w-20" rowSpan={2}>Company</th>
+                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-left w-20" rowSpan={2}>Discipline</th>
                                 <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-left min-w-[60px]" rowSpan={2}>Description</th>
                                 <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[72px]" rowSpan={2}>Budget</th>
                                 <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[72px]" rowSpan={2}>Contract</th>
@@ -482,13 +504,15 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                                         onStartEdit={(id, field) => setEditingCell({ id, field })}
                                         onCellChange={handleCellChange}
                                         onCancelEdit={() => setEditingCell(null)}
-                                        onDeleteLine={(id, description) => setDeleteConfirm({ id, description })}
+                                        onDeleteLine={(id, activity) => setDeleteConfirm({ id, activity })}
                                         selectedIds={selectedIds}
                                         onRowClick={handleRowClick}
                                         showAddRow={showAddRow === section}
                                         onSaveNewLine={(data) => handleCreateLine(section, data)}
                                         onCancelNewLine={() => setShowAddRow(null)}
                                         isSubmitting={isSubmitting}
+                                        disciplines={disciplineOptions}
+                                        trades={tradeOptions}
                                     />
                                 );
                             })}
@@ -526,9 +550,9 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                                         <GripVertical className="h-3.5 w-3.5 text-[#cccccc]" />
                                     </td>
                                     <td className="border border-[#3e3e42] px-1.5 py-1 text-[#6B9BD1] font-mono">{activeLine.costCode || '-'}</td>
-                                    <td className="border border-[#3e3e42] px-1.5 py-1 text-[#858585]">{activeLine.company?.name || '-'}</td>
+                                    <td className="border border-[#3e3e42] px-1.5 py-1 text-[#858585]">{activeLine.discipline?.disciplineName || '-'}</td>
                                     <td className="border border-[#3e3e42] px-1.5 py-1 text-[#cccccc]">
-                                        {activeLine.description}
+                                        {activeLine.activity}
                                         {selectedIds.size > 1 && (
                                             <span className="ml-2 px-1.5 py-0.5 bg-[#0e639c] text-white text-xs rounded">
                                                 +{selectedIds.size - 1}
@@ -547,7 +571,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
 
             {deleteConfirm && (
                 <DeleteConfirmDialog
-                    description={deleteConfirm.description}
+                    activity={deleteConfirm.activity}
                     onClose={() => setDeleteConfirm(null)}
                     onConfirm={() => handleDeleteLine(deleteConfirm.id)}
                     isSubmitting={isSubmitting}
@@ -555,6 +579,20 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             )}
         </div>
     );
+}
+
+interface DisciplineOption {
+    id: string;
+    name: string;
+    isEnabled: boolean;
+    order: number;
+}
+
+interface TradeOption {
+    id: string;
+    name: string;
+    isEnabled: boolean;
+    order: number;
 }
 
 interface SectionBlockProps {
@@ -567,17 +605,20 @@ interface SectionBlockProps {
     onAddLine: () => void;
     editingCell: { id: string; field: string } | null;
     onStartEdit: (id: string, field: string) => void;
-    onCellChange: (id: string, field: string, value: string | number) => void;
+    onCellChange: (id: string, field: string, value: string | number | null) => void;
     onCancelEdit: () => void;
-    onDeleteLine: (id: string, description: string) => void;
+    onDeleteLine: (id: string, activity: string) => void;
     // Selection props
     selectedIds: Set<string>;
     onRowClick: (lineId: string, section: CostLineSection, e: React.MouseEvent) => void;
     // Add line props
     showAddRow: boolean;
-    onSaveNewLine: (data: { description: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => Promise<void>;
+    onSaveNewLine: (data: { activity: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => Promise<void>;
     onCancelNewLine: () => void;
     isSubmitting: boolean;
+    // Discipline/Trade dropdown options
+    disciplines: DisciplineOption[];
+    trades: TradeOption[];
 }
 
 function SectionBlock({
@@ -596,6 +637,8 @@ function SectionBlock({
     onSaveNewLine,
     onCancelNewLine,
     isSubmitting,
+    disciplines,
+    trades,
 }: SectionBlockProps) {
     return (
         <>
@@ -632,10 +675,12 @@ function SectionBlock({
                         onStartEdit={onStartEdit}
                         onCellChange={onCellChange}
                         onCancelEdit={onCancelEdit}
-                        onDelete={() => onDeleteLine(line.id, line.description)}
+                        onDelete={() => onDeleteLine(line.id, line.activity)}
                         isSelected={selectedIds.has(line.id)}
                         onRowClick={onRowClick}
                         selectedCount={selectedIds.size}
+                        disciplines={disciplines}
+                        trades={trades}
                     />
                 ))}
             </SortableContext>
@@ -677,12 +722,14 @@ interface SortableCostLineRowProps {
     section: CostLineSection;
     editingCell: { id: string; field: string } | null;
     onStartEdit: (id: string, field: string) => void;
-    onCellChange: (id: string, field: string, value: string | number) => void;
+    onCellChange: (id: string, field: string, value: string | number | null) => void;
     onCancelEdit: () => void;
     onDelete: () => void;
     isSelected: boolean;
     onRowClick: (lineId: string, section: CostLineSection, e: React.MouseEvent) => void;
     selectedCount: number;
+    disciplines: DisciplineOption[];
+    trades: TradeOption[];
 }
 
 function SortableCostLineRow({
@@ -696,6 +743,8 @@ function SortableCostLineRow({
     isSelected,
     onRowClick,
     selectedCount,
+    disciplines,
+    trades,
 }: SortableCostLineRowProps) {
     const {
         attributes,
@@ -727,6 +776,8 @@ function SortableCostLineRow({
             onRowClick={onRowClick}
             dragHandleProps={{ ...attributes, ...listeners }}
             selectedCount={selectedCount}
+            disciplines={disciplines}
+            trades={trades}
         />
     );
 }
@@ -736,7 +787,7 @@ interface CostLineRowProps {
     section: CostLineSection;
     editingCell: { id: string; field: string } | null;
     onStartEdit: (id: string, field: string) => void;
-    onCellChange: (id: string, field: string, value: string | number) => void;
+    onCellChange: (id: string, field: string, value: string | number | null) => void;
     onCancelEdit: () => void;
     onDelete: () => void;
     isSelected: boolean;
@@ -745,10 +796,12 @@ interface CostLineRowProps {
     dragHandleProps: Record<string, unknown>;
     selectedCount: number;
     style?: React.CSSProperties;
+    disciplines: DisciplineOption[];
+    trades: TradeOption[];
 }
 
 const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(function CostLineRow(
-    { line, section, editingCell, onStartEdit, onCellChange, onCancelEdit, onDelete, isSelected, isDragging, onRowClick, dragHandleProps, selectedCount, style },
+    { line, section, editingCell, onStartEdit, onCellChange, onCancelEdit, onDelete, isSelected, isDragging, onRowClick, dragHandleProps, selectedCount, style, disciplines, trades },
     ref
 ) {
     const variance = line.calculated.varianceToBudgetCents;
@@ -789,14 +842,28 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
                 onCancel={onCancelEdit}
                 className="font-mono text-[#6B9BD1]"
             />
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-[#858585] truncate max-w-[80px]">
-                {line.company?.name || '-'}
+            <td className="border border-[#3e3e42] px-1 py-0.5 min-w-[100px]">
+                <DisciplineDropdown
+                    value={section === 'CONSULTANTS' ? line.disciplineId : line.tradeId}
+                    displayValue={section === 'CONSULTANTS' ? line.discipline?.disciplineName : line.trade?.tradeName}
+                    section={section}
+                    disciplines={disciplines}
+                    trades={trades}
+                    onChange={(id) => {
+                        // Send disciplineId for CONSULTANTS, tradeId for CONSTRUCTION
+                        if (section === 'CONSULTANTS') {
+                            onCellChange(line.id, 'disciplineId', id);
+                        } else if (section === 'CONSTRUCTION') {
+                            onCellChange(line.id, 'tradeId', id);
+                        }
+                    }}
+                />
             </td>
             <EditableCell
-                value={line.description}
-                isEditing={isEditing('description')}
-                onStartEdit={() => onStartEdit(line.id, 'description')}
-                onSave={(value) => onCellChange(line.id, 'description', value)}
+                value={line.activity}
+                isEditing={isEditing('activity')}
+                onStartEdit={() => onStartEdit(line.id, 'activity')}
+                onSave={(value) => onCellChange(line.id, 'activity', value)}
                 onCancel={onCancelEdit}
                 className="text-[#cccccc]"
             />
@@ -974,29 +1041,29 @@ function EditableNumberCell({ value, isEditing, onStartEdit, onSave, onCancel, c
 }
 
 interface AddCostLineRowProps {
-    onSave: (data: { description: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => Promise<void>;
+    onSave: (data: { activity: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => Promise<void>;
     onCancel: () => void;
     isSubmitting: boolean;
 }
 
 function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps) {
-    const descriptionRef = useRef<HTMLInputElement>(null);
+    const activityRef = useRef<HTMLInputElement>(null);
     const [formData, setFormData] = useState({
         costCode: '',
-        description: '',
+        activity: '',
         budgetCents: 0,
         approvedContractCents: 0,
     });
 
-    // Auto-focus description field
+    // Auto-focus activity field
     useEffect(() => {
-        descriptionRef.current?.focus();
+        activityRef.current?.focus();
     }, []);
 
     const handleSave = async () => {
-        if (!formData.description.trim()) return;
+        if (!formData.activity.trim()) return;
         await onSave({
-            description: formData.description,
+            activity: formData.activity,
             costCode: formData.costCode || undefined,
             budgetCents: formData.budgetCents || undefined,
             approvedContractCents: formData.approvedContractCents || undefined,
@@ -1030,11 +1097,11 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
             <td className="border border-[#3e3e42] px-1.5 py-1 text-[#6e6e6e]">-</td>
             <td className="border border-[#3e3e42] px-1 py-1">
                 <input
-                    ref={descriptionRef}
+                    ref={activityRef}
                     type="text"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Enter description..."
+                    value={formData.activity}
+                    onChange={(e) => setFormData({ ...formData, activity: e.target.value })}
+                    placeholder="Enter activity..."
                     className={inputClass}
                 />
             </td>
@@ -1067,7 +1134,7 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
                 <div className="flex items-center justify-center gap-1">
                     <button
                         onClick={handleSave}
-                        disabled={!formData.description.trim() || isSubmitting}
+                        disabled={!formData.activity.trim() || isSubmitting}
                         className="p-0.5 text-green-400 hover:text-green-300 hover:bg-green-900/30 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="Save (Enter)"
                     >
@@ -1088,13 +1155,13 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
 }
 
 interface DeleteConfirmDialogProps {
-    description: string;
+    activity: string;
     onClose: () => void;
     onConfirm: () => void;
     isSubmitting: boolean;
 }
 
-function DeleteConfirmDialog({ description, onClose, onConfirm, isSubmitting }: DeleteConfirmDialogProps) {
+function DeleteConfirmDialog({ activity, onClose, onConfirm, isSubmitting }: DeleteConfirmDialogProps) {
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
             <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-sm border border-[#3e3e42]">
@@ -1103,7 +1170,7 @@ function DeleteConfirmDialog({ description, onClose, onConfirm, isSubmitting }: 
                 </div>
                 <div className="p-4 space-y-4">
                     <p className="text-sm text-[#cccccc]">
-                        Are you sure you want to delete <strong>&quot;{description}&quot;</strong>?
+                        Are you sure you want to delete <strong>&quot;{activity}&quot;</strong>?
                     </p>
                     <p className="text-xs text-[#858585]">
                         This action cannot be undone.

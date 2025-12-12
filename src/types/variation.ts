@@ -47,7 +47,7 @@ export interface VariationWithCostLine extends Variation {
   costLine?: {
     id: string;
     costCode?: string | null;
-    description: string;
+    activity: string;
     section: string;
   } | null;
 }

@@ -213,7 +213,7 @@ function createVariationRow(variation: VariationWithCostLine): Record<string, un
   // Cost line cell
   const costLineCell = createTextCell(
     variation.costLine
-      ? `${variation.costLine.costCode || ''} ${variation.costLine.description}`.trim()
+      ? `${variation.costLine.costCode || ''} ${variation.costLine.activity}`.trim()
       : '',
     { editable: true }
   );

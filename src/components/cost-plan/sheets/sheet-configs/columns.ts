@@ -9,7 +9,7 @@
 // COLUMN TYPE DEFINITIONS
 // ============================================================================
 
-export type ColumnType = 'text' | 'currency' | 'currencyVariance' | 'percent' | 'date' | 'monthYear' | 'company' | 'dropdown' | 'costCode';
+export type ColumnType = 'text' | 'currency' | 'currencyVariance' | 'percent' | 'date' | 'monthYear' | 'discipline' | 'dropdown' | 'costCode';
 
 export type ColumnAlign = 'left' | 'center' | 'right';
 
@@ -53,9 +53,9 @@ export const PROJECT_SUMMARY_COLUMNS: ColumnDefinition[] = [
     description: 'Unique identifier for this cost line',
   },
   {
-    key: 'company',
-    label: 'Company',
-    type: 'company',
+    key: 'discipline',
+    label: 'Discipline',
+    type: 'discipline',
     width: 150,
     minWidth: 100,
     maxWidth: 250,
@@ -64,12 +64,12 @@ export const PROJECT_SUMMARY_COLUMNS: ColumnDefinition[] = [
     sortable: true,
     filterable: true,
     resizable: true,
-    description: 'Contractor or consultant company',
+    description: 'Consultant discipline (e.g., Architect, Structural)',
   },
   {
-    key: 'description',
-    label: 'Description',
-    shortLabel: 'Desc',
+    key: 'activity',
+    label: 'Activity',
+    shortLabel: 'Act',
     type: 'text',
     width: 200,
     minWidth: 100,
@@ -80,7 +80,7 @@ export const PROJECT_SUMMARY_COLUMNS: ColumnDefinition[] = [
     sortable: true,
     filterable: true,
     resizable: true,
-    description: 'Description of the cost line item',
+    description: 'Activity or work description',
   },
   {
     key: 'reference',

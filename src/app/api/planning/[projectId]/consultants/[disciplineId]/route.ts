@@ -4,24 +4,50 @@ import { consultantDisciplines } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
-const toggleSchema = z.object({
-    isEnabled: z.boolean(),
+const updateSchema = z.object({
+    isEnabled: z.boolean().optional(),
+    briefServices: z.string().optional(),
+    briefDeliverables: z.string().optional(),
+    briefFee: z.string().optional(),
+    briefProgram: z.string().optional(),
 });
+
+export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ projectId: string; disciplineId: string }> }
+) {
+    try {
+        const { disciplineId } = await params;
+        const [discipline] = await db
+            .select()
+            .from(consultantDisciplines)
+            .where(eq(consultantDisciplines.id, disciplineId));
+
+        if (!discipline) {
+            return NextResponse.json({ error: 'Discipline not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(discipline);
+    } catch (error) {
+        console.error('Error fetching discipline:', error);
+        return NextResponse.json({ error: 'Failed to fetch discipline' }, { status: 500 });
+    }
+}
 
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ projectId: string; disciplineId: string }> }
 ) {
     try {
-        const { projectId, disciplineId } = await params;
+        const { disciplineId } = await params;
         const body = await request.json();
-        const { isEnabled } = toggleSchema.parse(body);
+        const validated = updateSchema.parse(body);
 
         // Update the discipline
         const [updated] = await db
             .update(consultantDisciplines)
             .set({
-                isEnabled,
+                ...validated,
                 updatedAt: new Date().toISOString(),
             })
             .where(eq(consultantDisciplines.id, disciplineId))

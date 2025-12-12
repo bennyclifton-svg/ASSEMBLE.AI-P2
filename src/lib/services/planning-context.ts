@@ -23,10 +23,13 @@ import {
     documents,
     fileAssets,
     categories,
+    subcategories,
     disciplineFeeItems,
     tradePriceItems,
+    costLines,
 } from '../db/schema';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, isNull } from 'drizzle-orm';
+import { getCategoryById, getCategoryByName } from '../constants/categories';
 
 // ============================================
 // Type Definitions
@@ -119,6 +122,9 @@ export interface TransmittalDocument {
     name: string;
     version: string;
     category: string;
+    categoryColor?: string;
+    subcategory?: string;
+    subcategoryColor?: string;
 }
 
 export interface TransmittalContext {
@@ -144,6 +150,17 @@ export interface PriceItemContext {
     id: string;
     description: string;
     sortOrder: number;
+}
+
+// ============================================
+// Cost Plan Types
+// ============================================
+
+export interface CostLineContext {
+    id: string;
+    activity: string;
+    costCode?: string;
+    section: string;
 }
 
 // ============================================
@@ -278,6 +295,8 @@ export async function fetchTransmittalForDiscipline(
     projectId: string,
     disciplineId: string
 ): Promise<TransmittalContext | null> {
+    console.log('[fetchTransmittalForDiscipline] Looking up transmittal for projectId:', projectId, 'disciplineId:', disciplineId);
+
     // Find transmittal for this discipline
     const transmittal = await db.query.transmittals.findFirst({
         where: and(
@@ -287,8 +306,17 @@ export async function fetchTransmittalForDiscipline(
     });
 
     if (!transmittal) {
+        console.log('[fetchTransmittalForDiscipline] No transmittal found');
         return null;
     }
+
+    console.log('[fetchTransmittalForDiscipline] Found transmittal:', transmittal.id, transmittal.name);
+
+    // First, check how many transmittal items exist (without joins)
+    const rawItems = await db.select()
+        .from(transmittalItems)
+        .where(eq(transmittalItems.transmittalId, transmittal.id));
+    console.log('[fetchTransmittalForDiscipline] Raw transmittal items count:', rawItems.length);
 
     // Fetch transmittal items with document and version info
     const items = await db.select({
@@ -303,6 +331,8 @@ export async function fetchTransmittalForDiscipline(
         .innerJoin(documents, eq(versions.documentId, documents.id))
         .where(eq(transmittalItems.transmittalId, transmittal.id));
 
+    console.log('[fetchTransmittalForDiscipline] Joined items count:', items.length);
+
     // Fetch file assets and categories for each item
     const documentsWithDetails = await Promise.all(
         items.map(async (item) => {
@@ -315,11 +345,25 @@ export async function fetchTransmittalForDiscipline(
             });
 
             let categoryName = 'Uncategorized';
+            let categoryColor = '#858585'; // Default gray
             if (doc?.categoryId) {
                 const category = await db.query.categories.findFirst({
                     where: eq(categories.id, doc.categoryId),
                 });
                 categoryName = category?.name ?? 'Uncategorized';
+                // Try to get color from constants by ID first, then by name
+                const constantCategoryById = getCategoryById(doc.categoryId);
+                const constantCategoryByName = getCategoryByName(categoryName);
+                categoryColor = constantCategoryById?.color ?? constantCategoryByName?.color ?? '#858585';
+            }
+
+            // Fetch subcategory if exists
+            let subcategoryName: string | undefined;
+            if (doc?.subcategoryId) {
+                const subcategory = await db.query.subcategories.findFirst({
+                    where: eq(subcategories.id, doc.subcategoryId),
+                });
+                subcategoryName = subcategory?.name;
             }
 
             return {
@@ -327,6 +371,9 @@ export async function fetchTransmittalForDiscipline(
                 name: fileAsset?.originalName ?? 'Unknown',
                 version: `Rev ${item.versionNumber}`,
                 category: categoryName,
+                categoryColor,
+                subcategory: subcategoryName,
+                subcategoryColor: categoryColor, // Uses parent category's color
             };
         })
     );
@@ -385,11 +432,25 @@ export async function fetchTransmittalForTrade(
             });
 
             let categoryName = 'Uncategorized';
+            let categoryColor = '#858585'; // Default gray
             if (doc?.categoryId) {
                 const category = await db.query.categories.findFirst({
                     where: eq(categories.id, doc.categoryId),
                 });
                 categoryName = category?.name ?? 'Uncategorized';
+                // Try to get color from constants by ID first, then by name
+                const constantCategoryById = getCategoryById(doc.categoryId);
+                const constantCategoryByName = getCategoryByName(categoryName);
+                categoryColor = constantCategoryById?.color ?? constantCategoryByName?.color ?? '#858585';
+            }
+
+            // Fetch subcategory if exists
+            let subcategoryName: string | undefined;
+            if (doc?.subcategoryId) {
+                const subcategory = await db.query.subcategories.findFirst({
+                    where: eq(subcategories.id, doc.subcategoryId),
+                });
+                subcategoryName = subcategory?.name;
             }
 
             return {
@@ -397,6 +458,9 @@ export async function fetchTransmittalForTrade(
                 name: fileAsset?.originalName ?? 'Unknown',
                 version: `Rev ${item.versionNumber}`,
                 category: categoryName,
+                categoryColor,
+                subcategory: subcategoryName,
+                subcategoryColor: categoryColor, // Uses parent category's color
             };
         })
     );
@@ -568,6 +632,62 @@ ${tableRows.join('\n')}
 - Provide a breakdown of prices for each line item
 
 *Total price items: ${items.length}*`;
+}
+
+// ============================================
+// Cost Plan Functions
+// ============================================
+
+/**
+ * Fetch cost lines for a specific discipline
+ */
+export async function fetchCostLinesByDiscipline(disciplineId: string): Promise<CostLineContext[]> {
+    const lines = await db.select()
+        .from(costLines)
+        .where(and(
+            eq(costLines.disciplineId, disciplineId),
+            isNull(costLines.deletedAt)
+        ))
+        .orderBy(asc(costLines.sortOrder));
+
+    return lines.map(line => ({
+        id: line.id,
+        activity: line.activity,
+        costCode: line.costCode ?? undefined,
+        section: line.section,
+    }));
+}
+
+/**
+ * Format cost lines as markdown table for tender request
+ */
+export function formatCostLinesAsMarkdown(lines: CostLineContext[], disciplineName: string): string {
+    if (lines.length === 0) {
+        return `## Consultant Fee
+
+No cost plan items defined for ${disciplineName}.
+
+Please add cost plan items for this discipline to specify the fee breakdown required from tenderers.`;
+    }
+
+    const tableRows = lines.map((line, index) =>
+        `| ${index + 1} | ${line.activity} | $ __________ |`
+    );
+
+    return `## Consultant Fee
+
+The following fee breakdown is required from tenderers for ${disciplineName}:
+
+| # | Description | Amount (AUD) |
+|---|-------------|--------------|
+${tableRows.join('\n')}
+
+**Instructions for Tenderers:**
+- Complete all fee items in the table above
+- All amounts should be in AUD excluding GST
+- Provide a breakdown of fees for each line item
+
+*Total fee items: ${lines.length}*`;
 }
 
 // ============================================

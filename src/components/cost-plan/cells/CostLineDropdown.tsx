@@ -100,8 +100,8 @@ export function CostLineDropdown({
 
     // Sort items within each section alphanumerically by cost code, then description
     const sortAlphanumeric = (a: CostLineOption, b: CostLineOption) => {
-      const aKey = (a.costCode || a.description).toLowerCase();
-      const bKey = (b.costCode || b.description).toLowerCase();
+      const aKey = (a.costCode || a.activity).toLowerCase();
+      const bKey = (b.costCode || b.activity).toLowerCase();
       return aKey.localeCompare(bKey, undefined, { numeric: true, sensitivity: 'base' });
     };
 
@@ -120,9 +120,9 @@ export function CostLineDropdown({
 
   const formatCostLine = (cl: CostLineOption) => {
     if (cl.costCode) {
-      return `[${cl.costCode}] ${cl.description}`;
+      return `[${cl.costCode}] ${cl.activity}`;
     }
-    return cl.description;
+    return cl.activity;
   };
 
   const handleSelect = (costLineId: string) => {

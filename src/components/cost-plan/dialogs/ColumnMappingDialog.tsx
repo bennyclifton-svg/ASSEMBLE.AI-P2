@@ -57,7 +57,7 @@ interface ColumnMappingDialogProps {
 
 export const COST_LINE_TARGET_FIELDS: TargetField[] = [
   { key: 'costCode', label: 'Cost Code', required: false, type: 'string', description: 'Unique identifier for the cost line' },
-  { key: 'description', label: 'Description', required: true, type: 'string', description: 'Name or description of the item' },
+  { key: 'activity', label: 'Activity', required: true, type: 'string', description: 'Activity or work description' },
   { key: 'section', label: 'Section', required: true, type: 'section', description: 'FEES, CONSULTANTS, CONSTRUCTION, or CONTINGENCY' },
   { key: 'budgetCents', label: 'Budget', required: false, type: 'number', description: 'Original budget amount' },
   { key: 'approvedContractCents', label: 'Approved Contract', required: false, type: 'number', description: 'Contract award amount' },
@@ -71,7 +71,7 @@ export const COST_LINE_TARGET_FIELDS: TargetField[] = [
 
 const AUTO_MAP_PATTERNS: Record<string, string[]> = {
   costCode: ['cost code', 'code', 'item code', 'line code', 'ref', 'item no', 'item number'],
-  description: ['description', 'desc', 'item', 'name', 'detail', 'particulars', 'line item'],
+  activity: ['activity', 'description', 'desc', 'item', 'name', 'detail', 'particulars', 'line item'],
   section: ['section', 'category', 'type', 'group', 'cost type'],
   budgetCents: ['budget', 'original budget', 'budgeted', 'estimate', 'est'],
   approvedContractCents: ['contract', 'approved', 'award', 'contract value', 'approved value', 'let value'],

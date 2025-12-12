@@ -1,20 +1,18 @@
 /**
  * T147: POST /api/reports/[id]/refresh
- * Refresh Short RFT with updated data from database
+ * Refresh Short RFT - clears sections and resets to TOC pending
  *
  * Flow:
  * 1. Fetch existing report
- * 2. Re-fetch planning context, consultants, transmittals
- * 3. Re-generate report in data_only mode
- * 4. Update editedContent with new HTML
- * 5. Optionally preserve user edits
+ * 2. Delete existing sections
+ * 3. Reset status to toc_pending
+ * 4. Clear edited content (unless preserveEdits is true)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ragDb } from '@/lib/db/rag-client';
 import { reportTemplates, reportSections } from '@/lib/db/rag-schema';
 import { eq } from 'drizzle-orm';
-import { startReportGeneration } from '@/lib/langgraph/graph';
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -27,7 +25,14 @@ interface RefreshRequest {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
-    const body: RefreshRequest = await request.json();
+
+    // Parse body safely - may be empty
+    let body: RefreshRequest = {};
+    try {
+      body = await request.json();
+    } catch {
+      // No body sent - use defaults
+    }
 
     // Fetch existing report
     const report = await ragDb.query.reportTemplates.findFirst({
@@ -41,16 +46,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Only allow refresh for Short RFT (data_only mode)
-    if (report.reportChain !== 'short') {
+    // Only allow refresh for Short RFT (data_only mode) or reports without chain set
+    // Allow refresh if reportChain is 'short', null, or undefined
+    if (report.reportChain && report.reportChain !== 'short') {
       return NextResponse.json(
         { error: 'Refresh is only available for Short RFT reports' },
         { status: 400 }
       );
     }
 
-    // Check if report has been edited
-    if (report.isEdited && !body.preserveEdits) {
+    // Check if report has been edited - skip check if preserveEdits is explicitly false
+    if (report.isEdited && body.preserveEdits !== false && !body.preserveEdits) {
       return NextResponse.json(
         {
           error: 'Report has been edited',
@@ -65,47 +71,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const userId = 'user-placeholder';
     const userName = 'Current User';
 
-    // Lock the report for refresh
     const now = new Date();
-    await ragDb.update(reportTemplates)
-      .set({
-        lockedBy: userId,
-        lockedByName: userName,
-        lockedAt: now,
-        status: 'generating',
-        updatedAt: now,
-      })
-      .where(eq(reportTemplates.id, id));
 
     // Clear existing sections (will be regenerated)
     await ragDb.delete(reportSections).where(eq(reportSections.reportId, id));
 
-    // Re-generate report using LangGraph workflow in data_only mode
-    const { threadId, state } = await startReportGeneration({
-      projectId: report.projectId,
-      reportType: report.reportType,
-      title: report.title,
-      discipline: report.discipline ?? undefined,
-      documentSetIds: report.documentSetIds,
-      reportId: id,
-      generationMode: 'data_only', // Force data_only mode for refresh
+    // Reset report to toc_pending state so user can re-approve TOC and regenerate
+    const updateData: Record<string, any> = {
+      status: 'toc_pending',
       lockedBy: userId,
       lockedByName: userName,
-    });
-
-    // Update report with new TOC and reset edit flags
-    const updateData: any = {
-      tableOfContents: state.toc,
-      status: 'toc_pending',
-      graphState: {
-        threadId,
-        checkpointId: `${threadId}-1`,
-        messages: [],
-      },
-      updatedAt: new Date(),
+      lockedAt: now,
+      updatedAt: now,
+      // Clear graph state so a fresh generation can happen
+      graphState: null,
     };
 
-    // If preserveEdits is false, clear edited content
+    // Clear edited content unless preserveEdits is true
     if (!body.preserveEdits) {
       updateData.editedContent = null;
       updateData.isEdited = false;

@@ -187,22 +187,23 @@ Project (1) ──< (N) RevisionHistory
 
 > **Source of Truth**: `src/lib/constants/disciplines.ts`
 
-### Consultant Disciplines (36 total)
+### Consultant Disciplines (37 total)
 
 | # | Discipline | # | Discipline | # | Discipline |
 |---|------------|---|------------|---|------------|
-| 1 | Access | 13 | Electrical | 25 | NBN |
-| 2 | Acoustic | 14 | ESD | 26 | Passive Fire |
-| 3 | Arborist | 15 | Facade | 27 | Roof Access |
-| 4 | Architect | 16 | Fire Engineering | 28 | Site Investigation |
-| 5 | ASP3 | 17 | Fire Services | 29 | Stormwater |
-| 6 | BASIX | 18 | Flood | 30 | Structural |
-| 7 | Building Code Advice | 19 | Geotech | 31 | Survey |
-| 8 | Bushfire | 20 | Hazmat | 32 | Traffic |
-| 9 | Building Certifier | 21 | Hydraulic | 33 | Vertical Transport |
-| 10 | Civil | 22 | Interior Designer | 34 | Waste Management |
-| 11 | Cost Planning | 23 | Landscape | 35 | Wastewater |
-| 12 | Ecology | 24 | Mechanical | 36 | Waterproofing |
+| 1 | Access | 14 | ESD | 27 | Project Manager |
+| 2 | Acoustic | 15 | Facade | 28 | Roof Access |
+| 3 | Arborist | 16 | Fire Engineering | 29 | Site Investigation |
+| 4 | Architect | 17 | Fire Services | 30 | Stormwater |
+| 5 | ASP3 | 18 | Flood | 31 | Structural |
+| 6 | BASIX | 19 | Geotech | 32 | Survey |
+| 7 | Building Code Advice | 20 | Hazmat | 33 | Traffic |
+| 8 | Bushfire | 21 | Hydraulic | 34 | Vertical Transport |
+| 9 | Building Certifier | 22 | Interior Designer | 35 | Waste Management |
+| 10 | Civil | 23 | Landscape | 36 | Wastewater |
+| 11 | Cost Planning | 24 | Mechanical | 37 | Waterproofing |
+| 12 | Ecology | 25 | NBN | | |
+| 13 | Electrical | 26 | Passive Fire | | |
 
 ### Contractor Trades (21 total)
 
@@ -237,13 +238,13 @@ When a new project is created, the following data MUST be initialized automatica
 
 | Entity | Count | Default State |
 |--------|-------|---------------|
-| ConsultantDisciplines | 36 | isEnabled: false |
-| ConsultantStatuses | 144 (36 × 4) | isActive: false |
+| ConsultantDisciplines | 37 | isEnabled: false |
+| ConsultantStatuses | 148 (37 × 4) | isActive: false |
 | ContractorTrades | 21 | isEnabled: false |
 | ContractorStatuses | 84 (21 × 4) | isActive: false |
 | ProjectStages | 5 | status: 'not_started' |
 | ProjectDetails | 1 | all fields empty/null |
 | ProjectObjectives | 1 | all fields empty/null |
-| **Total records per project** | **292** | - |
+| **Total records per project** | **297** | - |
 
 All initialization MUST occur atomically within a database transaction to ensure data integrity.

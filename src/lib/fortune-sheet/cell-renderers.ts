@@ -231,6 +231,21 @@ export function createCompanyCell(
   };
 }
 
+/**
+ * Create FortuneSheet cell data for discipline
+ */
+export function createDisciplineCell(
+  discipline: { disciplineName: string; id?: string } | null | undefined,
+  editable = false
+): Record<string, unknown> {
+  return {
+    v: discipline?.disciplineName ?? '',
+    ct: { fa: '@', t: 's' },
+    fc: editable ? COLORS.accent.blue : COLORS.text.secondary,
+    ht: 1, // Left align
+  };
+}
+
 // ============================================================================
 // VARIANCE RENDERING
 // ============================================================================

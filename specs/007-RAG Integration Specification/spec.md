@@ -167,6 +167,39 @@ Uses same Planning Card data as context, but generates professional prose for ea
 - `generationMode` must be passed through `startReportGeneration()` correctly
 - Section 7 (Transmittal) only appears if `transmittal.documents.length > 0`
 
+#### Long RFT Generation Sequence
+
+**CRITICAL**: Long RFT is NOT a separate path from Short RFT. It is a **sequential extension**:
+
+```
+Short RFT Output → RAG Retrieval → AI Enhancement (with length control)
+```
+
+| Step | Description | Output |
+|------|-------------|--------|
+| 1. Template Render | Identical to Short RFT - generate template-based sections from Planning Card data | Baseline content (same as Short RFT) |
+| 2. RAG Retrieval | Fetch relevant chunks from discipline's Document Set | Retrieved technical context |
+| 3. AI Enhancement | Claude generates professional prose using template output as baseline + RAG chunks as context | Enhanced sections (length based on user selection) |
+
+#### Long RFT Length Control
+
+Users select content length when generating Long RFT:
+
+| Option | Label | Description | Target Words/Section |
+|--------|-------|-------------|---------------------|
+| `concise` | **Concise** | Brief, focused expansion of template content | ~500-800 words |
+| `lengthy` | **Lengthy** | Comprehensive, detailed expansion with thorough analysis | ~1500-2500 words |
+
+**UI**: Radio button selector shown before Long RFT generation starts.
+
+**Key Points:**
+- Steps 1-2 of Short RFT and Long RFT are IDENTICAL
+- Long RFT adds Step 3 (RAG + AI enhancement)
+- The template output serves as the "baseline" or "prompt seed" for AI generation
+- AI should EXPAND and ENHANCE the template content, not replace it entirely
+- Length option controls how much AI expands beyond the template baseline
+- Transmittal section uses data-only rendering in BOTH modes (no AI)
+
 ---
 
 ## Data Model

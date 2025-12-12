@@ -153,7 +153,7 @@ export function InlineEditField({
 
     // Base styles - transparent by default, shows border on focus
     const baseStyles = `
-        w-full px-3 py-2 rounded text-[#cccccc] leading-normal
+        w-full px-2 py-1 rounded text-sm text-[#cccccc] leading-normal
         bg-transparent border border-transparent
         transition-colors duration-150
         focus:outline-none focus:bg-[#252526] focus:border-[#0e639c] focus:ring-1 focus:ring-[#0e639c]
@@ -166,7 +166,7 @@ export function InlineEditField({
 
     return (
         <div className="relative">
-            {label && <label className="block text-sm font-medium text-[#858585] mb-1">{label}</label>}
+            {label && <label className="block text-xs font-medium text-[#858585] mb-0.5">{label}</label>}
             <div className="relative">
                 <textarea
                     ref={textareaRef}

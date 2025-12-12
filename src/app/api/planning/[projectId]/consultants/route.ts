@@ -76,7 +76,7 @@ export async function POST(
             return NextResponse.json({ message: 'Consultants already initialized' }, { status: 200 });
         }
 
-        // Create all 36 default disciplines
+        // Create all 37 default disciplines
         const disciplineRecords = CONSULTANT_DISCIPLINES.map((discipline) => ({
             id: crypto.randomUUID(),
             projectId,

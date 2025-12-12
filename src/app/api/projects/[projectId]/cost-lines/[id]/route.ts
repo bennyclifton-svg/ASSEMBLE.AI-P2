@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { costLines, companies } from '@/lib/db/schema';
+import { costLines, consultantDisciplines } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { UpdateCostLineInput } from '@/types/cost-plan';
 
@@ -33,17 +33,17 @@ export async function GET(
             );
         }
 
-        // Fetch company if present
-        let company = null;
-        if (costLine.companyId) {
-            const [comp] = await db
+        // Fetch discipline if present
+        let discipline = null;
+        if (costLine.disciplineId) {
+            const [disc] = await db
                 .select()
-                .from(companies)
-                .where(eq(companies.id, costLine.companyId));
-            company = comp || null;
+                .from(consultantDisciplines)
+                .where(eq(consultantDisciplines.id, costLine.disciplineId));
+            discipline = disc || null;
         }
 
-        return NextResponse.json({ ...costLine, company });
+        return NextResponse.json({ ...costLine, discipline });
     } catch (error) {
         console.error('Error fetching cost line:', error);
         return NextResponse.json(
@@ -91,10 +91,11 @@ export async function PATCH(
             updatedAt: now,
         };
 
-        if (body.companyId !== undefined) updateData.companyId = body.companyId;
+        if (body.disciplineId !== undefined) updateData.disciplineId = body.disciplineId;
+        if (body.tradeId !== undefined) updateData.tradeId = body.tradeId;
         if (body.section !== undefined) updateData.section = body.section;
         if (body.costCode !== undefined) updateData.costCode = body.costCode;
-        if (body.description !== undefined) updateData.description = body.description;
+        if (body.activity !== undefined) updateData.activity = body.activity;
         if (body.reference !== undefined) updateData.reference = body.reference;
         if (body.budgetCents !== undefined) updateData.budgetCents = body.budgetCents;
         if (body.approvedContractCents !== undefined) updateData.approvedContractCents = body.approvedContractCents;

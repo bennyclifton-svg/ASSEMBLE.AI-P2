@@ -10,7 +10,7 @@ import { useReportGeneration, useReport, type GenerateReportRequest } from '@/li
 import { useReportStream, getStreamProgress } from '@/lib/hooks/use-report-stream';
 import { useReportLock } from '@/lib/hooks/use-report-lock';
 import { useRAGRepos, useRepoSelection, type RAGRepo } from '@/lib/hooks/use-rag-repos';
-import { REPO_TYPE_LABELS, type RepoType, type GenerationMode } from '@/lib/db/rag-schema';
+import { REPO_TYPE_LABELS, type RepoType, type GenerationMode, type ContentLength } from '@/lib/db/rag-schema';
 import { TocEditor, type TocEditorHandle } from './TocEditor';
 import { SectionViewer } from './SectionViewer';
 import UnifiedReportEditor from './UnifiedReportEditor';
@@ -33,6 +33,8 @@ interface ReportGeneratorProps {
     contextType?: 'discipline' | 'trade';
     /** Generation mode from DisciplineRepoTiles */
     generationMode?: GenerationMode;
+    /** Content length for Long RFT (T099l) */
+    contentLength?: ContentLength;
     onComplete?: (reportId: string) => void;
     onCancel?: () => void;
     /** Render in compact inline mode */
@@ -41,7 +43,7 @@ interface ReportGeneratorProps {
 
 // Expose methods to parent via ref
 export interface ReportGeneratorHandle {
-    startTocGeneration: (mode?: GenerationMode) => Promise<void>;
+    startTocGeneration: (mode?: GenerationMode, length?: ContentLength) => Promise<void>;
     cancel: () => void;
     isSubmitting: boolean;
     sectionCount: number;
@@ -57,6 +59,7 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
     tradeId,
     contextType = 'discipline',
     generationMode: externalGenerationMode,
+    contentLength: externalContentLength, // T099l
     onComplete,
     onCancel,
     inline = false,
@@ -65,6 +68,8 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
     const tocEditorRef = useRef<TocEditorHandle>(null);
     // Ref to track generation mode for approval flow (avoids async state race)
     const currentGenerationModeRef = useRef<GenerationMode | undefined>(externalGenerationMode);
+    // Ref to track content length for approval flow (T099l)
+    const currentContentLengthRef = useRef<ContentLength | undefined>(externalContentLength);
 
     // State
     const [step, setStep] = useState<GenerationStep>(initialReportId ? 'toc_approval' : 'config');
@@ -178,8 +183,13 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
         if (!reportId) return;
 
         try {
-            // Pass generation mode from ref (set by startTocGeneration)
-            await approveToc(reportId, toc, currentGenerationModeRef.current);
+            // Pass generation mode and content length from refs (set by startTocGeneration)
+            await approveToc(
+                reportId,
+                toc,
+                currentGenerationModeRef.current,
+                currentContentLengthRef.current // T099l
+            );
             setStep('generating');
         } catch (err) {
             // Error handled by hook
@@ -196,9 +206,10 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
 
     // Expose methods to parent via ref
     useImperativeHandle(ref, () => ({
-        startTocGeneration: async (mode?: GenerationMode) => {
-            // Store mode in ref before approval (avoids async state race condition)
+        startTocGeneration: async (mode?: GenerationMode, length?: ContentLength) => {
+            // Store mode and length in refs before approval (avoids async state race condition)
             currentGenerationModeRef.current = mode ?? externalGenerationMode ?? 'ai_assisted';
+            currentContentLengthRef.current = length ?? externalContentLength ?? 'concise'; // T099l
             if (tocEditorRef.current) {
                 await tocEditorRef.current.approve();
             }
@@ -206,7 +217,7 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
         cancel: handleCancel,
         isSubmitting: tocEditorRef.current?.isSubmitting ?? false,
         sectionCount: tocEditorRef.current?.sectionCount ?? 0,
-    }), [handleCancel, externalGenerationMode, tocEditorRef.current?.isSubmitting, tocEditorRef.current?.sectionCount]);
+    }), [handleCancel, externalGenerationMode, externalContentLength, tocEditorRef.current?.isSubmitting, tocEditorRef.current?.sectionCount]);
 
     // Render based on step
     const renderStep = () => {

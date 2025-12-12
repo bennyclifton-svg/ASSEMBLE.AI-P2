@@ -45,6 +45,9 @@ export function setProgressEmitter(emitter: ProgressEmitter | null) {
 
 /**
  * Build prompt for section generation
+ *
+ * T099k: For AI-assisted mode (Long RFT), uses templateBaseline as the foundation
+ * T099l: Adjusts content length based on contentLength setting
  */
 function buildSectionPrompt(
     section: TocSection,
@@ -62,9 +65,36 @@ function buildSectionPrompt(
         ? `\n## User Feedback\n${state.userFeedback.instructions || 'Please regenerate this section.'}\n`
         : '';
 
+    // T099k: Include template baseline if available (Long RFT builds on Short RFT)
+    const templateBaselineSection = state.templateBaseline
+        ? `## Template Baseline (IMPORTANT - Use as foundation)
+
+The following content was generated from the Planning Card data using our standard templates.
+You MUST use this as the foundation and EXPAND upon it with additional professional analysis.
+Do NOT discard this content - enhance and elaborate on it.
+
+\`\`\`
+${state.templateBaseline}
+\`\`\`
+
+---
+
+`
+        : '';
+
+    // T099l: Adjust word count based on contentLength setting
+    const contentLengthInstructions = state.contentLength === 'lengthy'
+        ? `6. Be comprehensive and detailed (1500-2500 words)
+7. Provide thorough technical analysis and professional recommendations
+8. Expand on each point with detailed explanations and examples
+9. Include comprehensive risk considerations and mitigation strategies`
+        : `6. Be focused and efficient (500-800 words)
+7. Cover essential points concisely
+8. Prioritize the most important information`;
+
     return `You are a construction project management expert generating content for a Tender Request document.
 
-${hybridContext}
+${templateBaselineSection}${hybridContext}
 
 ## Current Section
 Section ${sectionNumber} of ${totalSections}: "${section.title}"
@@ -75,14 +105,21 @@ ${feedbackInstructions}
 
 ## Instructions
 
-Generate professional content for this section of the tender request. Your response should:
+${state.templateBaseline ? `IMPORTANT: You are ENHANCING the template baseline above. Your response should:
+
+1. START with the template baseline content as the foundation
+2. EXPAND each point with additional professional analysis and context
+3. INCORPORATE relevant information from the Document Context below
+4. ADD professional recommendations and considerations
+5. MAINTAIN the structure while enriching the content
+` : `Generate professional content for this section of the tender request. Your response should:
 
 1. Be appropriate for the ${state.discipline || 'construction'} discipline
 2. Reference specific details from the Project Context above
 3. Address relevant objectives and stakeholder needs
 4. Consider identified risks where appropriate
 5. Use professional construction industry terminology
-6. Be concise but comprehensive (300-800 words)
+`}${contentLengthInstructions}
 
 ${state.currentRetrievedChunks.length > 0 ? `
 ## Citation Instructions
@@ -147,12 +184,14 @@ export async function generateSectionNode(
         const prompt = buildSectionPrompt(currentSection, state, hybridContext);
 
         // Generate with Claude streaming
-        console.log('[generate-section] Calling Claude with streaming...');
+        // T099l: Adjust max_tokens based on content length setting
+        const maxTokens = state.contentLength === 'lengthy' ? 4000 : 2000;
+        console.log('[generate-section] Calling Claude with streaming... (max_tokens:', maxTokens, ')');
 
         let content = '';
         const stream = anthropic.messages.stream({
             model: 'claude-haiku-4-5-20251001',
-            max_tokens: 2000,
+            max_tokens: maxTokens,
             messages: [
                 {
                     role: 'user',
@@ -313,10 +352,10 @@ export async function regenerateSection(
 // ============================================
 
 import {
-    formatFeeItemsAsMarkdown,
     formatPriceItemsAsMarkdown,
-    fetchDisciplineFeeItems,
     fetchTradePriceItems,
+    fetchCostLinesByDiscipline,
+    formatCostLinesAsMarkdown,
     type DisciplineContext,
     type TradeContext,
 } from '../../services/planning-context';
@@ -566,15 +605,16 @@ import type { PlanningContext } from '../../services/planning-context';
 
 function formatProjectDetails(context: PlanningContext): string {
     // Build 8 rows for 2-column table (label | value)
+    // Order matches Planning Card / Details section layout exactly
     const rows: Array<[string, string]> = [
         ['Project Name', context.details.projectName || '-'],
         ['Address', context.details.address || '-'],
+        ['Zoning', context.details.zoning || '-'],
+        ['Lot Area (m²)', context.details.lotArea ? `${context.details.lotArea}` : '-'],
         ['Building Class', context.details.buildingClass || '-'],
         ['Number of Stories', context.details.numberOfStories?.toString() || '-'],
+        ['Legal Address', context.details.legalAddress || '-'],
         ['Jurisdiction', context.details.jurisdiction || '-'],
-        ['Zoning', context.details.zoning || '-'],
-        ['Lot Area', context.details.lotArea ? `${context.details.lotArea} sqm` : '-'],
-        ['Budget', context.details.budget || '-'],
     ];
 
     // Build HTML table with shaded label column (same as transmittal header)
@@ -660,8 +700,9 @@ async function formatFeeStructure(state: ReportStateType): Promise<string> {
         return `Discipline not found.`;
     }
 
-    const feeItems = await fetchDisciplineFeeItems(discipline.id);
-    return formatFeeItemsAsMarkdown(feeItems, discipline.name);
+    // Fetch cost lines from cost plan instead of fee items
+    const costLines = await fetchCostLinesByDiscipline(discipline.id);
+    return formatCostLinesAsMarkdown(costLines, discipline.name);
 }
 
 async function formatPriceStructure(state: ReportStateType): Promise<string> {

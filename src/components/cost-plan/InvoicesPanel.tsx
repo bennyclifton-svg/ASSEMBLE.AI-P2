@@ -270,8 +270,8 @@ function InvoiceRow({ invoice, costLines, onUpdate }: InvoiceRowProps) {
 
     // Sort cost lines alphabetically by cost code or description
     const sortedCostLines = [...costLines].sort((a, b) => {
-        const aKey = a.costCode || a.description;
-        const bKey = b.costCode || b.description;
+        const aKey = a.costCode || a.activity;
+        const bKey = b.costCode || b.activity;
         return aKey.localeCompare(bKey, undefined, { numeric: true });
     });
 
@@ -385,12 +385,12 @@ function InvoiceRow({ invoice, costLines, onUpdate }: InvoiceRowProps) {
                     value={invoice.costLineId || ''}
                     onChange={(e) => handleCostLineChange(e.target.value)}
                     className="w-full px-1 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[11px] text-[#858585] focus:outline-none cursor-pointer"
-                    title={invoice.costLine?.description || ''}
+                    title={invoice.costLine?.activity || ''}
                 >
                     <option value="">None</option>
                     {sortedCostLines.map((line) => (
-                        <option key={line.id} value={line.id} title={line.description}>
-                            {line.costCode ? `${line.costCode} - ${line.description}` : line.description}
+                        <option key={line.id} value={line.id} title={line.activity}>
+                            {line.costCode ? `${line.costCode} - ${line.activity}` : line.activity}
                         </option>
                     ))}
                 </select>
@@ -490,8 +490,8 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
 
     // Sort cost lines alphabetically by cost code or description
     const sortedCostLines = [...costLines].sort((a, b) => {
-        const aKey = a.costCode || a.description;
-        const bKey = b.costCode || b.description;
+        const aKey = a.costCode || a.activity;
+        const bKey = b.costCode || b.activity;
         return aKey.localeCompare(bKey, undefined, { numeric: true });
     });
 
@@ -553,12 +553,12 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     value={formData.costLineId}
                     onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
                     className={inputClass}
-                    title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.description : ''}
+                    title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
                 >
                     <option value="">None</option>
                     {sortedCostLines.map((line) => (
-                        <option key={line.id} value={line.id} title={line.description}>
-                            {line.costCode ? `${line.costCode} - ${line.description}` : line.description}
+                        <option key={line.id} value={line.id} title={line.activity}>
+                            {line.costCode ? `${line.costCode} - ${line.activity}` : line.activity}
                         </option>
                     ))}
                 </select>
