@@ -6,8 +6,7 @@ import { eq } from 'drizzle-orm';
 import JSZip from 'jszip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import fs from 'fs';
-import path from 'path';
+import { getFileFromStorage } from '@/lib/storage';
 
 export async function GET(
     request: NextRequest,
@@ -57,8 +56,9 @@ export async function GET(
         // Add files to ZIP
         for (const item of items) {
             try {
-                if (fs.existsSync(item.storagePath)) {
-                    const fileData = fs.readFileSync(item.storagePath);
+                // Use getFileFromStorage to support both local and Supabase storage
+                const fileData = await getFileFromStorage(item.storagePath);
+                if (fileData) {
                     folder.file(item.originalName, fileData);
                 } else {
                     console.warn(`File not found: ${item.storagePath}`);

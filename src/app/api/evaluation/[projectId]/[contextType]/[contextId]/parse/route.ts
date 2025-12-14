@@ -22,7 +22,7 @@ import {
 import { eq, and, asc, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
-import { storage } from '@/lib/storage/local';
+import { storage } from '@/lib/storage';
 import { parseTenderForEvaluation } from '@/lib/services/tender-parser';
 import type { TenderParseResult } from '@/types/evaluation';
 

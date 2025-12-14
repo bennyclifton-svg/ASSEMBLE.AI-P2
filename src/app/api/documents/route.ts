@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { validateExcelFile } from '@/lib/excel-validation';
-import { storage } from '@/lib/storage/local';
+import { storage } from '@/lib/storage';
 import { versioning } from '@/lib/versioning';
 import { db } from '@/lib/db';
 import { documents, versions, fileAssets, categories, subcategories, projects, consultantDisciplines, contractorTrades } from '@/lib/db/schema';

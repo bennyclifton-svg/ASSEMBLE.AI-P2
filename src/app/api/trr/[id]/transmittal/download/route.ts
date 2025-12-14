@@ -11,8 +11,7 @@ import { eq } from 'drizzle-orm';
 import JSZip from 'jszip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import fs from 'fs';
-import path from 'path';
+import { getFileFromStorage } from '@/lib/storage';
 
 interface RouteContext {
     params: Promise<{ id: string }>;
@@ -69,15 +68,17 @@ export async function GET(
         // Add files to ZIP
         for (const item of items) {
             try {
-                // Storage paths are relative like /uploads/filename.ext
-                // Need to join with process.cwd() to get full path
-                const fullPath = item.storagePath ? path.join(process.cwd(), item.storagePath) : null;
-                if (fullPath && fs.existsSync(fullPath)) {
-                    const fileData = fs.readFileSync(fullPath);
-                    folder.file(item.originalName || 'unknown_file', fileData);
+                // Use getFileFromStorage to support both local and Supabase storage
+                if (item.storagePath) {
+                    const fileData = await getFileFromStorage(item.storagePath);
+                    if (fileData) {
+                        folder.file(item.originalName || 'unknown_file', fileData);
+                    } else {
+                        console.warn(`File not found: ${item.storagePath}`);
+                        folder.file(`${item.originalName || 'unknown'}.txt`, `Error: File not found on server.`);
+                    }
                 } else {
-                    console.warn(`File not found: ${fullPath}`);
-                    folder.file(`${item.originalName || 'unknown'}.txt`, `Error: File not found on server.`);
+                    folder.file(`${item.originalName || 'unknown'}.txt`, `Error: No storage path.`);
                 }
             } catch (e) {
                 console.error(`Failed to add file ${item.originalName} to zip`, e);

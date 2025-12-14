@@ -23,7 +23,7 @@ import {
 import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
-import { storage } from '@/lib/storage/local';
+import { storage } from '@/lib/storage';
 import { parseNonPriceTender } from '@/lib/services/non-price-parser';
 import { NON_PRICE_CRITERIA } from '@/lib/constants/non-price-criteria';
 import type { QualityRating } from '@/types/evaluation';
