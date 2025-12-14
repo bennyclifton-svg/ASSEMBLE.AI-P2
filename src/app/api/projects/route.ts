@@ -171,16 +171,13 @@ export async function POST(request: Request) {
             const costLineRecords = DEFAULT_COST_LINES.map((template) => ({
                 id: crypto.randomUUID(),
                 projectId,
-                companyId: null, // No company assigned initially
                 section: template.section,
                 costCode: template.costCode,
-                description: template.description,
+                activity: template.description, // PG schema uses 'activity' column
                 reference: null,
                 budgetCents: template.budgetCents,
                 approvedContractCents: 0,
                 sortOrder: template.sortOrder,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
             }));
             await tx.insert(costLines).values(costLineRecords);
 
