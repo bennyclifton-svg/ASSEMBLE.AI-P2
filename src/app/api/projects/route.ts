@@ -78,8 +78,7 @@ export async function POST(request: Request) {
         const defaultSettings = org ? JSON.parse(org.defaultSettings || '{}') : {};
 
         // Use transaction to ensure atomic initialization (FR-055)
-        // Note: better-sqlite3 is synchronous, so we use sync transaction
-        const result = db.transaction((tx) => {
+        const result = await db.transaction(async (tx) => {
             // 1. Create project with organizationId
             const projectId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             const newProject = {
@@ -91,7 +90,7 @@ export async function POST(request: Request) {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };
-            tx.insert(projects).values(newProject).run();
+            await tx.insert(projects).values(newProject);
 
             // 2. Initialize consultant disciplines (37) with org defaults (FR-051, FR-056)
             const enabledDisciplines: string[] = defaultSettings.enabledDisciplines || [];
@@ -102,7 +101,7 @@ export async function POST(request: Request) {
                 isEnabled: enabledDisciplines.includes(d.name),
                 order: d.order,
             }));
-            const createdDisciplines = tx.insert(consultantDisciplines).values(disciplineRecords).returning().all();
+            const createdDisciplines = await tx.insert(consultantDisciplines).values(disciplineRecords).returning();
 
             // 3. Create status records for each discipline (144 total) (FR-058)
             const disciplineStatusRecords = createdDisciplines.flatMap((d) =>
@@ -113,7 +112,7 @@ export async function POST(request: Request) {
                     isActive: false,
                 }))
             );
-            tx.insert(consultantStatuses).values(disciplineStatusRecords).run();
+            await tx.insert(consultantStatuses).values(disciplineStatusRecords);
 
             // 4. Initialize contractor trades (21) with org defaults (FR-052, FR-057)
             const enabledTrades: string[] = defaultSettings.enabledTrades || [];
@@ -124,7 +123,7 @@ export async function POST(request: Request) {
                 isEnabled: enabledTrades.includes(t.name),
                 order: t.order,
             }));
-            const createdTrades = tx.insert(contractorTrades).values(tradeRecords).returning().all();
+            const createdTrades = await tx.insert(contractorTrades).values(tradeRecords).returning();
 
             // 5. Create status records for each trade (84 total) (FR-058)
             const tradeStatusRecords = createdTrades.flatMap((t) =>
@@ -135,7 +134,7 @@ export async function POST(request: Request) {
                     isActive: false,
                 }))
             );
-            tx.insert(contractorStatuses).values(tradeStatusRecords).run();
+            await tx.insert(contractorStatuses).values(tradeStatusRecords);
 
             // 6. Initialize 5 default project stages (FR-053)
             const stageRecords = [
@@ -151,21 +150,21 @@ export async function POST(request: Request) {
                 stageName: s.name,
                 status: 'not_started' as const,
             }));
-            tx.insert(projectStages).values(stageRecords).run();
+            await tx.insert(projectStages).values(stageRecords);
 
             // 7. Initialize empty ProjectDetails (FR-054)
-            tx.insert(projectDetails).values({
+            await tx.insert(projectDetails).values({
                 id: crypto.randomUUID(),
                 projectId,
                 projectName: name.trim(), // Use project name as default
                 address: '', // Empty, user will fill in
-            }).run();
+            });
 
             // 8. Initialize empty ProjectObjectives (FR-054)
-            tx.insert(projectObjectives).values({
+            await tx.insert(projectObjectives).values({
                 id: crypto.randomUUID(),
                 projectId,
-            }).run();
+            });
 
             // 9. Initialize default cost lines (FR-009 - Default Financial Data)
             // Creates 20 pre-populated cost line entries across 4 sections
@@ -183,15 +182,14 @@ export async function POST(request: Request) {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             }));
-            tx.insert(costLines).values(costLineRecords).run();
+            await tx.insert(costLines).values(costLineRecords);
 
             // 10. Add sample variation (FR-009 - Demonstrates linking workflow)
             // Linked to 2.02 Architect
             const architectCostLineId = costLineRecords.find(cl => cl.costCode === '2.02')?.id;
-            const sampleVariationId = crypto.randomUUID();
             if (architectCostLineId) {
-                tx.insert(variations).values({
-                    id: sampleVariationId,
+                await tx.insert(variations).values({
+                    id: crypto.randomUUID(),
                     projectId,
                     costLineId: architectCostLineId,
                     variationNumber: 'PV-001',
@@ -202,17 +200,16 @@ export async function POST(request: Request) {
                     amountApprovedCents: 0,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                }).run();
+                });
             }
 
             // 11. Add sample invoice (FR-009 - Demonstrates linking workflow)
             // Linked to 2.01 Project Manager
             const pmCostLineId = costLineRecords.find(cl => cl.costCode === '2.01')?.id;
-            const sampleInvoiceId = crypto.randomUUID();
             if (pmCostLineId) {
                 const currentDate = new Date();
-                tx.insert(invoices).values({
-                    id: sampleInvoiceId,
+                await tx.insert(invoices).values({
+                    id: crypto.randomUUID(),
                     projectId,
                     costLineId: pmCostLineId,
                     companyId: null,
@@ -226,7 +223,7 @@ export async function POST(request: Request) {
                     paidStatus: 'unpaid',
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                }).run();
+                });
             }
 
             // Return project with initialization summary
