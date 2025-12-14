@@ -42,11 +42,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get current organization settings
-    const org = await db
+    const [org] = await db
       .select()
       .from(organizations)
       .where(eq(organizations.id, authResult.user.organizationId))
-      .get();
+      .limit(1);
 
     if (!org) {
       return NextResponse.json(
@@ -104,11 +104,11 @@ export async function GET() {
       );
     }
 
-    const org = await db
+    const [org] = await db
       .select()
       .from(organizations)
       .where(eq(organizations.id, authResult.user.organizationId))
-      .get();
+      .limit(1);
 
     if (!org) {
       return NextResponse.json(

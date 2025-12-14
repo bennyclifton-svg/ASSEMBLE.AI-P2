@@ -11,21 +11,61 @@ import { eq } from 'drizzle-orm';
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     return handleApiError(async () => {
-        const { id } = params;
+        const { id } = await params;
 
-        const report = await db
+        const [report] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
         if (!report) {
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
         }
 
         return NextResponse.json(report);
+    });
+}
+
+/**
+ * PUT /api/rft-new/[id] - Update RFT NEW report (e.g., rftDate)
+ */
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    return handleApiError(async () => {
+        const { id } = await params;
+        const body = await request.json();
+        const { rftDate } = body;
+
+        const [existing] = await db
+            .select()
+            .from(rftNew)
+            .where(eq(rftNew.id, id))
+            .limit(1);
+
+        if (!existing) {
+            return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
+        }
+
+        await db
+            .update(rftNew)
+            .set({
+                rftDate,
+                updatedAt: new Date().toISOString(),
+            })
+            .where(eq(rftNew.id, id));
+
+        const [updated] = await db
+            .select()
+            .from(rftNew)
+            .where(eq(rftNew.id, id))
+            .limit(1);
+
+        return NextResponse.json(updated);
     });
 }

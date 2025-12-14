@@ -45,7 +45,7 @@ export async function POST(
     }
 
     // Get the library
-    const library = await db
+    const [library] = await db
       .select()
       .from(knowledgeLibraries)
       .where(
@@ -54,7 +54,7 @@ export async function POST(
           eq(knowledgeLibraries.type, type)
         )
       )
-      .get();
+      .limit(1);
 
     if (!library) {
       return NextResponse.json(

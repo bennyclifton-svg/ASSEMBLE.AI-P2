@@ -54,11 +54,11 @@ export async function PUT(
       })
       .where(eq(contractors.id, id));
 
-    const updatedContractor = await db
+    const [updatedContractor] = await db
       .select()
       .from(contractors)
       .where(eq(contractors.id, id))
-      .get();
+      .limit(1);
 
     if (!updatedContractor) {
       return NextResponse.json(
@@ -86,11 +86,11 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if contractor exists
-    const contractor = await db
+    const [contractor] = await db
       .select()
       .from(contractors)
       .where(eq(contractors.id, id))
-      .get();
+      .limit(1);
 
     if (!contractor) {
       return NextResponse.json(

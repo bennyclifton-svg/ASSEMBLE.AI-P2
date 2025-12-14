@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
         // For each addendum, count transmittal documents
         const result = await Promise.all(
-            list.map(async (item) => {
+            list.map(async (item: typeof list[number]) => {
                 const transmittalCount = await db
                     .select({ id: addendumTransmittals.id })
                     .from(addendumTransmittals)
@@ -80,11 +80,11 @@ export async function POST(request: NextRequest) {
             conditions.push(isNull(addenda.disciplineId));
         }
 
-        const existing = await db
+        const [existing] = await db
             .select({ maxNum: max(addenda.addendumNumber) })
             .from(addenda)
             .where(and(...conditions))
-            .get();
+            .limit(1);
 
         const nextNumber = (existing?.maxNum || 0) + 1;
 
@@ -99,11 +99,11 @@ export async function POST(request: NextRequest) {
             content: '',
         });
 
-        const created = await db
+        const [created] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
         return NextResponse.json(created);
     });

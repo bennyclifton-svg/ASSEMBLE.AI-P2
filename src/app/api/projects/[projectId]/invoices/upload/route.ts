@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { invoices, fileAssets, documents, versions, categories, subcategories, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { invoices, fileAssets, documents, versions, categories, subcategories, consultantDisciplines, contractorTrades, costLines } from '@/lib/db/schema';
+import { eq, and, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage/local';
 import { extractInvoiceFromPdf } from '@/lib/invoice/extract';
@@ -183,6 +183,37 @@ export async function POST(
     const periodYear = invoiceDate.getFullYear();
     const periodMonth = invoiceDate.getMonth() + 1; // 1-12
 
+    // Step 6.5: Match to cost line based on discipline/trade
+    let matchedCostLineId: string | null = null;
+
+    if (companyMatch.discipline?.disciplineId) {
+      // Find cost line with matching disciplineId
+      const matchedCostLine = await db.query.costLines.findFirst({
+        where: and(
+          eq(costLines.projectId, projectId),
+          eq(costLines.disciplineId, companyMatch.discipline.disciplineId),
+          isNull(costLines.deletedAt)
+        ),
+      });
+      if (matchedCostLine) {
+        matchedCostLineId = matchedCostLine.id;
+        console.log(`[invoice-upload] Matched to cost line by discipline: ${matchedCostLine.id}`);
+      }
+    } else if (companyMatch.trade?.tradeId) {
+      // Find cost line with matching tradeId
+      const matchedCostLine = await db.query.costLines.findFirst({
+        where: and(
+          eq(costLines.projectId, projectId),
+          eq(costLines.tradeId, companyMatch.trade.tradeId),
+          isNull(costLines.deletedAt)
+        ),
+      });
+      if (matchedCostLine) {
+        matchedCostLineId = matchedCostLine.id;
+        console.log(`[invoice-upload] Matched to cost line by trade: ${matchedCostLine.id}`);
+      }
+    }
+
     // Step 7: Create Invoice record
     const invoiceId = uuidv4();
     const now = new Date().toISOString();
@@ -190,6 +221,7 @@ export async function POST(
     await db.insert(invoices).values({
       id: invoiceId,
       projectId,
+      costLineId: matchedCostLineId,
       companyId: companyMatch.company?.companyId || null,
       fileAssetId, // Link to source PDF
       invoiceDate: extractedData.invoiceDate,
@@ -229,6 +261,8 @@ export async function POST(
               trade: companyMatch.trade?.tradeName,
             }
           : null,
+        costLineMatched: !!matchedCostLineId,
+        costLineId: matchedCostLineId,
       },
       document: {
         documentId,
@@ -244,8 +278,12 @@ export async function POST(
     return NextResponse.json(response, { status: 201 });
   } catch (error) {
     console.error('[invoice-upload] Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('[invoice-upload] Error details:', errorMessage);
+    if (errorStack) console.error('[invoice-upload] Stack:', errorStack);
     return NextResponse.json(
-      { error: 'Failed to process invoice upload' },
+      { error: 'Failed to process invoice upload', details: errorMessage },
       { status: 500 }
     );
   }

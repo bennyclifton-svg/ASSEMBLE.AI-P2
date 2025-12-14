@@ -6,10 +6,11 @@ import { eq, desc } from 'drizzle-orm';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     return handleApiError(async () => {
-        const documentId = params.id;
+        const { id } = await params;
+        const documentId = id;
 
         const history = await db.select({
             id: versions.id,

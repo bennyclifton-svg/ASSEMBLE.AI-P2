@@ -73,7 +73,7 @@ export async function GET(
             );
         }
 
-        const chunk = chunkResult.rows[0] as DocumentChunk;
+        const chunk = chunkResult.rows[0] as unknown as DocumentChunk;
 
         // Get document info (placeholder - in production would query SQLite)
         const document: DocumentInfo = {
@@ -102,7 +102,7 @@ export async function GET(
             `);
 
             if (parentResult.rows && parentResult.rows.length > 0) {
-                parentChunk = parentResult.rows[0] as DocumentChunk;
+                parentChunk = parentResult.rows[0] as unknown as DocumentChunk;
             }
         }
 
@@ -128,7 +128,7 @@ export async function GET(
                 LIMIT 10
             `);
 
-            siblingChunks = (siblingsResult.rows || []) as DocumentChunk[];
+            siblingChunks = (siblingsResult.rows || []) as unknown as DocumentChunk[];
         }
 
         // Get child chunks
@@ -150,7 +150,7 @@ export async function GET(
             LIMIT 20
         `);
 
-        const childChunks = (childrenResult.rows || []) as DocumentChunk[];
+        const childChunks = (childrenResult.rows || []) as unknown as DocumentChunk[];
 
         const response: ChunkWithContext = {
             ...chunk,

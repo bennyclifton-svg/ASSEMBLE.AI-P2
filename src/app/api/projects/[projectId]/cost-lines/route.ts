@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { costLines, consultantDisciplines } from '@/lib/db/schema';
+import { costLines, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
 import { eq, isNull, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { CreateCostLineInput } from '@/types/cost-plan';
@@ -34,10 +34,11 @@ export async function GET(
             .where(and(...filters))
             .orderBy(costLines.section, costLines.sortOrder);
 
-        // Fetch disciplines for each cost line
+        // Fetch disciplines and trades for each cost line
         const result = await Promise.all(
             projectCostLines.map(async (cl) => {
                 let discipline = null;
+                let trade = null;
                 if (cl.disciplineId) {
                     const [disc] = await db
                         .select()
@@ -45,7 +46,14 @@ export async function GET(
                         .where(eq(consultantDisciplines.id, cl.disciplineId));
                     discipline = disc || null;
                 }
-                return { ...cl, discipline };
+                if (cl.tradeId) {
+                    const [tr] = await db
+                        .select()
+                        .from(contractorTrades)
+                        .where(eq(contractorTrades.id, cl.tradeId));
+                    trade = tr || null;
+                }
+                return { ...cl, discipline, trade };
             })
         );
 
@@ -105,6 +113,7 @@ export async function POST(
             id,
             projectId,
             disciplineId: body.disciplineId || null,
+            tradeId: body.tradeId || null,
             section: body.section,
             costCode: body.costCode || null,
             activity: body.activity,

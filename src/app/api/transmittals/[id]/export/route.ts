@@ -17,7 +17,7 @@ export async function GET(
         const { id: transmittalId } = await params;
 
         // 1. Fetch Transmittal Details
-        const transmittal = await db.select({
+        const [transmittal] = await db.select({
             id: transmittals.id,
             name: transmittals.name,
             status: transmittals.status,
@@ -27,7 +27,7 @@ export async function GET(
             .from(transmittals)
             .leftJoin(subcategories, eq(transmittals.subcategoryId, subcategories.id))
             .where(eq(transmittals.id, transmittalId))
-            .get();
+            .limit(1);
 
         if (!transmittal) {
             return NextResponse.json({ error: 'Transmittal not found' }, { status: 404 });

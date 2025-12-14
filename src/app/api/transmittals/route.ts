@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
                 conditions.push(isNull(transmittals.disciplineId));
             }
 
-            const transmittal = await db
+            const [transmittal] = await db
                 .select()
                 .from(transmittals)
                 .where(and(...conditions))
-                .get();
+                .limit(1);
 
             if (!transmittal) {
                 return NextResponse.json({ error: 'Transmittal not found' }, { status: 404 });
@@ -108,11 +108,11 @@ export async function POST(request: NextRequest) {
                 conditions.push(isNull(transmittals.disciplineId));
             }
 
-            const existing = await db
+            const [existing] = await db
                 .select({ id: transmittals.id })
                 .from(transmittals)
                 .where(and(...conditions))
-                .get();
+                .limit(1);
 
             if (existing) {
                 // Update existing transmittal

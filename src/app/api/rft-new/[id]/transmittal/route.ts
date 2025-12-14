@@ -14,11 +14,11 @@ export async function GET(
         const { id } = await params;
 
         // Verify RFT NEW exists
-        const report = await db
+        const [report] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
         if (!report) {
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
@@ -74,13 +74,13 @@ export async function POST(
         }
 
         // Verify RFT NEW exists
-        const report = await db
+        const [report2] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
-        if (!report) {
+        if (!report2) {
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
         }
 

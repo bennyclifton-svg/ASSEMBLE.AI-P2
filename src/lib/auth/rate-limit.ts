@@ -35,11 +35,11 @@ export async function checkRateLimit(email: string): Promise<{
 
   // If not in cache, load from database
   if (!attempt) {
-    const dbAttempt = await db
+    const [dbAttempt] = await db
       .select()
       .from(loginAttempts)
       .where(eq(loginAttempts.email, normalizedEmail))
-      .get();
+      .limit(1);
 
     if (dbAttempt) {
       attempt = {
@@ -81,11 +81,11 @@ export async function recordFailedAttempt(email: string): Promise<void> {
 
   if (!attempt) {
     // Check database
-    const dbAttempt = await db
+    const [dbAttempt] = await db
       .select()
       .from(loginAttempts)
       .where(eq(loginAttempts.email, normalizedEmail))
-      .get();
+      .limit(1);
 
     if (dbAttempt) {
       attempt = {
@@ -108,11 +108,11 @@ export async function recordFailedAttempt(email: string): Promise<void> {
   attemptCache.set(normalizedEmail, attempt);
 
   // Persist to database
-  const existing = await db
+  const [existing] = await db
     .select()
     .from(loginAttempts)
     .where(eq(loginAttempts.email, normalizedEmail))
-    .get();
+    .limit(1);
 
   if (existing) {
     await db

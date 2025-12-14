@@ -47,11 +47,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Find user
-    const user = await db
+    const [user] = await db
       .select()
       .from(users)
       .where(eq(users.email, normalizedEmail))
-      .get();
+      .limit(1);
 
     if (!user) {
       await recordFailedAttempt(normalizedEmail);

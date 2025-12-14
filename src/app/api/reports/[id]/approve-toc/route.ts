@@ -80,7 +80,7 @@ async function generateAllSections(
     }
 
     // Fetch transmittal if discipline ID specified (use ID directly, not name lookup)
-    let transmittal = null;
+    let transmittal: Awaited<ReturnType<typeof fetchTransmittalForDiscipline>> = null;
     if (disciplineId) {
         console.log('[approve-toc] Fetching transmittal for disciplineId:', disciplineId);
         transmittal = await fetchTransmittalForDiscipline(projectId, disciplineId);

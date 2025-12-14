@@ -41,11 +41,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // 1. Fetch RFT NEW record
-        const report = await db
+        const [report] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
         if (!report) {
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
@@ -54,27 +54,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const projectId = report.projectId;
 
         // 2. Fetch Project & Details
-        const project = await db
+        const [project] = await db
             .select({ name: projects.name })
             .from(projects)
             .where(eq(projects.id, projectId))
-            .get();
+            .limit(1);
 
-        const details = await db
+        const [details] = await db
             .select({
                 projectName: projectDetails.projectName,
                 address: projectDetails.address,
             })
             .from(projectDetails)
             .where(eq(projectDetails.projectId, projectId))
-            .get();
+            .limit(1);
 
         // 3. Fetch Planning Data (Objectives, Stages, Risks)
-        const objectives = await db
+        const [objectives] = await db
             .select()
             .from(projectObjectives)
             .where(eq(projectObjectives.projectId, projectId))
-            .get();
+            .limit(1);
 
         const stages = await db
             .select()
@@ -97,11 +97,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         if (report.disciplineId) {
             contextType = 'Discipline';
-            const discipline = await db
+            const [discipline] = await db
                 .select()
                 .from(consultantDisciplines)
                 .where(eq(consultantDisciplines.id, report.disciplineId))
-                .get();
+                .limit(1);
 
             if (discipline) {
                 briefData = {
@@ -124,11 +124,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         } else if (report.tradeId) {
             contextType = 'Trade';
-            const trade = await db
+            const [trade] = await db
                 .select()
                 .from(contractorTrades)
                 .where(eq(contractorTrades.id, report.tradeId))
-                .get();
+                .limit(1);
 
             if (trade) {
                 briefData = {

@@ -9,10 +9,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { addenda, addendumTransmittals, documents, versions, fileAssets, projectDetails, projects } from '@/lib/db/schema';
+import { addenda, addendumTransmittals, documents, versions, fileAssets, projectDetails, projects, categories, subcategories } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { exportToPDF } from '@/lib/export/pdf-enhanced';
 import { exportToDOCX } from '@/lib/export/docx-enhanced';
+import { getCategoryById } from '@/lib/constants/categories';
 
 type RouteParams = {
     params: Promise<{ id: string }>;
@@ -33,11 +34,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Fetch addendum
-        const addendum = await db
+        const [addendum] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
         if (!addendum) {
             return NextResponse.json(
@@ -47,34 +48,39 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Fetch project details
-        const project = await db
+        const [project] = await db
             .select({
                 name: projects.name,
             })
             .from(projects)
             .where(eq(projects.id, addendum.projectId))
-            .get();
+            .limit(1);
 
-        const details = await db
+        const [details] = await db
             .select({
                 projectName: projectDetails.projectName,
                 address: projectDetails.address,
             })
             .from(projectDetails)
             .where(eq(projectDetails.projectId, addendum.projectId))
-            .get();
+            .limit(1);
 
-        // Fetch transmittal documents
+        // Fetch transmittal documents with category/subcategory info
         const transmittalDocs = await db
             .select({
                 originalName: fileAssets.originalName,
                 versionNumber: versions.versionNumber,
-                createdAt: addendumTransmittals.createdAt,
+                categoryId: documents.categoryId,
+                categoryName: categories.name,
+                subcategoryId: documents.subcategoryId,
+                subcategoryName: subcategories.name,
             })
             .from(addendumTransmittals)
             .innerJoin(documents, eq(addendumTransmittals.documentId, documents.id))
             .innerJoin(versions, eq(documents.latestVersionId, versions.id))
             .innerJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
+            .leftJoin(categories, eq(documents.categoryId, categories.id))
+            .leftJoin(subcategories, eq(documents.subcategoryId, subcategories.id))
             .where(eq(addendumTransmittals.addendumId, id))
             .orderBy(addendumTransmittals.sortOrder);
 
@@ -143,7 +149,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 interface TransmittalDoc {
     originalName: string;
     versionNumber: number;
-    createdAt: string | null;
+    categoryId: string | null;
+    categoryName: string | null;
+    subcategoryId: string | null;
+    subcategoryName: string | null;
 }
 
 interface AddendumHTMLParams {
@@ -157,16 +166,23 @@ interface AddendumHTMLParams {
 function generateAddendumHTML(params: AddendumHTMLParams): string {
     const { projectName, address, addendumLabel, content, transmittalDocs } = params;
 
-    // Generate transmittal table rows
+    // Generate transmittal table rows matching webpage format
     const transmittalRows = transmittalDocs.length > 0
-        ? transmittalDocs.map(doc => `
+        ? transmittalDocs.map((doc, index) => {
+            // Get color from constants based on categoryId
+            const category = doc.categoryId ? getCategoryById(doc.categoryId) : null;
+            const categoryColor = category?.color || '#666';
+            return `
             <tr>
+                <td class="num-col">${index + 1}</td>
                 <td>${escapeHtml(doc.originalName)}</td>
-                <td>${doc.versionNumber}</td>
-                <td>${doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : '-'}</td>
+                <td class="rev-col">${String(doc.versionNumber).padStart(2, '0')}</td>
+                <td style="color: ${categoryColor}">${doc.categoryName ? escapeHtml(doc.categoryName) : '-'}</td>
+                <td style="color: ${categoryColor}">${doc.subcategoryName ? escapeHtml(doc.subcategoryName) : '-'}</td>
             </tr>
-        `).join('')
-        : '<tr><td colspan="3" style="text-align: center; color: #666;">No documents attached</td></tr>';
+        `;
+        }).join('')
+        : '<tr><td colspan="5" style="text-align: center; color: #666;">No documents attached</td></tr>';
 
     return `
 <!DOCTYPE html>
@@ -177,7 +193,7 @@ function generateAddendumHTML(params: AddendumHTMLParams): string {
             font-family: Arial, sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -210,9 +226,10 @@ function generateAddendumHTML(params: AddendumHTMLParams): string {
             margin-top: 32px;
         }
         .transmittal-section h3 {
-            color: #444;
-            border-bottom: 2px solid #ddd;
+            color: #c65d00;
+            border-bottom: 2px solid #c65d00;
             padding-bottom: 8px;
+            margin-bottom: 16px;
         }
         .transmittal-table {
             width: 100%;
@@ -222,14 +239,23 @@ function generateAddendumHTML(params: AddendumHTMLParams): string {
         .transmittal-table td {
             padding: 10px 12px;
             text-align: left;
-            border: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
         }
         .transmittal-table th {
             background-color: #f5f5f5;
-            font-weight: bold;
+            font-weight: 600;
+            color: #666;
         }
-        .transmittal-table tr:nth-child(even) {
-            background-color: #fafafa;
+        .transmittal-table .num-col {
+            width: 40px;
+            color: #999;
+        }
+        .transmittal-table .rev-col {
+            width: 60px;
+            text-align: center;
+        }
+        .transmittal-table th.rev-col {
+            text-align: center;
         }
     </style>
 </head>
@@ -259,9 +285,11 @@ function generateAddendumHTML(params: AddendumHTMLParams): string {
         <table class="transmittal-table">
             <thead>
                 <tr>
+                    <th class="num-col">#</th>
                     <th>Document</th>
-                    <th>Rev</th>
-                    <th>Date</th>
+                    <th class="rev-col">Rev</th>
+                    <th>Category</th>
+                    <th>Subcategory</th>
                 </tr>
             </thead>
             <tbody>

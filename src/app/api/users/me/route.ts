@@ -52,11 +52,11 @@ export async function PATCH(request: NextRequest) {
       }
 
       // Get user's current password hash
-      const user = await db
+      const [user] = await db
         .select({ passwordHash: users.passwordHash })
         .from(users)
         .where(eq(users.id, authResult.user.id))
-        .get();
+        .limit(1);
 
       if (!user) {
         return NextResponse.json(
@@ -94,7 +94,7 @@ export async function PATCH(request: NextRequest) {
       .where(eq(users.id, authResult.user.id));
 
     // Get updated user
-    const updatedUser = await db
+    const [updatedUser] = await db
       .select({
         id: users.id,
         email: users.email,
@@ -103,7 +103,7 @@ export async function PATCH(request: NextRequest) {
       })
       .from(users)
       .where(eq(users.id, authResult.user.id))
-      .get();
+      .limit(1);
 
     return NextResponse.json({
       user: updatedUser,

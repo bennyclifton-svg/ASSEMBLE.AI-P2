@@ -13,11 +13,11 @@ export async function GET(
     return handleApiError(async () => {
         const { id } = await params;
 
-        const addendum = await db
+        const [addendum] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
         if (!addendum) {
             return NextResponse.json({ error: 'Addendum not found' }, { status: 404 });
@@ -69,13 +69,13 @@ export async function POST(
             return NextResponse.json({ error: 'documentIds array is required' }, { status: 400 });
         }
 
-        const addendum = await db
+        const [addendum2] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
-        if (!addendum) {
+        if (!addendum2) {
             return NextResponse.json({ error: 'Addendum not found' }, { status: 404 });
         }
 
@@ -92,7 +92,7 @@ export async function POST(
                 .from(documents)
                 .where(inArray(documents.id, documentIds));
 
-            const validDocIds = new Set(validDocs.map(d => d.id));
+            const validDocIds = new Set(validDocs.map((d: { id: string }) => d.id));
 
             const itemsToInsert = documentIds
                 .filter((docId: string) => validDocIds.has(docId))
@@ -130,13 +130,13 @@ export async function DELETE(
     return handleApiError(async () => {
         const { id } = await params;
 
-        const addendum = await db
+        const [addendum3] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
-        if (!addendum) {
+        if (!addendum3) {
             return NextResponse.json({ error: 'Addendum not found' }, { status: 404 });
         }
 

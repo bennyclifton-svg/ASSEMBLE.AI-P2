@@ -10,7 +10,7 @@ export async function GET(
 ) {
     return handleApiError(async () => {
         const { id } = await params;
-        const transmittal = await db.select().from(transmittals).where(eq(transmittals.id, id)).get();
+        const [transmittal] = await db.select().from(transmittals).where(eq(transmittals.id, id)).limit(1);
 
         if (!transmittal) {
             return NextResponse.json({ error: 'Transmittal not found' }, { status: 404 });

@@ -91,11 +91,11 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     });
 
-    const newConsultant = await db
+    const [newConsultant] = await db
       .select()
       .from(consultants)
       .where(eq(consultants.id, id))
-      .get();
+      .limit(1);
 
     return NextResponse.json(newConsultant, { status: 201 });
   } catch (error) {

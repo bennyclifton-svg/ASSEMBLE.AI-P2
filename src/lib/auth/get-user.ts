@@ -39,11 +39,11 @@ export async function getCurrentUser(): Promise<AuthResult> {
     }
 
     // Find session
-    const session = await db
+    const [session] = await db
       .select()
       .from(sessions)
       .where(eq(sessions.tokenHash, hashToken(sessionToken)))
-      .get();
+      .limit(1);
 
     if (!session) {
       return {
@@ -65,11 +65,11 @@ export async function getCurrentUser(): Promise<AuthResult> {
     }
 
     // Get user
-    const user = await db
+    const [user] = await db
       .select()
       .from(users)
       .where(eq(users.id, session.userId))
-      .get();
+      .limit(1);
 
     if (!user) {
       return {

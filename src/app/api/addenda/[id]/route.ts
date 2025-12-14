@@ -12,11 +12,11 @@ export async function GET(
     return handleApiError(async () => {
         const { id } = await params;
 
-        const addendum = await db
+        const [addendum] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
         if (!addendum) {
             return NextResponse.json({ error: 'Addendum not found' }, { status: 404 });
@@ -47,7 +47,7 @@ export async function GET(
     });
 }
 
-// PUT /api/addenda/[id] - Update addendum content
+// PUT /api/addenda/[id] - Update addendum content and/or date
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -55,31 +55,35 @@ export async function PUT(
     return handleApiError(async () => {
         const { id } = await params;
         const body = await request.json();
-        const { content } = body;
+        const { content, addendumDate } = body;
 
-        const existing = await db
+        const [existing] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
         if (!existing) {
             return NextResponse.json({ error: 'Addendum not found' }, { status: 404 });
         }
 
+        // Build update object with only provided fields
+        const updateData: Record<string, unknown> = {
+            updatedAt: new Date().toISOString(),
+        };
+        if (content !== undefined) updateData.content = content;
+        if (addendumDate !== undefined) updateData.addendumDate = addendumDate;
+
         await db
             .update(addenda)
-            .set({
-                content,
-                updatedAt: new Date().toISOString(),
-            })
+            .set(updateData)
             .where(eq(addenda.id, id));
 
-        const updated = await db
+        const [updated] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
         return NextResponse.json(updated);
     });
@@ -93,13 +97,13 @@ export async function DELETE(
     return handleApiError(async () => {
         const { id } = await params;
 
-        const existing = await db
+        const [existing2] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
-        if (!existing) {
+        if (!existing2) {
             return NextResponse.json({ error: 'Addendum not found' }, { status: 404 });
         }
 

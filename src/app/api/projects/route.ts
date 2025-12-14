@@ -70,11 +70,11 @@ export async function POST(request: Request) {
         const organizationId = authResult.user.organizationId;
 
         // Get organization default settings
-        const org = await db
+        const [org] = await db
             .select()
             .from(organizations)
             .where(eq(organizations.id, organizationId))
-            .get();
+            .limit(1);
         const defaultSettings = org ? JSON.parse(org.defaultSettings || '{}') : {};
 
         // Use transaction to ensure atomic initialization (FR-055)

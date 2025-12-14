@@ -56,11 +56,11 @@ export async function PUT(
       })
       .where(eq(consultants.id, id));
 
-    const updatedConsultant = await db
+    const [updatedConsultant] = await db
       .select()
       .from(consultants)
       .where(eq(consultants.id, id))
-      .get();
+      .limit(1);
 
     if (!updatedConsultant) {
       return NextResponse.json(
@@ -88,11 +88,11 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if consultant exists
-    const consultant = await db
+    const [consultant] = await db
       .select()
       .from(consultants)
       .where(eq(consultants.id, id))
-      .get();
+      .limit(1);
 
     if (!consultant) {
       return NextResponse.json(
