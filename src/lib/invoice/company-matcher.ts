@@ -199,12 +199,12 @@ export async function matchCompany(
 
       return {
         found: true,
-        company: {
-          companyId: consultant.companyId || consultant.id,
+        company: consultant.companyId ? {
+          companyId: consultant.companyId,
           companyName: consultant.companyName,
           matchScore: similarity,
           matchType: similarity === 1.0 ? 'exact' : similarity >= 0.9 ? 'partial' : 'fuzzy',
-        },
+        } : null, // Don't return invalid company ID - consultant.id is not a valid companies FK
         type: 'consultant',
         discipline: discipline
           ? {
@@ -242,12 +242,12 @@ export async function matchCompany(
 
       return {
         found: true,
-        company: {
-          companyId: contractor.companyId || contractor.id,
+        company: contractor.companyId ? {
+          companyId: contractor.companyId,
           companyName: contractor.companyName,
           matchScore: similarity,
           matchType: similarity === 1.0 ? 'exact' : similarity >= 0.9 ? 'partial' : 'fuzzy',
-        },
+        } : null, // Don't return invalid company ID - contractor.id is not a valid companies FK
         type: 'contractor',
         discipline: null,
         trade: trade

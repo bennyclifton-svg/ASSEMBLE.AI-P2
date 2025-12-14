@@ -14,8 +14,9 @@ import { useRftNew } from '@/lib/hooks/use-rft-new';
 import { useRftNewTransmittal } from '@/lib/hooks/use-rft-new-transmittal';
 import { RFTNewShortTab } from './RFTNewShortTab';
 import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
-import { FileText, Save, Upload, Download, FileDown } from 'lucide-react';
+import { FileText, Save, RotateCcw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Highlight blue color for icons and buttons
@@ -43,6 +44,7 @@ export function RFTNewSection({
     onSaveTransmittal,
 }: RFTNewSectionProps) {
     const [isExporting, setIsExporting] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
     const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
 
@@ -50,6 +52,7 @@ export function RFTNewSection({
     const {
         rftNew,
         isLoading,
+        updateRftDate,
     } = useRftNew({
         projectId,
         disciplineId,
@@ -83,6 +86,41 @@ export function RFTNewSection({
         }
     }, [loadTransmittal, onLoadTransmittal]);
 
+    const handleDownloadTransmittal = useCallback(async () => {
+        if (!rftNew) return;
+
+        setIsDownloading(true);
+        try {
+            const response = await fetch(`/api/rft-new/${rftNew.id}/transmittal/download`);
+
+            if (!response.ok) {
+                throw new Error('Download failed');
+            }
+
+            const blob = await response.blob();
+            const contentDisposition = response.headers.get('Content-Disposition');
+            const contextName = disciplineName || tradeName || 'RFT';
+            let filename = `${contextName}_Transmittal.zip`;
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="(.+)"/);
+                if (match) filename = match[1];
+            }
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Download error:', error);
+        } finally {
+            setIsDownloading(false);
+        }
+    }, [rftNew, disciplineName, tradeName]);
+
     const handleExport = useCallback(async (format: 'pdf' | 'docx') => {
         if (!rftNew) return;
 
@@ -107,7 +145,7 @@ export function RFTNewSection({
             // Download the file
             const blob = await response.blob();
             const contentDisposition = response.headers.get('Content-Disposition');
-            let filename = `RFT_NEW.${format}`;
+            let filename = `RFT.${format}`;
             if (contentDisposition) {
                 const match = contentDisposition.match(/filename="(.+)"/);
                 if (match) filename = match[1];
@@ -170,7 +208,7 @@ export function RFTNewSection({
                 >
                     <FileText className="w-4 h-4" style={{ color: HIGHLIGHT_BLUE }} />
                     <span className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
-                        RFT NEW
+                        RFT
                     </span>
                     {isExpanded ? <TriangleDown /> : <TriangleRight />}
                 </button>
@@ -200,8 +238,22 @@ export function RFTNewSection({
                             color: HIGHLIGHT_BLUE,
                         }}
                     >
-                        <Upload className="w-3 h-3 mr-1" />
-                        Load {documentCount > 0 && `(${documentCount})`}
+                        <RotateCcw className="w-3 h-3 mr-1" />
+                        Recall {documentCount > 0 && `(${documentCount})`}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDownloadTransmittal}
+                        disabled={!rftNew || !hasTransmittal || isDownloading}
+                        className="h-7 px-2 text-xs"
+                        style={{
+                            backgroundColor: `rgba(79, 193, 255, 0.2)`,
+                            color: HIGHLIGHT_BLUE,
+                        }}
+                    >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
                     </Button>
                 </div>
             </div>
@@ -214,7 +266,7 @@ export function RFTNewSection({
                     <div className="flex items-center">
                         <div
                             className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'short'
-                                ? 'text-[#cccccc] border-b-2 border-[#0e639c] -mb-px'
+                                ? 'text-[#cccccc] border-b-[3px] border-[#0e639c] -mb-px'
                                 : 'text-[#858585] hover:text-[#cccccc]'
                                 }`}
                             onClick={() => handleTabClick('short')}
@@ -223,7 +275,7 @@ export function RFTNewSection({
                         </div>
                         <div
                             className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'long'
-                                ? 'text-[#cccccc] border-b-2 border-[#0e639c] -mb-px'
+                                ? 'text-[#cccccc] border-b-[3px] border-[#0e639c] -mb-px'
                                 : 'text-[#858585] hover:text-[#cccccc]'
                                 }`}
                             onClick={() => handleTabClick('long')}
@@ -232,27 +284,27 @@ export function RFTNewSection({
                         </div>
                     </div>
 
-                    {/* Export Buttons */}
+                    {/* Export Buttons - Icon Only */}
                     <div className="flex items-center gap-2 pb-2">
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleExport('pdf')}
                             disabled={!rftNew || isExporting}
-                            className="h-7 px-2 text-xs"
+                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            title="Export PDF"
                         >
-                            <FileDown className="w-3 h-3 mr-1" />
-                            Export PDF
+                            <PdfIcon size={22} />
                         </Button>
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleExport('docx')}
                             disabled={!rftNew || isExporting}
-                            className="h-7 px-2 text-xs"
+                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            title="Export Word"
                         >
-                            <Download className="w-3 h-3 mr-1" />
-                            Export Word
+                            <DocxIcon size={22} />
                         </Button>
                     </div>
                 </div>
@@ -263,7 +315,7 @@ export function RFTNewSection({
                         {activeTab === 'short' ? (
                             isLoading ? (
                                 <div className="p-8 text-center text-[#858585]">
-                                    <p>Loading RFT NEW...</p>
+                                    <p>Loading RFT...</p>
                                 </div>
                             ) : rftNew ? (
                                 <RFTNewShortTab
@@ -273,10 +325,11 @@ export function RFTNewSection({
                                     tradeId={tradeId}
                                     contextName={contextName}
                                     contextType={disciplineId ? 'discipline' : 'trade'}
+                                    onDateChange={updateRftDate}
                                 />
                             ) : (
                                 <div className="p-8 text-center text-[#858585]">
-                                    <p>Unable to load RFT NEW</p>
+                                    <p>Unable to load RFT</p>
                                 </div>
                             )
                         ) : (

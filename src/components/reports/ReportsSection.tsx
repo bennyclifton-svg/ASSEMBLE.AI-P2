@@ -23,7 +23,8 @@ import {
     Download,
     Database,
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/lib/hooks/use-toast';
+import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
 interface Report {
     id: string;
@@ -73,6 +74,7 @@ export function ReportsSection({
     tradeName,
     generationMode = 'ai_assisted',
 }: ReportsSectionProps) {
+    const { toast } = useToast();
     const [viewingReportId, setViewingReportId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -185,9 +187,9 @@ export function ReportsSection({
             const res = await fetch(`/api/reports/${reportId}/refresh`, { method: 'POST' });
             if (!res.ok) throw new Error('Failed to refresh');
             mutate();
-            toast.success('Report refreshed with latest data');
+            toast({ title: 'Report refreshed with latest data', variant: 'success' });
         } catch (err) {
-            toast.error('Failed to refresh report');
+            toast({ title: 'Failed to refresh report', variant: 'destructive' });
         } finally {
             setRefreshingReportId(null);
         }
@@ -217,16 +219,16 @@ export function ReportsSection({
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            toast.success(`Report exported as ${format.toUpperCase()}`);
+            toast({ title: `Report exported as ${format.toUpperCase()}`, variant: 'success' });
         } catch (err) {
             console.error('Export failed:', err);
-            toast.error(err instanceof Error ? err.message : 'Failed to export report');
+            toast({ title: err instanceof Error ? err.message : 'Failed to export report', variant: 'destructive' });
         }
     };
 
     const handleGenerateLong = (reportId: string) => {
         // TODO: Implement generate long RFT modal
-        toast.info('Generate Long RFT coming soon');
+        toast({ title: 'Generate Long RFT coming soon', variant: 'info' });
     };
 
     const handleStartCreating = (type: 'rft' | 'trr') => {
@@ -239,7 +241,7 @@ export function ReportsSection({
 
     const handleCreateReport = async () => {
         if (!newReportTitle.trim() || !creatingReportType) {
-            toast.error('Please enter a report title');
+            toast({ title: 'Please enter a report title', variant: 'destructive' });
             return;
         }
 
@@ -267,10 +269,10 @@ export function ReportsSection({
             await mutate();
             // Show TOC editor for the new report
             setViewingReportId(newReport.id);
-            toast.success('Report created successfully');
+            toast({ title: 'Report created successfully', variant: 'success' });
         } catch (err) {
             console.error('Failed to create report:', err);
-            toast.error(err instanceof Error ? err.message : 'Failed to create report');
+            toast({ title: err instanceof Error ? err.message : 'Failed to create report', variant: 'destructive' });
         }
     };
 
@@ -304,7 +306,7 @@ export function ReportsSection({
                 mutate();
             } catch (err) {
                 console.error('Failed to start generation:', err);
-                toast.error('Failed to start generation');
+                toast({ title: 'Failed to start generation', variant: 'destructive' });
             } finally {
                 setStartingGeneration(false);
             }
@@ -424,15 +426,17 @@ export function ReportsSection({
                                                         {showExportMenu === report.id && (
                                                             <div className="absolute right-0 top-full mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg z-10">
                                                                 <button
-                                                                    className="block w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42]"
+                                                                    className="w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42] flex items-center gap-2"
                                                                     onClick={() => handleExport(report.id, 'docx')}
                                                                 >
+                                                                    <DocxIcon size={16} />
                                                                     Export as DOCX
                                                                 </button>
                                                                 <button
-                                                                    className="block w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42]"
+                                                                    className="w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42] flex items-center gap-2"
                                                                     onClick={() => handleExport(report.id, 'pdf')}
                                                                 >
+                                                                    <PdfIcon size={16} />
                                                                     Export as PDF
                                                                 </button>
                                                             </div>

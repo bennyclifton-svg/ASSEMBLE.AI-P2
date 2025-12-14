@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useConsultants } from '@/lib/hooks/use-consultants';
 import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
 import { useToast } from '@/lib/hooks/use-toast';
-import { RFTSection } from '@/components/reports/rft';
+
 import { RFTNewSection } from '@/components/rft-new';
 import { AddendumSection } from '@/components/addendum';
+import { EvaluationSection } from '@/components/evaluation';
+import { TRRSection } from '@/components/trr';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -446,30 +448,7 @@ export function ConsultantGallery({
         </div>
       </div>
 
-      {/* RFT Section - contains Brief, TOC, and RFT tabs */}
-      {disciplineId && onUpdateBrief && (
-        <RFTSection
-          projectId={projectId}
-          disciplineId={disciplineId}
-          name={discipline}
-          contextType="discipline"
-          briefData={{
-            services: briefServices,
-            fee: briefFee,
-            program: briefProgram,
-          }}
-          onBriefChange={async (field, value) => {
-            const fieldMap = {
-              services: 'briefServices',
-              fee: 'briefFee',
-              program: 'briefProgram',
-            } as const;
-            await onUpdateBrief(disciplineId, fieldMap[field], value);
-          }}
-          selectedDocumentIds={selectedDocumentIds}
-          onSetSelectedDocumentIds={onSetSelectedDocumentIds}
-        />
-      )}
+
 
       {/* RFT NEW Section - comprehensive RFT documents per discipline */}
       {disciplineId && (
@@ -486,6 +465,27 @@ export function ConsultantGallery({
       {/* Addendum Section - independent transmittals per addendum */}
       {disciplineId && (
         <AddendumSection
+          projectId={projectId}
+          disciplineId={disciplineId}
+          disciplineName={discipline}
+          selectedDocumentIds={selectedDocumentIds}
+          onLoadTransmittal={onSetSelectedDocumentIds}
+          onSaveTransmittal={() => selectedDocumentIds}
+        />
+      )}
+
+      {/* Evaluation Section - tender price/non-price evaluation */}
+      {disciplineId && (
+        <EvaluationSection
+          projectId={projectId}
+          disciplineId={disciplineId}
+          disciplineName={discipline}
+        />
+      )}
+
+      {/* TRR Section - Tender Recommendation Report */}
+      {disciplineId && (
+        <TRRSection
           projectId={projectId}
           disciplineId={disciplineId}
           disciplineName={discipline}

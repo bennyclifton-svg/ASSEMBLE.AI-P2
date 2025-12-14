@@ -15,6 +15,7 @@ export interface RftNew {
     projectId: string;
     disciplineId: string | null;
     tradeId: string | null;
+    rftDate: string | null;
     transmittalCount: number;
     createdAt: string;
     updatedAt: string;
@@ -30,6 +31,7 @@ interface UseRftNewReturn {
     rftNew: RftNew | null;
     isLoading: boolean;
     error: Error | null;
+    updateRftDate: (date: string) => Promise<void>;
     refetch: () => void;
 }
 
@@ -72,6 +74,35 @@ export function useRftNew({
     );
 
     /**
+     * Update the RFT date
+     */
+    const updateRftDate = useCallback(async (date: string): Promise<void> => {
+        if (!data?.id) return;
+
+        // Optimistically update local cache
+        localMutate((prev) => prev ? { ...prev, rftDate: date } : prev, false);
+
+        try {
+            const response = await fetch(`/api/rft-new/${data.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rftDate: date }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update RFT date');
+            }
+
+            // Revalidate to ensure sync with server
+            localMutate();
+        } catch (error) {
+            // Revert on error
+            localMutate();
+            console.error('Failed to update RFT date:', error);
+        }
+    }, [data?.id, localMutate]);
+
+    /**
      * Manually refetch RFT NEW
      */
     const refetch = useCallback(() => {
@@ -82,6 +113,7 @@ export function useRftNew({
         rftNew: data ?? null,
         isLoading,
         error: error ?? null,
+        updateRftDate,
         refetch,
     };
 }

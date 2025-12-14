@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, RefreshCw, FileSpreadsheet, GitBranch, FileText, Trash2, GripVertical, Check, X } from 'lucide-react';
+import { Plus, Trash, GripVertical, Check, X } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     DndContext,
@@ -85,23 +85,20 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
                 <TabsList className="w-full justify-start bg-[#252526] border-b border-[#3e3e42] rounded-none h-auto p-0 px-2">
                     <TabsTrigger
                         value="cost-plan"
-                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#B85C5C] rounded-none px-4 py-2 text-[#858585] text-xs gap-2 font-medium"
+                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#B85C5C] rounded-none px-4 py-2 text-[#858585] text-xs font-medium"
                     >
-                        <FileSpreadsheet className="h-4 w-4" />
                         Cost Plan
                     </TabsTrigger>
                     <TabsTrigger
                         value="variations"
-                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#D4A574] rounded-none px-4 py-2 text-[#858585] text-xs gap-2 font-medium"
+                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#D4A574] rounded-none px-4 py-2 text-[#858585] text-xs font-medium"
                     >
-                        <GitBranch className="h-4 w-4" />
                         Variations
                     </TabsTrigger>
                     <TabsTrigger
                         value="invoices"
-                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#6B9BD1] rounded-none px-4 py-2 text-[#858585] text-xs gap-2 font-medium"
+                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#6B9BD1] rounded-none px-4 py-2 text-[#858585] text-xs font-medium"
                     >
-                        <FileText className="h-4 w-4" />
                         Invoices
                     </TabsTrigger>
                 </TabsList>
@@ -419,43 +416,24 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     return (
         <div className="h-full flex flex-col bg-[#1e1e1e]">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
-                <div className="flex items-center gap-6 text-xs">
-                    <span className="text-[#858585]">
-                        Budget: <strong className="text-[#cccccc]">{formatCurrency(totals?.budgetCents || 0)}</strong>
-                    </span>
-                    <span className="text-[#858585]">
-                        Variance: <strong className={totals && totals.varianceCents < 0 ? 'text-[#f87171]' : 'text-[#4ade80]'}>
-                            {formatCurrency(totals?.varianceCents || 0)}
-                        </strong>
-                    </span>
-                </div>
-                <div className="flex items-center gap-2">
-                    {/* Month Selector */}
-                    <select
-                        value={`${selectedMonth.year}-${String(selectedMonth.month).padStart(2, '0')}`}
-                        onChange={(e) => {
-                            const [year, month] = e.target.value.split('-').map(Number);
-                            setSelectedMonth({ year, month });
-                        }}
-                        className="text-xs bg-[#252526] border border-[#3e3e42] text-[#cccccc] px-2 py-1 rounded hover:bg-[#2d2d30] focus:outline-none focus:border-[#0e639c] transition-colors"
-                        title="Select reporting month"
-                    >
-                        {monthOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
-                    <button
-                        onClick={() => refetch()}
-                        disabled={isLoading}
-                        className="p-1.5 text-[#858585] hover:text-[#cccccc] hover:bg-[#37373d] rounded transition-colors"
-                        title="Refresh"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    </button>
-                </div>
+            <div className="flex items-center justify-end px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
+                {/* Month Selector */}
+                <select
+                    value={`${selectedMonth.year}-${String(selectedMonth.month).padStart(2, '0')}`}
+                    onChange={(e) => {
+                        const [year, month] = e.target.value.split('-').map(Number);
+                        setSelectedMonth({ year, month });
+                    }}
+                    className="text-xs bg-[#2d2d30] border border-[#3e3e42] text-[#cccccc] px-2 py-1 rounded hover:border-[#555555] focus:outline-none focus:border-[#0e639c] transition-colors cursor-pointer"
+                    title="Select reporting month"
+                    style={{ colorScheme: 'dark' }}
+                >
+                    {monthOptions.map(option => (
+                        <option key={option.value} value={option.value} className="bg-[#2d2d30] text-[#cccccc]">
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* Spreadsheet */}
@@ -465,8 +443,8 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <div className="flex-1 overflow-auto">
-                    <table className="w-full border-collapse text-xs" style={{ minWidth: '900px' }}>
+                <div className="flex-1 overflow-auto min-h-0" style={{ scrollbarGutter: 'stable' }}>
+                    <table className="border-collapse text-xs" style={{ minWidth: '900px', width: 'max-content' }}>
                         <thead className="sticky top-0 z-10">
                             <tr style={{ backgroundColor: COLORS.accent.costPlan }}>
                                 <th className="border border-[#8a4a4a] px-0.5 py-1.5 w-6" rowSpan={2}></th>
@@ -543,7 +521,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                 {/* Drag overlay for better visual feedback */}
                 <DragOverlay>
                     {activeLine ? (
-                        <table className="w-full border-collapse text-xs" style={{ minWidth: '900px' }}>
+                        <table className="border-collapse text-xs" style={{ minWidth: '900px', width: 'max-content' }}>
                             <tbody>
                                 <tr className="bg-[#37373d] shadow-lg opacity-90">
                                     <td className="border border-[#3e3e42] px-0.5 py-1 w-6">
@@ -912,7 +890,7 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
                     className="p-0.5 text-[#858585] hover:text-[#f87171] hover:bg-[#4e4e52] rounded transition-colors opacity-0 group-hover:opacity-100"
                     title="Delete line"
                 >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash className="h-3 w-3" />
                 </button>
             </td>
         </tr>

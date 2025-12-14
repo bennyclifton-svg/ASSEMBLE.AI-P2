@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import {
-  Trash2,
+  Trash,
   Link2,
   CheckCircle,
   XCircle,
@@ -308,7 +308,7 @@ export function VariationContextMenu({
 
       {/* Delete action */}
       <MenuItem
-        icon={<Trash2 className="w-4 h-4" />}
+        icon={<Trash className="w-4 h-4" />}
         label="Delete Variation"
         onClick={() => handleAction(onDelete)}
         danger

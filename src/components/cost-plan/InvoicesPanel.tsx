@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Plus, RefreshCw, FileText, CheckCircle, Clock, AlertCircle, Upload, Check, X } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Plus, Upload, Check, X, Trash, ChevronUp, ChevronDown } from 'lucide-react';
 import { useInvoices, useInvoiceMutations, useCostLines } from '@/lib/hooks/cost-plan';
 import { formatCurrency, getCurrentPeriod } from '@/lib/calculations/cost-plan-formulas';
 import type { PaidStatus, InvoiceWithRelations, CreateInvoiceInput } from '@/types/invoice';
@@ -36,11 +36,8 @@ const COLORS = {
     },
 };
 
-const STATUS_CONFIG: Record<PaidStatus, { icon: typeof Clock; style: { bg: string; text: string; border: string } }> = {
-    unpaid: { icon: Clock, style: COLORS.status.unpaid },
-    paid: { icon: CheckCircle, style: COLORS.status.paid },
-    partial: { icon: AlertCircle, style: COLORS.status.partial },
-};
+// Sort column type for sortable headers
+type SortColumn = 'invoiceNumber' | 'description' | 'costLine' | 'period' | 'invoiceDate' | 'amountCents' | 'paidStatus';
 
 interface InvoicesPanelProps {
     projectId: string;
@@ -48,36 +45,79 @@ interface InvoicesPanelProps {
 
 export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
     const { invoices, isLoading, error, refetch } = useInvoices(projectId);
-    const { createInvoice, updateInvoice, isSubmitting } = useInvoiceMutations(projectId, refetch);
+    const { createInvoice, updateInvoice, deleteInvoice, isSubmitting } = useInvoiceMutations(projectId, refetch);
     const { costLines } = useCostLines(projectId);
 
     const [showAddRow, setShowAddRow] = useState(false);
-    const [filterStatus, setFilterStatus] = useState<PaidStatus | 'all'>('all');
-    const [filterPeriod, setFilterPeriod] = useState<string>('all');
+    const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; invoiceNo: string } | null>(null);
+    const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-    // Get unique periods for filter
-    const periods = [...new Set(invoices.map(inv => `${inv.periodYear}-${String(inv.periodMonth).padStart(2, '0')}`))].sort().reverse();
-
-    const filteredInvoices = invoices.filter(inv => {
-        if (filterStatus !== 'all' && inv.paidStatus !== filterStatus) return false;
-        if (filterPeriod !== 'all') {
-            const invPeriod = `${inv.periodYear}-${String(inv.periodMonth).padStart(2, '0')}`;
-            if (invPeriod !== filterPeriod) return false;
+    // Handle sort column click
+    const handleSort = (column: SortColumn) => {
+        if (sortColumn === column) {
+            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
         }
-        return true;
-    });
-
-    // Summary calculations
-    const summary = {
-        totalAmount: invoices.reduce((sum, inv) => sum + inv.amountCents, 0),
-        paidAmount: invoices.filter(inv => inv.paidStatus === 'paid').reduce((sum, inv) => sum + inv.amountCents, 0),
-        unpaidAmount: invoices.filter(inv => inv.paidStatus === 'unpaid').reduce((sum, inv) => sum + inv.amountCents, 0),
-        invoiceCount: invoices.length,
     };
+
+    // Sort invoices based on current sort state
+    const sortedInvoices = useMemo(() => {
+        if (!sortColumn) return invoices;
+
+        return [...invoices].sort((a, b) => {
+            let aVal: string | number;
+            let bVal: string | number;
+
+            switch (sortColumn) {
+                case 'invoiceNumber':
+                    aVal = a.invoiceNumber.toLowerCase();
+                    bVal = b.invoiceNumber.toLowerCase();
+                    break;
+                case 'description':
+                    aVal = (a.description || '').toLowerCase();
+                    bVal = (b.description || '').toLowerCase();
+                    break;
+                case 'costLine':
+                    aVal = (a.costLine?.activity || '').toLowerCase();
+                    bVal = (b.costLine?.activity || '').toLowerCase();
+                    break;
+                case 'period':
+                    aVal = a.periodYear * 100 + a.periodMonth;
+                    bVal = b.periodYear * 100 + b.periodMonth;
+                    break;
+                case 'invoiceDate':
+                    aVal = a.invoiceDate;
+                    bVal = b.invoiceDate;
+                    break;
+                case 'amountCents':
+                    aVal = a.amountCents;
+                    bVal = b.amountCents;
+                    break;
+                case 'paidStatus':
+                    aVal = a.paidStatus;
+                    bVal = b.paidStatus;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [invoices, sortColumn, sortDirection]);
 
     const handleAddInvoice = async (data: Omit<CreateInvoiceInput, 'projectId'>) => {
         await createInvoice(data);
         setShowAddRow(false);
+    };
+
+    const handleDeleteInvoice = async (id: string) => {
+        await deleteInvoice(id);
+        setDeleteConfirm(null);
     };
 
     if (error) {
@@ -97,81 +137,11 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
         <InvoiceDropZone projectId={projectId} onUploadComplete={() => refetch()}>
         <div className="h-full flex flex-col bg-[#1e1e1e] text-xs">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <span className="text-[#858585]">Total:</span>
-                        <span className="font-semibold text-[#cccccc]">{formatCurrency(summary.totalAmount)}</span>
-                        <span className="text-[#6e6e6e]">({summary.invoiceCount})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[#858585]">Paid:</span>
-                        <span className="font-semibold text-green-400">{formatCurrency(summary.paidAmount)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[#858585]">Unpaid:</span>
-                        <span className="font-semibold text-yellow-400">{formatCurrency(summary.unpaidAmount)}</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowAddRow(true)}
-                        disabled={showAddRow}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Invoice
-                    </button>
-                    <span className="text-[#3e3e42]">|</span>
-                    <span className="text-[10px] text-[#6e6e6e] flex items-center gap-1">
-                        <Upload className="h-3 w-3" />
-                        Drop PDF
-                    </span>
-                    <button
-                        onClick={() => refetch()}
-                        disabled={isLoading}
-                        className="p-1.5 text-[#858585] hover:text-[#cccccc] hover:bg-[#37373d] rounded transition-colors"
-                        title="Refresh"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex items-center gap-4 px-4 py-2 border-b border-[#3e3e42] bg-[#2d2d30]">
-                <div className="flex items-center gap-2">
-                    <label className="text-[#858585]">Status:</label>
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value as PaidStatus | 'all')}
-                        className="px-2 py-1 bg-[#1e1e1e] border border-[#3e3e42] rounded text-xs text-[#cccccc] focus:outline-none focus:border-[#0e639c]"
-                    >
-                        <option value="all">All</option>
-                        <option value="unpaid">Unpaid</option>
-                        <option value="paid">Paid</option>
-                        <option value="partial">Partial</option>
-                    </select>
-                </div>
-                <div className="flex items-center gap-2">
-                    <label className="text-[#858585]">Period:</label>
-                    <select
-                        value={filterPeriod}
-                        onChange={(e) => setFilterPeriod(e.target.value)}
-                        className="px-2 py-1 bg-[#1e1e1e] border border-[#3e3e42] rounded text-xs text-[#cccccc] focus:outline-none focus:border-[#0e639c]"
-                    >
-                        <option value="all">All Periods</option>
-                        {periods.map(period => {
-                            const [year, month] = period.split('-');
-                            const date = new Date(parseInt(year), parseInt(month) - 1);
-                            return (
-                                <option key={period} value={period}>
-                                    {date.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' })}
-                                </option>
-                            );
-                        })}
-                    </select>
-                </div>
+            <div className="flex items-center justify-end px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
+                <span className="text-[10px] text-[#6e6e6e] flex items-center gap-1">
+                    <Upload className="h-3 w-3" />
+                    Drop Invoice
+                </span>
             </div>
 
             {/* Table */}
@@ -179,33 +149,114 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                 <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
                     <thead className="sticky top-0 z-10" style={{ backgroundColor: COLORS.accent.invoice }}>
                         <tr>
-                            <th className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px]">Invoice No.</th>
-                            <th className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium">Description</th>
-                            <th className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[160px]">Cost Line</th>
-                            <th className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[80px]">Period</th>
-                            <th className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px]">Date</th>
-                            <th className="border border-[#5080a0] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px]">Amount ex GST</th>
-                            <th className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[80px]">Status</th>
+                            <th
+                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                onClick={() => handleSort('invoiceNumber')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Invoice No.
+                                    {sortColumn === 'invoiceNumber' && (
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                    )}
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                onClick={() => handleSort('description')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Description
+                                    {sortColumn === 'description' && (
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                    )}
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[160px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                onClick={() => handleSort('costLine')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Cost Line
+                                    {sortColumn === 'costLine' && (
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                    )}
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[80px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                onClick={() => handleSort('period')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Period
+                                    {sortColumn === 'period' && (
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                    )}
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                onClick={() => handleSort('invoiceDate')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Date
+                                    {sortColumn === 'invoiceDate' && (
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                    )}
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#5080a0] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                onClick={() => handleSort('amountCents')}
+                            >
+                                <div className="flex items-center justify-end gap-1">
+                                    Amount ex GST
+                                    {sortColumn === 'amountCents' && (
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                    )}
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[80px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                onClick={() => handleSort('paidStatus')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Status
+                                    {sortColumn === 'paidStatus' && (
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                    )}
+                                </div>
+                            </th>
+                            <th className="border border-[#5080a0] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[40px]">
+                                <button
+                                    onClick={() => setShowAddRow(true)}
+                                    disabled={showAddRow}
+                                    className="p-0.5 text-[#1e1e1e] hover:text-[#0e639c] transition-colors disabled:opacity-50"
+                                    title="Add Invoice"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </button>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={7} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">Loading invoices...</td>
+                                <td colSpan={8} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">Loading invoices...</td>
                             </tr>
-                        ) : filteredInvoices.length === 0 && !showAddRow ? (
+                        ) : sortedInvoices.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={7} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">
-                                    {invoices.length === 0 ? 'No invoices yet. Click "Add Invoice" to create one.' : 'No invoices match the current filters'}
+                                <td colSpan={8} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">
+                                    No invoices yet. Click the + icon to add one.
                                 </td>
                             </tr>
                         ) : (
-                            filteredInvoices.map((invoice) => (
+                            sortedInvoices.map((invoice) => (
                                 <InvoiceRow
                                     key={invoice.id}
                                     invoice={invoice}
                                     costLines={costLines}
                                     onUpdate={updateInvoice}
+                                    onDelete={() => setDeleteConfirm({ id: invoice.id, invoiceNo: invoice.invoiceNumber })}
                                 />
                             ))
                         )}
@@ -219,21 +270,33 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                             />
                         )}
                     </tbody>
-                    {filteredInvoices.length > 0 && (
+                    {sortedInvoices.length > 0 && (
                         <tfoot className="bg-[#2d2d30] font-semibold">
                             <tr>
                                 <td colSpan={5} className="border border-[#3e3e42] px-2 py-1.5 text-right text-[#858585]">
-                                    Filtered Total:
+                                    Total:
                                 </td>
                                 <td className="border border-[#3e3e42] px-2 py-1.5 text-right font-mono text-[#cccccc]">
-                                    {formatCurrency(filteredInvoices.reduce((sum, inv) => sum + inv.amountCents, 0))}
+                                    {formatCurrency(sortedInvoices.reduce((sum, inv) => sum + inv.amountCents, 0))}
                                 </td>
+                                <td className="border border-[#3e3e42] px-2 py-1.5"></td>
                                 <td className="border border-[#3e3e42] px-2 py-1.5"></td>
                             </tr>
                         </tfoot>
                     )}
                 </table>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            {deleteConfirm && (
+                <DeleteConfirmDialog
+                    itemName={deleteConfirm.invoiceNo}
+                    itemType="invoice"
+                    onClose={() => setDeleteConfirm(null)}
+                    onConfirm={() => handleDeleteInvoice(deleteConfirm.id)}
+                    isSubmitting={isSubmitting}
+                />
+            )}
         </div>
         </InvoiceDropZone>
     );
@@ -253,14 +316,16 @@ interface InvoiceRowProps {
         periodYear: number;
         invoiceDate: string;
     }>) => Promise<void>;
+    onDelete: () => void;
 }
 
-function InvoiceRow({ invoice, costLines, onUpdate }: InvoiceRowProps) {
+function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps) {
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const statusConfig = STATUS_CONFIG[invoice.paidStatus];
+    // Determine if status is paid (treat partial as unpaid for display purposes)
+    const isPaid = invoice.paidStatus === 'paid';
 
     const inputClass = "w-full p-0 bg-transparent border-none rounded text-[11px] text-[#cccccc] focus:outline-none";
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
@@ -340,7 +405,7 @@ function InvoiceRow({ invoice, costLines, onUpdate }: InvoiceRowProps) {
     };
 
     return (
-        <tr className="bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42] transition-colors">
+        <tr className="group bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42] transition-colors">
             <td
                 className="border-x border-[#3e3e42] px-2 py-1.5 font-mono font-medium text-[#6B9BD1] cursor-pointer w-[100px]"
                 onClick={() => handleStartEdit('invoiceNumber', invoice.invoiceNumber)}
@@ -384,15 +449,26 @@ function InvoiceRow({ invoice, costLines, onUpdate }: InvoiceRowProps) {
                 <select
                     value={invoice.costLineId || ''}
                     onChange={(e) => handleCostLineChange(e.target.value)}
-                    className="w-full px-1 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[11px] text-[#858585] focus:outline-none cursor-pointer"
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
                     title={invoice.costLine?.activity || ''}
+                    style={{ colorScheme: 'dark' }}
                 >
-                    <option value="">None</option>
-                    {sortedCostLines.map((line) => (
-                        <option key={line.id} value={line.id} title={line.activity}>
-                            {line.costCode ? `${line.costCode} - ${line.activity}` : line.activity}
-                        </option>
-                    ))}
+                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
+                    {sortedCostLines.map((line) => {
+                        const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
+                        const label = line.costCode
+                            ? disciplineOrTrade
+                                ? `${line.costCode} - ${disciplineOrTrade} - ${line.activity}`
+                                : `${line.costCode} - ${line.activity}`
+                            : disciplineOrTrade
+                                ? `${disciplineOrTrade} - ${line.activity}`
+                                : line.activity;
+                        return (
+                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
+                                {label}
+                            </option>
+                        );
+                    })}
                 </select>
             </td>
             <td
@@ -452,15 +528,25 @@ function InvoiceRow({ invoice, costLines, onUpdate }: InvoiceRowProps) {
                 )}
             </td>
             <td className="border-x border-[#3e3e42] px-2 py-1.5 w-[80px]">
-                <select
-                    value={invoice.paidStatus}
-                    onChange={(e) => onUpdate(invoice.id, { paidStatus: e.target.value as PaidStatus })}
-                    className={`px-1.5 py-0.5 rounded text-[10px] border cursor-pointer ${statusConfig.style.bg} ${statusConfig.style.text} ${statusConfig.style.border} focus:outline-none`}
+                <button
+                    onClick={() => onUpdate(invoice.id, { paidStatus: isPaid ? 'unpaid' : 'paid' })}
+                    className={`px-2 py-0.5 rounded text-[10px] border cursor-pointer transition-colors ${
+                        isPaid
+                            ? 'bg-green-900/40 text-green-400 border-green-600 hover:bg-green-900/60'
+                            : 'bg-yellow-900/40 text-yellow-400 border-yellow-600 hover:bg-yellow-900/60'
+                    }`}
                 >
-                    <option value="unpaid" className="bg-[#1e1e1e] text-[#cccccc]">Unpaid</option>
-                    <option value="paid" className="bg-[#1e1e1e] text-[#cccccc]">Paid</option>
-                    <option value="partial" className="bg-[#1e1e1e] text-[#cccccc]">Partial</option>
-                </select>
+                    {isPaid ? 'Paid' : 'Unpaid'}
+                </button>
+            </td>
+            <td className="border-x border-[#3e3e42] px-1 py-1 text-center w-[40px]">
+                <button
+                    onClick={onDelete}
+                    className="p-0.5 text-[#858585] hover:text-[#f87171] hover:bg-[#4e4e52] rounded transition-colors opacity-0 group-hover:opacity-100"
+                    title="Delete invoice"
+                >
+                    <Trash className="h-3 w-3" />
+                </button>
             </td>
         </tr>
     );
@@ -552,15 +638,26 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                 <select
                     value={formData.costLineId}
                     onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
-                    className={inputClass}
+                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
                     title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
+                    style={{ colorScheme: 'dark' }}
                 >
-                    <option value="">None</option>
-                    {sortedCostLines.map((line) => (
-                        <option key={line.id} value={line.id} title={line.activity}>
-                            {line.costCode ? `${line.costCode} - ${line.activity}` : line.activity}
-                        </option>
-                    ))}
+                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
+                    {sortedCostLines.map((line) => {
+                        const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
+                        const label = line.costCode
+                            ? disciplineOrTrade
+                                ? `${line.costCode} - ${disciplineOrTrade} - ${line.activity}`
+                                : `${line.costCode} - ${line.activity}`
+                            : disciplineOrTrade
+                                ? `${disciplineOrTrade} - ${line.activity}`
+                                : line.activity;
+                        return (
+                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
+                                {label}
+                            </option>
+                        );
+                    })}
                 </select>
             </td>
             <td className="border-x border-[#3e3e42] px-1 py-1">
@@ -593,15 +690,17 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
             </td>
             <td className="border-x border-[#3e3e42] px-1 py-1">
                 <div className="flex items-center gap-1">
-                    <select
-                        value={formData.paidStatus}
-                        onChange={(e) => setFormData({ ...formData, paidStatus: e.target.value as PaidStatus })}
-                        className={`px-1.5 py-0.5 rounded text-[10px] border cursor-pointer bg-yellow-900/40 text-yellow-400 border-yellow-600 focus:outline-none`}
+                    <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, paidStatus: formData.paidStatus === 'paid' ? 'unpaid' : 'paid' })}
+                        className={`px-2 py-0.5 rounded text-[10px] border cursor-pointer transition-colors ${
+                            formData.paidStatus === 'paid'
+                                ? 'bg-green-900/40 text-green-400 border-green-600 hover:bg-green-900/60'
+                                : 'bg-yellow-900/40 text-yellow-400 border-yellow-600 hover:bg-yellow-900/60'
+                        }`}
                     >
-                        <option value="unpaid" className="bg-[#1e1e1e] text-[#cccccc]">Unpaid</option>
-                        <option value="paid" className="bg-[#1e1e1e] text-[#cccccc]">Paid</option>
-                        <option value="partial" className="bg-[#1e1e1e] text-[#cccccc]">Partial</option>
-                    </select>
+                        {formData.paidStatus === 'paid' ? 'Paid' : 'Unpaid'}
+                    </button>
                     <button
                         onClick={handleSave}
                         disabled={!formData.invoiceNumber.trim() || !formData.amountCents || isSubmitting}
@@ -620,7 +719,53 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     </button>
                 </div>
             </td>
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[40px]"></td>
         </tr>
+    );
+}
+
+interface DeleteConfirmDialogProps {
+    itemName: string;
+    itemType: string;
+    onClose: () => void;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+}
+
+function DeleteConfirmDialog({ itemName, itemType, onClose, onConfirm, isSubmitting }: DeleteConfirmDialogProps) {
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-sm border border-[#3e3e42]">
+                <div className="px-4 py-3 border-b border-[#3e3e42]">
+                    <h2 className="text-sm font-semibold text-[#cccccc]">Delete {itemType}</h2>
+                </div>
+                <div className="p-4 space-y-4">
+                    <p className="text-sm text-[#cccccc]">
+                        Are you sure you want to delete <strong>&quot;{itemName}&quot;</strong>?
+                    </p>
+                    <p className="text-xs text-[#858585]">
+                        This action cannot be undone.
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 text-xs text-[#858585] hover:text-[#cccccc] transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onConfirm}
+                            disabled={isSubmitting}
+                            className="px-4 py-2 text-xs bg-[#f87171] text-white rounded hover:bg-[#ef4444] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isSubmitting ? 'Deleting...' : 'Delete'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 

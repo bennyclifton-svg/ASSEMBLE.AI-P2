@@ -1,9 +1,182 @@
 'use client';
 
-import { useState } from 'react';
-import { InlineEditField } from './InlineEditField';
+import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
 import { Upload, UploadCloud } from 'lucide-react';
+
+// Props for DetailRow component
+interface DetailRowProps {
+    label: string;
+    value: string;
+    onSave: (newValue: string) => Promise<void>;
+    placeholder?: string;
+    isLast?: boolean;
+}
+
+// Two-column table row with label on left, editable field on right
+function DetailRow({ label, value, onSave, placeholder, isLast = false }: DetailRowProps) {
+    const [editValue, setEditValue] = useState(value || '');
+    const [isSaving, setIsSaving] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [savedValue, setSavedValue] = useState(value || '');
+    const [isFocused, setIsFocused] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Auto-resize textarea to fit content (handles word wrap)
+    const autoResize = () => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const scrollTop = window.scrollY;
+        // Reset height to auto to get accurate scrollHeight
+        textarea.style.height = 'auto';
+        const newHeight = Math.max(textarea.scrollHeight, 24);
+        textarea.style.height = `${newHeight}px`;
+        window.scrollTo(0, scrollTop);
+    };
+
+    // Sync with prop value when not editing
+    useEffect(() => {
+        if (!isFocused && !isSaving && !showSuccess) {
+            setEditValue(value || '');
+            setSavedValue(value || '');
+        }
+    }, [value]);
+
+    // Auto-resize on value change
+    useLayoutEffect(() => {
+        autoResize();
+    }, [editValue]);
+
+    // Resize when container width changes (panel resize)
+    useEffect(() => {
+        const textarea = textareaRef.current;
+        if (!textarea) return;
+
+        const resizeObserver = new ResizeObserver(() => {
+            autoResize();
+        });
+
+        resizeObserver.observe(textarea);
+        return () => resizeObserver.disconnect();
+    }, []);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const handleSave = async () => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+            saveTimeoutRef.current = null;
+        }
+
+        if (editValue === savedValue) return;
+
+        setIsSaving(true);
+        const previousValue = savedValue;
+        setSavedValue(editValue);
+
+        try {
+            await onSave(editValue);
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2000);
+        } catch (error) {
+            console.error('Save failed:', error);
+            setSavedValue(previousValue);
+            setEditValue(previousValue);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleBlur = () => {
+        setIsFocused(false);
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+        saveTimeoutRef.current = setTimeout(() => handleSave(), 150);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            textareaRef.current?.blur();
+        } else if (e.key === 'Escape') {
+            setEditValue(savedValue);
+            textareaRef.current?.blur();
+        }
+    };
+
+    return (
+        <div
+            className={`
+                flex transition-all duration-150 relative
+                ${isHovered || isFocused ? 'bg-[#2a2d2e]' : 'bg-transparent'}
+                ${!isLast ? 'border-b border-[#3e3e42]' : ''}
+            `}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            {/* Label column - dynamic width, allows text wrap */}
+            <div className="w-[25%] min-w-[60px] max-w-[120px] shrink-0 pl-4 pr-3 py-1.5 flex items-center relative">
+                <span className="text-xs font-medium text-[#858585] break-words leading-tight">{label}</span>
+
+                {/* Blue vertical highlight bar at column separator */}
+                <div
+                    className={`
+                        absolute right-0 top-0 bottom-0 w-[2px]
+                        transition-opacity duration-150
+                        ${isHovered || isFocused ? 'opacity-100 bg-[#4fc3f7]' : 'opacity-0 bg-transparent'}
+                    `}
+                />
+            </div>
+
+            {/* Value column */}
+            <div className="flex-1 relative pl-1 pr-4">
+                <textarea
+                    ref={textareaRef}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={handleBlur}
+                    onKeyDown={handleKeyDown}
+                    className={`
+                        w-full px-2 py-1.5 text-sm leading-tight
+                        bg-transparent border-none
+                        transition-colors duration-150
+                        focus:outline-none focus:ring-0
+                        disabled:opacity-50
+                        resize-none overflow-hidden
+                        placeholder:text-[#5a5a5a]
+                        text-[#4fc3f7]
+                        break-words whitespace-pre-wrap
+                    `}
+                    placeholder={placeholder}
+                    disabled={isSaving}
+                    rows={1}
+                />
+
+                {/* Save indicator */}
+                {isSaving && (
+                    <div className="absolute right-2 top-1.5 pointer-events-none">
+                        <div className="w-3 h-3 border-2 border-[#4fc3f7] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                )}
+                {showSuccess && !isSaving && (
+                    <span className="absolute right-2 top-1.5 text-green-500 text-xs pointer-events-none">✓</span>
+                )}
+            </div>
+        </div>
+    );
+}
 
 interface DetailsSectionProps {
     projectId: string;
@@ -270,59 +443,61 @@ export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange 
                 </div>
             )}
 
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-[#cccccc]">Details</h3>
                 <UploadCloud className="w-4 h-4 text-[#858585]" />
             </div>
 
-            <div className="flex flex-col gap-2">
-                <InlineEditField
+            {/* Two-column table layout */}
+            <div className="-mx-4 overflow-hidden">
+                <DetailRow
                     label="Project Name"
                     value={data?.projectName || ''}
                     onSave={(v) => updateField('projectName', v)}
                     placeholder="Enter project name"
                 />
-                <InlineEditField
+                <DetailRow
                     label="Address"
                     value={data?.address || ''}
                     onSave={(v) => updateField('address', v)}
                     placeholder="Enter address"
                 />
-                <InlineEditField
+                <DetailRow
                     label="Zoning"
                     value={data?.zoning || ''}
                     onSave={(v) => updateField('zoning', v)}
                     placeholder="Enter zoning"
                 />
-                <InlineEditField
+                <DetailRow
                     label="Lot Area (m²)"
                     value={data?.lotArea?.toString() || ''}
                     onSave={(v) => updateField('lotArea', v)}
                     placeholder="Enter lot area"
                 />
-                <InlineEditField
+                <DetailRow
                     label="Building Class"
                     value={data?.buildingClass || ''}
                     onSave={(v) => updateField('buildingClass', v)}
                     placeholder="Enter building class"
                 />
-                <InlineEditField
-                    label="Number of Stories"
+                <DetailRow
+                    label="No. of Stories"
                     value={data?.numberOfStories?.toString() || ''}
                     onSave={(v) => updateField('numberOfStories', v)}
                     placeholder="Enter number of stories"
                 />
-                <InlineEditField
+                <DetailRow
                     label="Legal Address"
                     value={data?.legalAddress || ''}
                     onSave={(v) => updateField('legalAddress', v)}
                     placeholder="Enter legal address"
                 />
-                <InlineEditField
+                <DetailRow
                     label="Jurisdiction"
                     value={data?.jurisdiction || ''}
                     onSave={(v) => updateField('jurisdiction', v)}
                     placeholder="Enter jurisdiction"
+                    isLast
                 />
             </div>
         </div>

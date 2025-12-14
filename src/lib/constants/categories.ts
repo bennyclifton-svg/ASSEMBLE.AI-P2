@@ -29,7 +29,7 @@ export const DOCUMENT_CATEGORIES = {
     PROCUREMENT: {
         id: 'procurement',
         name: 'Procurement',
-        color: '#D4A574', // Golden Sand (more distinct from brown)
+        color: '#D4A574', // Variation header yellow
         hasSubcategories: false,
         row: 1,
     },

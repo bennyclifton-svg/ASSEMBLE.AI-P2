@@ -137,7 +137,7 @@ export function FirmCardCompact({
           onClick={handleStarClick}
           className={`
             p-0.5 rounded transition-colors
-            ${firm.shortlisted ? 'text-[#fbbf24]' : 'text-[#858585] hover:text-[#cccccc]'}
+            ${firm.shortlisted ? 'text-[#D4A574]' : 'text-[#858585] hover:text-[#cccccc]'}
           `}
           title={firm.shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
         >

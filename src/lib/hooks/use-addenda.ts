@@ -18,6 +18,7 @@ export interface Addendum {
     tradeId: string | null;
     addendumNumber: number;
     content: string | null;
+    addendumDate: string | null;
     transmittalCount: number;
     createdAt: string;
     updatedAt: string;
@@ -35,6 +36,7 @@ interface UseAddendaReturn {
     error: Error | null;
     createAddendum: () => Promise<Addendum | null>;
     updateContent: (addendumId: string, content: string) => Promise<boolean>;
+    updateDate: (addendumId: string, date: string) => Promise<boolean>;
     deleteAddendum: (addendumId: string) => Promise<boolean>;
     refetch: () => void;
 }
@@ -182,6 +184,41 @@ export function useAddenda({
     }, [data, localMutate, toast]);
 
     /**
+     * Update addendum date
+     */
+    const updateDate = useCallback(async (addendumId: string, date: string): Promise<boolean> => {
+        try {
+            const response = await fetch(`/api/addenda/${addendumId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ addendumDate: date }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save');
+            }
+
+            // Optimistically update local data
+            if (data) {
+                const updatedData = data.map(a =>
+                    a.id === addendumId ? { ...a, addendumDate: date } : a
+                );
+                localMutate(updatedData, false);
+            }
+
+            return true;
+        } catch (err) {
+            console.error('Failed to update addendum date:', err);
+            toast({
+                title: 'Save failed',
+                description: 'Failed to save date',
+                variant: 'destructive',
+            });
+            return false;
+        }
+    }, [data, localMutate, toast]);
+
+    /**
      * Delete an addendum
      */
     const deleteAddendum = useCallback(async (addendumId: string): Promise<boolean> => {
@@ -228,6 +265,7 @@ export function useAddenda({
         error: error ?? null,
         createAddendum,
         updateContent,
+        updateDate,
         deleteAddendum,
         refetch,
     };

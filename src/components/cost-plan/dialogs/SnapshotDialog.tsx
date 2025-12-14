@@ -14,7 +14,7 @@ import {
   Camera,
   History,
   Calendar,
-  Trash2,
+  Trash,
   Eye,
   Download,
   Plus,
@@ -340,7 +340,7 @@ export function SnapshotDialog({
                             title="Delete snapshot"
                             className="p-2 text-[#858585] hover:text-[#f87171] hover:bg-[#f87171]/10 rounded transition-colors"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash className="w-4 h-4" />
                           </button>
                         )}
                       </div>

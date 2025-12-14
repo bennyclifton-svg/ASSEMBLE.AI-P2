@@ -5,9 +5,11 @@ import { useContractors } from '@/lib/hooks/use-contractors';
 import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
 import { PriceStructureSection } from './PriceStructureSection';
 import { useToast } from '@/lib/hooks/use-toast';
-import { RFTSection } from '@/components/reports/rft';
+
 import { RFTNewSection } from '@/components/rft-new';
 import { AddendumSection } from '@/components/addendum';
+import { EvaluationSection } from '@/components/evaluation';
+import { TRRSection } from '@/components/trr';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -436,30 +438,7 @@ export function ContractorGallery({
         </div>
       </div>
 
-      {/* RFT Section - contains Scope, TOC, and RFT tabs */}
-      {tradeId && onUpdateScope && (
-        <RFTSection
-          projectId={projectId}
-          tradeId={tradeId}
-          name={trade}
-          contextType="trade"
-          scopeData={{
-            works: scopeWorks,
-            price: scopePrice,
-            program: scopeProgram,
-          }}
-          onScopeChange={async (field, value) => {
-            const fieldMap = {
-              works: 'scopeWorks',
-              price: 'scopePrice',
-              program: 'scopeProgram',
-            } as const;
-            await onUpdateScope(tradeId, fieldMap[field], value);
-          }}
-          selectedDocumentIds={selectedDocumentIds}
-          onSetSelectedDocumentIds={onSetSelectedDocumentIds}
-        />
-      )}
+
 
       {/* RFT NEW Section - comprehensive RFT documents per trade */}
       {tradeId && (
@@ -476,6 +455,27 @@ export function ContractorGallery({
       {/* Addendum Section - independent transmittals per addendum */}
       {tradeId && (
         <AddendumSection
+          projectId={projectId}
+          tradeId={tradeId}
+          tradeName={trade}
+          selectedDocumentIds={selectedDocumentIds}
+          onLoadTransmittal={onSetSelectedDocumentIds}
+          onSaveTransmittal={() => selectedDocumentIds}
+        />
+      )}
+
+      {/* Evaluation Section - tender price/non-price evaluation */}
+      {tradeId && (
+        <EvaluationSection
+          projectId={projectId}
+          tradeId={tradeId}
+          tradeName={trade}
+        />
+      )}
+
+      {/* TRR Section - Tender Recommendation Report */}
+      {tradeId && (
+        <TRRSection
           projectId={projectId}
           tradeId={tradeId}
           tradeName={trade}

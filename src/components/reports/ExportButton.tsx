@@ -10,8 +10,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, ChevronDown, FileText, File } from 'lucide-react';
-import { toast } from 'sonner';
+import { Download, ChevronDown } from 'lucide-react';
+import { useToast } from '@/lib/hooks/use-toast';
+import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
 interface ExportButtonProps {
   reportId: string;
@@ -22,6 +23,7 @@ export default function ExportButton({ reportId, content }: ExportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   /**
    * Close dropdown when clicking outside
@@ -77,10 +79,10 @@ export default function ExportButton({ reportId, content }: ExportButtonProps) {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success(`Report exported as ${format.toUpperCase()}`);
+      toast({ title: `Report exported as ${format.toUpperCase()}`, variant: 'success' });
     } catch (error) {
       console.error('Export error:', error);
-      toast.error(`Failed to export as ${format.toUpperCase()}`);
+      toast({ title: `Failed to export as ${format.toUpperCase()}`, variant: 'destructive' });
     } finally {
       setIsExporting(false);
     }
@@ -115,16 +117,16 @@ export default function ExportButton({ reportId, content }: ExportButtonProps) {
           <div className="py-1">
             <button
               onClick={() => handleExport('pdf')}
-              className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-[#3a3a3a] flex items-center gap-2"
+              className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-[#3a3a3a] flex items-center gap-3"
             >
-              <FileText className="w-4 h-4" />
+              <PdfIcon size={20} />
               Export as PDF
             </button>
             <button
               onClick={() => handleExport('docx')}
-              className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-[#3a3a3a] flex items-center gap-2"
+              className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-[#3a3a3a] flex items-center gap-3"
             >
-              <File className="w-4 h-4" />
+              <DocxIcon size={20} />
               Export as DOCX
             </button>
           </div>

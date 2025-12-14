@@ -7,7 +7,7 @@
 
 ## Overview
 
-RFT NEW is a new report type within the Procurement Cards that provides a comprehensive Request for Tender document. It replicates the Addendum reporting structure while incorporating project planning data (objectives, staging, risks) and cost plan information specific to each discipline or trade.
+RFT NEW is the internal code name for the comprehensive Request for Tender report within the Procurement Cards. **The user-facing display name is simply "RFT"**. It replicates the Addendum reporting structure while incorporating project planning data (objectives, staging, risks) and cost plan information specific to each discipline or trade.
 
 ## Feature Location
 
@@ -32,7 +32,7 @@ RFT NEW is a new report type within the Procurement Cards that provides a compre
 3. **Report Export**
    - Export to PDF format
    - Export to Word (DOCX) format
-   - Filename format: `RFT NEW [Discipline].pdf/docx`
+   - Filename format: `RFT [Discipline].pdf/docx`
 
 ## SHORT Tab Content Structure
 
@@ -42,7 +42,7 @@ The SHORT tab generates a comprehensive report with the following sections:
 A header table displaying:
 - **Project Name**: From project details
 - **Address**: From project details
-- **Document**: "RFT NEW [Discipline Name]" (e.g., "RFT NEW Fire Services")
+- **Document**: "RFT [Discipline Name]" (e.g., "RFT Fire Services")
 
 ### 2. Objectives Section
 **Heading**: "Objectives"

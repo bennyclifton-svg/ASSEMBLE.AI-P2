@@ -11,7 +11,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import {
   Plus,
-  Trash2,
+  Trash,
   Copy,
   ClipboardPaste,
   FileText,
@@ -240,7 +240,7 @@ export function CostLineContextMenu({
 
       {/* Delete action */}
       <MenuItem
-        icon={<Trash2 className="w-4 h-4" />}
+        icon={<Trash className="w-4 h-4" />}
         label="Delete Row"
         shortcut="Ctrl+Del"
         onClick={() => handleAction(onDeleteRow)}

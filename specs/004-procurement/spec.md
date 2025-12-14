@@ -9,7 +9,7 @@
 A unified "Procurement" tab combining:
 1. **Consultants** – filtered by Discipline (Architectural, Structural, MEP, etc.)
 2. **Contractors** – filtered by Trade (Concrete, Electrical, Roofing, etc.)
-3. **RFT Reports** – Request For Tender document generation per discipline/trade
+3. **RFT Reports** – comprehensive Request For Tender documents per discipline/trade (see [rft-new-spec.md](./rft-new-spec.md))
 4. **Addendum Reports** – Contract addenda documents with separate transmittals per discipline/trade
 
 All support manual entry, edit, delete, and AI-assisted creation via drag & drop of emails, PDFs, business cards, or pasted text.
@@ -32,7 +32,7 @@ All support manual entry, edit, delete, and AI-assisted creation via drag & drop
 
 **US-07** As a Project Manager, I want the Save/Load Transmittal and Sync to AI buttons organized in a dedicated section (no heading) so that document actions are clearly accessible.
 
-**US-08** As a Project Manager, I want to generate tender request reports inline within each discipline/trade tab with two modes (Data Only using planning card data, or AI Assisted using RAG) so that I can quickly produce documentation without leaving the consultant/contractor context.
+**US-08** As a Project Manager, I want to generate comprehensive RFT reports inline within each discipline/trade tab. See [rft-new-spec.md](./rft-new-spec.md) for full specification.
 
 **US-09** As a Project Manager, I want to define fee structure items for each consultant discipline (with drag-and-drop reordering) so that I can document pricing expectations before tendering.
 
@@ -207,13 +207,8 @@ Located within each discipline/trade tab, provides tile-based interface for:
 2. **Transmittal Tiles (Green)** - Save/Load transmittals with document counts
 3. **Generation Mode Tiles** - Data Only (purple) and AI Assist (orange/gold)
 
-### Report Generation Section (ReportsSection)
-Inline report generation within each discipline/trade tab:
-- Report lifecycle: draft → toc_pending → generating → complete/failed
-- Streaming progress updates during generation
-- Smart Context Panel showing source documents
-- Report history with delete capability
-- Integrates with 007-RAG Integration Specification
+### ~~Report Generation Section (ReportsSection)~~ - REMOVED
+*Replaced by RFT NEW. See [rft-new-spec.md](./rft-new-spec.md) for the new RFT implementation.*
 
 ### Fee/Price Structure Management
 - **FeeStructureSection** (Consultants): Drag-and-drop reorderable fee items with inline editing

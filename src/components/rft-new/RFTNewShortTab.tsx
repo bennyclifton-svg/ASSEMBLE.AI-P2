@@ -6,10 +6,16 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { type RftNew } from '@/lib/hooks/use-rft-new';
 import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
 import { Textarea } from '@/components/ui/textarea';
+
+function formatDisplayDate(dateString: string): string {
+    if (!dateString) return '';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+}
 
 interface ProjectDetails {
     projectName: string;
@@ -58,6 +64,7 @@ interface RFTNewShortTabProps {
     contextType: 'discipline' | 'trade';
     disciplineId?: string | null;
     tradeId?: string | null;
+    onDateChange?: (date: string) => void;
 }
 
 export function RFTNewShortTab({
@@ -67,6 +74,7 @@ export function RFTNewShortTab({
     contextType,
     disciplineId,
     tradeId,
+    onDateChange,
 }: RFTNewShortTabProps) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
     const [objectives, setObjectives] = useState<PlanningObjectives>({});
@@ -76,6 +84,33 @@ export function RFTNewShortTab({
     const [isSavingBrief, setIsSavingBrief] = useState(false);
     const [costLines, setCostLines] = useState<CostLine[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [rftDate, setRftDate] = useState(rftNew.rftDate || new Date().toISOString().split('T')[0]);
+    const dateInputRef = useRef<HTMLInputElement>(null);
+    const hasAutoSavedDateRef = useRef(false);
+
+    // Update rftDate when rftNew changes, and persist default if not set
+    useEffect(() => {
+        const defaultDate = new Date().toISOString().split('T')[0];
+        setRftDate(rftNew.rftDate || defaultDate);
+
+        // If RFT has no date set, persist the default date to the database
+        // This ensures TRR can retrieve the date without manual user intervention
+        // Use ref to prevent duplicate saves in React Strict Mode or edge cases
+        if (!rftNew.rftDate && onDateChange && !hasAutoSavedDateRef.current) {
+            hasAutoSavedDateRef.current = true;
+            onDateChange(defaultDate);
+        }
+    }, [rftNew.rftDate, onDateChange]);
+
+    const handleDateClick = useCallback(() => {
+        dateInputRef.current?.showPicker();
+    }, []);
+
+    const handleDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const newDate = e.target.value;
+        setRftDate(newDate);
+        onDateChange?.(newDate);
+    }, [onDateChange]);
 
     // Fetch all data when component mounts
     useEffect(() => {
@@ -158,7 +193,7 @@ export function RFTNewShortTab({
                     setCostLines([]);
                 }
             } catch (error) {
-                console.error('Error fetching RFT NEW data:', error);
+                console.error('Error fetching RFT data:', error);
             } finally {
                 setIsLoading(false);
             }
@@ -170,12 +205,12 @@ export function RFTNewShortTab({
     if (isLoading) {
         return (
             <div className="p-8 text-center text-[#858585]">
-                <p>Loading RFT NEW data...</p>
+                <p>Loading RFT data...</p>
             </div>
         );
     }
 
-    const rftLabel = `RFT NEW ${contextName}`;
+    const rftLabel = `RFT ${contextName}`;
 
     const handleBriefChange = (field: 'service' | 'deliverables', value: string) => {
         setBriefData(prev => ({ ...prev, [field]: value }));
@@ -217,7 +252,7 @@ export function RFTNewShortTab({
                             <td className="w-36 px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
                                 Project Name
                             </td>
-                            <td className="px-4 py-2.5 text-[#cccccc]">
+                            <td className="px-4 py-2.5 text-[#cccccc]" colSpan={2}>
                                 {projectDetails?.projectName || 'Loading...'}
                             </td>
                         </tr>
@@ -225,7 +260,7 @@ export function RFTNewShortTab({
                             <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
                                 Address
                             </td>
-                            <td className="px-4 py-2.5 text-[#cccccc]">
+                            <td className="px-4 py-2.5 text-[#cccccc]" colSpan={2}>
                                 {projectDetails?.address || '-'}
                             </td>
                         </tr>
@@ -235,6 +270,20 @@ export function RFTNewShortTab({
                             </td>
                             <td className="px-4 py-2.5 text-[#cccccc] font-semibold">
                                 {rftLabel}
+                            </td>
+                            <td
+                                className="w-36 px-4 py-2.5 text-[#cccccc] border-l border-[#3e3e42] cursor-pointer hover:bg-[#2a2a2a] transition-colors relative"
+                                onClick={handleDateClick}
+                            >
+                                <span className="select-none">{formatDisplayDate(rftDate)}</span>
+                                <input
+                                    ref={dateInputRef}
+                                    type="date"
+                                    value={rftDate}
+                                    onChange={handleDateChange}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    tabIndex={-1}
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -378,7 +427,8 @@ export function RFTNewShortTab({
                                         onChange={(e) => handleBriefChange('service', e.target.value)}
                                         onBlur={() => handleSaveBrief('service')}
                                         placeholder="Enter service details..."
-                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-[#cccccc] resize-y min-h-[80px] p-4"
+                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text"
+                                        style={{ fieldSizing: 'content' } as React.CSSProperties}
                                     />
                                 </td>
                             </tr>
@@ -392,7 +442,8 @@ export function RFTNewShortTab({
                                         onChange={(e) => handleBriefChange('deliverables', e.target.value)}
                                         onBlur={() => handleSaveBrief('deliverables')}
                                         placeholder="Enter deliverables..."
-                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-[#cccccc] resize-y min-h-[80px] p-4"
+                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text"
+                                        style={{ fieldSizing: 'content' } as React.CSSProperties}
                                     />
                                 </td>
                             </tr>

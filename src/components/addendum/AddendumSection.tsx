@@ -11,8 +11,9 @@ import { useAddendumTransmittal } from '@/lib/hooks/use-addendum-transmittal';
 import { AddendumTabs } from './AddendumTabs';
 import { AddendumContent } from './AddendumContent';
 import { AddendumTransmittalSchedule } from './AddendumTransmittalSchedule';
-import { FileText, Save, Upload, Download, FileDown, Loader2 } from 'lucide-react';
+import { FileText, Save, RotateCcw, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
 // Highlight blue color for icons and buttons
 const HIGHLIGHT_BLUE = '#4fc1ff';
@@ -40,6 +41,7 @@ export function AddendumSection({
 }: AddendumSectionProps) {
     const [activeAddendumId, setActiveAddendumId] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
 
     // Handle tab selection - also expands if collapsed
@@ -66,6 +68,7 @@ export function AddendumSection({
         isLoading,
         createAddendum,
         updateContent,
+        updateDate,
         deleteAddendum,
     } = useAddenda({
         projectId,
@@ -117,6 +120,41 @@ export function AddendumSection({
             onLoadTransmittal(documentIds);
         }
     }, [loadTransmittal, onLoadTransmittal]);
+
+    const handleDownloadTransmittal = useCallback(async () => {
+        if (!activeAddendumId) return;
+
+        setIsDownloading(true);
+        try {
+            const response = await fetch(`/api/addenda/${activeAddendumId}/transmittal/download`);
+
+            if (!response.ok) {
+                throw new Error('Download failed');
+            }
+
+            const blob = await response.blob();
+            const contentDisposition = response.headers.get('Content-Disposition');
+            const contextName = disciplineName || tradeName || 'Addendum';
+            let filename = `${contextName}_Addendum_Transmittal.zip`;
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="(.+)"/);
+                if (match) filename = match[1];
+            }
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Download error:', error);
+        } finally {
+            setIsDownloading(false);
+        }
+    }, [activeAddendumId, disciplineName, tradeName]);
 
     const handleExport = useCallback(async (format: 'pdf' | 'docx') => {
         if (!activeAddendumId) return;
@@ -220,8 +258,22 @@ export function AddendumSection({
                             color: HIGHLIGHT_BLUE,
                         }}
                     >
-                        <Upload className="w-3 h-3 mr-1" />
-                        Load {documentCount > 0 && `(${documentCount})`}
+                        <RotateCcw className="w-3 h-3 mr-1" />
+                        Recall {documentCount > 0 && `(${documentCount})`}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDownloadTransmittal}
+                        disabled={!activeAddendumId || !hasTransmittal || isDownloading}
+                        className="h-7 px-2 text-xs"
+                        style={{
+                            backgroundColor: `rgba(79, 193, 255, 0.2)`,
+                            color: HIGHLIGHT_BLUE,
+                        }}
+                    >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
                     </Button>
                 </div>
             </div>
@@ -244,20 +296,20 @@ export function AddendumSection({
                             size="sm"
                             onClick={() => handleExport('pdf')}
                             disabled={!activeAddendumId || isExporting}
-                            className="h-7 px-2 text-xs"
+                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            title="Export PDF"
                         >
-                            <FileDown className="w-3 h-3 mr-1" />
-                            Export PDF
+                            <PdfIcon size={22} />
                         </Button>
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleExport('docx')}
                             disabled={!activeAddendumId || isExporting}
-                            className="h-7 px-2 text-xs"
+                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            title="Export Word"
                         >
-                            <Download className="w-3 h-3 mr-1" />
-                            Export Word
+                            <DocxIcon size={22} />
                         </Button>
                     </div>
                 </div>
@@ -270,6 +322,7 @@ export function AddendumSection({
                                 projectId={projectId}
                                 addendum={activeAddendum}
                                 onUpdateContent={updateContent}
+                                onUpdateDate={updateDate}
                                 onDelete={() => handleDeleteAddendum(activeAddendum.id)}
                             />
 
