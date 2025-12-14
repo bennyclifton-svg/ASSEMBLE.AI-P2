@@ -49,6 +49,18 @@ export const stakeholderSchema = z.object({
     phone: z.string().optional(),
 });
 
+// Consultant Status Schema
+export const consultantStatusSchema = z.object({
+    statusType: z.enum(['brief', 'tender', 'rec', 'award']),
+    isActive: z.boolean(),
+});
+
+// Contractor Status Schema
+export const contractorStatusSchema = z.object({
+    statusType: z.enum(['brief', 'tender', 'rec', 'award']),
+    isActive: z.boolean(),
+});
+
 // Inline Edit Field Schema (generic)
 export const inlineEditSchema = z.object({
     value: z.string(),
@@ -60,3 +72,5 @@ export type ProjectObjectivesInput = z.infer<typeof projectObjectivesSchema>;
 export type ProjectStageInput = z.infer<typeof projectStageSchema>;
 export type RiskInput = z.infer<typeof riskSchema>;
 export type StakeholderInput = z.infer<typeof stakeholderSchema>;
+export type ConsultantStatusInput = z.infer<typeof consultantStatusSchema>;
+export type ContractorStatusInput = z.infer<typeof contractorStatusSchema>;

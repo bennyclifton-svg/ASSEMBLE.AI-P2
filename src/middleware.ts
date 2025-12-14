@@ -1,14 +1,23 @@
 /**
  * Authentication Middleware
- * Protects routes by checking for valid session cookie.
- * Redirects unauthenticated users to /login.
+ * Handles routing for public and authenticated pages.
+ *
+ * Route structure:
+ * - / (public landing page for unauthenticated, redirects to /dashboard for authenticated)
+ * - /pricing (public)
+ * - /login, /register (public auth pages)
+ * - /dashboard (authenticated - main app)
+ * - /billing (authenticated - subscription management)
  */
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Routes that don't require authentication
-const PUBLIC_ROUTES = ['/login', '/register'];
+// Routes that don't require authentication (marketing pages)
+const PUBLIC_MARKETING_ROUTES = ['/', '/pricing', '/about', '/contact', '/privacy', '/terms'];
+
+// Auth pages (login/register)
+const AUTH_ROUTES = ['/login', '/register'];
 
 // Static assets and API routes handle their own auth
 const BYPASS_PATTERNS = [
@@ -35,21 +44,32 @@ export async function middleware(request: NextRequest) {
 
   // Check for session cookie
   const sessionToken = request.cookies.get('session')?.value;
-  const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+  const isAuthenticated = !!sessionToken;
 
-  // Redirect unauthenticated users to login (except public routes)
-  if (!sessionToken && !isPublicRoute) {
-    const loginUrl = new URL('/login', request.url);
-    // Preserve the original URL for redirect after login
-    if (pathname !== '/') {
-      loginUrl.searchParams.set('redirect', pathname);
-    }
-    return NextResponse.redirect(loginUrl);
+  // Check route type
+  const isAuthRoute = AUTH_ROUTES.some(route => pathname.startsWith(route));
+  const isPublicMarketingRoute = PUBLIC_MARKETING_ROUTES.includes(pathname);
+  const isDashboardRoute = pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/billing') ||
+    pathname.startsWith('/projects') ||
+    pathname.startsWith('/cost-plan');
+
+  // Redirect authenticated users from public marketing pages to dashboard
+  if (isAuthenticated && isPublicMarketingRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // Redirect authenticated users away from auth pages
-  if (sessionToken && isPublicRoute) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // Redirect authenticated users from auth pages to dashboard
+  if (isAuthenticated && isAuthRoute) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // Redirect unauthenticated users from protected routes to login
+  if (!isAuthenticated && isDashboardRoute) {
+    const loginUrl = new URL('/login', request.url);
+    // Preserve the original URL for redirect after login
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();

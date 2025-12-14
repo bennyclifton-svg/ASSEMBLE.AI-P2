@@ -570,6 +570,27 @@ export const users = sqliteTable('users', {
     passwordHash: text('password_hash').notNull(),
     displayName: text('display_name').notNull(),
     organizationId: text('organization_id').references(() => organizations.id),
+    // Polar subscription fields (Feature 014 - SaaS Launch)
+    polarCustomerId: text('polar_customer_id'),
+    subscriptionStatus: text('subscription_status').default('free'), // free, active, canceled, past_due, trialing
+    subscriptionPlanId: text('subscription_plan_id'),
+    subscriptionEndsAt: integer('subscription_ends_at'), // Unix timestamp
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+});
+
+// Subscriptions (Feature 014 - SaaS Launch)
+export const subscriptions = sqliteTable('subscriptions', {
+    id: text('id').primaryKey(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+    polarSubscriptionId: text('polar_subscription_id').unique(),
+    polarCustomerId: text('polar_customer_id'),
+    status: text('status').notNull(), // active, canceled, past_due, trialing, incomplete
+    planId: text('plan_id').notNull(), // free, starter, professional
+    currentPeriodStart: integer('current_period_start'),
+    currentPeriodEnd: integer('current_period_end'),
+    canceledAt: integer('canceled_at'),
+    cancelAtPeriodEnd: integer('cancel_at_period_end', { mode: 'boolean' }).default(false),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
 });
@@ -679,6 +700,7 @@ export const addenda = sqliteTable('addenda', {
     tradeId: text('trade_id').references(() => contractorTrades.id),
     addendumNumber: integer('addendum_number').notNull(),
     content: text('content'),
+    addendumDate: text('addendum_date'), // Date field for TRR report
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
@@ -733,6 +755,7 @@ export const rftNew = sqliteTable('rft_new', {
     projectId: text('project_id').references(() => projects.id).notNull(),
     disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
     tradeId: text('trade_id').references(() => contractorTrades.id),
+    rftDate: text('rft_date'), // Date field for TRR report
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
@@ -772,6 +795,246 @@ export const rftNewTransmittalsRelations = relations(rftNewTransmittals, ({ one 
     }),
     document: one(documents, {
         fields: [rftNewTransmittals.documentId],
+        references: [documents.id],
+    }),
+}));
+
+// ============================================================================
+// EVALUATION SCHEMA (Feature 011 - Evaluation Report)
+// ============================================================================
+
+// Evaluations (one per discipline/trade per project)
+export const evaluations = sqliteTable('evaluations', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
+    tradeId: text('trade_id').references(() => contractorTrades.id),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Tender Submissions (audit trail for tender parsing - Feature 011 US7)
+export const tenderSubmissions = sqliteTable('tender_submissions', {
+    id: text('id').primaryKey(),
+    evaluationId: text('evaluation_id')
+        .references(() => evaluations.id, { onDelete: 'cascade' })
+        .notNull(),
+    firmId: text('firm_id').notNull(),
+    firmType: text('firm_type', { enum: ['consultant', 'contractor'] }).notNull(),
+    filename: text('filename').notNull(),
+    fileAssetId: text('file_asset_id').references(() => fileAssets.id),
+    parsedAt: text('parsed_at').default(sql`CURRENT_TIMESTAMP`),
+    parserUsed: text('parser_used').default('claude'),
+    confidence: integer('confidence'), // 0-100
+    rawExtractedItems: text('raw_extracted_items'), // JSON array of extracted items before mapping
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Evaluation Rows (rows within evaluation tables)
+export const evaluationRows = sqliteTable('evaluation_rows', {
+    id: text('id').primaryKey(),
+    evaluationId: text('evaluation_id')
+        .references(() => evaluations.id, { onDelete: 'cascade' })
+        .notNull(),
+    tableType: text('table_type', { enum: ['initial_price', 'adds_subs'] }).notNull(),
+    description: text('description').notNull(),
+    orderIndex: integer('order_index').notNull(),
+    isSystemRow: integer('is_system_row', { mode: 'boolean' }).default(false),
+    costLineId: text('cost_line_id').references(() => costLines.id),
+    // Feature 011 US7: Track row origin
+    source: text('source', { enum: ['cost_plan', 'ai_parsed', 'manual'] }).default('cost_plan'),
+    sourceSubmissionId: text('source_submission_id').references(() => tenderSubmissions.id),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Evaluation Cells (amounts per firm per row)
+export const evaluationCells = sqliteTable('evaluation_cells', {
+    id: text('id').primaryKey(),
+    rowId: text('row_id')
+        .references(() => evaluationRows.id, { onDelete: 'cascade' })
+        .notNull(),
+    firmId: text('firm_id').notNull(),
+    firmType: text('firm_type', { enum: ['consultant', 'contractor'] }).notNull(),
+    amountCents: integer('amount_cents').default(0),
+    source: text('source', { enum: ['manual', 'ai'] }).default('manual'),
+    confidence: integer('confidence'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
+// EVALUATION RELATIONS
+// ============================================================================
+
+export const evaluationsRelations = relations(evaluations, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [evaluations.projectId],
+        references: [projects.id],
+    }),
+    discipline: one(consultantDisciplines, {
+        fields: [evaluations.disciplineId],
+        references: [consultantDisciplines.id],
+    }),
+    trade: one(contractorTrades, {
+        fields: [evaluations.tradeId],
+        references: [contractorTrades.id],
+    }),
+    rows: many(evaluationRows),
+    submissions: many(tenderSubmissions),
+}));
+
+// Tender Submissions Relations
+export const tenderSubmissionsRelations = relations(tenderSubmissions, ({ one }) => ({
+    evaluation: one(evaluations, {
+        fields: [tenderSubmissions.evaluationId],
+        references: [evaluations.id],
+    }),
+    fileAsset: one(fileAssets, {
+        fields: [tenderSubmissions.fileAssetId],
+        references: [fileAssets.id],
+    }),
+}));
+
+export const evaluationRowsRelations = relations(evaluationRows, ({ one, many }) => ({
+    evaluation: one(evaluations, {
+        fields: [evaluationRows.evaluationId],
+        references: [evaluations.id],
+    }),
+    costLine: one(costLines, {
+        fields: [evaluationRows.costLineId],
+        references: [costLines.id],
+    }),
+    sourceSubmission: one(tenderSubmissions, {
+        fields: [evaluationRows.sourceSubmissionId],
+        references: [tenderSubmissions.id],
+    }),
+    cells: many(evaluationCells),
+}));
+
+export const evaluationCellsRelations = relations(evaluationCells, ({ one }) => ({
+    row: one(evaluationRows, {
+        fields: [evaluationCells.rowId],
+        references: [evaluationRows.id],
+    }),
+}));
+
+// ============================================================================
+// EVALUATION NON-PRICE SCHEMA (Feature 013 - Evaluation Non-Price)
+// ============================================================================
+
+// Non-Price Criteria (7 fixed criteria per evaluation)
+export const evaluationNonPriceCriteria = sqliteTable('evaluation_non_price_criteria', {
+    id: text('id').primaryKey(),
+    evaluationId: text('evaluation_id')
+        .references(() => evaluations.id, { onDelete: 'cascade' })
+        .notNull(),
+    criteriaKey: text('criteria_key', {
+        enum: ['methodology', 'program', 'personnel', 'experience', 'health_safety', 'insurance', 'departures']
+    }).notNull(),
+    criteriaLabel: text('criteria_label').notNull(),
+    orderIndex: integer('order_index').notNull(),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Non-Price Cells (one per criterion per firm)
+export const evaluationNonPriceCells = sqliteTable('evaluation_non_price_cells', {
+    id: text('id').primaryKey(),
+    criteriaId: text('criteria_id')
+        .references(() => evaluationNonPriceCriteria.id, { onDelete: 'cascade' })
+        .notNull(),
+    firmId: text('firm_id').notNull(),
+    firmType: text('firm_type', { enum: ['consultant', 'contractor'] }).notNull(),
+    // AI-extracted content
+    extractedContent: text('extracted_content'),
+    qualityRating: text('quality_rating', { enum: ['good', 'average', 'poor'] }),
+    // User overrides
+    userEditedContent: text('user_edited_content'),
+    userEditedRating: text('user_edited_rating', { enum: ['good', 'average', 'poor'] }),
+    // Metadata
+    source: text('source', { enum: ['manual', 'ai'] }).default('manual'),
+    confidence: integer('confidence'), // 0-100
+    sourceChunks: text('source_chunks'), // JSON array of chunk IDs
+    sourceSubmissionId: text('source_submission_id').references(() => tenderSubmissions.id),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
+// EVALUATION NON-PRICE RELATIONS
+// ============================================================================
+
+export const evaluationNonPriceCriteriaRelations = relations(evaluationNonPriceCriteria, ({ one, many }) => ({
+    evaluation: one(evaluations, {
+        fields: [evaluationNonPriceCriteria.evaluationId],
+        references: [evaluations.id],
+    }),
+    cells: many(evaluationNonPriceCells),
+}));
+
+export const evaluationNonPriceCellsRelations = relations(evaluationNonPriceCells, ({ one }) => ({
+    criteria: one(evaluationNonPriceCriteria, {
+        fields: [evaluationNonPriceCells.criteriaId],
+        references: [evaluationNonPriceCriteria.id],
+    }),
+    tenderSubmission: one(tenderSubmissions, {
+        fields: [evaluationNonPriceCells.sourceSubmissionId],
+        references: [tenderSubmissions.id],
+    }),
+}));
+
+// ============================================================================
+// TRR SCHEMA (Feature 012 - Tender Recommendation Report)
+// ============================================================================
+
+// TRR (Tender Recommendation Report) - one per discipline/trade per project
+export const trr = sqliteTable('trr', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
+    tradeId: text('trade_id').references(() => contractorTrades.id),
+    executiveSummary: text('executive_summary'),
+    clarifications: text('clarifications'),
+    recommendation: text('recommendation'),
+    reportDate: text('report_date'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// TRR Transmittals (Documents attached to a TRR report)
+export const trrTransmittals = sqliteTable('trr_transmittals', {
+    id: text('id').primaryKey(),
+    trrId: text('trr_id').references(() => trr.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
+// TRR RELATIONS
+// ============================================================================
+
+export const trrRelations = relations(trr, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [trr.projectId],
+        references: [projects.id],
+    }),
+    discipline: one(consultantDisciplines, {
+        fields: [trr.disciplineId],
+        references: [consultantDisciplines.id],
+    }),
+    trade: one(contractorTrades, {
+        fields: [trr.tradeId],
+        references: [contractorTrades.id],
+    }),
+    transmittals: many(trrTransmittals),
+}));
+
+export const trrTransmittalsRelations = relations(trrTransmittals, ({ one }) => ({
+    trr: one(trr, {
+        fields: [trrTransmittals.trrId],
+        references: [trr.id],
+    }),
+    document: one(documents, {
+        fields: [trrTransmittals.documentId],
         references: [documents.id],
     }),
 }));
