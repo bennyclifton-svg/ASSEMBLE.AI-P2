@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Plus, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Check, X } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { Plus, Upload, Check, X, Trash, ChevronUp, ChevronDown } from 'lucide-react';
 import { useVariations, useVariationMutations, useCostLines } from '@/lib/hooks/cost-plan';
 import { formatCurrency } from '@/lib/calculations/cost-plan-formulas';
 import type { VariationStatus, VariationCategory, VariationWithCostLine, CreateVariationInput } from '@/types/variation';
@@ -41,12 +41,8 @@ const COLORS = {
     },
 };
 
-const STATUS_CONFIG: Record<VariationStatus, { icon: typeof Clock; style: { bg: string; text: string; border: string } }> = {
-    Forecast: { icon: Clock, style: COLORS.status.forecast },
-    Approved: { icon: CheckCircle, style: COLORS.status.approved },
-    Rejected: { icon: XCircle, style: COLORS.status.rejected },
-    Withdrawn: { icon: AlertTriangle, style: COLORS.status.withdrawn },
-};
+// Sort column type for sortable headers
+type SortColumn = 'variationNumber' | 'description' | 'costLine' | 'status' | 'forecast' | 'approved' | 'date' | 'category';
 
 interface VariationsPanelProps {
     projectId: string;
@@ -54,30 +50,83 @@ interface VariationsPanelProps {
 
 export function VariationsPanel({ projectId }: VariationsPanelProps) {
     const { variations, isLoading, error, refetch } = useVariations(projectId);
-    const { createVariation, updateVariation, isSubmitting } = useVariationMutations(projectId, refetch);
+    const { createVariation, updateVariation, deleteVariation, isSubmitting } = useVariationMutations(projectId, refetch);
     const { costLines } = useCostLines(projectId);
 
     const [showAddRow, setShowAddRow] = useState(false);
-    const [filterStatus, setFilterStatus] = useState<VariationStatus | 'all'>('all');
-    const [filterCategory, setFilterCategory] = useState<VariationCategory | 'all'>('all');
+    const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; variationNo: string } | null>(null);
+    const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
-    const filteredVariations = variations.filter(v => {
-        if (filterStatus !== 'all' && v.status !== filterStatus) return false;
-        if (filterCategory !== 'all' && v.category !== filterCategory) return false;
-        return true;
-    });
-
-    // Summary calculations
-    const summary = {
-        totalForecast: variations.filter(v => v.status === 'Forecast').reduce((sum, v) => sum + v.amountForecastCents, 0),
-        totalApproved: variations.filter(v => v.status === 'Approved').reduce((sum, v) => sum + v.amountApprovedCents, 0),
-        forecastCount: variations.filter(v => v.status === 'Forecast').length,
-        approvedCount: variations.filter(v => v.status === 'Approved').length,
+    // Handle sort column click
+    const handleSort = (column: SortColumn) => {
+        if (sortColumn === column) {
+            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
+        }
     };
+
+    // Sort variations based on current sort state
+    const sortedVariations = useMemo(() => {
+        if (!sortColumn) return variations;
+
+        return [...variations].sort((a, b) => {
+            let aVal: string | number;
+            let bVal: string | number;
+
+            switch (sortColumn) {
+                case 'variationNumber':
+                    aVal = a.variationNumber.toLowerCase();
+                    bVal = b.variationNumber.toLowerCase();
+                    break;
+                case 'description':
+                    aVal = a.description.toLowerCase();
+                    bVal = b.description.toLowerCase();
+                    break;
+                case 'costLine':
+                    aVal = (a.costLine?.activity || '').toLowerCase();
+                    bVal = (b.costLine?.activity || '').toLowerCase();
+                    break;
+                case 'status':
+                    aVal = a.status.toLowerCase();
+                    bVal = b.status.toLowerCase();
+                    break;
+                case 'forecast':
+                    aVal = a.amountForecastCents;
+                    bVal = b.amountForecastCents;
+                    break;
+                case 'approved':
+                    aVal = a.amountApprovedCents;
+                    bVal = b.amountApprovedCents;
+                    break;
+                case 'date':
+                    aVal = a.dateSubmitted || '';
+                    bVal = b.dateSubmitted || '';
+                    break;
+                case 'category':
+                    aVal = a.category.toLowerCase();
+                    bVal = b.category.toLowerCase();
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [variations, sortColumn, sortDirection]);
 
     const handleAddVariation = async (data: Omit<CreateVariationInput, 'projectId'>) => {
         await createVariation(data);
         setShowAddRow(false);
+    };
+
+    const handleDeleteVariation = async (id: string) => {
+        await deleteVariation(id);
+        setDeleteConfirm(null);
     };
 
     if (error) {
@@ -93,71 +142,20 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
         );
     }
 
+    // Render sort indicator
+    const SortIndicator = ({ column }: { column: SortColumn }) => {
+        if (sortColumn !== column) return null;
+        return sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
+    };
+
     return (
         <div className="h-full flex flex-col bg-[#1e1e1e] text-xs">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
-                <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <span className="text-[#858585]">Forecast:</span>
-                        <span className="font-semibold text-yellow-400">{formatCurrency(summary.totalForecast)}</span>
-                        <span className="text-[#6e6e6e]">({summary.forecastCount})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-[#858585]">Approved:</span>
-                        <span className="font-semibold text-green-400">{formatCurrency(summary.totalApproved)}</span>
-                        <span className="text-[#6e6e6e]">({summary.approvedCount})</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setShowAddRow(true)}
-                        disabled={showAddRow}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Variation
-                    </button>
-                    <button
-                        onClick={() => refetch()}
-                        disabled={isLoading}
-                        className="p-1.5 text-[#858585] hover:text-[#cccccc] hover:bg-[#37373d] rounded transition-colors"
-                        title="Refresh"
-                    >
-                        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Filters */}
-            <div className="flex items-center gap-4 px-4 py-2 border-b border-[#3e3e42] bg-[#2d2d30]">
-                <div className="flex items-center gap-2">
-                    <label className="text-[#858585]">Status:</label>
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value as VariationStatus | 'all')}
-                        className="px-2 py-1 bg-[#1e1e1e] border border-[#3e3e42] rounded text-xs text-[#cccccc] focus:outline-none focus:border-[#0e639c]"
-                    >
-                        <option value="all">All</option>
-                        <option value="Forecast">Forecast</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Rejected">Rejected</option>
-                        <option value="Withdrawn">Withdrawn</option>
-                    </select>
-                </div>
-                <div className="flex items-center gap-2">
-                    <label className="text-[#858585]">Category:</label>
-                    <select
-                        value={filterCategory}
-                        onChange={(e) => setFilterCategory(e.target.value as VariationCategory | 'all')}
-                        className="px-2 py-1 bg-[#1e1e1e] border border-[#3e3e42] rounded text-xs text-[#cccccc] focus:outline-none focus:border-[#0e639c]"
-                    >
-                        <option value="all">All</option>
-                        <option value="Principal">Principal</option>
-                        <option value="Contractor">Contractor</option>
-                        <option value="Lessor Works">Lessor Works</option>
-                    </select>
-                </div>
+            <div className="flex items-center justify-end px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
+                <span className="text-[10px] text-[#6e6e6e] flex items-center gap-1">
+                    <Upload className="h-3 w-3" />
+                    Drop Variation
+                </span>
             </div>
 
             {/* Table */}
@@ -165,34 +163,109 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                 <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
                     <thead className="sticky top-0 z-10" style={{ backgroundColor: COLORS.accent.variation }}>
                         <tr>
-                            <th className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px]">Variation No.</th>
-                            <th className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium">Description</th>
-                            <th className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[200px]">Cost Line</th>
-                            <th className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px]">Status</th>
-                            <th className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px]">Forecast</th>
-                            <th className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px]">Approved</th>
-                            <th className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px]">Date</th>
-                            <th className="border border-[#a08050] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[60px]">Category</th>
+                            <th
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#c09060] select-none"
+                                onClick={() => handleSort('variationNumber')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Variation No.
+                                    <SortIndicator column="variationNumber" />
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium cursor-pointer hover:bg-[#c09060] select-none"
+                                onClick={() => handleSort('description')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Description
+                                    <SortIndicator column="description" />
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[200px] cursor-pointer hover:bg-[#c09060] select-none"
+                                onClick={() => handleSort('costLine')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Cost Line
+                                    <SortIndicator column="costLine" />
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px] cursor-pointer hover:bg-[#c09060] select-none"
+                                onClick={() => handleSort('status')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Status
+                                    <SortIndicator column="status" />
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#c09060] select-none"
+                                onClick={() => handleSort('forecast')}
+                            >
+                                <div className="flex items-center justify-end gap-1">
+                                    Forecast
+                                    <SortIndicator column="forecast" />
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#c09060] select-none"
+                                onClick={() => handleSort('approved')}
+                            >
+                                <div className="flex items-center justify-end gap-1">
+                                    Approved
+                                    <SortIndicator column="approved" />
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#c09060] select-none"
+                                onClick={() => handleSort('date')}
+                            >
+                                <div className="flex items-center gap-1">
+                                    Date
+                                    <SortIndicator column="date" />
+                                </div>
+                            </th>
+                            <th
+                                className="border border-[#a08050] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[60px] cursor-pointer hover:bg-[#c09060] select-none"
+                                onClick={() => handleSort('category')}
+                            >
+                                <div className="flex items-center justify-center gap-1">
+                                    Cat
+                                    <SortIndicator column="category" />
+                                </div>
+                            </th>
+                            <th className="border border-[#a08050] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[40px]">
+                                <button
+                                    onClick={() => setShowAddRow(true)}
+                                    disabled={showAddRow}
+                                    className="p-0.5 text-[#1e1e1e] hover:text-[#0e639c] transition-colors disabled:opacity-50"
+                                    title="Add Variation"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                </button>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">Loading variations...</td>
+                                <td colSpan={9} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">Loading variations...</td>
                             </tr>
-                        ) : filteredVariations.length === 0 && !showAddRow ? (
+                        ) : sortedVariations.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">
-                                    {variations.length === 0 ? 'No variations yet. Click "Add Variation" to create one.' : 'No variations match the current filters'}
+                                <td colSpan={9} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">
+                                    No variations yet. Click the + icon to add one.
                                 </td>
                             </tr>
                         ) : (
-                            filteredVariations.map((variation) => (
+                            sortedVariations.map((variation) => (
                                 <VariationRow
                                     key={variation.id}
                                     variation={variation}
                                     costLines={costLines}
                                     onUpdate={updateVariation}
+                                    onDelete={() => setDeleteConfirm({ id: variation.id, variationNo: variation.variationNumber })}
                                 />
                             ))
                         )}
@@ -208,6 +281,17 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                     </tbody>
                 </table>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            {deleteConfirm && (
+                <DeleteConfirmDialog
+                    itemName={deleteConfirm.variationNo}
+                    itemType="variation"
+                    onClose={() => setDeleteConfirm(null)}
+                    onConfirm={() => handleDeleteVariation(deleteConfirm.id)}
+                    isSubmitting={isSubmitting}
+                />
+            )}
         </div>
     );
 }
@@ -217,29 +301,28 @@ interface VariationRowProps {
     costLines: CostLineWithCalculations[];
     onUpdate: (id: string, data: Partial<{
         status: VariationStatus;
+        category: VariationCategory;
         description: string;
         costLineId: string | null;
         amountForecastCents: number;
         amountApprovedCents: number;
         dateSubmitted: string;
     }>) => Promise<any>;
+    onDelete: () => void;
 }
 
-function VariationRow({ variation, costLines, onUpdate }: VariationRowProps) {
+function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRowProps) {
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const inputRef = useRef<HTMLInputElement>(null);
-
-    const statusConfig = STATUS_CONFIG[variation.status];
-    const categoryStyle = COLORS.category[variation.category];
 
     const inputClass = "w-full p-0 bg-transparent border-none rounded text-[11px] text-[#cccccc] focus:outline-none";
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
     // Sort cost lines alphabetically by cost code or description
     const sortedCostLines = [...costLines].sort((a, b) => {
-        const aKey = a.costCode || a.description;
-        const bKey = b.costCode || b.description;
+        const aKey = a.costCode || a.activity;
+        const bKey = b.costCode || b.activity;
         return aKey.localeCompare(bKey, undefined, { numeric: true });
     });
 
@@ -296,14 +379,13 @@ function VariationRow({ variation, costLines, onUpdate }: VariationRowProps) {
         }
     };
 
-    const handleStatusToggle = async () => {
-        const newStatus = variation.status === 'Forecast' ? 'Approved' : 'Forecast';
+    const handleStatusChange = async (newStatus: VariationStatus) => {
         const updateData: Partial<{
             status: VariationStatus;
             amountApprovedCents: number;
         }> = { status: newStatus };
 
-        // When toggling from Forecast to Approved, copy forecast amount to approved amount
+        // When changing to Approved, copy forecast amount to approved amount if approved is 0
         if (newStatus === 'Approved' && variation.amountApprovedCents === 0) {
             updateData.amountApprovedCents = variation.amountForecastCents;
         }
@@ -311,12 +393,16 @@ function VariationRow({ variation, costLines, onUpdate }: VariationRowProps) {
         await onUpdate(variation.id, updateData);
     };
 
+    const handleCategoryChange = async (newCategory: VariationCategory) => {
+        await onUpdate(variation.id, { category: newCategory });
+    };
+
     const handleCostLineChange = async (costLineId: string) => {
         await onUpdate(variation.id, { costLineId: costLineId || null });
     };
 
     return (
-        <tr className="bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42] transition-colors">
+        <tr className="group bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42] transition-colors">
             <td className="border-x border-[#3e3e42] px-2 py-1.5 font-mono font-medium text-[#D4A574] w-[100px]">
                 {variation.variationNumber}
             </td>
@@ -346,24 +432,37 @@ function VariationRow({ variation, costLines, onUpdate }: VariationRowProps) {
                     value={variation.costLineId || ''}
                     onChange={(e) => handleCostLineChange(e.target.value)}
                     className="w-full px-1 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[11px] text-[#858585] focus:outline-none cursor-pointer"
-                    title={variation.costLine?.description || ''}
+                    title={variation.costLine?.activity || ''}
                 >
                     <option value="">None</option>
-                    {sortedCostLines.map((line) => (
-                        <option key={line.id} value={line.id} title={line.description}>
-                            {line.costCode ? `${line.costCode} - ${line.description}` : line.description}
-                        </option>
-                    ))}
+                    {sortedCostLines.map((line) => {
+                        const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
+                        const label = line.costCode
+                            ? disciplineOrTrade
+                                ? `${line.costCode} - ${disciplineOrTrade} - ${line.activity}`
+                                : `${line.costCode} - ${line.activity}`
+                            : disciplineOrTrade
+                                ? `${disciplineOrTrade} - ${line.activity}`
+                                : line.activity;
+                        return (
+                            <option key={line.id} value={line.id} title={label}>
+                                {label}
+                            </option>
+                        );
+                    })}
                 </select>
             </td>
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 w-[90px]">
-                <button
-                    onClick={handleStatusToggle}
-                    className={`px-1.5 py-0.5 rounded text-[10px] border cursor-pointer transition-colors ${statusConfig.style.bg} ${statusConfig.style.text} ${statusConfig.style.border} hover:opacity-80`}
-                    title={`Click to toggle to ${variation.status === 'Forecast' ? 'Approved' : 'Forecast'}`}
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[90px]">
+                <select
+                    value={variation.status}
+                    onChange={(e) => handleStatusChange(e.target.value as VariationStatus)}
+                    className="w-full px-1 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
                 >
-                    {variation.status}
-                </button>
+                    <option value="Forecast">Forecast</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Withdrawn">Withdrawn</option>
+                </select>
             </td>
             <td
                 className="border-x border-[#3e3e42] px-2 py-1.5 text-right cursor-pointer w-[100px]"
@@ -425,10 +524,25 @@ function VariationRow({ variation, costLines, onUpdate }: VariationRowProps) {
                     </span>
                 )}
             </td>
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 text-center w-[60px]">
-                <span className={`px-1.5 py-0.5 rounded text-[10px] border ${categoryStyle}`}>
-                    {variation.category === 'Principal' ? 'PV' : variation.category === 'Contractor' ? 'CV' : 'LV'}
-                </span>
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[60px]">
+                <select
+                    value={variation.category}
+                    onChange={(e) => handleCategoryChange(e.target.value as VariationCategory)}
+                    className="w-full px-0.5 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[10px] text-[#cccccc] focus:outline-none cursor-pointer text-center"
+                >
+                    <option value="Principal">PV</option>
+                    <option value="Contractor">CV</option>
+                    <option value="Lessor Works">LV</option>
+                </select>
+            </td>
+            <td className="border-x border-[#3e3e42] px-1 py-1 text-center w-[40px]">
+                <button
+                    onClick={onDelete}
+                    className="p-0.5 text-[#858585] hover:text-[#f87171] hover:bg-[#4e4e52] rounded transition-colors opacity-0 group-hover:opacity-100"
+                    title="Delete variation"
+                >
+                    <Trash className="h-3 w-3" />
+                </button>
             </td>
         </tr>
     );
@@ -452,8 +566,8 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
 
     // Sort cost lines alphabetically by cost code or description
     const sortedCostLines = [...costLines].sort((a, b) => {
-        const aKey = a.costCode || a.description;
-        const bKey = b.costCode || b.description;
+        const aKey = a.costCode || a.activity;
+        const bKey = b.costCode || b.activity;
         return aKey.localeCompare(bKey, undefined, { numeric: true });
     });
 
@@ -506,14 +620,24 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                     value={formData.costLineId}
                     onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
                     className={inputClass}
-                    title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.description : ''}
+                    title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
                 >
                     <option value="">None</option>
-                    {sortedCostLines.map((line) => (
-                        <option key={line.id} value={line.id} title={line.description}>
-                            {line.costCode ? `${line.costCode} - ${line.description}` : line.description}
-                        </option>
-                    ))}
+                    {sortedCostLines.map((line) => {
+                        const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
+                        const label = line.costCode
+                            ? disciplineOrTrade
+                                ? `${line.costCode} - ${disciplineOrTrade} - ${line.activity}`
+                                : `${line.costCode} - ${line.activity}`
+                            : disciplineOrTrade
+                                ? `${disciplineOrTrade} - ${line.activity}`
+                                : line.activity;
+                        return (
+                            <option key={line.id} value={line.id} title={label}>
+                                {label}
+                            </option>
+                        );
+                    })}
                 </select>
             </td>
             <td className="border-x border-[#3e3e42] px-2 py-1.5">
@@ -557,14 +681,60 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                 <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as VariationCategory })}
-                    className={inputClass}
+                    className={`${inputClass} text-center`}
                 >
                     <option value="Principal">PV</option>
                     <option value="Contractor">CV</option>
                     <option value="Lessor Works">LV</option>
                 </select>
             </td>
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[40px]"></td>
         </tr>
+    );
+}
+
+interface DeleteConfirmDialogProps {
+    itemName: string;
+    itemType: string;
+    onClose: () => void;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+}
+
+function DeleteConfirmDialog({ itemName, itemType, onClose, onConfirm, isSubmitting }: DeleteConfirmDialogProps) {
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-sm border border-[#3e3e42]">
+                <div className="px-4 py-3 border-b border-[#3e3e42]">
+                    <h2 className="text-sm font-semibold text-[#cccccc]">Delete {itemType}</h2>
+                </div>
+                <div className="p-4 space-y-4">
+                    <p className="text-sm text-[#cccccc]">
+                        Are you sure you want to delete <strong>&quot;{itemName}&quot;</strong>?
+                    </p>
+                    <p className="text-xs text-[#858585]">
+                        This action cannot be undone.
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 text-xs text-[#858585] hover:text-[#cccccc] transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onConfirm}
+                            disabled={isSubmitting}
+                            className="px-4 py-2 text-xs bg-[#f87171] text-white rounded hover:bg-[#ef4444] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isSubmitting ? 'Deleting...' : 'Delete'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     );
 }
 

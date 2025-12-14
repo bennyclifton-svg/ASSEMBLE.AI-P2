@@ -29,7 +29,7 @@ export const DOCUMENT_CATEGORIES = {
     PROCUREMENT: {
         id: 'procurement',
         name: 'Procurement',
-        color: '#D4A574', // Golden Sand (more distinct from brown)
+        color: '#C9B616', // Muted Yellow
         hasSubcategories: false,
         row: 1,
     },
@@ -107,4 +107,12 @@ export function getCategoriesByRow(row: number): Category[] {
 // Helper to get category by ID
 export function getCategoryById(id: string): Category | undefined {
     return Object.values(DOCUMENT_CATEGORIES).find(cat => cat.id === id);
+}
+
+// Helper to get category by name (case-insensitive)
+export function getCategoryByName(name: string): Category | undefined {
+    const normalizedName = name.toLowerCase();
+    return Object.values(DOCUMENT_CATEGORIES).find(
+        cat => cat.name.toLowerCase() === normalizedName
+    );
 }

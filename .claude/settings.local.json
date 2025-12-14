@@ -65,7 +65,19 @@
       "Bash(xargs cat:*)",
       "Bash(if not exist \"d:\\assemble.ai P2\\assemble.ai\\src\\lib\\constants\" mkdir \"d:\\assemble.ai P2\\assemble.ai\\src\\lib\\constants\")",
       "Bash(cmd /c \"taskkill /F /IM node.exe 2>nul & echo Done\")",
-      "Bash(cmd /c \"taskkill /F /PID 27616 2>nul & del /F \"\"d:\\assemble.ai P2\\assemble.ai\\.next\\dev\\lock\"\" 2>nul & echo Done\")"
+      "Bash(cmd /c \"taskkill /F /PID 27616 2>nul & del /F \"\"d:\\assemble.ai P2\\assemble.ai\\.next\\dev\\lock\"\" 2>nul & echo Done\")",
+      "Bash(move:*)",
+      "Bash(git mv:*)",
+      "Bash(cmd /c del /F \"d:\\assemble.ai P2\\assemble.ai\\src\\components\\consultants\\FeeStructureSection.tsx\")",
+      "Bash(cmd /c del /F \"d:\\assemble.ai P2\\assemble.ai\\src\\lib\\hooks\\use-discipline-fee-items.ts\")",
+      "Bash(ren \"d:\\assemble.ai P2\\assemble.ai\\drizzle\\0018_rft_new_update.sql\" \"0019_rft_new_update.sql\")",
+      "Bash(git checkout:*)",
+      "Bash(git branch:*)",
+      "Bash(if exist \"specs\\001-trr-report\" rmdir /s /q \"specs\\001-trr-report\")",
+      "Bash(npm ls:*)",
+      "Bash(cmd /c \"del /F \"\"d:\\assemble.ai P2\\assemble.ai\\.next\\dev\\lock\"\" 2>nul\")",
+      "Bash(cmd /c \"taskkill /F /PID 72720 2>nul & del /F \"\"d:\\assemble.ai P2\\assemble.ai\\.next\\dev\\lock\"\" 2>nul & echo Done\")",
+      "Bash(cmd /c \"taskkill /F /IM node.exe 2>nul & echo Killed all node processes\")"
     ],
     "deny": [],
     "ask": []

@@ -177,7 +177,7 @@ Sample invoice links to a cost line via `costLineId`.
 [Project Created]
     │
     ▼
-[Initialize Disciplines] (existing - 36 items)
+[Initialize Disciplines] (existing - 37 items)
     │
     ▼
 [Initialize Trades] (existing - 21 items)

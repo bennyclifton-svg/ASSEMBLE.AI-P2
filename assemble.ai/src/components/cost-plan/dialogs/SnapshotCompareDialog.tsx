@@ -30,7 +30,7 @@ import type { CostLineSection, SECTION_NAMES } from '@/types/cost-plan';
 interface CostLineCompare {
   id: string;
   costCode?: string | null;
-  description: string;
+  activity: string;
   section: CostLineSection;
   // Snapshot values (null if line didn't exist)
   snapshotBudgetCents: number | null;
@@ -398,7 +398,7 @@ export function SnapshotCompareDialog({
                                       : 'text-[#cccccc]'
                                   }`}
                                 >
-                                  {line.description}
+                                  {line.activity}
                                 </span>
                               </div>
                             </div>

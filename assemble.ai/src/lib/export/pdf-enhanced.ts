@@ -19,6 +19,30 @@ const HEADING_COLORS = {
 } as const;
 
 /**
+ * Convert hex color to RGB tuple for jsPDF
+ */
+function hexToRgb(hex: string): [number, number, number] | null {
+  if (!hex || typeof hex !== 'string') return null;
+
+  // Remove # if present
+  const cleanHex = hex.replace('#', '');
+
+  // Handle 3-digit hex
+  const fullHex = cleanHex.length === 3
+    ? cleanHex[0] + cleanHex[0] + cleanHex[1] + cleanHex[1] + cleanHex[2] + cleanHex[2]
+    : cleanHex;
+
+  // Validate hex format
+  if (!/^[0-9a-fA-F]{6}$/.test(fullHex)) return null;
+
+  const r = parseInt(fullHex.substring(0, 2), 16);
+  const g = parseInt(fullHex.substring(2, 4), 16);
+  const b = parseInt(fullHex.substring(4, 6), 16);
+
+  return [r, g, b];
+}
+
+/**
  * Darken color by 15% for better print contrast
  */
 function darkenColor(hex: string | undefined, percent: number = 15): string {
@@ -87,11 +111,8 @@ export async function exportToPDF(
   const margin = 20;
   const contentWidth = pageWidth - 2 * margin;
 
-  // Process each element
-  const elements = htmlDoc.body.children;
-
-  for (let i = 0; i < elements.length; i++) {
-    const element = elements[i];
+  // Helper function to process elements recursively
+  function processElement(element: Element) {
     const tagName = element.tagName.toLowerCase();
 
     // Check for page break
@@ -135,38 +156,101 @@ export async function exportToPDF(
       }
 
     } else if (tagName === 'table') {
-      // Table (transmittal)
-      const rows: any[] = [];
-      const tbody = element.querySelector('tbody');
+      // Check if this is a project-info-table or transmittal-table
+      const className = element.getAttribute('class') || '';
+      const isProjectInfo = className.includes('project-info');
+      const isTransmittal = className.includes('transmittal');
+      const isDetailsTable = className.includes('details');
 
-      if (tbody) {
-        const trs = tbody.querySelectorAll('tr');
-        trs.forEach(tr => {
-          const row: any[] = [];
-          const tds = tr.querySelectorAll('td');
-          tds.forEach(td => {
-            row.push(td.textContent || '');
-          });
-          rows.push(row);
+      const rows: string[][] = [];
+      const headerRow: string[] = [];
+      // Store cell styles (colors) for transmittal tables
+      const cellStyles: Array<{ row: number; col: number; textColor: [number, number, number]; fillColor?: [number, number, number] }> = [];
+
+      // Extract header if present
+      const thead = element.querySelector('thead');
+      if (thead) {
+        const ths = thead.querySelectorAll('th');
+        ths.forEach(th => {
+          headerRow.push(th.textContent || '');
         });
       }
 
-      // Add table using autotable
+      // Extract body rows
+      const tbody = element.querySelector('tbody') || element;
+      const trs = tbody.querySelectorAll('tr');
+      trs.forEach((tr, rowIndex) => {
+        const row: string[] = [];
+        const cells = tr.querySelectorAll('td, th');
+        cells.forEach((cell, colIndex) => {
+          row.push(cell.textContent || '');
+
+          // Extract cell color from inline style (for category colors)
+          if (isTransmittal) {
+            const style = cell.getAttribute('style') || '';
+            const colorMatch = style.match(/color:\s*([^;]+)/);
+            const bgColorMatch = style.match(/background-color:\s*([^;]+)/);
+
+            if (colorMatch) {
+              const hexColor = colorMatch[1].trim();
+              const rgb = hexToRgb(hexColor);
+              if (rgb) {
+                cellStyles.push({
+                  row: rowIndex,
+                  col: colIndex,
+                  textColor: rgb,
+                  fillColor: bgColorMatch ? hexToRgb(bgColorMatch[1].trim()) || undefined : undefined,
+                });
+              }
+            }
+          }
+        });
+        if (row.length > 0) {
+          rows.push(row);
+        }
+      });
+
+      // Add table using autotable - now with consistent light styling for all tables
       if (rows.length > 0) {
+        // Build cell-specific styles for transmittal tables
+        const bodyCellStyles: { [key: string]: { textColor?: [number, number, number]; fillColor?: [number, number, number] } } = {};
+        cellStyles.forEach(({ row, col, textColor, fillColor }) => {
+          bodyCellStyles[`${row}-${col}`] = { textColor, fillColor };
+        });
+
         autoTable(doc, {
           startY: yPosition,
-          head: [['Document Name', 'Version', 'Category']],
+          head: headerRow.length > 0 ? [headerRow] : undefined,
           body: rows,
           theme: 'grid',
           headStyles: {
-            fillColor: [70, 70, 70],
-            textColor: [255, 255, 255],
+            // Use consistent light gray header for all tables (matching Addendum style)
+            fillColor: [245, 245, 245],
+            textColor: [0, 0, 0],
             fontSize: 10,
             fontStyle: 'bold',
           },
           bodyStyles: {
-            fontSize: 9,
+            fontSize: isProjectInfo ? 10 : 9,
           },
+          columnStyles: isProjectInfo ? {
+            0: { cellWidth: 35, fontStyle: 'bold', fillColor: [245, 245, 245] },
+          } : undefined,
+          // Apply cell-specific colors for transmittal category columns
+          didParseCell: isTransmittal ? (data) => {
+            if (data.section === 'body') {
+              const key = `${data.row.index}-${data.column.index}`;
+              const style = bodyCellStyles[key];
+              if (style) {
+                if (style.textColor) {
+                  data.cell.styles.textColor = style.textColor;
+                }
+                if (style.fillColor) {
+                  data.cell.styles.fillColor = style.fillColor;
+                }
+              }
+            }
+          } : undefined,
           margin: { left: margin, right: margin },
           tableWidth: contentWidth,
         });
@@ -175,7 +259,49 @@ export async function exportToPDF(
         const finalY = (doc as any).lastAutoTable?.finalY ?? yPosition + 50;
         yPosition = finalY + 10;
       }
+
+    } else if (tagName === 'div') {
+      // Process div contents - handle text with <br> tags
+      const innerHTML = element.innerHTML;
+
+      // Check if it contains line breaks (from addendum content)
+      if (innerHTML.includes('<br>')) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor('#000000');
+
+        // Split by <br> tags and render each line
+        const textLines = innerHTML
+          .split(/<br\s*\/?>/i)
+          .map(line => line.replace(/<[^>]+>/g, '').trim());
+
+        textLines.forEach(line => {
+          if (line) {
+            // Check for page break
+            if (yPosition > pageHeight - 20) {
+              doc.addPage();
+              yPosition = 20;
+            }
+            const wrapped = doc.splitTextToSize(line, contentWidth);
+            doc.text(wrapped, margin, yPosition);
+            yPosition += wrapped.length * 5 + 2;
+          }
+        });
+        yPosition += 5;
+      } else {
+        // Process child elements
+        const children = element.children;
+        for (let j = 0; j < children.length; j++) {
+          processElement(children[j]);
+        }
+      }
     }
+  }
+
+  // Process each top-level element
+  const elements = htmlDoc.body.children;
+  for (let i = 0; i < elements.length; i++) {
+    processElement(elements[i]);
   }
 
   // Return as ArrayBuffer for Node.js compatibility

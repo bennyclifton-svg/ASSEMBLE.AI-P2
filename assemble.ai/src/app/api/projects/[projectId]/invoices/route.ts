@@ -56,7 +56,7 @@ export async function GET(
 
                 if (inv.costLineId) {
                     const [cl] = await db
-                        .select({ id: costLines.id, costCode: costLines.costCode, description: costLines.description, section: costLines.section })
+                        .select({ id: costLines.id, costCode: costLines.costCode, activity: costLines.activity, section: costLines.section })
                         .from(costLines)
                         .where(eq(costLines.id, inv.costLineId));
                     costLine = cl || null;

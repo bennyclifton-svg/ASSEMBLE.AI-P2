@@ -1,4 +1,4 @@
-// Default Consultant Disciplines (36 total)
+// Default Consultant Disciplines (37 total)
 export const CONSULTANT_DISCIPLINES = [
   { name: 'Access', order: 1 },
   { name: 'Acoustic', order: 2 },
@@ -26,16 +26,17 @@ export const CONSULTANT_DISCIPLINES = [
   { name: 'Mechanical', order: 24 },
   { name: 'NBN', order: 25 },
   { name: 'Passive Fire', order: 26 },
-  { name: 'Roof Access', order: 27 },
-  { name: 'Site Investigation', order: 28 },
-  { name: 'Stormwater', order: 29 },
-  { name: 'Structural', order: 30 },
-  { name: 'Survey', order: 31 },
-  { name: 'Traffic', order: 32 },
-  { name: 'Vertical Transport', order: 33 },
-  { name: 'Waste Management', order: 34 },
-  { name: 'Wastewater', order: 35 },
-  { name: 'Waterproofing', order: 36 },
+  { name: 'Project Manager', order: 27 },
+  { name: 'Roof Access', order: 28 },
+  { name: 'Site Investigation', order: 29 },
+  { name: 'Stormwater', order: 30 },
+  { name: 'Structural', order: 31 },
+  { name: 'Survey', order: 32 },
+  { name: 'Traffic', order: 33 },
+  { name: 'Vertical Transport', order: 34 },
+  { name: 'Waste Management', order: 35 },
+  { name: 'Wastewater', order: 36 },
+  { name: 'Waterproofing', order: 37 },
 ] as const;
 
 // Default Contractor Trades (21 total)

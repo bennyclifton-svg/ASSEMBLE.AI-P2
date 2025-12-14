@@ -41,6 +41,9 @@ export async function generateTransmittalSectionNode(
             name: doc.name,
             version: doc.version,
             category: doc.category,
+            categoryColor: doc.categoryColor,
+            subcategory: doc.subcategory,
+            subcategoryColor: doc.subcategoryColor,
         }))
     );
 

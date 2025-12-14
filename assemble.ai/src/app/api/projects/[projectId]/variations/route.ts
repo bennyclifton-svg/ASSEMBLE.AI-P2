@@ -52,7 +52,7 @@ export async function GET(
                 let costLine = null;
                 if (v.costLineId) {
                     const [cl] = await db
-                        .select({ id: costLines.id, costCode: costLines.costCode, description: costLines.description, section: costLines.section })
+                        .select({ id: costLines.id, costCode: costLines.costCode, activity: costLines.activity, section: costLines.section })
                         .from(costLines)
                         .where(eq(costLines.id, v.costLineId));
                     costLine = cl || null;

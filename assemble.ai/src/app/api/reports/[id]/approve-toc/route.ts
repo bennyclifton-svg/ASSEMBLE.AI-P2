@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ragDb } from '@/lib/db/rag-client';
-import { reportTemplates, reportSections, type GenerationMode, type ContentLength } from '@/lib/db/rag-schema';
+import { reportTemplates, reportSections, type GenerationMode, type ContentLength, type TableOfContents as RagTableOfContents } from '@/lib/db/rag-schema';
 import { eq, and } from 'drizzle-orm';
 import { validateToc } from '@/lib/langgraph/nodes/await-toc-approval';
 import type { TableOfContents, ReportStateType, GeneratedSection } from '@/lib/langgraph/state';
@@ -311,7 +311,7 @@ async function generateAllSections(
             organizationId: 'org_default', // TODO: Get from user context
             reportType: 'tender_request',
             discipline: disciplineName ?? tradeName, // Use discipline or trade name
-            tableOfContents: finalToc, // Use finalToc which may include dynamically added transmittal
+            tableOfContents: finalToc as RagTableOfContents, // Use finalToc which may include dynamically added transmittal
         });
         console.log('[approve-toc] Report memory captured successfully');
     } catch (error) {

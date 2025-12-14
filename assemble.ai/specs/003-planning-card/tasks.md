@@ -388,8 +388,8 @@ This phase uses the **same LangGraph orchestration** as 007-RAG tender report ge
 - [x] T099 [FR-051-058] Add project initialization logic to POST /api/projects
   - Implemented: `src/app/api/projects/route.ts` with full transaction support
   - ✅ Wrap all operations in a database transaction (line 38)
-  - ✅ Create 36 consultant disciplines with isEnabled: false (line 51-59)
-  - ✅ Create 144 consultant statuses (4 per discipline) with isActive: false (line 61-70)
+  - ✅ Create 37 consultant disciplines with isEnabled: false (line 51-59)
+  - ✅ Create 148 consultant statuses (4 per discipline) with isActive: false (line 61-70)
   - ✅ Create 21 contractor trades with isEnabled: false (line 72-80)
   - ✅ Create 84 contractor statuses (4 per trade) with isActive: false (line 82-91)
   - ✅ Create 5 default project stages (line 93-107)
@@ -405,7 +405,7 @@ This phase uses the **same LangGraph orchestration** as 007-RAG tender report ge
 
 - [ ] T101 [Testing] Test project initialization
   - Manual testing required:
-  - [ ] Create new project → verify 292 records created
+  - [ ] Create new project → verify 297 records created
   - [ ] Simulate DB failure → verify rollback (no partial data)
   - [ ] Run migration on existing projects → verify backfill
   - [ ] Run migration twice → verify no duplicates

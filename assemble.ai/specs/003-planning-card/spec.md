@@ -357,7 +357,7 @@ Directors need to export the Planning Card as a professionally formatted PDF wit
 - **FR-019**: System MUST maintain an undo history for the current session.
 
 **Project Initialization (AC-9.x)**:
-- **FR-051**: System MUST initialize all 36 consultant disciplines when a project is created (see [data-model.md](data-model.md) for full list).
+- **FR-051**: System MUST initialize all 37 consultant disciplines when a project is created (see [data-model.md](data-model.md) for full list).
 - **FR-052**: System MUST initialize all 21 contractor trades when a project is created (see [data-model.md](data-model.md) for full list).
 - **FR-053**: System MUST initialize 5 default project stages when a project is created (Initiation, Scheme Design, Detail Design, Procurement, Delivery).
 - **FR-054**: System MUST initialize empty ProjectDetails and ProjectObjectives records when a project is created.
@@ -419,6 +419,6 @@ Directors need to export the Planning Card as a professionally formatted PDF wit
 - **SC-021**: Revision history in PDF is accurate and complete.
 
 **Project Initialization**:
-- **SC-022**: 100% of new projects have complete planning data (292 records) immediately after creation.
+- **SC-022**: 100% of new projects have complete planning data (297 records) immediately after creation.
 - **SC-023**: Project creation including initialization completes in < 2 seconds.
 - **SC-024**: Transaction rollback works correctly on simulated failure (no partial data).

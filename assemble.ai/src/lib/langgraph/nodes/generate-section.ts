@@ -352,10 +352,10 @@ export async function regenerateSection(
 // ============================================
 
 import {
-    formatFeeItemsAsMarkdown,
     formatPriceItemsAsMarkdown,
-    fetchDisciplineFeeItems,
     fetchTradePriceItems,
+    fetchCostLinesByDiscipline,
+    formatCostLinesAsMarkdown,
     type DisciplineContext,
     type TradeContext,
 } from '../../services/planning-context';
@@ -700,8 +700,9 @@ async function formatFeeStructure(state: ReportStateType): Promise<string> {
         return `Discipline not found.`;
     }
 
-    const feeItems = await fetchDisciplineFeeItems(discipline.id);
-    return formatFeeItemsAsMarkdown(feeItems, discipline.name);
+    // Fetch cost lines from cost plan instead of fee items
+    const costLines = await fetchCostLinesByDiscipline(discipline.id);
+    return formatCostLinesAsMarkdown(costLines, discipline.name);
 }
 
 async function formatPriceStructure(state: ReportStateType): Promise<string> {

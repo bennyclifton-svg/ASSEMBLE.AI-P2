@@ -10,8 +10,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, ChevronDown, FileText, File } from 'lucide-react';
+import { Download, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
 interface ExportButtonProps {
   reportId: string;
@@ -115,16 +116,16 @@ export default function ExportButton({ reportId, content }: ExportButtonProps) {
           <div className="py-1">
             <button
               onClick={() => handleExport('pdf')}
-              className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-[#3a3a3a] flex items-center gap-2"
+              className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-[#3a3a3a] flex items-center gap-3"
             >
-              <FileText className="w-4 h-4" />
+              <PdfIcon size={20} />
               Export as PDF
             </button>
             <button
               onClick={() => handleExport('docx')}
-              className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-[#3a3a3a] flex items-center gap-2"
+              className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-[#3a3a3a] flex items-center gap-3"
             >
-              <File className="w-4 h-4" />
+              <DocxIcon size={20} />
               Export as DOCX
             </button>
           </div>

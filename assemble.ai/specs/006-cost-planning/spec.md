@@ -52,12 +52,12 @@ A web-based, spreadsheet-native cost planning tool that:
 
 ```
 ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│     Project     │       │    Company      │       │   Cost Line     │
+│     Project     │       │   Discipline    │       │   Cost Line     │
 ├─────────────────┤       ├─────────────────┤       ├─────────────────┤
 │ id              │       │ id              │       │ id              │
-│ name            │       │ name            │       │ project_id      │──┐
-│ current_month   │──────<│ abn             │>──────│ company_id      │  │
-│ revision        │       │ contact_email   │       │ description     │  │
+│ name            │       │ discipline_name │       │ project_id      │──┐
+│ current_month   │──────<│ project_id      │>──────│ discipline_id   │  │
+│ revision        │       │ is_enabled      │       │ description     │  │
 │ currency_code   │       └─────────────────┘       │ budget          │  │
 │ show_gst        │                                 │ approved_contract│  │
 └─────────────────┘                                 │ section         │  │
@@ -139,7 +139,7 @@ CREATE TABLE companies (
 CREATE TABLE cost_lines (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   projectId INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  companyId INTEGER REFERENCES companies(id) ON DELETE SET NULL,
+  disciplineId INTEGER REFERENCES consultant_disciplines(id) ON DELETE SET NULL,
   section TEXT NOT NULL, -- FEES, CONSULTANTS, CONSTRUCTION, CONTINGENCY
   costCode TEXT,
   description TEXT NOT NULL,
@@ -280,7 +280,7 @@ CREATE INDEX idx_snapshots_project ON project_snapshots(projectId);
 | Col | Field | Formula | Implementation |
 |-----|-------|---------|----------------|
 | A | Cost Code | - | Direct input |
-| B | Company | - | FK to companies table |
+| B | Discipline | - | FK to consultant_disciplines table |
 | C | Description/Role | - | Direct input |
 | D | Reference | - | Contract/PO reference |
 | E+ | FY Allocations | - | ⚠️ NOT YET IN UI (schema only) |
@@ -388,7 +388,7 @@ const displayAmount = (amountCents: number, gstCents: number, showGst: boolean) 
 | Col | Header | Width | Type | Editable | Style | Notes |
 |-----|--------|-------|------|----------|-------|-------|
 | A | Cost Code | 80px | Text | Yes | Blue | Auto-gen or manual |
-| B | Company | 140px | Autocomplete | Yes | Blue | From companies master |
+| B | Discipline | 140px | Dropdown | Yes | Blue | From project disciplines |
 | C | Description/Role | 250px | Text | Yes | Blue | Primary identifier |
 | D | Reference | 100px | Text | Yes | Blue | Contract/PO ref |
 | E+ | FY 20XX | 80px | Currency | Yes | Blue | Dynamic columns |
@@ -489,26 +489,35 @@ const contextMenuItems = [
 
 | Col | Header | Width | Type | Editable | Notes |
 |-----|--------|-------|------|----------|-------|
-| A | Date | 100px | Date | Yes | Invoice date |
-| B | Company | 140px | Autocomplete | Yes | From master list |
-| C | PO Number | 100px | Text | Yes | |
-| D | Invoice Number | 110px | Text | Yes | **Required**, duplicate warning |
-| E | Description | 250px | Text | Yes | Free text |
-| F | Cost Line | 200px | Dropdown | Yes | **Links to Project Summary** |
-| G | Variation | 120px | Dropdown | Yes | Optional link to variation |
-| H | Amount (Ex GST) | 100px | Currency | Yes | |
-| I | GST | 80px | Currency | Yes | Auto-calc option |
-| J | Period | 100px | Month Picker | Yes | Defaults to project current month |
-| K | Paid? | 80px | Dropdown | Yes | unpaid/paid/partial |
+| A | Invoice No. | 100px | Text | Yes | **Required** |
+| B | Description | Auto | Text | Yes | Free text |
+| C | Cost Line | 160px | Dropdown | Yes | **Links to Project Summary** |
+| D | Period | 80px | Month Picker | Yes | Defaults to current month |
+| E | Date | 90px | Date | Yes | Invoice date |
+| F | Amount ex GST | 100px | Currency | Yes | Right-aligned |
+| G | Status | 80px | Toggle Button | Yes | **Paid/Unpaid toggle** (single click) |
+| H | Actions | 40px | Icon | - | + icon in header to add invoice |
+
+#### Toolbar
+
+The toolbar displays only the drop zone indicator:
+- **Drop Invoice**: Shows upload icon with "Drop Invoice" text for drag-and-drop PDF uploads
+
+#### Sortable Column Headers
+
+All columns (except Actions) are sortable by clicking the header:
+- Click header to sort ascending
+- Click again to sort descending
+- Sort indicator (chevron up/down) shows current sort direction
+- Useful for grouping invoices by period, amount, or status
 
 #### Smart Features
 
-1. **Company autocomplete**: Search-as-you-type from companies master list, with "Add new..." option
-2. **Cost Line dropdown**: Shows `[cost_code] - [description]` format, grouped by section
-3. **Variation dropdown**: Only shows approved variations for the selected cost line
-4. **Period default**: Auto-fills project's `current_report_month`
-5. **Duplicate detection**: Orange warning if Invoice Number already exists
-6. **GST auto-calc**: Option to auto-calculate GST at 10% (Australian default)
+1. **Cost Line dropdown**: Shows `[cost_code] - [discipline/trade] - [activity]` format
+2. **Period default**: Auto-fills current month
+3. **Status toggle**: Single-click to toggle between Paid (green) and Unpaid (yellow)
+4. **Add invoice**: Click + icon in table header to add new row
+5. **AI extraction**: Drop PDF invoice to auto-extract invoice data
 
 #### Drag-to-Link Feature
 
@@ -520,33 +529,72 @@ const handleDragDrop = (invoiceId: string, targetCostLineId: string) => {
 };
 ```
 
+#### Delete Invoice Behavior
+
+| Element | Specification |
+|---------|---------------|
+| **Trigger** | Trash icon in far-right column, visible on row hover |
+| **Icon Style** | Gray (#858585) → Red (#f87171) on hover |
+| **Visibility** | Hidden by default, appears on row hover (group-hover pattern) |
+| **Confirmation** | Modal dialog: "Are you sure you want to delete [Invoice No.]?" |
+| **Warning** | "This action cannot be undone." |
+| **Action** | Soft delete (sets `deletedAt` timestamp) |
+| **Effect** | Invoice removed from totals and Project Summary calculations |
+
 ### 5.5 Variations Sheet
+
+#### UI Layout
+
+| Element | Specification |
+|---------|---------------|
+| **Toolbar** | Simple bar with "Drop Variation" hint (Upload icon + text) on right |
+| **Add Variation** | + icon button in last column header |
+| **Filters** | None (removed for simplified UX) |
+| **Summary Row** | None (removed for simplified UX) |
 
 #### Column Configuration
 
+All columns are **sortable** by clicking the header. Sort indicator (chevron) shows current sort direction.
+
 | Col | Header | Width | Type | Editable | Notes |
 |-----|--------|-------|------|----------|-------|
-| A | Date Submitted | 100px | Date | Yes | |
-| B | Requested by | 120px | Text | Yes | |
-| C | Variation # | 90px | Text | **Auto** | e.g., PV-001, CV-002 |
-| D | Category | 140px | Dropdown | Yes | Principal/Contractor/Lessor |
-| E | Description | 300px | Text | Yes | |
-| F | Variation To | 200px | Dropdown | Yes | **Links to Cost Line** |
-| G | Status | 100px | Dropdown | Yes | Forecast/Approved/Rejected/Withdrawn |
-| H | Amount Forecast | 110px | Currency | Yes | PM's estimate |
-| I | Amount Approved | 110px | Currency | Yes | Final approved (can differ) |
-| J | Date Approved | 100px | Date | Yes | Required if Approved |
-| K | Approved By | 120px | Text | Yes | |
+| A | Variation # | 100px | Text | **Auto** | e.g., PV-001, CV-002 |
+| B | Description | flex | Text | Yes | Click to edit inline |
+| C | Cost Line | 200px | Dropdown | Yes | Links to Cost Line |
+| D | Status | 90px | Dropdown | Yes | Forecast/Approved/Rejected/Withdrawn |
+| E | Forecast | 100px | Currency | Yes | PM's estimate |
+| F | Approved | 100px | Currency | Yes | Final approved amount |
+| G | Date | 100px | Date | Yes | Date submitted |
+| H | Cat | 60px | Dropdown | Yes | PV/CV/LV (Principal/Contractor/Lessor) |
+| I | (actions) | 40px | Button | - | + icon in header, trash icon on hover |
+
+#### Status Dropdown Options
+
+| Value | Description |
+|-------|-------------|
+| Forecast | Variation proposed but not approved |
+| Approved | Officially approved |
+| Rejected | Declined |
+| Withdrawn | Pulled back by requester |
+
+#### Category Dropdown Options
+
+| Display | Value | Prefix |
+|---------|-------|--------|
+| PV | Principal | PV-### |
+| CV | Contractor | CV-### |
+| LV | Lessor Works | LV-### |
 
 #### Business Rules
 
 | Rule | Behavior |
 |------|----------|
-| New variation | Auto-generate variation number based on category |
-| Status → Approved | Date Approved becomes required |
-| Status → Approved | `amount_forecast` flows to column I, `amount_approved` to column J in Project Summary |
-| Status → Rejected/Withdrawn | Removes from both Forecast and Approved columns |
-| Variation To changed | Updates Forecast/Approved totals on affected cost lines |
+| New variation | Auto-generate variation number based on category (click + icon in header) |
+| Status → Approved | If Approved amount is 0, copies Forecast amount to Approved |
+| Status → Approved | Amounts flow to Forecast/Approved columns in Project Summary |
+| Status → Rejected/Withdrawn | Removes from both Forecast and Approved calculations |
+| Cost Line changed | Updates Forecast/Approved totals on affected cost lines |
+| Column header click | Sorts table by that column (toggle asc/desc) |
 
 #### Variation Number Generation
 
@@ -554,12 +602,24 @@ const handleDragDrop = (invoiceId: string, targetCostLineId: string) => {
 // Auto-prefix based on category
 const prefixes = {
   'Principal': 'PV',
-  'Contractor': 'CV', 
+  'Contractor': 'CV',
   'Lessor Works': 'LV'
 };
 
 // Result: PV-001, PV-002, CV-001, etc.
 ```
+
+#### Delete Variation Behavior
+
+| Element | Specification |
+|---------|---------------|
+| **Trigger** | Trash icon in far-right column, visible on row hover |
+| **Icon Style** | Gray (#858585) → Red (#f87171) on hover |
+| **Visibility** | Hidden by default, appears on row hover (group-hover pattern) |
+| **Confirmation** | Modal dialog: "Are you sure you want to delete [Variation No.]?" |
+| **Warning** | "This action cannot be undone." |
+| **Action** | Soft delete (sets `deletedAt` timestamp) |
+| **Effect** | Variation removed from Forecast/Approved totals and Project Summary calculations |
 
 ---
 

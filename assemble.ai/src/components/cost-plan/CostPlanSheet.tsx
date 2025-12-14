@@ -41,7 +41,7 @@ interface CostPlanSheetProps {
 // Create header row
 function createHeaderRow() {
   const headers = [
-    'Cost Code', 'Company', 'Description', 'Reference',
+    'Cost Code', 'Discipline', 'Description', 'Reference',
     'Budget', 'Approved Contract', 'Forecast Vars', 'Approved Vars',
     'Final Forecast', 'Variance', 'Claimed', 'Current Month', 'ETC'
   ];
@@ -90,8 +90,8 @@ function createCostLineRow(line: CostLineWithCalculations) {
 
   return [
     { v: line.costCode || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
-    { v: line.company?.name || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
-    { v: line.description, ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
+    { v: line.discipline?.disciplineName || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
+    { v: line.activity, ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
     { v: line.reference || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
     { v: line.budgetCents / 100, ct: { fa: '$#,##0', t: 'n' }, fc: '#3b82f6' },
     { v: line.approvedContractCents / 100, ct: { fa: '$#,##0', t: 'n' }, fc: '#3b82f6' },
@@ -217,7 +217,7 @@ export function CostPlanSheet({
       config: {
         columnlen: {
           0: 80,   // Cost Code
-          1: 150,  // Company
+          1: 150,  // Discipline
           2: 250,  // Description
           3: 100,  // Reference
           4: 100,  // Budget

@@ -41,7 +41,7 @@ export interface InvoiceWithRelations extends Invoice {
   costLine?: {
     id: string;
     costCode?: string | null;
-    description: string;
+    activity: string;
     section: string;
   } | null;
   variation?: {

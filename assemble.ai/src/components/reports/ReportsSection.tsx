@@ -24,6 +24,7 @@ import {
     Database,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
 interface Report {
     id: string;
@@ -424,15 +425,17 @@ export function ReportsSection({
                                                         {showExportMenu === report.id && (
                                                             <div className="absolute right-0 top-full mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg z-10">
                                                                 <button
-                                                                    className="block w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42]"
+                                                                    className="w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42] flex items-center gap-2"
                                                                     onClick={() => handleExport(report.id, 'docx')}
                                                                 >
+                                                                    <DocxIcon size={16} />
                                                                     Export as DOCX
                                                                 </button>
                                                                 <button
-                                                                    className="block w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42]"
+                                                                    className="w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42] flex items-center gap-2"
                                                                     onClick={() => handleExport(report.id, 'pdf')}
                                                                 >
+                                                                    <PdfIcon size={16} />
                                                                     Export as PDF
                                                                 </button>
                                                             </div>

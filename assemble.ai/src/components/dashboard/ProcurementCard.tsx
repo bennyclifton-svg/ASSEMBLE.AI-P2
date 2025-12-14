@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Briefcase, Wrench } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useConsultantDisciplines } from '@/lib/hooks/use-consultant-disciplines';
 import { useContractorTrades } from '@/lib/hooks/use-contractor-trades';
@@ -91,9 +90,8 @@ export function ProcurementCard({ projectId, selectedDocumentIds, onSetSelectedD
                                     <TabsTrigger
                                         key={`discipline-${d.id}`}
                                         value={`discipline-${d.id}`}
-                                        className="data-[state=active]:bg-[#252526] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#4fc1ff] rounded-none px-4 py-2 text-[#858585] whitespace-nowrap gap-1"
+                                        className="data-[state=active]:bg-[#252526] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#4fc1ff] rounded-none px-4 py-2 text-[#858585] whitespace-nowrap"
                                     >
-                                        <Briefcase className="h-3 w-3" />
                                         {d.disciplineName}
                                     </TabsTrigger>
                                 ))}
@@ -108,9 +106,8 @@ export function ProcurementCard({ projectId, selectedDocumentIds, onSetSelectedD
                                     <TabsTrigger
                                         key={`trade-${t.id}`}
                                         value={`trade-${t.id}`}
-                                        className="data-[state=active]:bg-[#252526] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#ffa726] rounded-none px-4 py-2 text-[#858585] whitespace-nowrap gap-1"
+                                        className="data-[state=active]:bg-[#252526] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#ffa726] rounded-none px-4 py-2 text-[#858585] whitespace-nowrap"
                                     >
-                                        <Wrench className="h-3 w-3" />
                                         {t.tradeName}
                                     </TabsTrigger>
                                 ))}

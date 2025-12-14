@@ -262,7 +262,7 @@ As a Project Manager, I want default cost lines to have sensible cost codes pre-
 This feature extends the existing project initialization logic in `POST /api/projects/route.ts` defined in [008-project-initialization](../008-project-initialization/spec.md). The transaction should:
 
 1. Create project record
-2. Initialize consultant disciplines (existing - 36 items)
+2. Initialize consultant disciplines (existing - 37 items)
 3. Initialize contractor trades (existing - 21 items)
 4. Initialize project stages (existing - 5 items)
 5. Initialize project details (existing - 1 record)

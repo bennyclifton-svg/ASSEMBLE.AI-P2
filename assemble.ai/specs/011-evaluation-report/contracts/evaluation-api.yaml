@@ -1,0 +1,478 @@
+# Evaluation API Contracts
+# Feature: 011-evaluation-report
+# Date: 2025-12-12
+
+openapi: 3.0.0
+info:
+  title: Evaluation Report API
+  version: 1.0.0
+  description: API endpoints for tender evaluation functionality
+
+paths:
+  /api/evaluation/{projectId}/{contextType}/{contextId}:
+    get:
+      summary: Get evaluation data
+      description: Retrieves evaluation with all rows and cells for a discipline/trade
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contextType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [discipline, trade]
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: disciplineId or tradeId
+      responses:
+        '200':
+          description: Evaluation data (creates if not exists)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationResponse'
+        '404':
+          description: Project or context not found
+
+    put:
+      summary: Update evaluation data
+      description: Updates rows and cells (auto-save from UI)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contextType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [discipline, trade]
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvaluationUpdateRequest'
+      responses:
+        '200':
+          description: Updated evaluation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationResponse'
+
+  /api/evaluation/{projectId}/{contextType}/{contextId}/rows:
+    post:
+      summary: Add a new row
+      description: Adds a new row to Initial Price or Adds & Subs table
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contextType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [discipline, trade]
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tableType
+                - description
+              properties:
+                tableType:
+                  type: string
+                  enum: [initial_price, adds_subs]
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Row created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationRow'
+
+  /api/evaluation/{projectId}/{contextType}/{contextId}/rows/{rowId}:
+    delete:
+      summary: Delete a row
+      description: Deletes a row and its cells (cascade)
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contextType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [discipline, trade]
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: rowId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Row deleted
+        '400':
+          description: Cannot delete system row
+
+  /api/evaluation/{projectId}/{contextType}/{contextId}/parse:
+    post:
+      summary: Parse single tender PDF
+      description: Uploads and parses a PDF for a specific firm column
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contextType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [discipline, trade]
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - firmId
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file
+                firmId:
+                  type: string
+                  description: Target firm ID
+      responses:
+        '200':
+          description: Parse results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseResult'
+        '400':
+          description: Invalid file type or parsing error
+
+  /api/evaluation/{projectId}/bulk-parse:
+    post:
+      summary: Bulk parse all tender PDFs
+      description: Parses all PDFs in discipline/trade category and assigns to firms
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - contextType
+                - contextId
+              properties:
+                contextType:
+                  type: string
+                  enum: [discipline, trade]
+                contextId:
+                  type: string
+      responses:
+        '200':
+          description: Bulk parse results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkParseResult'
+
+  /api/evaluation/{projectId}/{contextType}/{contextId}/export:
+    get:
+      summary: Export evaluation
+      description: Export evaluation to PDF, Word, or Excel
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: contextType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [discipline, trade]
+        - name: contextId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [pdf, docx, xlsx]
+      responses:
+        '200':
+          description: Exported file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+components:
+  schemas:
+    EvaluationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        disciplineId:
+          type: string
+          nullable: true
+        tradeId:
+          type: string
+          nullable: true
+        shortlistedFirms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Firm'
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvaluationRowWithCells'
+        subtotals:
+          type: object
+          properties:
+            initial_price:
+              type: object
+              additionalProperties:
+                type: number
+            adds_subs:
+              type: object
+              additionalProperties:
+                type: number
+        grandTotal:
+          type: object
+          additionalProperties:
+            type: number
+
+    EvaluationUpdateRequest:
+      type: object
+      properties:
+        cells:
+          type: array
+          items:
+            type: object
+            required:
+              - rowId
+              - firmId
+              - amountCents
+            properties:
+              rowId:
+                type: string
+              firmId:
+                type: string
+              amountCents:
+                type: integer
+        rows:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              description:
+                type: string
+
+    EvaluationRow:
+      type: object
+      properties:
+        id:
+          type: string
+        tableType:
+          type: string
+          enum: [initial_price, adds_subs]
+        description:
+          type: string
+        orderIndex:
+          type: integer
+        isSystemRow:
+          type: boolean
+
+    EvaluationRowWithCells:
+      allOf:
+        - $ref: '#/components/schemas/EvaluationRow'
+        - type: object
+          properties:
+            cells:
+              type: array
+              items:
+                $ref: '#/components/schemas/EvaluationCell'
+
+    EvaluationCell:
+      type: object
+      properties:
+        id:
+          type: string
+        rowId:
+          type: string
+        firmId:
+          type: string
+        firmType:
+          type: string
+          enum: [consultant, contractor]
+        amountCents:
+          type: integer
+        source:
+          type: string
+          enum: [manual, ai]
+        confidence:
+          type: integer
+          nullable: true
+
+    Firm:
+      type: object
+      properties:
+        id:
+          type: string
+        companyName:
+          type: string
+        shortlisted:
+          type: boolean
+
+    ParseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        firmId:
+          type: string
+        documentId:
+          type: string
+          description: ID of uploaded document in repository
+        extractedItems:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              amount:
+                type: number
+              confidence:
+                type: integer
+        mappedCells:
+          type: array
+          items:
+            type: object
+            properties:
+              rowId:
+                type: string
+              amountCents:
+                type: integer
+              confidence:
+                type: integer
+        unmappedItems:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              amount:
+                type: number
+
+    BulkParseResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              documentName:
+                type: string
+              matchedFirmId:
+                type: string
+                nullable: true
+              matchedFirmName:
+                type: string
+                nullable: true
+              matchConfidence:
+                type: integer
+              parseResult:
+                $ref: '#/components/schemas/ParseResult'
+        unmatchedDocuments:
+          type: array
+          items:
+            type: object
+            properties:
+              documentName:
+                type: string
+              extractedFirmName:
+                type: string
+              extractedItems:
+                type: array
+                items:
+                  type: object

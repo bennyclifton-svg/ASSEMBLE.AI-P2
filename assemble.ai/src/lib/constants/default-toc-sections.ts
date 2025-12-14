@@ -73,7 +73,7 @@ export function getDefaultTocSections(
         id: DEFAULT_TOC_SECTION_IDS.CONSULTANT_FEE,
         title: 'Consultant Fee',
         level: 1,
-        linkedTo: 'discipline.feeStructure',
+        linkedTo: 'discipline.costPlan',
       }
     );
   } else {
@@ -123,7 +123,7 @@ export function getLinkedSectionSource(sectionId: string): string | undefined {
     [DEFAULT_TOC_SECTION_IDS.PROJECT_RISKS]: 'Planning Card › Risks',
     [DEFAULT_TOC_SECTION_IDS.CONSULTANT_BRIEF]: 'Discipline › Brief',
     [DEFAULT_TOC_SECTION_IDS.CONTRACTOR_SCOPE]: 'Trade › Scope',
-    [DEFAULT_TOC_SECTION_IDS.CONSULTANT_FEE]: 'Discipline › Fee Structure',
+    [DEFAULT_TOC_SECTION_IDS.CONSULTANT_FEE]: 'Cost Planning › Discipline Lines',
     [DEFAULT_TOC_SECTION_IDS.CONTRACTOR_PRICE]: 'Trade › Price Structure',
     [DEFAULT_TOC_SECTION_IDS.TRANSMITTAL]: 'Transmittal Documents',
   };

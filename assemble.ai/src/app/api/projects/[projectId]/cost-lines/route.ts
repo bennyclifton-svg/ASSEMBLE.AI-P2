@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { costLines, companies } from '@/lib/db/schema';
+import { costLines, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
 import { eq, isNull, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { CreateCostLineInput } from '@/types/cost-plan';
@@ -16,29 +16,44 @@ export async function GET(
     try {
         const { projectId } = await params;
 
+        const { searchParams } = new URL(request.url);
+        const disciplineId = searchParams.get('disciplineId');
+
+        const filters = [
+            eq(costLines.projectId, projectId),
+            isNull(costLines.deletedAt),
+        ];
+
+        if (disciplineId) {
+            filters.push(eq(costLines.disciplineId, disciplineId));
+        }
+
         const projectCostLines = await db
             .select()
             .from(costLines)
-            .where(
-                and(
-                    eq(costLines.projectId, projectId),
-                    isNull(costLines.deletedAt)
-                )
-            )
+            .where(and(...filters))
             .orderBy(costLines.section, costLines.sortOrder);
 
-        // Fetch companies for each cost line
+        // Fetch disciplines and trades for each cost line
         const result = await Promise.all(
             projectCostLines.map(async (cl) => {
-                let company = null;
-                if (cl.companyId) {
-                    const [comp] = await db
+                let discipline = null;
+                let trade = null;
+                if (cl.disciplineId) {
+                    const [disc] = await db
                         .select()
-                        .from(companies)
-                        .where(eq(companies.id, cl.companyId));
-                    company = comp || null;
+                        .from(consultantDisciplines)
+                        .where(eq(consultantDisciplines.id, cl.disciplineId));
+                    discipline = disc || null;
                 }
-                return { ...cl, company };
+                if (cl.tradeId) {
+                    const [tr] = await db
+                        .select()
+                        .from(contractorTrades)
+                        .where(eq(contractorTrades.id, cl.tradeId));
+                    trade = tr || null;
+                }
+                return { ...cl, discipline, trade };
             })
         );
 
@@ -65,9 +80,9 @@ export async function POST(
         const body: CreateCostLineInput = await request.json();
 
         // Validate required fields
-        if (!body.description || !body.section) {
+        if (!body.activity || !body.section) {
             return NextResponse.json(
-                { error: 'Description and section are required' },
+                { error: 'Activity and section are required' },
                 { status: 400 }
             );
         }
@@ -97,10 +112,11 @@ export async function POST(
         await db.insert(costLines).values({
             id,
             projectId,
-            companyId: body.companyId || null,
+            disciplineId: body.disciplineId || null,
+            tradeId: body.tradeId || null,
             section: body.section,
             costCode: body.costCode || null,
-            description: body.description,
+            activity: body.activity,
             reference: body.reference || null,
             budgetCents: body.budgetCents || 0,
             approvedContractCents: body.approvedContractCents || 0,

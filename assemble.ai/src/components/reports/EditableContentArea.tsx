@@ -17,8 +17,8 @@ interface EditableContentAreaProps {
   onSave: () => Promise<void>;
 }
 
-// Single heading color (consistent, clean look)
-const HEADING_COLOR = '#4fc3f7'; // Cyan blue - matches document selection highlight
+// Single heading color (consistent, clean look) - matches Addendum styling
+const HEADING_COLOR = '#4fc1ff'; // Highlight blue - matches Addendum reports
 
 export default function EditableContentArea({
   content,
@@ -26,27 +26,48 @@ export default function EditableContentArea({
   onSave,
 }: EditableContentAreaProps) {
   const editorRef = useRef<HTMLDivElement>(null);
-  const isInternalUpdate = useRef(false);
 
   // Track whether we've done the initial render
   const hasInitialized = useRef(false);
+  // Track the last content we sent to parent to avoid unnecessary updates
+  const lastSentContent = useRef(content);
 
   /**
    * Update editor content when prop changes (after initial render)
+   * Only update if the change came from outside (not from user typing)
    */
   useEffect(() => {
-    if (!editorRef.current || isInternalUpdate.current) return;
+    if (!editorRef.current) return;
 
     // Skip the first update since we use dangerouslySetInnerHTML for initial render
     if (!hasInitialized.current) {
       hasInitialized.current = true;
+      lastSentContent.current = content;
+      console.log('[EditableContentArea] Initialized');
       return;
     }
 
-    // Only update if content differs to avoid cursor jumps
-    if (editorRef.current.innerHTML !== content) {
-      editorRef.current.innerHTML = content;
+    // Skip if this is content we just sent to parent (user typing)
+    if (content === lastSentContent.current) {
+      console.log('[EditableContentArea] Skipping update - same as lastSent');
+      return;
     }
+
+    // Skip if content matches what's in editor (handles HTML normalization)
+    if (editorRef.current.innerHTML === content) {
+      lastSentContent.current = content;
+      console.log('[EditableContentArea] Skipping update - same as editor innerHTML');
+      return;
+    }
+
+    // External content change - update editor
+    console.log('[EditableContentArea] UPDATING EDITOR - cursor will jump!', {
+      contentLength: content.length,
+      lastSentLength: lastSentContent.current.length,
+      editorLength: editorRef.current.innerHTML.length,
+    });
+    lastSentContent.current = content;
+    editorRef.current.innerHTML = content;
   }, [content]);
 
   /**
@@ -55,13 +76,9 @@ export default function EditableContentArea({
   const handleInput = useCallback(() => {
     if (!editorRef.current) return;
 
-    isInternalUpdate.current = true;
-    onChange(editorRef.current.innerHTML);
-
-    // Reset flag after update propagates
-    setTimeout(() => {
-      isInternalUpdate.current = false;
-    }, 0);
+    const newContent = editorRef.current.innerHTML;
+    lastSentContent.current = newContent;
+    onChange(newContent);
   }, [onChange]);
 
   /**
@@ -201,7 +218,7 @@ export default function EditableContentArea({
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        className="min-h-screen max-w-4xl mx-auto prose prose-invert prose-base focus:outline-none [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h3]:text-base [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_p]:mb-1 [&_p]:leading-normal [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[#1a4a5a] [&_th]:px-4 [&_th]:py-2 [&_th]:bg-[#0d3347] [&_td]:border [&_td]:border-[#1a4a5a] [&_td]:px-4 [&_td]:py-2 selection:bg-[#4fc3f7]/30"
+        className="min-h-screen max-w-4xl mx-auto prose prose-invert prose-base focus:outline-none [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h3]:text-base [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_p]:mb-1 [&_p]:leading-normal [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[#3e3e42] [&_th]:px-4 [&_th]:py-2 [&_th]:bg-[#2d2d30] [&_th]:text-[#858585] [&_th]:font-medium [&_td]:border [&_td]:border-[#3e3e42] [&_td]:px-4 [&_td]:py-2 selection:bg-[#4fc1ff]/30"
         style={{
           whiteSpace: 'pre-wrap',
           wordWrap: 'break-word',

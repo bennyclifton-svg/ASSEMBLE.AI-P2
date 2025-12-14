@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import {
-  Trash2,
+  Trash,
   Link2,
   GitBranch,
   CheckCircle,
@@ -277,7 +277,7 @@ export function InvoiceContextMenu({
 
       {/* Delete action */}
       <MenuItem
-        icon={<Trash2 className="w-4 h-4" />}
+        icon={<Trash className="w-4 h-4" />}
         label="Delete Invoice"
         onClick={() => handleAction(onDelete)}
         danger

@@ -40,7 +40,7 @@ const result = db.transaction((tx) => {
     const newProject = { id: projectId, name: name.trim(), ... };
     tx.insert(projects).values(newProject).run();
 
-    // 2. Initialize consultant disciplines (36) + statuses (144)
+    // 2. Initialize consultant disciplines (37) + statuses (148)
     const disciplineRecords = CONSULTANT_DISCIPLINES.map((d) => ({...}));
     const createdDisciplines = tx.insert(consultantDisciplines)
         .values(disciplineRecords).returning().all();
@@ -114,7 +114,7 @@ migrateProjects().catch(console.error);
 
 | Test | Expected Result |
 |------|-----------------|
-| Create new project | 292 records created (36 disciplines + 144 statuses + 21 trades + 84 statuses + 5 stages + 1 details + 1 objectives) |
+| Create new project | 297 records created (37 disciplines + 148 statuses + 21 trades + 84 statuses + 5 stages + 1 details + 1 objectives) |
 | View Planning Card after create | All sections display with default/empty states |
 | Simulate DB failure mid-transaction | No partial data, project not created |
 | Run migration on old project | Complete initialization |

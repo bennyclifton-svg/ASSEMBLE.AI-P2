@@ -369,7 +369,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                         <TableHeader>
                             <TableRow className="border-[#3e3e42] hover:bg-[#252526]">
                                 <TableHead
-                                    className="text-[#cccccc] cursor-pointer hover:text-white select-none w-[40%] @md:w-auto"
+                                    className="text-[#cccccc] cursor-pointer hover:text-white select-none w-[50%] @md:w-auto"
                                     onClick={() => handleSort('name')}
                                 >
                                     <div className="flex items-center gap-2">
@@ -383,7 +383,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     </div>
                                 </TableHead>
                                 <TableHead
-                                    className="text-[#cccccc] w-[45%] @md:w-36 cursor-pointer hover:text-white select-none"
+                                    className="text-[#cccccc] w-[35%] @md:w-36 cursor-pointer hover:text-white select-none"
                                     onClick={() => handleSort('category')}
                                 >
                                     Category<SortIndicator column="category" />
@@ -446,7 +446,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         }}
                                         onClick={(e) => handleSelect(doc.id, e)}
                                     >
-                                        <TableCell className="font-medium text-[#cccccc] !py-2 w-[40%] @md:w-auto">
+                                        <TableCell className="font-medium text-[#cccccc] !py-2 w-[50%] @md:w-auto">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <div className="w-2 flex-shrink-0">
                                                     <SyncStatusDot documentId={doc.id} />
@@ -456,7 +456,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 </span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="w-[45%] @md:w-36 !py-2">
+                                        <TableCell className="w-[35%] @md:w-36 !py-2">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 {doc.categoryName ? (
                                                     <>

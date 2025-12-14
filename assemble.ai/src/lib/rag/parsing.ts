@@ -180,10 +180,23 @@ async function parseWithPdfParse(
 ): Promise<ParsedDocument> {
     // Use require for pdf-parse as it's a CommonJS module
     const pdf = require('pdf-parse');
+
+    console.log(`[parsing] pdf-parse: parsing ${filename}, buffer size: ${fileBuffer.length} bytes`);
+
     const result = await pdf(fileBuffer);
 
+    console.log(`[parsing] pdf-parse result: ${result.numpages} pages, ${result.text?.length || 0} chars extracted`);
+    if (result.text) {
+        console.log(`[parsing] pdf-parse text preview (first 200 chars): ${result.text.substring(0, 200)}`);
+    }
+
+    // Warn if no text was extracted
+    if (!result.text || result.text.trim().length === 0) {
+        console.warn(`[parsing] pdf-parse: No text extracted from ${filename}. The PDF may be scanned/image-based.`);
+    }
+
     return {
-        content: result.text,
+        content: result.text || '',
         metadata: {
             pageCount: result.numpages,
             title: result.info?.Title || filename,

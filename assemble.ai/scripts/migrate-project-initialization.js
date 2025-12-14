@@ -2,7 +2,7 @@
  * Migration Script: Project Initialization Backfill
  *
  * This script initializes planning data for existing projects that are missing:
- * - 36 consultant disciplines with 4 statuses each (144 status records)
+ * - 37 consultant disciplines with 4 statuses each (148 status records)
  * - 21 contractor trades with 4 statuses each (84 status records)
  * - 5 project stages
  * - Project details (if missing)
@@ -19,7 +19,7 @@ const crypto = require('crypto');
 
 const db = new Database('sqlite.db');
 
-// Consultant Disciplines (36 total) - must match disciplines.ts
+// Consultant Disciplines (37 total) - must match disciplines.ts
 const CONSULTANT_DISCIPLINES = [
     { name: 'Access', order: 1 },
     { name: 'Acoustic', order: 2 },
@@ -47,16 +47,17 @@ const CONSULTANT_DISCIPLINES = [
     { name: 'Mechanical', order: 24 },
     { name: 'NBN', order: 25 },
     { name: 'Passive Fire', order: 26 },
-    { name: 'Roof Access', order: 27 },
-    { name: 'Site Investigation', order: 28 },
-    { name: 'Stormwater', order: 29 },
-    { name: 'Structural', order: 30 },
-    { name: 'Survey', order: 31 },
-    { name: 'Traffic', order: 32 },
-    { name: 'Vertical Transport', order: 33 },
-    { name: 'Waste Management', order: 34 },
-    { name: 'Wastewater', order: 35 },
-    { name: 'Waterproofing', order: 36 },
+    { name: 'Project Manager', order: 27 },
+    { name: 'Roof Access', order: 28 },
+    { name: 'Site Investigation', order: 29 },
+    { name: 'Stormwater', order: 30 },
+    { name: 'Structural', order: 31 },
+    { name: 'Survey', order: 32 },
+    { name: 'Traffic', order: 33 },
+    { name: 'Vertical Transport', order: 34 },
+    { name: 'Waste Management', order: 35 },
+    { name: 'Wastewater', order: 36 },
+    { name: 'Waterproofing', order: 37 },
 ];
 
 // Contractor Trades (21 total) - must match disciplines.ts
@@ -126,7 +127,7 @@ function initializeProject(projectId, projectName) {
                     insertDisciplineStatus.run(generateUUID(), disciplineId, statusType);
                 }
             }
-            console.log(`  Created 36 consultant disciplines with 144 status records`);
+            console.log(`  Created 37 consultant disciplines with 148 status records`);
         }
 
         // Check if trades already exist
@@ -235,7 +236,7 @@ function main() {
             'SELECT COUNT(*) as count FROM consultant_disciplines WHERE project_id = ?'
         ).get(project.id);
 
-        if (disciplines.count >= 36) {
+        if (disciplines.count >= 37) {
             console.log(`  Already fully initialized - skipping\n`);
             skipped++;
             continue;

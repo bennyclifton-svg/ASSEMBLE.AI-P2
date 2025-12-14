@@ -17,7 +17,7 @@ import {
   CheckCircle,
   ChevronRight,
   FileText,
-  Trash2,
+  Trash,
 } from 'lucide-react';
 
 // ============================================================================
@@ -327,7 +327,7 @@ export function ImportDialog({
                   className="p-2 text-[#858585] hover:text-[#f87171] hover:bg-[#f87171]/10 rounded transition-colors"
                   title="Remove file"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash className="w-4 h-4" />
                 </button>
               </div>
 

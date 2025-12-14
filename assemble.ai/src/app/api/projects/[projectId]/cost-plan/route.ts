@@ -6,7 +6,8 @@ import {
     costLineAllocations,
     variations,
     invoices,
-    companies,
+    consultantDisciplines,
+    contractorTrades,
 } from '@/lib/db/schema';
 import { eq, isNull, and } from 'drizzle-orm';
 import {
@@ -115,16 +116,29 @@ export async function GET(
                 )
             );
 
-        // Fetch companies for cost lines
-        const companyIds = [...new Set(projectCostLines.filter(cl => cl.companyId).map(cl => cl.companyId!))];
-        const companiesMap = new Map<string, typeof companies.$inferSelect>();
-        for (const companyId of companyIds) {
-            const [company] = await db
+        // Fetch disciplines for cost lines
+        const disciplineIds = [...new Set(projectCostLines.filter(cl => cl.disciplineId).map(cl => cl.disciplineId!))];
+        const disciplinesMap = new Map<string, typeof consultantDisciplines.$inferSelect>();
+        for (const disciplineId of disciplineIds) {
+            const [discipline] = await db
                 .select()
-                .from(companies)
-                .where(eq(companies.id, companyId));
-            if (company) {
-                companiesMap.set(companyId, company);
+                .from(consultantDisciplines)
+                .where(eq(consultantDisciplines.id, disciplineId));
+            if (discipline) {
+                disciplinesMap.set(disciplineId, discipline);
+            }
+        }
+
+        // Fetch trades for cost lines
+        const tradeIds = [...new Set(projectCostLines.filter(cl => cl.tradeId).map(cl => cl.tradeId!))];
+        const tradesMap = new Map<string, typeof contractorTrades.$inferSelect>();
+        for (const tradeId of tradeIds) {
+            const [trade] = await db
+                .select()
+                .from(contractorTrades)
+                .where(eq(contractorTrades.id, tradeId));
+            if (trade) {
+                tradesMap.set(tradeId, trade);
             }
         }
 
@@ -141,7 +155,8 @@ export async function GET(
 
             return {
                 ...cl,
-                company: cl.companyId ? companiesMap.get(cl.companyId) || null : null,
+                discipline: cl.disciplineId ? disciplinesMap.get(cl.disciplineId) || null : null,
+                trade: cl.tradeId ? tradesMap.get(cl.tradeId) || null : null,
                 allocations: clAllocations,
                 calculated,
             };

@@ -16,7 +16,7 @@ import { COLORS } from '@/lib/fortune-sheet/config';
 import {
   createCurrencyCell,
   createTextCell,
-  createCompanyCell,
+  createDisciplineCell,
   createVarianceCell,
   createHeaderCell,
   createSectionHeaderCell,
@@ -198,8 +198,8 @@ export function ProjectSummarySheet({
 function createCostLineRow(line: CostLineWithCalculations): Record<string, unknown>[] {
   return [
     createTextCell(line.costCode || '', { editable: true }),
-    createCompanyCell(line.company, true),
-    createTextCell(line.description, { editable: true }),
+    createDisciplineCell(line.discipline, true),
+    createTextCell(line.activity, { editable: true }),
     createTextCell(line.reference || '', { editable: true }),
     createCurrencyCell(line.budgetCents, { editable: true }),
     createCurrencyCell(line.approvedContractCents, { editable: true }),

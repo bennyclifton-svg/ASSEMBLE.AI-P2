@@ -2,9 +2,10 @@
  * T142: DOCX Export with Enhanced Formatting
  *
  * Exports report HTML to DOCX preserving:
- * - Heading colors (H1: #5B9BD5, H2: #70AD47, H3: #ED7D31)
- * - Transmittal table with formatting
- * - Paragraph styles
+ * - Project info table
+ * - Content sections
+ * - Transmittal table with proper columns
+ * - Heading colors
  */
 
 import {
@@ -18,6 +19,8 @@ import {
   TableCell,
   WidthType,
   BorderStyle,
+  AlignmentType,
+  ShadingType,
 } from 'docx';
 import { JSDOM } from 'jsdom';
 
@@ -25,16 +28,278 @@ import { JSDOM } from 'jsdom';
 const HEADING_COLORS = {
   H1: '5B9BD5', // Professional Blue (without #)
   H2: '70AD47', // Fresh Green
-  H3: 'ED7D31', // Warm Amber
+  H3: 'C65D00', // Orange (matching transmittal section)
 } as const;
 
 /**
- * Parse HTML color to RGB
+ * Parse HTML color to RGB (remove # if present)
  */
 function hexToRgb(hex: string): string {
-  // Remove # if present
-  const color = hex.replace('#', '');
-  return color;
+  return hex.replace('#', '');
+}
+
+/**
+ * Process text content, handling <br> tags
+ */
+function processTextContent(element: Element): string {
+  let text = '';
+  element.childNodes.forEach(node => {
+    if (node.nodeType === 3) { // Text node
+      text += node.textContent || '';
+    } else if (node.nodeType === 1) { // Element node
+      const el = node as Element;
+      if (el.tagName.toLowerCase() === 'br') {
+        text += '\n';
+      } else {
+        text += el.textContent || '';
+      }
+    }
+  });
+  return text;
+}
+
+/**
+ * Create a two-column info table (like project info)
+ */
+function createInfoTable(element: Element): Table {
+  const rows: TableRow[] = [];
+  const trs = element.querySelectorAll('tr');
+
+  trs.forEach(tr => {
+    const tds = tr.querySelectorAll('td');
+    if (tds.length >= 2) {
+      const label = tds[0].textContent?.trim() || '';
+      const value = tds[1].textContent?.trim() || '';
+      const isBold = tds[1].querySelector('strong') !== null;
+
+      rows.push(
+        new TableRow({
+          children: [
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: label,
+                      bold: true,
+                    }),
+                  ],
+                }),
+              ],
+              width: { size: 25, type: WidthType.PERCENTAGE },
+              shading: {
+                type: ShadingType.SOLID,
+                color: 'F5F5F5',
+                fill: 'F5F5F5',
+              },
+            }),
+            new TableCell({
+              children: [
+                new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: value,
+                      bold: isBold,
+                    }),
+                  ],
+                }),
+              ],
+              width: { size: 75, type: WidthType.PERCENTAGE },
+            }),
+          ],
+        })
+      );
+    }
+  });
+
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+    },
+  });
+}
+
+/**
+ * Create transmittal table with proper columns
+ */
+function createTransmittalTable(element: Element): Table {
+  const rows: TableRow[] = [];
+
+  // Get header row
+  const thead = element.querySelector('thead');
+  if (thead) {
+    const ths = thead.querySelectorAll('th');
+    const headerCells: TableCell[] = [];
+
+    ths.forEach((th, index) => {
+      const text = th.textContent?.trim() || '';
+      // Column widths: #=8%, Document=40%, Rev=10%, Category=21%, Subcategory=21%
+      const widths = [8, 40, 10, 21, 21];
+
+      headerCells.push(
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: text,
+                  bold: true,
+                  color: '666666',
+                }),
+              ],
+              alignment: index === 2 ? AlignmentType.CENTER : AlignmentType.LEFT,
+            }),
+          ],
+          width: { size: widths[index] || 20, type: WidthType.PERCENTAGE },
+          shading: {
+            type: ShadingType.SOLID,
+            color: 'F5F5F5',
+            fill: 'F5F5F5',
+          },
+        })
+      );
+    });
+
+    rows.push(new TableRow({ children: headerCells }));
+  }
+
+  // Get data rows
+  const tbody = element.querySelector('tbody');
+  if (tbody) {
+    const trs = tbody.querySelectorAll('tr');
+
+    trs.forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      const cells: TableCell[] = [];
+      const widths = [8, 40, 10, 21, 21];
+
+      tds.forEach((td, index) => {
+        const text = td.textContent?.trim() || '';
+
+        // Extract color from style attribute
+        let color: string | undefined;
+        const style = td.getAttribute('style') || '';
+        const colorMatch = style.match(/color:\s*([^;]+)/);
+        if (colorMatch) {
+          color = hexToRgb(colorMatch[1].trim());
+        }
+
+        // Check for class-based styling
+        const className = td.className || '';
+        const isNumCol = className.includes('num-col');
+        const isRevCol = className.includes('rev-col');
+
+        cells.push(
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: text,
+                    color: isNumCol ? '999999' : color,
+                  }),
+                ],
+                alignment: isRevCol ? AlignmentType.CENTER : AlignmentType.LEFT,
+              }),
+            ],
+            width: { size: widths[index] || 20, type: WidthType.PERCENTAGE },
+          })
+        );
+      });
+
+      if (cells.length > 0) {
+        rows.push(new TableRow({ children: cells }));
+      }
+    });
+  }
+
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+    },
+  });
+}
+
+/**
+ * Process a div element and its children
+ */
+function processDiv(element: Element, children: (Paragraph | Table)[]): void {
+  const className = element.className || '';
+
+  // Process each child element
+  element.childNodes.forEach(node => {
+    if (node.nodeType !== 1) return; // Skip non-element nodes
+
+    const child = node as Element;
+    const tagName = child.tagName.toLowerCase();
+
+    if (tagName === 'h3') {
+      // Section heading
+      const text = child.textContent?.trim() || '';
+      const style = child.getAttribute('style') || '';
+      const colorMatch = style.match(/color:\s*([^;]+)/);
+      const color = colorMatch ? hexToRgb(colorMatch[1].trim()) : HEADING_COLORS.H3;
+
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: text,
+              bold: true,
+              color: color,
+              size: 24, // 12pt
+            }),
+          ],
+          heading: HeadingLevel.HEADING_3,
+          spacing: {
+            before: 300,
+            after: 150,
+          },
+        })
+      );
+    } else if (tagName === 'div') {
+      // Content div - extract text
+      const text = processTextContent(child);
+      if (text.trim()) {
+        // Split by newlines and create paragraphs
+        const lines = text.split('\n').filter(line => line.trim());
+        lines.forEach(line => {
+          children.push(
+            new Paragraph({
+              text: line.trim(),
+              spacing: { after: 120 },
+            })
+          );
+        });
+      }
+    } else if (tagName === 'p') {
+      const text = child.textContent?.trim() || '';
+      if (text) {
+        children.push(
+          new Paragraph({
+            text: text,
+            spacing: { after: 120 },
+          })
+        );
+      }
+    } else if (tagName === 'table') {
+      children.push(createTransmittalTable(child));
+    }
+  });
 }
 
 /**
@@ -51,15 +316,25 @@ export async function exportToDOCX(
 
   const children: (Paragraph | Table)[] = [];
 
-  // Process each element
+  // Process each element in body
   const elements = htmlDoc.body.children;
 
   for (let i = 0; i < elements.length; i++) {
     const element = elements[i];
     const tagName = element.tagName.toLowerCase();
+    const className = element.className || '';
 
-    if (tagName === 'h1') {
-      // H1 Heading
+    if (tagName === 'table' && className.includes('project-info-table')) {
+      // Project info table
+      children.push(createInfoTable(element));
+      children.push(new Paragraph({ text: '', spacing: { after: 200 } })); // Spacer
+
+    } else if (tagName === 'div' && (className.includes('content-section') || className.includes('transmittal-section'))) {
+      // Content or transmittal section
+      processDiv(element, children);
+      children.push(new Paragraph({ text: '', spacing: { after: 200 } })); // Spacer
+
+    } else if (tagName === 'h1') {
       const text = element.textContent || '';
       const style = element.getAttribute('style') || '';
       const colorMatch = style.match(/color:\s*([^;]+)/);
@@ -67,22 +342,20 @@ export async function exportToDOCX(
 
       children.push(
         new Paragraph({
-          text: text,
+          children: [
+            new TextRun({
+              text: text,
+              bold: true,
+              color: color,
+              size: 32, // 16pt
+            }),
+          ],
           heading: HeadingLevel.HEADING_1,
-          spacing: {
-            before: 400,
-            after: 200,
-          },
-          run: {
-            color: color,
-            bold: true,
-            size: 32, // 16pt
-          },
+          spacing: { before: 400, after: 200 },
         })
       );
 
     } else if (tagName === 'h2') {
-      // H2 Heading
       const text = element.textContent || '';
       const style = element.getAttribute('style') || '';
       const colorMatch = style.match(/color:\s*([^;]+)/);
@@ -90,22 +363,20 @@ export async function exportToDOCX(
 
       children.push(
         new Paragraph({
-          text: text,
+          children: [
+            new TextRun({
+              text: text,
+              bold: true,
+              color: color,
+              size: 28, // 14pt
+            }),
+          ],
           heading: HeadingLevel.HEADING_2,
-          spacing: {
-            before: 300,
-            after: 150,
-          },
-          run: {
-            color: color,
-            bold: true,
-            size: 28, // 14pt
-          },
+          spacing: { before: 300, after: 150 },
         })
       );
 
     } else if (tagName === 'h3') {
-      // H3 Heading
       const text = element.textContent || '';
       const style = element.getAttribute('style') || '';
       const colorMatch = style.match(/color:\s*([^;]+)/);
@@ -113,121 +384,69 @@ export async function exportToDOCX(
 
       children.push(
         new Paragraph({
-          text: text,
+          children: [
+            new TextRun({
+              text: text,
+              bold: true,
+              color: color,
+              size: 24, // 12pt
+            }),
+          ],
           heading: HeadingLevel.HEADING_3,
-          spacing: {
-            before: 200,
-            after: 100,
-          },
-          run: {
-            color: color,
-            bold: true,
-            size: 24, // 12pt
-          },
+          spacing: { before: 200, after: 100 },
         })
       );
 
     } else if (tagName === 'p') {
-      // Paragraph
       const text = element.textContent || '';
       if (text.trim()) {
         children.push(
           new Paragraph({
             text: text,
-            spacing: {
-              after: 120,
-            },
+            spacing: { after: 120 },
           })
         );
       }
 
     } else if (tagName === 'table') {
-      // Table (transmittal)
-      const rows: TableRow[] = [];
-
-      // Header row
-      rows.push(
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [new Paragraph({ text: 'Document Name', run: { bold: true } })],
-              width: { size: 50, type: WidthType.PERCENTAGE },
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: 'Version', run: { bold: true } })],
-              width: { size: 25, type: WidthType.PERCENTAGE },
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: 'Category', run: { bold: true } })],
-              width: { size: 25, type: WidthType.PERCENTAGE },
-            }),
-          ],
-        })
-      );
-
-      // Data rows
-      const tbody = element.querySelector('tbody');
-      if (tbody) {
-        const trs = tbody.querySelectorAll('tr');
-        trs.forEach(tr => {
-          const tds = tr.querySelectorAll('td');
-          const cells: TableCell[] = [];
-
-          tds.forEach((td, index) => {
-            const text = td.textContent || '';
-
-            // Extract category color for last column
-            let color = undefined;
-            if (index === 2) {
-              const style = td.getAttribute('style') || '';
-              const colorMatch = style.match(/color:\s*([^;]+)/);
-              if (colorMatch) {
-                color = hexToRgb(colorMatch[1].trim());
-              }
-            }
-
-            cells.push(
-              new TableCell({
-                children: [
-                  new Paragraph({
-                    text: text,
-                    run: color ? { color } : undefined,
-                  }),
-                ],
-                width: {
-                  size: index === 0 ? 50 : 25,
-                  type: WidthType.PERCENTAGE,
-                },
-              })
-            );
-          });
-
-          rows.push(new TableRow({ children: cells }));
-        });
+      // Generic table - check if it's a transmittal table
+      const hasTransmittalClass = className.includes('transmittal-table');
+      if (hasTransmittalClass) {
+        children.push(createTransmittalTable(element));
+      } else {
+        // Treat as info table
+        children.push(createInfoTable(element));
       }
-
-      children.push(
-        new Table({
-          rows,
-          width: {
-            size: 100,
-            type: WidthType.PERCENTAGE,
-          },
-          borders: {
-            top: { style: BorderStyle.SINGLE, size: 1, color: '999999' },
-            bottom: { style: BorderStyle.SINGLE, size: 1, color: '999999' },
-            left: { style: BorderStyle.SINGLE, size: 1, color: '999999' },
-            right: { style: BorderStyle.SINGLE, size: 1, color: '999999' },
-            insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: '999999' },
-            insideVertical: { style: BorderStyle.SINGLE, size: 1, color: '999999' },
-          },
-        })
-      );
     }
   }
 
-  // Create document
+  // Create document with Arial font
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Arial',
+            size: 22, // 11pt
+          },
+        },
+        heading1: {
+          run: {
+            font: 'Arial',
+          },
+        },
+        heading2: {
+          run: {
+            font: 'Arial',
+          },
+        },
+        heading3: {
+          run: {
+            font: 'Arial',
+          },
+        },
+      },
+    },
     sections: [
       {
         properties: {},

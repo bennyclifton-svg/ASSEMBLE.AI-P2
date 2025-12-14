@@ -93,7 +93,7 @@ export async function POST(request: Request) {
             };
             tx.insert(projects).values(newProject).run();
 
-            // 2. Initialize consultant disciplines (36) with org defaults (FR-051, FR-056)
+            // 2. Initialize consultant disciplines (37) with org defaults (FR-051, FR-056)
             const enabledDisciplines: string[] = defaultSettings.enabledDisciplines || [];
             const disciplineRecords = CONSULTANT_DISCIPLINES.map((d) => ({
                 id: crypto.randomUUID(),
