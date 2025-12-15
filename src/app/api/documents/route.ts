@@ -3,8 +3,7 @@ import { handleApiError } from '@/lib/api-utils';
 import { validateExcelFile } from '@/lib/excel-validation';
 import { storage } from '@/lib/storage';
 import { versioning } from '@/lib/versioning';
-import { db } from '@/lib/db';
-import { documents, versions, fileAssets, categories, subcategories, projects, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
+import { db, documents, versions, fileAssets, categories, subcategories, projects, consultantDisciplines, contractorTrades } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, sql } from 'drizzle-orm';
 import { getCategoryById } from '@/lib/constants/categories';
@@ -66,33 +65,12 @@ export async function POST(request: NextRequest) {
         if (categoryId) {
           const info = getCategoryById(categoryId);
           if (info) {
-            try {
-              // Try to insert the category (will fail silently if it already exists)
-              await db.insert(categories).values({
-                id: categoryId,
-                name: info.name,
-                isSystem: true
-              });
-            } catch (err: any) {
-              console.log('Category insert error (may be normal if already exists):', {
-                code: err?.code,
-                message: err?.message,
-                categoryId
-              });
-              // Ignore UNIQUE constraint errors (category already exists)
-              // SQLite error codes can vary - check message too
-              const isConstraintError =
-                err?.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
-                err?.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' ||
-                err?.code === 'SQLITE_CONSTRAINT' ||
-                err?.message?.includes('UNIQUE') ||
-                err?.message?.includes('PRIMARY');
-
-              if (!isConstraintError) {
-                console.error('Unexpected error inserting category:', err);
-                throw err;
-              }
-            }
+            // Use onConflictDoNothing for upsert behavior (works with both SQLite and PostgreSQL)
+            await db.insert(categories).values({
+              id: categoryId,
+              name: info.name,
+              isSystem: true
+            }).onConflictDoNothing();
           }
         }
 
@@ -100,28 +78,13 @@ export async function POST(request: NextRequest) {
         if (subcategoryId && categoryId) {
           const subcategoryName = formData.get('subcategoryName') as string | null;
           if (subcategoryName) {
-            try {
-              // Try to insert the subcategory (will fail silently if it already exists)
-              await db.insert(subcategories).values({
-                id: subcategoryId,
-                categoryId: categoryId,
-                name: subcategoryName,
-                isSystem: false
-              });
-            } catch (err: any) {
-              // Ignore UNIQUE constraint errors (subcategory already exists)
-              const isConstraintError =
-                err?.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
-                err?.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' ||
-                err?.code === 'SQLITE_CONSTRAINT' ||
-                err?.message?.includes('UNIQUE') ||
-                err?.message?.includes('PRIMARY');
-
-              if (!isConstraintError) {
-                console.error('Unexpected error inserting subcategory:', err);
-                throw err;
-              }
-            }
+            // Use onConflictDoNothing for upsert behavior (works with both SQLite and PostgreSQL)
+            await db.insert(subcategories).values({
+              id: subcategoryId,
+              categoryId: categoryId,
+              name: subcategoryName,
+              isSystem: false
+            }).onConflictDoNothing();
           }
         }
 

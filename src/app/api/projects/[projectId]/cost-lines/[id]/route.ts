@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { costLines, consultantDisciplines } from '@/lib/db/schema';
+import { costLines, consultantDisciplines } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { UpdateCostLineInput } from '@/types/cost-plan';
 

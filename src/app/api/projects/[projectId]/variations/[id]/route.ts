@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { variations } from '@/lib/db/schema';
+import { variations } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { UpdateVariationInput } from '@/types/variation';
 

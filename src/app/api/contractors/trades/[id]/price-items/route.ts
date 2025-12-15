@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { tradePriceItems, contractorTrades } from '@/lib/db/schema';
+import { tradePriceItems, contractorTrades } from '@/lib/db';
 import { eq, asc, max } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 

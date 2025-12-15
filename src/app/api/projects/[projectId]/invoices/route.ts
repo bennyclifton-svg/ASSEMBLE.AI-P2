@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { invoices, costLines, variations, companies } from '@/lib/db/schema';
+import { invoices, costLines, variations, companies } from '@/lib/db';
 import { eq, isNull, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { CreateInvoiceInput } from '@/types/invoice';

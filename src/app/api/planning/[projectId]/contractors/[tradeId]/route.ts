@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractorTrades } from '@/lib/db/schema';
+import { contractorTrades } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 

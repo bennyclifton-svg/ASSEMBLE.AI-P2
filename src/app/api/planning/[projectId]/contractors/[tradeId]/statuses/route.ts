@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractorStatuses } from '@/lib/db/schema';
+import { contractorStatuses } from '@/lib/db';
 import { and, eq } from 'drizzle-orm';
 import { contractorStatusSchema } from '@/lib/validations/planning-schema';
 

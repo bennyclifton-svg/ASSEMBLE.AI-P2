@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { documents } from '@/lib/db/schema';
+import { documents } from '@/lib/db';
 import { inArray } from 'drizzle-orm';
 
 export async function PATCH(request: NextRequest) {

@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { knowledgeLibraries } from '@/lib/db/schema';
+import { knowledgeLibraries } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { KNOWLEDGE_LIBRARY_TYPES } from '@/lib/constants/libraries';
 import { eq } from 'drizzle-orm';

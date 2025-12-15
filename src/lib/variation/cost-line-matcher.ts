@@ -7,7 +7,7 @@
  */
 
 import { db } from '@/lib/db';
-import { costLines, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
+import { costLines, consultantDisciplines, contractorTrades } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 
 // ============================================================================

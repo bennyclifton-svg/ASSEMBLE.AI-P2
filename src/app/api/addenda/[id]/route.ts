@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { addenda, addendumTransmittals, documents, versions, fileAssets } from '@/lib/db/schema';
+import { addenda, addendumTransmittals, documents, versions, fileAssets } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 // GET /api/addenda/[id] - Get single addendum with transmittal documents

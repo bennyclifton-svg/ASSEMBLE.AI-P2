@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/db';
-import { users, sessions } from '@/lib/db/schema';
+import { users, sessions } from '@/lib/db';
 import { getSessionToken, hashToken, isSessionExpired } from './session';
 import { eq } from 'drizzle-orm';
 

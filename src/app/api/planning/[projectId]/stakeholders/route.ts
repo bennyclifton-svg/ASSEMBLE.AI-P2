@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { stakeholders } from '@/lib/db/schema';
+import { stakeholders } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { stakeholderSchema } from '@/lib/validations/planning-schema';
 

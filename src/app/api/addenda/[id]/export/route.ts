@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { addenda, addendumTransmittals, documents, versions, fileAssets, projectDetails, projects, categories, subcategories } from '@/lib/db/schema';
+import { addenda, addendumTransmittals, documents, versions, fileAssets, projectDetails, projects, categories, subcategories } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { exportToPDF } from '@/lib/export/pdf-enhanced';
 import { exportToDOCX } from '@/lib/export/docx-enhanced';

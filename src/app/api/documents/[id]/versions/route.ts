@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { versions, fileAssets } from '@/lib/db/schema';
+import { versions, fileAssets } from '@/lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 export async function GET(

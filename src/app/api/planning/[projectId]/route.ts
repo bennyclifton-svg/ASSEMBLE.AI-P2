@@ -6,7 +6,7 @@ import {
     projectStages,
     risks,
     stakeholders
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 export async function GET(

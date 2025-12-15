@@ -19,7 +19,7 @@ import {
     consultantDisciplines,
     contractorTrades,
     tenderSubmissions,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';

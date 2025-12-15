@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr, trrTransmittals, documents, versions, fileAssets, categories, subcategories } from '@/lib/db/schema';
+import { trr, trrTransmittals, documents, versions, fileAssets, categories, subcategories } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
 

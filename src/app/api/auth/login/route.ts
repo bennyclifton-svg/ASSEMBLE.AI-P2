@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users, sessions, organizations } from '@/lib/db/schema';
+import { users, sessions, organizations } from '@/lib/db';
 import { verifyPassword } from '@/lib/auth/password';
 import { generateSessionToken, hashToken, setSessionCookie, getSessionExpiry } from '@/lib/auth/session';
 import { checkRateLimit, recordFailedAttempt, clearAttempts } from '@/lib/auth/rate-limit';

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { costLines } from '@/lib/db/schema';
+import { costLines } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 
 interface ReorderUpdate {

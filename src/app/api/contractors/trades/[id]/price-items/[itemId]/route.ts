@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { tradePriceItems } from '@/lib/db/schema';
+import { tradePriceItems } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 
 // PUT /api/contractors/trades/[id]/price-items/[itemId] - Update price item

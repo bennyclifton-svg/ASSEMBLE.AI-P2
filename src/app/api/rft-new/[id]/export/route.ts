@@ -17,7 +17,7 @@ import {
     fileAssets,
     categories,
     subcategories
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, asc } from 'drizzle-orm';
 import { exportToPDF } from '@/lib/export/pdf-enhanced';
 import { exportToDOCX } from '@/lib/export/docx-enhanced';

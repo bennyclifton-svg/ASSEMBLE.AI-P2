@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/db';
-import { loginAttempts } from '@/lib/db/schema';
+import { loginAttempts } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 

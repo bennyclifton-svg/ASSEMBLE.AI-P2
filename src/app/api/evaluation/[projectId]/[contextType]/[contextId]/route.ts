@@ -16,7 +16,7 @@ import {
     contractors,
     consultantDisciplines,
     contractorTrades,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 

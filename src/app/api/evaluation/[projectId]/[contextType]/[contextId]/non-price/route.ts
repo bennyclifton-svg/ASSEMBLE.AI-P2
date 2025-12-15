@@ -14,7 +14,7 @@ import {
     contractors,
     consultantDisciplines,
     contractorTrades,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { NON_PRICE_CRITERIA } from '@/lib/constants/non-price-criteria';

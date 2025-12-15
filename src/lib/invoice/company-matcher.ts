@@ -7,7 +7,7 @@
  */
 
 import { db } from '@/lib/db';
-import { companies, consultants, contractors, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
+import { companies, consultants, contractors, consultantDisciplines, contractorTrades } from '@/lib/db';
 import { eq, like, and, isNull } from 'drizzle-orm';
 
 // ============================================================================

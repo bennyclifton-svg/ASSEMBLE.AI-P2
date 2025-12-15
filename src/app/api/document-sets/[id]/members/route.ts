@@ -11,7 +11,7 @@ import { sql, eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { addDocumentForProcessing } from '@/lib/queue/client';
 import { db } from '@/lib/db';
-import { documents, versions, fileAssets } from '@/lib/db/schema';
+import { documents, versions, fileAssets } from '@/lib/db';
 
 interface RouteParams {
     params: Promise<{ id: string }>;

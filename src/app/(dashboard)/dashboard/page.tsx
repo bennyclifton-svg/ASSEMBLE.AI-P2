@@ -7,7 +7,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
-import { users, sessions, projects } from '@/lib/db/schema';
+import { users, sessions, projects } from '@/lib/db';
 import { eq, desc } from 'drizzle-orm';
 import { hashToken } from '@/lib/auth/session';
 import Link from 'next/link';

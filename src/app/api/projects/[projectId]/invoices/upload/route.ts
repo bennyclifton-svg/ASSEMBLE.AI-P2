@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { invoices, fileAssets, documents, versions, categories, subcategories, consultantDisciplines, contractorTrades, costLines } from '@/lib/db/schema';
+import { invoices, fileAssets, documents, versions, categories, subcategories, consultantDisciplines, contractorTrades, costLines } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';

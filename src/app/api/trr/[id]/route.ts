@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr } from '@/lib/db/schema';
+import { trr } from '@/lib/db';
 import { eq, sql } from 'drizzle-orm';
 
 interface RouteContext {

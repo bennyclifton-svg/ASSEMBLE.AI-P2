@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { consultantDisciplines, contractorTrades } from '@/lib/db/schema';
+import { consultantDisciplines, contractorTrades } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { getAllCategories, type ActiveCategory, type Subcategory } from '@/lib/constants/categories';
 

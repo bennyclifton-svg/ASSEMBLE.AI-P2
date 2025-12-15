@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractorTrades, contractorStatuses } from '@/lib/db/schema';
+import { contractorTrades, contractorStatuses } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { CONTRACTOR_TRADES, STATUS_TYPES } from '@/lib/constants/disciplines';
 

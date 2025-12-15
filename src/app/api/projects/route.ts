@@ -13,7 +13,7 @@ import {
     variations,
     invoices,
     organizations,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { CONSULTANT_DISCIPLINES, CONTRACTOR_TRADES, STATUS_TYPES } from '@/lib/constants/disciplines';
 import { DEFAULT_COST_LINES, getTotalDefaultBudget } from '@/lib/constants/default-cost-lines';
 import { getCurrentUser, AuthError } from '@/lib/auth/get-user';

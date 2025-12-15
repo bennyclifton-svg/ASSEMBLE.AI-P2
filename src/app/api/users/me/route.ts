@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users } from '@/lib/db/schema';
+import { users } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { hashPassword, verifyPassword, validatePassword } from '@/lib/auth/password';
 import { eq } from 'drizzle-orm';

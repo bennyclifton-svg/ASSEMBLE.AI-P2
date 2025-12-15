@@ -3,11 +3,11 @@
  * Uses PostgreSQL in production, SQLite in development
  */
 
-import * as schema from './schema';
+import * as sqliteSchema from './schema';
 import * as pgSchema from './pg-schema';
 
 // Determine which database to use based on environment
-const usePostgres = process.env.DATABASE_URL || process.env.SUPABASE_POSTGRES_URL;
+export const usePostgres = !!(process.env.DATABASE_URL || process.env.SUPABASE_POSTGRES_URL);
 
 // Export unified database instance
 export const db = usePostgres
@@ -30,11 +30,66 @@ export const db = usePostgres
         const Database = require('better-sqlite3');
         const sqlite = new Database('sqlite.db');
         sqlite.pragma('foreign_keys = ON');
-        return drizzle(sqlite, { schema });
+        return drizzle(sqlite, { schema: sqliteSchema });
     })();
 
 // Export the database type for TypeScript
 export type Database = typeof db;
 
-// Re-export schema for convenience
-export { schema, pgSchema };
+// Re-export the correct schema based on database type
+// This ensures API routes use the right table definitions
+export const schema = usePostgres ? pgSchema : sqliteSchema;
+
+// Export individual tables for convenience (uses correct schema automatically)
+export const {
+    categories,
+    subcategories,
+    documents,
+    fileAssets,
+    versions,
+    transmittals,
+    transmittalItems,
+    projects,
+    projectDetails,
+    projectObjectives,
+    projectStages,
+    risks,
+    stakeholders,
+    consultantDisciplines,
+    consultantStatuses,
+    contractorTrades,
+    contractorStatuses,
+    disciplineFeeItems,
+    tradePriceItems,
+    revisionHistory,
+    gisCache,
+    consultants,
+    contractors,
+    companies,
+    costLines,
+    costLineAllocations,
+    variations,
+    invoices,
+    costLineComments,
+    projectSnapshots,
+    importTemplates,
+    organizations,
+    users,
+    sessions,
+    loginAttempts,
+    subscriptions,
+    knowledgeLibraries,
+    libraryDocuments,
+    addenda,
+    addendumTransmittals,
+    rftNew,
+    rftNewTransmittals,
+    evaluations,
+    tenderSubmissions,
+    evaluationRows,
+    evaluationCells,
+    evaluationNonPriceCriteria,
+    evaluationNonPriceCells,
+    trr,
+    trrTransmittals,
+} = usePostgres ? pgSchema : sqliteSchema;

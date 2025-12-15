@@ -8,7 +8,7 @@ import {
     invoices,
     consultantDisciplines,
     contractorTrades,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, isNull, and } from 'drizzle-orm';
 import {
     calculateCostLineFields,

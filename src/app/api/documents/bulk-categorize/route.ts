@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { documents } from '@/lib/db/schema';
+import { documents } from '@/lib/db';
 import { inArray } from 'drizzle-orm';
 
 export async function PUT(request: NextRequest) {

@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { evaluationRows } from '@/lib/db/schema';
+import { evaluationRows } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 interface RouteParams {

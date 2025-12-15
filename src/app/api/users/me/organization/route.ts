@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { organizations } from '@/lib/db/schema';
+import { organizations } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { eq } from 'drizzle-orm';
 

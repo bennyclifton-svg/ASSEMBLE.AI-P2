@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { transmittals, transmittalItems, versions, fileAssets, documents, subcategories } from '@/lib/db/schema';
+import { transmittals, transmittalItems, versions, fileAssets, documents, subcategories } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import JSZip from 'jszip';
 import jsPDF from 'jspdf';

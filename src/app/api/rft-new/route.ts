@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { rftNew, rftNewTransmittals } from '@/lib/db/schema';
+import { rftNew, rftNewTransmittals } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, isNull } from 'drizzle-orm';
 

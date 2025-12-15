@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
+import { trr, consultantDisciplines, contractorTrades } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 interface RouteContext {

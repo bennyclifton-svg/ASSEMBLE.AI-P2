@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { invoices } from '@/lib/db/schema';
+import { invoices } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { UpdateInvoiceInput } from '@/types/invoice';
 

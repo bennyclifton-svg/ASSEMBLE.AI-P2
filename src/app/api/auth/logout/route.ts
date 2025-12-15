@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { sessions } from '@/lib/db/schema';
+import { sessions } from '@/lib/db';
 import { getSessionToken, hashToken, clearSessionCookie } from '@/lib/auth/session';
 import { eq } from 'drizzle-orm';
 

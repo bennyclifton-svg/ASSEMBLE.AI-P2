@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractors } from '@/lib/db/schema';
+import { contractors } from '@/lib/db';
 import { eq, and, ne } from 'drizzle-orm';
 
 // PUT /api/contractors/firms/[id]

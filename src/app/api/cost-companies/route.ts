@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { companies } from '@/lib/db/schema';
+import { companies } from '@/lib/db';
 import { eq, isNull, like, or } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { CreateCompanyInput } from '@/types/cost-plan';

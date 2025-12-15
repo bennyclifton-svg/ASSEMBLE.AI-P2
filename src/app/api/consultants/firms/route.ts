@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { consultants } from '@/lib/db/schema';
+import { consultants } from '@/lib/db';
 import { eq, and, or } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
