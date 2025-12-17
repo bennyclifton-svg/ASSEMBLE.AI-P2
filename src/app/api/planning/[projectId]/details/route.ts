@@ -61,7 +61,7 @@ export async function PUT(
             await db.update(projectDetails)
                 .set({
                     ...validated,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(eq(projectDetails.projectId, projectId));
         } else {
@@ -78,7 +78,7 @@ export async function PUT(
             await db.update(projects)
                 .set({
                     name: validated.projectName,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(eq(projects.id, projectId));
         }

@@ -48,7 +48,7 @@ export async function PUT(
             .update(consultantDisciplines)
             .set({
                 ...validated,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(consultantDisciplines.id, disciplineId))
             .returning();

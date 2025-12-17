@@ -10,8 +10,8 @@ export async function POST() {
             name: 'Default Project',
             code: 'DEFAULT',
             status: 'active',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         }).onConflictDoNothing();
 
         return NextResponse.json({ success: true, message: 'Default project seeded successfully' });

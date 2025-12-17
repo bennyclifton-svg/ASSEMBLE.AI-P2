@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
             }
 
             if (hasUpdates) {
-                updates.updatedAt = new Date().toISOString();
+                (updates as Record<string, unknown>).updatedAt = new Date();
                 await db
                     .update(companies)
                     .set(updates)
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
         // No match found - create new company
         const id = uuidv4();
-        const now = new Date().toISOString();
+        const now = new Date();
 
         await db.insert(companies).values({
             id,

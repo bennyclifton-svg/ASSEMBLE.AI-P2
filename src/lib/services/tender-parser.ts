@@ -197,7 +197,12 @@ export function filterLineItems(items: ParsedLineItem[]): FilterResult {
 // ANTHROPIC CLIENT
 // ============================================================================
 
-const anthropic = new Anthropic();
+function getAnthropicClient(): Anthropic {
+    if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+    }
+    return new Anthropic();
+}
 
 // ============================================================================
 // T041: PDF TEXT EXTRACTION
@@ -276,6 +281,7 @@ export async function extractPricingFromTender(
             };
         }
 
+        const anthropic = getAnthropicClient();
         const response = await anthropic.messages.create({
             model: 'claude-haiku-4-5-20251001',
             max_tokens: 2000,

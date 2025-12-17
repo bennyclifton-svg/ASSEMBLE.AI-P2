@@ -69,7 +69,7 @@ export async function PUT(
 
         // Build update object with only provided fields
         const updateData: Record<string, unknown> = {
-            updatedAt: new Date().toISOString(),
+            updatedAt: new Date(),
         };
         if (content !== undefined) updateData.content = content;
         if (addendumDate !== undefined) updateData.addendumDate = addendumDate;

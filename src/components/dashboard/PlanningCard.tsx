@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { DetailsSection } from './planning/DetailsSection';
 import { ObjectivesSection } from './planning/ObjectivesSection';
-import { StagingSection } from './planning/StagingSection';
 import { RiskSection } from './planning/RiskSection';
 import { StakeholdersSection } from './planning/StakeholdersSection';
 import { ConsultantListSection } from './planning/ConsultantListSection';
@@ -71,12 +70,6 @@ export function PlanningCard({
                 <ObjectivesSection
                     projectId={projectId}
                     data={data?.objectives}
-                    onUpdate={fetchPlanningData}
-                />
-
-                <StagingSection
-                    projectId={projectId}
-                    data={data?.stages || []}
                     onUpdate={fetchPlanningData}
                 />
 

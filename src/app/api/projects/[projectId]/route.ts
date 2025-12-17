@@ -28,8 +28,8 @@ export async function PATCH(
         const { name, code, status } = body;
 
         // Build update object with only provided fields
-        const updateData: Record<string, string> = {
-            updatedAt: new Date().toISOString(),
+        const updateData: Record<string, unknown> = {
+            updatedAt: new Date(),
         };
 
         if (name !== undefined) {

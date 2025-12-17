@@ -98,38 +98,24 @@ export async function POST(
       const subcategoryName = companyMatch.categoryPath.subcategory;
       categoryDisplayPath = `${companyMatch.categoryPath.category}/${companyMatch.categoryPath.subcategory}`;
 
-      // Ensure category exists
+      // Ensure category exists (upsert)
       const categoryInfo = getCategoryById(categoryId);
       if (categoryInfo) {
-        try {
-          await db.insert(categories).values({
-            id: categoryId,
-            name: categoryInfo.name,
-            isSystem: true,
-          });
-        } catch (err: any) {
-          // Ignore if already exists
-          if (!err?.message?.includes('UNIQUE') && !err?.message?.includes('PRIMARY')) {
-            throw err;
-          }
-        }
+        await db.insert(categories).values({
+          id: categoryId,
+          name: categoryInfo.name,
+          isSystem: true,
+        }).onConflictDoNothing();
       }
 
-      // Ensure subcategory exists if we have discipline/trade
+      // Ensure subcategory exists if we have discipline/trade (upsert)
       if (subcategoryId && subcategoryName) {
-        try {
-          await db.insert(subcategories).values({
-            id: subcategoryId,
-            categoryId,
-            name: subcategoryName,
-            isSystem: false,
-          });
-        } catch (err: any) {
-          // Ignore if already exists
-          if (!err?.message?.includes('UNIQUE') && !err?.message?.includes('PRIMARY')) {
-            throw err;
-          }
-        }
+        await db.insert(subcategories).values({
+          id: subcategoryId,
+          categoryId,
+          name: subcategoryName,
+          isSystem: false,
+        }).onConflictDoNothing();
       }
     } else {
       // No company match - use uncategorized
@@ -137,19 +123,12 @@ export async function POST(
       subcategoryId = null;
       categoryDisplayPath = 'Uncategorized';
 
-      // Ensure uncategorized category exists
-      try {
-        await db.insert(categories).values({
-          id: 'uncategorized',
-          name: 'Uncategorized',
-          isSystem: true,
-        });
-      } catch (err: any) {
-        // Ignore if already exists
-        if (!err?.message?.includes('UNIQUE') && !err?.message?.includes('PRIMARY')) {
-          throw err;
-        }
-      }
+      // Ensure uncategorized category exists (upsert)
+      await db.insert(categories).values({
+        id: 'uncategorized',
+        name: 'Uncategorized',
+        isSystem: true,
+      }).onConflictDoNothing();
     }
 
     // Create document entry
@@ -173,7 +152,7 @@ export async function POST(
 
     // Update document's latest version pointer
     await db.update(documents)
-      .set({ latestVersionId: versionId, updatedAt: new Date().toISOString() })
+      .set({ latestVersionId: versionId, updatedAt: new Date() })
       .where(eq(documents.id, documentId));
 
     console.log(`[invoice-upload] Created document in ${categoryDisplayPath}`);
@@ -216,7 +195,7 @@ export async function POST(
 
     // Step 7: Create Invoice record
     const invoiceId = uuidv4();
-    const now = new Date().toISOString();
+    const now = new Date();
 
     await db.insert(invoices).values({
       id: invoiceId,

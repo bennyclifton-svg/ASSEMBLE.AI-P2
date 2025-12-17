@@ -1039,3 +1039,86 @@ export const trrTransmittalsRelations = relations(trrTransmittals, ({ one }) => 
     }),
 }));
 
+// ============================================================================
+// PROGRAM MODULE SCHEMA (Feature 015 - Program/Gantt Chart)
+// ============================================================================
+
+// Program Activities (Gantt chart rows)
+export const programActivities = sqliteTable('program_activities', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    parentId: text('parent_id'), // Self-reference for 2-tier hierarchy
+    name: text('name').notNull(),
+    startDate: text('start_date'), // ISO date string
+    endDate: text('end_date'), // ISO date string
+    collapsed: integer('collapsed', { mode: 'boolean' }).default(false),
+    color: text('color'), // Auto-assigned from muted palette
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Program Dependencies (FS, SS, FF connections between activities)
+export const programDependencies = sqliteTable('program_dependencies', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    fromActivityId: text('from_activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
+    toActivityId: text('to_activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
+    type: text('type', { enum: ['FS', 'SS', 'FF'] }).notNull(), // Finish-to-Start, Start-to-Start, Finish-to-Finish
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Program Milestones (Diamond markers within activities)
+export const programMilestones = sqliteTable('program_milestones', {
+    id: text('id').primaryKey(),
+    activityId: text('activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
+    name: text('name').notNull(),
+    date: text('date').notNull(), // ISO date string
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
+// PROGRAM MODULE RELATIONS
+// ============================================================================
+
+export const programActivitiesRelations = relations(programActivities, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [programActivities.projectId],
+        references: [projects.id],
+    }),
+    parent: one(programActivities, {
+        fields: [programActivities.parentId],
+        references: [programActivities.id],
+        relationName: 'parentChild',
+    }),
+    children: many(programActivities, { relationName: 'parentChild' }),
+    milestones: many(programMilestones),
+    dependenciesFrom: many(programDependencies, { relationName: 'fromActivity' }),
+    dependenciesTo: many(programDependencies, { relationName: 'toActivity' }),
+}));
+
+export const programDependenciesRelations = relations(programDependencies, ({ one }) => ({
+    project: one(projects, {
+        fields: [programDependencies.projectId],
+        references: [projects.id],
+    }),
+    fromActivity: one(programActivities, {
+        fields: [programDependencies.fromActivityId],
+        references: [programActivities.id],
+        relationName: 'fromActivity',
+    }),
+    toActivity: one(programActivities, {
+        fields: [programDependencies.toActivityId],
+        references: [programActivities.id],
+        relationName: 'toActivity',
+    }),
+}));
+
+export const programMilestonesRelations = relations(programMilestones, ({ one }) => ({
+    activity: one(programActivities, {
+        fields: [programMilestones.activityId],
+        references: [programActivities.id],
+    }),
+}));
+

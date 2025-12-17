@@ -107,7 +107,7 @@ export async function POST(
         }
 
         const id = uuidv4();
-        const now = new Date().toISOString();
+        const now = new Date();
 
         await db.insert(costLines).values({
             id,

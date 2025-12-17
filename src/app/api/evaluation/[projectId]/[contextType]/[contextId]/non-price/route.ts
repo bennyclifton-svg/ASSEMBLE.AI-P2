@@ -247,7 +247,7 @@ export async function PUT(
             ),
         });
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         if (existingCell) {
             // Update existing cell - user edits override AI content (T020)

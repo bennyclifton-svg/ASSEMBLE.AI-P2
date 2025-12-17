@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         }
 
         const id = uuidv4();
-        const now = new Date().toISOString();
+        const now = new Date();
 
         await db.insert(companies).values({
             id,

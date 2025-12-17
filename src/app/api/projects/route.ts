@@ -87,8 +87,8 @@ export async function POST(request: Request) {
                 code: code?.trim(),
                 status: status || 'active',
                 organizationId,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
             };
             await tx.insert(projects).values(newProject);
 
@@ -195,8 +195,8 @@ export async function POST(request: Request) {
                     status: 'Forecast',
                     amountForecastCents: 1000000, // $10,000
                     amountApprovedCents: 0,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
                 });
             }
 
@@ -218,8 +218,8 @@ export async function POST(request: Request) {
                     periodYear: currentDate.getFullYear(),
                     periodMonth: currentDate.getMonth() + 1,
                     paidStatus: 'unpaid',
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
                 });
             }
 

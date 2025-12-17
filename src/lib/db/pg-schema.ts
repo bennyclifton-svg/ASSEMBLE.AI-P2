@@ -641,6 +641,42 @@ export const trrTransmittals = pgTable('trr_transmittals', {
 });
 
 // ============================================================================
+// PROGRAM MODULE (Gantt Chart)
+// ============================================================================
+
+export const programActivities = pgTable('program_activities', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    parentId: text('parent_id'),
+    name: text('name').notNull(),
+    startDate: text('start_date'),
+    endDate: text('end_date'),
+    collapsed: boolean('collapsed').default(false),
+    color: text('color'),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const programDependencies = pgTable('program_dependencies', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    fromActivityId: text('from_activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
+    toActivityId: text('to_activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
+    type: text('type').notNull(), // 'FS' | 'SS' | 'FF'
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const programMilestones = pgTable('program_milestones', {
+    id: text('id').primaryKey(),
+    activityId: text('activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
+    name: text('name').notNull(),
+    date: text('date').notNull(),
+    sortOrder: integer('sort_order').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ============================================================================
 // RELATIONS (maintaining the same structure as SQLite schema)
 // ============================================================================
 
@@ -974,5 +1010,45 @@ export const trrTransmittalsRelations = relations(trrTransmittals, ({ one }) => 
     document: one(documents, {
         fields: [trrTransmittals.documentId],
         references: [documents.id],
+    }),
+}));
+
+export const programActivitiesRelations = relations(programActivities, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [programActivities.projectId],
+        references: [projects.id],
+    }),
+    parent: one(programActivities, {
+        fields: [programActivities.parentId],
+        references: [programActivities.id],
+        relationName: 'parentChild',
+    }),
+    children: many(programActivities, { relationName: 'parentChild' }),
+    milestones: many(programMilestones),
+    dependenciesFrom: many(programDependencies, { relationName: 'fromActivity' }),
+    dependenciesTo: many(programDependencies, { relationName: 'toActivity' }),
+}));
+
+export const programDependenciesRelations = relations(programDependencies, ({ one }) => ({
+    project: one(projects, {
+        fields: [programDependencies.projectId],
+        references: [projects.id],
+    }),
+    fromActivity: one(programActivities, {
+        fields: [programDependencies.fromActivityId],
+        references: [programActivities.id],
+        relationName: 'fromActivity',
+    }),
+    toActivity: one(programActivities, {
+        fields: [programDependencies.toActivityId],
+        references: [programActivities.id],
+        relationName: 'toActivity',
+    }),
+}));
+
+export const programMilestonesRelations = relations(programMilestones, ({ one }) => ({
+    activity: one(programActivities, {
+        fields: [programMilestones.activityId],
+        references: [programActivities.id],
     }),
 }));

@@ -1116,3 +1116,316 @@ Structured logging with key events only (minimal overhead, sufficient for debugg
 | Access Control | **Project-level (all members)** | All project members have full RAG access; no per-document-set permissions |
 | Concurrency | **Report-level locking** | One user generates/edits at a time; others see "in progress" status |
 | **Transmittal in Reports** | **Appendix A (conditional)** | Transmittal rendered as data table at end of RFT; only if discipline has saved transmittal; columns: Doc Name, Version, Category |
+
+---
+
+## Knowledge Source (Simplified V1)
+
+**Status**: Implementation Phase | **Updated**: 2025-12-16
+
+### Overview
+
+Simplified Knowledge Source feature enabling per-project RAG without the complexity of global knowledge libraries. Users can upload documents to a "Knowledge" category tile, which automatically triggers RAG processing for AI-assisted content generation.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    KNOWLEDGE SOURCE (Per Project)                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│   Document Repository                                            │
+│   ┌──────────────────────────────────────────────────────────┐  │
+│   │  Category Tiles                                           │  │
+│   │  ┌─────────┐ ┌─────────┐ ┌─────────────┐ ┌─────────┐    │  │
+│   │  │ Specs   │ │ Drawings│ │ KNOWLEDGE   │ │ Reports │    │  │
+│   │  │         │ │         │ │ (Auto-RAG)  │ │         │    │  │
+│   │  └─────────┘ └─────────┘ └──────┬──────┘ └─────────┘    │  │
+│   └─────────────────────────────────┼────────────────────────┘  │
+│                                     │                            │
+│                                     ▼                            │
+│   ┌──────────────────────────────────────────────────────────┐  │
+│   │  RAG Pipeline (BullMQ)                                    │  │
+│   │  Parse → Chunk → Embed (Voyage) → Store (pgvector)        │  │
+│   └──────────────────────────────────────────────────────────┘  │
+│                                     │                            │
+│                                     ▼                            │
+│   ┌──────────────────────────────────────────────────────────┐  │
+│   │  AI Generation (RFT Brief)                                │  │
+│   │  ◇ Click icon → Retrieve chunks → Generate content        │  │
+│   └──────────────────────────────────────────────────────────┘  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Knowledge Category** | Replaces "Cost Planning" tile; sky blue color (#6B9BD1) |
+| **Auto-RAG Trigger** | Documents dropped/assigned to Knowledge tile automatically queue for RAG |
+| **Per-Project Scope** | One document set per project (global libraries deferred) |
+| **AI Generate Icon** | Diamond icon (◇) next to Brief heading triggers RAG-powered generation |
+| **Keyword Context** | Existing field text used as keywords for targeted retrieval |
+
+### User Workflows
+
+#### Flow 1: Adding Documents to Knowledge Source
+
+1. User drags files onto "Knowledge" tile OR selects files and clicks "Knowledge" tile
+2. Files uploaded and categorized as "knowledge"
+3. **Automatic RAG trigger**: Documents added to project's document set
+4. BullMQ worker processes: Parse → Chunk → Embed → Store in pgvector
+5. Status indicator shows: pending → processing → synced
+
+#### Flow 2: AI-Assisted Brief Generation
+
+1. User opens RFT → Brief section
+2. Optionally types keywords in Service/Deliverables fields
+3. Clicks diamond icon (◇) next to "Brief" heading
+4. System retrieves top 5 relevant chunks using existing text as keywords
+5. Claude generates professional Service and Deliverables content
+6. Fields populated with generated text
+
+### Category Configuration
+
+```typescript
+KNOWLEDGE: {
+    id: 'knowledge',
+    name: 'Knowledge',
+    color: '#6B9BD1', // Sky Blue (AI/knowledge indicator)
+    hasSubcategories: false,
+    row: 2,
+    isKnowledgeSource: true, // Triggers auto-RAG
+}
+```
+
+### API Endpoint: Generate Brief
+
+**POST** `/api/retrieval/generate-brief`
+
+```typescript
+// Request
+{
+    projectId: string;
+    disciplineId?: string;
+    tradeId?: string;
+    keywords: string;        // Existing field text as context
+    contextType: 'consultant' | 'contractor';
+}
+
+// Response
+{
+    service: string;         // Generated service description
+    deliverables: string;    // Generated deliverables list
+}
+```
+
+### Database (PostgreSQL + pgvector)
+
+**Note**: Project has migrated from SQLite to PostgreSQL. All app data now uses PostgreSQL via Docker, with pgvector extension for RAG embeddings.
+
+| Table | Purpose |
+|-------|---------|
+| `document_sets` | One per project for Knowledge Source |
+| `document_set_members` | Documents in Knowledge Source with sync status |
+| `document_chunks` | Embedded chunks with vector(1024) column |
+
+### Deferred Features (V2)
+
+- Global Knowledge Libraries (6 organization-wide repos)
+- Multi-repo selection for report generation
+- Knowledge Library tiles in Planning Card
+
+---
+
+## Unified Field Generation
+
+**Status**: Specification | **Updated**: 2025-12-17
+
+### Overview
+
+A universal pattern for AI-assisted field generation across all text fields in the application. Replaces the single-purpose `/api/retrieval/generate-brief` endpoint with a flexible, reusable system that interprets user input intelligently.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  User Input (any text field)                                    │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ "list 4 key services, each 1 sentence"  ← Instruction     │  │
+│  │                        OR                                 │  │
+│  │ "Fire engineering design and..."        ← Content         │  │
+│  │                        OR                                 │  │
+│  │ (empty)                                 ← Generate        │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              ↓                                  │
+│              ┌───────────────────────────────┐                  │
+│              │   AI Interprets Intent:       │                  │
+│              │   • Instruction → Execute it  │                  │
+│              │   • Content → Enhance it      │                  │
+│              │   • Empty → Use context       │                  │
+│              └───────────────────────────────┘                  │
+│                              ↓                                  │
+│              Context Assembly:                                  │
+│              • Discipline/Trade name                            │
+│              • Project brief & objectives                       │
+│              • Knowledge Source (RAG chunks)                    │
+│                              ↓                                  │
+│              Generated, contextual content                      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Field Type Taxonomy
+
+```typescript
+type FieldType =
+  // RFT Fields (Consultant Brief)
+  | 'brief.service'       // briefServices field
+  | 'brief.deliverables'  // briefDeliverables field
+
+  // RFT Fields (Contractor Scope)
+  | 'scope.works'         // scopeWorks field
+
+  // TRR Fields (Future)
+  | 'trr.executiveSummary'
+  | 'trr.clarifications'
+  | 'trr.recommendation'
+
+  // Report Fields (Future)
+  | 'report.section'
+  | 'report.summary'
+```
+
+### Input Interpretation Modes
+
+| User Input | Mode | AI Behavior | Example |
+|------------|------|-------------|---------|
+| Starts with verb, contains "list", "write", "describe" | **INSTRUCTION** | Execute the instruction using RAG + context | "list 4 key services, 1 sentence each" |
+| Non-empty text | **ENHANCE** | Expand and enhance content using RAG | "Fire engineering design..." |
+| Empty field | **GENERATE** | Generate default content for discipline using RAG | (nothing) |
+| Contains topic keywords | **FOCUSED** | Bias retrieval + generation toward topic | "focus on compliance requirements" |
+
+### API Endpoint
+
+**POST** `/api/retrieval/generate-field`
+
+Replaces `/api/retrieval/generate-brief`.
+
+```typescript
+// Request
+interface GenerateFieldRequest {
+  projectId: string;
+  fieldType: FieldType;
+  userInput: string;           // Can be instruction, content, or empty
+  disciplineId?: string;       // For consultant fields
+  tradeId?: string;            // For contractor fields
+  additionalContext?: {
+    firmName?: string;         // For TRR fields
+    evaluationData?: object;   // For recommendation fields
+    sectionTitle?: string;     // For report sections
+  };
+}
+
+// Response
+interface GenerateFieldResponse {
+  content: string;
+  sources: {
+    chunkId: string;
+    documentName: string;
+    relevanceScore: number;
+  }[];
+  inputInterpretation: 'instruction' | 'enhance' | 'generate' | 'focused';
+}
+```
+
+**Auto-fetched Context** (server-side):
+- Discipline/Trade name from ID
+- Project objectives from planning context
+- Project details (name, address, building class)
+- Knowledge Source chunks (top 5 via RAG retrieval)
+
+### React Hook
+
+```typescript
+interface UseFieldGenerationOptions {
+  fieldType: FieldType;
+  projectId: string;
+  disciplineId?: string;
+  tradeId?: string;
+  additionalContext?: object;
+}
+
+interface UseFieldGenerationReturn {
+  generate: (userInput: string) => Promise<GenerateFieldResponse>;
+  isGenerating: boolean;
+  error: Error | null;
+  lastGeneration: GenerateFieldResponse | null;
+}
+
+function useFieldGeneration(options: UseFieldGenerationOptions): UseFieldGenerationReturn;
+```
+
+### Reusable Component
+
+```typescript
+interface GenerativeFieldProps {
+  type: FieldType;
+  value: string;
+  onChange: (value: string) => void;
+  context: {
+    projectId: string;
+    disciplineId?: string;
+    tradeId?: string;
+  };
+  placeholder?: string;
+  rows?: number;
+  disabled?: boolean;
+  className?: string;
+}
+
+// Usage
+<GenerativeField
+  type="brief.service"
+  value={briefService}
+  onChange={setBriefService}
+  context={{ projectId, disciplineId }}
+  placeholder="Enter service details or instructions for AI..."
+/>
+```
+
+### Prompt Engineering
+
+**Input Detection Logic**:
+```
+IF input matches instruction patterns (starts with verb, contains "list", "write", "describe", etc.)
+  → Mode: INSTRUCTION
+  → Prompt: "Follow these instructions: {input}. Use context from: {RAG chunks}"
+
+ELSE IF input is non-empty text
+  → Mode: ENHANCE
+  → Prompt: "Enhance and expand this content professionally: {input}. Use context from: {RAG chunks}"
+
+ELSE (empty input)
+  → Mode: GENERATE
+  → Prompt: "Generate professional {fieldType} content for {disciplineName} discipline. Use context from: {RAG chunks}"
+```
+
+**Context Assembly Order**:
+1. Discipline/Trade name (required for relevance)
+2. Project name and objectives
+3. Planning card details (address, building class, etc.)
+4. RAG-retrieved chunks (top 5 from Knowledge Source)
+5. Additional context (firm name, evaluation data if applicable)
+
+### Reusability Matrix
+
+| Report Type | Field | FieldType |
+|-------------|-------|-----------|
+| RFT (Consultant) | Service | `brief.service` |
+| RFT (Consultant) | Deliverables | `brief.deliverables` |
+| RFT (Contractor) | Scope of Works | `scope.works` |
+| TRR | Executive Summary | `trr.executiveSummary` |
+| TRR | Clarifications | `trr.clarifications` |
+| TRR | Recommendation | `trr.recommendation` |
+| Any Report | Section Content | `report.section` |

@@ -14,12 +14,13 @@ export async function PUT(
         const { statusType, isActive } = consultantStatusSchema.parse(body);
 
         // Update the specific status
+        const now = new Date();
         const [updated] = await db
             .update(consultantStatuses)
             .set({
                 isActive,
-                completedAt: isActive ? new Date().toISOString() : null,
-                updatedAt: new Date().toISOString(),
+                completedAt: isActive ? now : null,
+                updatedAt: now,
             })
             .where(
                 and(

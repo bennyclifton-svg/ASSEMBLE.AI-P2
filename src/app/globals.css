@@ -61,23 +61,3 @@ body {
   width: 0;
 }
 
-/* Ripped paper edge effect for toasts */
-.toast-ripped {
-  clip-path: polygon(
-    /* Top edge - subtle jagged */
-    0% 3px, 4% 0, 8% 2px, 12% 0, 16% 3px, 20% 1px, 24% 0, 28% 2px,
-    32% 0, 36% 3px, 40% 1px, 44% 0, 48% 2px, 52% 0, 56% 3px, 60% 1px,
-    64% 0, 68% 2px, 72% 0, 76% 3px, 80% 1px, 84% 0, 88% 2px, 92% 0, 96% 3px, 100% 0,
-    /* Right edge */
-    100% 100%,
-    /* Bottom edge - subtle jagged */
-    96% calc(100% - 2px), 92% 100%, 88% calc(100% - 3px), 84% 100%,
-    80% calc(100% - 1px), 76% 100%, 72% calc(100% - 2px), 68% 100%,
-    64% calc(100% - 3px), 60% 100%, 56% calc(100% - 1px), 52% 100%,
-    48% calc(100% - 2px), 44% 100%, 40% calc(100% - 3px), 36% 100%,
-    32% calc(100% - 1px), 28% 100%, 24% calc(100% - 2px), 20% 100%,
-    16% calc(100% - 3px), 12% 100%, 8% calc(100% - 1px), 4% 100%, 0% calc(100% - 2px),
-    /* Left edge */
-    0% 3px
-  );
-}

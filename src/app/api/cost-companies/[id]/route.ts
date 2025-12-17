@@ -71,7 +71,7 @@ export async function PATCH(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         const updateData: Record<string, unknown> = {
             updatedAt: now,
@@ -132,7 +132,7 @@ export async function DELETE(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         await db
             .update(companies)

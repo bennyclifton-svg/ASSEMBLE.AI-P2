@@ -91,13 +91,15 @@ export async function POST(request: NextRequest) {
         // 3. Determine Versioning (T017)
         let documentId = await versioning.findMatchingDocument(file.name, projectId);
         let versionNumber = 1;
+        let isNewDocument = false;
 
         if (documentId) {
             // Existing document found, increment version
             versionNumber = await versioning.getNextVersionNumber(documentId);
         } else {
-            // New document
+            // New document - generate ID but don't insert yet
             documentId = uuidv4();
+            isNewDocument = true;
 
             console.log('Creating new document with:', {
                 id: documentId,
@@ -106,17 +108,25 @@ export async function POST(request: NextRequest) {
                 subcategoryId: subcategoryId || null,
                 filename: file.name
             });
+        }
 
+        // 4. Create Version record (T018)
+        const versionId = uuidv4();
+
+        // For new documents, insert document AND version together, then update latestVersionId
+        // This ensures we never have orphaned documents without versions
+        if (isNewDocument) {
+            // Insert document first
             await db.insert(documents).values({
                 id: documentId,
                 projectId: projectId,
                 categoryId: categoryId || null,
                 subcategoryId: subcategoryId || null,
+                latestVersionId: versionId, // Set latestVersionId immediately
             });
         }
 
-        // 4. Create Version record (T018)
-        const versionId = uuidv4();
+        // Insert version
         await db.insert(versions).values({
             id: versionId,
             documentId: documentId!,
@@ -125,10 +135,26 @@ export async function POST(request: NextRequest) {
             uploadedBy: 'User', // Placeholder
         });
 
-        // Update document's latest version pointer
-        await db.update(documents)
-            .set({ latestVersionId: versionId, updatedAt: new Date().toISOString() })
-            .where(eq(documents.id, documentId!));
+        // For existing documents, update latestVersionId
+        if (!isNewDocument) {
+            await db.update(documents)
+                .set({ latestVersionId: versionId, updatedAt: new Date() })
+                .where(eq(documents.id, documentId!));
+        }
+
+        // Verify the document has a valid latestVersionId
+        const verifyDoc = await db.select({ latestVersionId: documents.latestVersionId })
+            .from(documents)
+            .where(eq(documents.id, documentId!))
+            .limit(1);
+
+        if (!verifyDoc[0]?.latestVersionId) {
+            console.error(`[documents POST] CRITICAL: Document ${documentId} has no latestVersionId after creation!`);
+            // Try to fix it
+            await db.update(documents)
+                .set({ latestVersionId: versionId, updatedAt: new Date() })
+                .where(eq(documents.id, documentId!));
+        }
 
         return NextResponse.json({
             success: true,
@@ -193,6 +219,55 @@ export async function GET(request: NextRequest) {
         const { and } = await import('drizzle-orm');
         const docs = await query.where(and(...conditions));
 
-        return NextResponse.json(docs);
+        // Post-process documents to handle missing originalName
+        // (can happen if latestVersionId is NULL - orphaned documents)
+        const docsWithFallback = await Promise.all(docs.map(async (doc) => {
+            let result = { ...doc };
+
+            // Fall back to category constants if categoryName is null but categoryId exists
+            if (doc.categoryId && !doc.categoryName) {
+                const categoryInfo = getCategoryById(doc.categoryId);
+                if (categoryInfo) {
+                    result.categoryName = categoryInfo.name;
+                }
+            }
+
+            // If originalName is missing, try to recover from the latest version
+            if (!doc.originalName) {
+                try {
+                    // Find the most recent version for this document
+                    const latestVersion = await db.select({
+                        originalName: fileAssets.originalName,
+                        versionNumber: versions.versionNumber,
+                        versionId: versions.id,
+                        fileAssetId: versions.fileAssetId,
+                    })
+                        .from(versions)
+                        .leftJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
+                        .where(eq(versions.documentId, doc.id))
+                        .orderBy(sql`${versions.versionNumber} DESC`)
+                        .limit(1);
+
+                    if (latestVersion.length > 0 && latestVersion[0].originalName) {
+                        result.originalName = latestVersion[0].originalName;
+                        result.versionNumber = latestVersion[0].versionNumber;
+
+                        // Also fix the document's latestVersionId while we're at it
+                        if (!doc.latestVersionId && latestVersion[0].versionId) {
+                            await db.update(documents)
+                                .set({ latestVersionId: latestVersion[0].versionId, updatedAt: new Date() })
+                                .where(eq(documents.id, doc.id));
+                            console.log(`[documents GET] Auto-repaired latestVersionId for document ${doc.id}`);
+                        }
+                    }
+                } catch (error) {
+                    console.warn(`[documents GET] Failed to recover originalName for document ${doc.id}:`, error);
+                }
+            }
+
+            return result;
+        }));
+
+        return NextResponse.json(docsWithFallback);
     });
 }

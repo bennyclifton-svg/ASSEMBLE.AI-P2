@@ -87,19 +87,12 @@ export async function POST(
     const categoryId = 'uncategorized';
     const categoryDisplayPath = 'Uncategorized';
 
-    // Ensure uncategorized category exists
-    try {
-      await db.insert(categories).values({
-        id: 'uncategorized',
-        name: 'Uncategorized',
-        isSystem: true,
-      });
-    } catch (err: any) {
-      // Ignore if already exists
-      if (!err?.message?.includes('UNIQUE') && !err?.message?.includes('PRIMARY')) {
-        throw err;
-      }
-    }
+    // Ensure uncategorized category exists (upsert)
+    await db.insert(categories).values({
+      id: 'uncategorized',
+      name: 'Uncategorized',
+      isSystem: true,
+    }).onConflictDoNothing();
 
     // Create document entry
     documentId = uuidv4();
@@ -122,7 +115,7 @@ export async function POST(
 
     // Update document's latest version pointer
     await db.update(documents)
-      .set({ latestVersionId: versionId, updatedAt: new Date().toISOString() })
+      .set({ latestVersionId: versionId, updatedAt: new Date() })
       .where(eq(documents.id, documentId));
 
     console.log(`[variation-upload] Created document in ${categoryDisplayPath}`);
@@ -164,7 +157,8 @@ export async function POST(
 
     // Step 7: Create Variation record
     const variationId = uuidv4();
-    const now = new Date().toISOString();
+    const now = new Date();
+    const todayDateString = now.toISOString().split('T')[0];
 
     await db.insert(variations).values({
       id: variationId,
@@ -176,7 +170,7 @@ export async function POST(
       status: 'Forecast',
       amountForecastCents: extractedData.amountCents,
       amountApprovedCents: 0,
-      dateSubmitted: extractedData.dateSubmitted || now.split('T')[0],
+      dateSubmitted: extractedData.dateSubmitted || todayDateString,
       requestedBy: extractedData.requestedBy,
       createdAt: now,
       updatedAt: now,

@@ -49,7 +49,7 @@ export async function PATCH(
                 ...(name && { name }),
                 ...(status && { status }),
                 ...(issuedAt && { issuedAt }),
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(transmittals.id, id));
 

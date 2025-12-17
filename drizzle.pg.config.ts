@@ -6,7 +6,10 @@
 import type { Config } from 'drizzle-kit';
 import * as dotenv from 'dotenv';
 
-dotenv.config();
+// Load .env.development for local, or .env.production for production
+dotenv.config({ path: '.env.development' });
+dotenv.config({ path: '.env.production' });
+dotenv.config({ path: '.env' });
 
 export default {
     schema: './src/lib/db/pg-schema.ts',

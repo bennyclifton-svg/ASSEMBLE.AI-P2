@@ -80,6 +80,7 @@ export async function POST(
             tableType,
             description: description || '',
             orderIndex: nextOrderIndex,
+            source: 'manual' as const, // Manual rows should always be visible
         });
 
         // Fetch and return the created row

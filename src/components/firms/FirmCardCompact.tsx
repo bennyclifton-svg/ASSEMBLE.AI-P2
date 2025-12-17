@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Star, CloudUpload, Trash } from 'lucide-react';
+import { Star, Upload, Trash } from 'lucide-react';
 import { FirmData } from './types';
 
 interface FirmCardCompactProps {
@@ -144,13 +144,13 @@ export function FirmCardCompact({
           <Star className={`w-3.5 h-3.5 ${firm.shortlisted ? 'fill-current' : ''}`} />
         </button>
 
-        {/* Cloud upload */}
+        {/* Folder upload */}
         <button
           onClick={handleUploadClick}
           className="p-0.5 rounded text-[#858585] hover:text-[#cccccc] transition-colors"
           title="Upload file to extract data"
         >
-          <CloudUpload className="w-3.5 h-3.5" />
+          <Upload className="w-3.5 h-3.5" />
         </button>
 
         {/* Delete button */}

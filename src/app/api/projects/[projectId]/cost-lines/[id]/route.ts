@@ -84,7 +84,7 @@ export async function PATCH(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         // Build update object
         const updateData: Record<string, unknown> = {
@@ -152,7 +152,7 @@ export async function DELETE(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         // Soft delete
         await db

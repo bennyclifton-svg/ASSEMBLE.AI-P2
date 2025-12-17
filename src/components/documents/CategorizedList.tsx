@@ -176,6 +176,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             const res = await fetch(`/api/documents?projectId=${projectId}`);
             if (res.ok) {
                 const data = await res.json();
+
+                // Debug: Log any documents with missing originalName
+                const missingNames = data.filter((d: Document) => !d.originalName);
+                if (missingNames.length > 0) {
+                    console.warn('[CategorizedList] Documents with missing originalName:', missingNames);
+                }
+
                 setDocuments(data);
 
                 // Restore scroll position after data is loaded
@@ -451,8 +458,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 <div className="w-2 flex-shrink-0">
                                                     <SyncStatusDot documentId={doc.id} />
                                                 </div>
-                                                <span className="truncate flex-1" title={doc.originalName}>
-                                                    {doc.originalName}
+                                                <span className="truncate flex-1" title={doc.originalName || 'Untitled'}>
+                                                    {doc.originalName || <span className="text-[#858585] italic">Untitled Document</span>}
                                                 </span>
                                             </div>
                                         </TableCell>

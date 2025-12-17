@@ -141,6 +141,11 @@ export async function addDocumentForProcessing(
 ): Promise<Job<DocumentProcessingJob>> {
     const queue = getDocumentQueue();
 
+    // Ensure queue is not paused
+    if (await queue.isPaused()) {
+        await queue.resume();
+    }
+
     return queue.add(
         'process',
         {
@@ -152,7 +157,7 @@ export async function addDocumentForProcessing(
         },
         {
             jobId: `doc-${documentId}-${Date.now()}`,
-            priority: 1, // Normal priority
+            // No priority - BullMQ 5.x has issues with prioritized queue
         }
     );
 }

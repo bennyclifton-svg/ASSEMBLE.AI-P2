@@ -22,7 +22,7 @@ export async function PUT(
         const updated = await db.update(disciplineFeeItems)
             .set({
                 description: description.trim(),
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(
                 and(

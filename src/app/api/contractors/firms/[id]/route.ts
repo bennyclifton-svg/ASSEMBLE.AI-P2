@@ -35,7 +35,6 @@ export async function PUT(
     }
 
     // Update contractor
-    const now = new Date().toISOString();
     await db
       .update(contractors)
       .set({
@@ -50,7 +49,7 @@ export async function PUT(
         shortlisted,
         awarded,
         companyId,
-        updatedAt: now,
+        updatedAt: new Date(),
       })
       .where(eq(contractors.id, id));
 

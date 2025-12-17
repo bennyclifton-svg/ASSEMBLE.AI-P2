@@ -80,7 +80,12 @@ Document content:
 // ANTHROPIC CLIENT
 // ============================================================================
 
-const anthropic = new Anthropic();
+function getAnthropicClient(): Anthropic {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY environment variable is required for invoice extraction');
+  }
+  return new Anthropic();
+}
 
 // ============================================================================
 // EXTRACTION FUNCTION
@@ -114,8 +119,9 @@ export async function extractInvoiceFromPdf(
   try {
     console.log('[invoice-extract] Calling Claude Haiku for extraction...');
 
+    const anthropic = getAnthropicClient();
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 1000,
       messages: [
         {
@@ -191,8 +197,9 @@ export async function extractInvoiceFromText(
   content: string
 ): Promise<Omit<ExtractionResult, 'parserUsed'>> {
   try {
+    const anthropic = getAnthropicClient();
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 1000,
       messages: [
         {

@@ -70,11 +70,13 @@ export function ContractorGallery({
   const handleSave = async (id: string, data: Partial<FirmData>) => {
     try {
       if (id === 'new' && newFirm) {
-        // Creating new contractor
-        if (data.companyName && data.email) {
+        // Creating new contractor - only companyName is required
+        const companyName = data.companyName || newFirm.companyName;
+        if (companyName) {
           const newContractor = await addContractor({
             ...newFirm,
             ...data,
+            companyName,
             trade,
           });
           toast({

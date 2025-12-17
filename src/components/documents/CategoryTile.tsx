@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Loader2, CloudUpload } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ActiveCategory, Subcategory } from '@/lib/constants/categories';
 
@@ -20,6 +20,8 @@ interface CategoryTileProps {
     onClick?: () => void;
     /** Callback for Ctrl+click to bulk-select all documents in this category. */
     onBulkSelectCategory?: (categoryId: string, subcategoryId?: string) => void;
+    /** Callback when files are added to Knowledge category (triggers RAG). */
+    onKnowledgeAction?: (files: File[]) => void;
     /** Whether the category is expanded (for categories with subcategories). */
     isExpanded?: boolean;
     /** Whether this tile is a subcategory tile. */
@@ -42,17 +44,26 @@ export function CategoryTile({
     onFilesDropped,
     onClick,
     onBulkSelectCategory,
+    onKnowledgeAction,
     isExpanded,
     isSubcategory = false,
     hasSelection = false,
     isUploading = false,
     isUploadTile = false,
 }: CategoryTileProps) {
+    // Check if this is the Knowledge category (triggers auto-RAG)
+    const isKnowledgeCategory = category.isKnowledgeSource === true;
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop: (acceptedFiles) => {
             // Upload tile should not pass categoryId
             if (isUploadTile) {
                 onFilesDropped(acceptedFiles);
+            } else if (isKnowledgeCategory) {
+                // Knowledge category: upload to Uncategorized (no categoryId), then trigger RAG
+                onFilesDropped(acceptedFiles); // No categoryId = Uncategorized
+                if (onKnowledgeAction && acceptedFiles.length > 0) {
+                    onKnowledgeAction(acceptedFiles);
+                }
             } else if (subcategory) {
                 onFilesDropped(acceptedFiles, category.id, subcategory.id, subcategory.name);
             } else if (!category.hasSubcategories) {
@@ -80,6 +91,12 @@ export function CategoryTile({
         }
 
         if (hasSelection) {
+            // Knowledge category: only trigger RAG, don't change document category
+            if (isKnowledgeCategory && onKnowledgeAction) {
+                onKnowledgeAction([]); // Empty array signals "use selected documents"
+                return;
+            }
+
             // If files are selected, clicking categorizes them (no files passed)
             if (subcategory) {
                 onFilesDropped([], category.id, subcategory.id, subcategory.name);
@@ -166,15 +183,46 @@ export function CategoryTile({
             {/* Upload tile content */}
             {isUploadTile ? (
                 <div className="flex flex-col items-center justify-center gap-1">
-                    <CloudUpload
+                    <Upload
                         className="w-6 h-6 text-[#aaaaaa] group-hover:text-[#0e639c] transition-colors"
                     />
+                </div>
+            ) : isKnowledgeCategory ? (
+                /* Knowledge tile content - diamond icon */
+                <div className="flex items-center justify-center w-full relative z-10 gap-2">
+                    <svg
+                        width={24}
+                        height={24}
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="text-[#4fc1ff] group-hover:text-[#6fd1ff] transition-colors flex-shrink-0"
+                    >
+                        {/* Outer diamond (square rotated 45 degrees) */}
+                        <path
+                            d="M8 1L15 8L8 15L1 8L8 1Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            fill="none"
+                        />
+                        {/* Inner diamond (smaller, filled) */}
+                        <path
+                            d="M8 4.5L11.5 8L8 11.5L4.5 8L8 4.5Z"
+                            fill="currentColor"
+                        />
+                    </svg>
+                    <span
+                        className="font-medium text-base transition-colors"
+                        style={{ color: brightColor }}
+                    >
+                        {displayName}
+                    </span>
                 </div>
             ) : (
                 /* Regular tile content */
                 <div className="flex items-center justify-between w-full relative z-10">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <CloudUpload
+                        <Upload
                             className={cn(
                                 'w-4 h-4 flex-shrink-0 transition-colors',
                                 isConsultantsOrContractors && 'text-[#aaaaaa] group-hover:text-[#0e639c]'

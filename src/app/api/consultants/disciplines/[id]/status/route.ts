@@ -27,13 +27,14 @@ export async function PUT(
             ));
 
         let result;
+        const now = new Date();
         if (existing.length > 0) {
             // Update
             result = await db.update(consultantStatuses)
                 .set({
                     isActive,
-                    updatedAt: new Date().toISOString(),
-                    completedAt: isActive ? new Date().toISOString() : null
+                    updatedAt: now,
+                    completedAt: isActive ? now : null
                 })
                 .where(eq(consultantStatuses.id, existing[0].id))
                 .returning();
@@ -45,7 +46,7 @@ export async function PUT(
                     disciplineId,
                     statusType,
                     isActive,
-                    completedAt: isActive ? new Date().toISOString() : null
+                    completedAt: isActive ? now : null
                 })
                 .returning();
         }

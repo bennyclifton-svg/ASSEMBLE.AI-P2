@@ -87,7 +87,12 @@ Document content:
 // ANTHROPIC CLIENT
 // ============================================================================
 
-const anthropic = new Anthropic();
+function getAnthropicClient(): Anthropic {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    throw new Error('ANTHROPIC_API_KEY environment variable is required for variation extraction');
+  }
+  return new Anthropic();
+}
 
 // ============================================================================
 // EXTRACTION FUNCTION
@@ -121,8 +126,9 @@ export async function extractVariationFromPdf(
   try {
     console.log('[variation-extract] Calling Claude Haiku for extraction...');
 
+    const anthropic = getAnthropicClient();
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 1500,
       messages: [
         {
@@ -205,8 +211,9 @@ export async function extractVariationFromText(
   content: string
 ): Promise<Omit<ExtractionResult, 'parserUsed'>> {
   try {
+    const anthropic = getAnthropicClient();
     const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 1500,
       messages: [
         {

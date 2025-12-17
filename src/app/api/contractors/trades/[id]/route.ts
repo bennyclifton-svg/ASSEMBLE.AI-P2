@@ -15,7 +15,7 @@ export async function PUT(
 
         // Build update object with only provided fields
         const updateData: Record<string, unknown> = {
-            updatedAt: new Date().toISOString(),
+            updatedAt: new Date(),
         };
 
         if (typeof isEnabled === 'boolean') {

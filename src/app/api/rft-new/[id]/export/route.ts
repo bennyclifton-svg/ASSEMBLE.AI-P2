@@ -6,8 +6,7 @@ import {
     projects,
     projectDetails,
     projectObjectives,
-    projectStages,
-    risks,
+    programActivities,
     consultantDisciplines,
     contractorTrades,
     costLines,
@@ -69,26 +68,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .where(eq(projectDetails.projectId, projectId))
             .limit(1);
 
-        // 3. Fetch Planning Data (Objectives, Stages, Risks)
+        // 3. Fetch Planning Data (Objectives, Program Activities, Risks)
         const [objectives] = await db
             .select()
             .from(projectObjectives)
             .where(eq(projectObjectives.projectId, projectId))
             .limit(1);
 
-        const stages = await db
+        const activities = await db
             .select()
-            .from(projectStages)
-            .where(eq(projectStages.projectId, projectId))
-            .orderBy(asc(projectStages.stageNumber))
-            .all();
-
-        const projectRisks = await db
-            .select()
-            .from(risks)
-            .where(eq(risks.projectId, projectId))
-            .orderBy(asc(risks.order))
-            .all();
+            .from(programActivities)
+            .where(eq(programActivities.projectId, projectId))
+            .orderBy(asc(programActivities.sortOrder));
 
         // 4. Fetch Brief Data & Cost Lines
         let briefData = { service: '', deliverables: '', contextName: '' };
@@ -119,8 +110,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 })
                 .from(costLines)
                 .where(eq(costLines.disciplineId, report.disciplineId))
-                .orderBy(asc(costLines.sortOrder))
-                .all();
+                .orderBy(asc(costLines.sortOrder));
 
         } else if (report.tradeId) {
             contextType = 'Trade';
@@ -146,8 +136,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 })
                 .from(costLines)
                 .where(eq(costLines.tradeId, report.tradeId))
-                .orderBy(asc(costLines.sortOrder))
-                .all();
+                .orderBy(asc(costLines.sortOrder));
         }
 
         // 5. Fetch Transmittal Documents
@@ -166,8 +155,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .leftJoin(categories, eq(documents.categoryId, categories.id))
             .leftJoin(subcategories, eq(documents.subcategoryId, subcategories.id))
             .where(eq(rftNewTransmittals.rftNewId, id))
-            .orderBy(asc(rftNewTransmittals.addedAt))
-            .all();
+            .orderBy(asc(rftNewTransmittals.addedAt));
 
         // 6. Generate HTML
         const projectName = details?.projectName || project?.name || 'Untitled Project';
@@ -179,8 +167,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             address,
             title,
             objectives,
-            stages,
-            risks: projectRisks,
+            activities,
             brief: briefData,
             feeItems,
             transmittalDocs,
@@ -222,10 +209,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     } catch (error) {
         console.error('RFT NEW export error:', error);
+        console.error('RFT NEW export error stack:', (error as Error).stack);
         return NextResponse.json(
             {
                 error: 'Failed to export RFT NEW',
                 details: (error as Error).message,
+                stack: (error as Error).stack,
             },
             { status: 500 }
         );
@@ -236,20 +225,202 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 // HTML GENERATOR
 // ============================================================================
 
+interface ProgramActivity {
+    id: string;
+    parentId: string | null;
+    name: string;
+    startDate: string | null;
+    endDate: string | null;
+    color: string | null;
+    sortOrder: number;
+}
+
 interface HTMLParams {
     projectName: string;
     address: string;
     title: string;
     objectives: any;
-    stages: any[];
-    risks: any[];
+    activities: ProgramActivity[];
     brief: { service: string; deliverables: string; contextName: string };
     feeItems: any[];
     transmittalDocs: any[];
 }
 
+// Helper to get week start (Monday) for a date
+function getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+// Generate weekly columns with month grouping
+interface WeekColumn {
+    start: Date;
+    dayLabel: number;
+    month: string;
+    year: number;
+}
+
+function generateWeekColumnsWithMonths(startDate: Date, endDate: Date): WeekColumn[] {
+    const columns: WeekColumn[] = [];
+    const current = getWeekStart(startDate);
+    const end = new Date(endDate);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    while (current <= end) {
+        columns.push({
+            start: new Date(current),
+            dayLabel: current.getDate(),
+            month: months[current.getMonth()],
+            year: current.getFullYear(),
+        });
+        current.setDate(current.getDate() + 7);
+    }
+    return columns;
+}
+
+// Group columns by month for header
+function groupColumnsByMonth(columns: WeekColumn[]): { label: string; count: number }[] {
+    const groups: { label: string; count: number }[] = [];
+    let currentGroup: { label: string; count: number } | null = null;
+
+    columns.forEach(col => {
+        const label = `${col.month} ${col.year}`;
+        if (!currentGroup || currentGroup.label !== label) {
+            if (currentGroup) groups.push(currentGroup);
+            currentGroup = { label, count: 1 };
+        } else {
+            currentGroup.count++;
+        }
+    });
+    if (currentGroup) groups.push(currentGroup);
+    return groups;
+}
+
+// Generate Program Gantt HTML - PDF-friendly version using pure table cells (no absolute positioning)
+function generateProgramGanttHTML(activities: ProgramActivity[]): string {
+    const activitiesWithDates = activities.filter(a => a.startDate && a.endDate);
+
+    if (activitiesWithDates.length === 0) {
+        return `
+            <h3>Program</h3>
+            <p style="color: #666; font-size: 12px;">No program activities with dates.</p>
+        `;
+    }
+
+    // Calculate date range
+    const allDates = activitiesWithDates.flatMap(a => [
+        new Date(a.startDate!),
+        new Date(a.endDate!),
+    ]);
+    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+
+    // Generate week columns with month info
+    const weekColumns = generateWeekColumnsWithMonths(minDate, maxDate);
+    const monthGroups = groupColumnsByMonth(weekColumns);
+    const columnWidth = 40; // pixels per week column for print
+
+    // Build hierarchy (parent activities first, then children)
+    const parentActivities = activities.filter(a => !a.parentId);
+    const childActivities = activities.filter(a => a.parentId);
+
+    const orderedActivities: ProgramActivity[] = [];
+    parentActivities.forEach(parent => {
+        orderedActivities.push(parent);
+        const children = childActivities.filter(c => c.parentId === parent.id);
+        children.sort((a, b) => a.sortOrder - b.sortOrder);
+        orderedActivities.push(...children);
+    });
+    // Add orphaned children
+    childActivities.filter(c => !parentActivities.some(p => p.id === c.parentId)).forEach(a => {
+        orderedActivities.push(a);
+    });
+
+    // All bars use consistent teal color
+    const barColor = '#0d9488';
+
+    // Generate month header row (use bgcolor for PDF compatibility)
+    const monthHeaderCells = monthGroups.map(group =>
+        `<th colspan="${group.count}" bgcolor="#f5f5f5" style="text-align: center; font-size: 10px; padding: 4px; border: 1px solid #ddd; white-space: nowrap;">${group.label}</th>`
+    ).join('');
+
+    // Generate day number header row
+    const dayHeaderCells = weekColumns.map(col =>
+        `<th bgcolor="#f5f5f5" style="width: ${columnWidth}px; text-align: center; font-size: 9px; padding: 3px; border: 1px solid #ddd;">${col.dayLabel}</th>`
+    ).join('');
+
+    // Check if a week column falls within an activity's date range
+    const isWeekInRange = (weekStart: Date, activityStart: Date, activityEnd: Date): boolean => {
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        // Week overlaps with activity if week starts before activity ends AND week ends after activity starts
+        return weekStart <= activityEnd && weekEnd >= activityStart;
+    };
+
+    // Generate activity rows using individual cells for timeline
+    const activityRows = orderedActivities.map(activity => {
+        const isChild = !!activity.parentId;
+        const hasDateRange = activity.startDate && activity.endDate;
+        const activityStart = hasDateRange ? new Date(activity.startDate!) : null;
+        const activityEnd = hasDateRange ? new Date(activity.endDate!) : null;
+
+        // Color indicator for children, chevron for parents (use simple > for PDF compatibility)
+        const indicator = isChild
+            ? `<span style="display: inline-block; width: 4px; height: 12px; background: ${barColor}; margin-right: 6px;"></span>`
+            : `<span style="color: #666; margin-right: 4px;">&gt;</span>`;
+
+        const nameStyle = isChild
+            ? 'font-weight: normal; color: #555;'
+            : 'font-weight: 600; color: #333;';
+
+        // Indentation for child activities
+        const paddingLeft = isChild ? '16px' : '6px';
+
+        // Generate timeline cells - color cell if it falls within activity date range
+        // Use bgcolor attribute for PDF compatibility (CSS background-color often doesn't render in PDF)
+        const timelineCells = weekColumns.map(col => {
+            const inRange = hasDateRange && activityStart && activityEnd && isWeekInRange(col.start, activityStart, activityEnd);
+            if (inRange) {
+                return `<td bgcolor="${barColor}" style="width: ${columnWidth}px; height: 20px; padding: 0; border: 1px solid #ddd;"></td>`;
+            }
+            return `<td style="width: ${columnWidth}px; height: 20px; padding: 0; border: 1px solid #eee; background-color: #fff;"></td>`;
+        }).join('');
+
+        return `
+            <tr>
+                <td style="padding: 4px 6px; padding-left: ${paddingLeft}; border: 1px solid #ddd; white-space: nowrap; font-size: 10px; ${nameStyle}">
+                    ${indicator}${escapeHtml(activity.name)}
+                </td>
+                ${timelineCells}
+            </tr>
+        `;
+    }).join('');
+
+    return `
+        <h3>Program</h3>
+        <table class="gantt-table" style="table-layout: fixed; border-collapse: collapse;">
+            <thead>
+                <tr>
+                    <th rowspan="2" bgcolor="#f5f5f5" style="width: 160px; text-align: left; padding: 6px 8px; border: 1px solid #ddd; font-size: 10px; font-weight: bold;">Activity</th>
+                    ${monthHeaderCells}
+                </tr>
+                <tr>
+                    ${dayHeaderCells}
+                </tr>
+            </thead>
+            <tbody>
+                ${activityRows}
+            </tbody>
+        </table>
+    `;
+}
+
 function generateRFTNewHTML(params: HTMLParams): string {
-    const { projectName, address, title, objectives, stages, risks, brief, feeItems, transmittalDocs } = params;
+    const { projectName, address, title, objectives, activities, brief, feeItems, transmittalDocs } = params;
 
     const logoHtml = `<div style="margin-bottom: 20px; font-size: 24px; font-weight: bold; color: #333;">ASSEMBLE.AI</div>`;
 
@@ -261,32 +432,10 @@ function generateRFTNewHTML(params: HTMLParams): string {
         <tr><td class="label">Program</td><td>${escapeHtml(objectives?.program || '-')}</td></tr>
     `;
 
-    // 2. Stages Rows
-    const stageRows = stages.length > 0
-        ? stages.map(s => `
-            <tr>
-                <td>${escapeHtml(s.stageName)}</td>
-                <td>${escapeHtml(s.startDate || '-')}</td>
-                <td>${escapeHtml(s.endDate || '-')}</td>
-            </tr>
-        `).join('')
-        : '<tr><td colspan="3" style="text-align: center; color: #666;">No staging information available.</td></tr>';
+    // 2. Program Gantt
+    const programHtml = generateProgramGanttHTML(activities);
 
-    // 3. Risks Rows
-    const riskRows = risks.length > 0
-        ? risks.map(r => `
-            <tr>
-                <td style="font-weight: 500;">${escapeHtml(r.title)}</td>
-                <td>
-                    <div style="font-size: 11px;">L: ${r.likelihood || '-'}</div>
-                    <div style="font-size: 11px;">I: ${r.impact || '-'}</div>
-                </td>
-                <td>${escapeHtml(r.mitigation || '-')}</td>
-            </tr>
-        `).join('')
-        : '<tr><td colspan="3" style="text-align: center; color: #666;">No risks identified.</td></tr>';
-
-    // 4. Fee Rows
+    // 3. Fee Rows
     const feeRows = feeItems.length > 0
         ? feeItems.map(item => `
             <tr>
@@ -327,8 +476,12 @@ function generateRFTNewHTML(params: HTMLParams): string {
         .section-table td.label { width: 140px; background-color: #f5f5f5; font-weight: bold; color: #555; }
         
         .fee-table th:last-child { width: 30%; }
-        
+
         .brief-content { background-color: #fafafa; padding: 10px; border: 1px solid #eee; min-height: 40px; white-space: pre-wrap; font-size: 12px; }
+
+        .gantt-table { table-layout: fixed; }
+        .gantt-table th, .gantt-table td { border: 1px solid #ddd; }
+        .gantt-table th { background-color: #f5f5f5; }
     </style>
 </head>
 <body>
@@ -347,36 +500,6 @@ function generateRFTNewHTML(params: HTMLParams): string {
         ${objectiveRows}
     </table>
 
-    <!-- Staging -->
-    <h3>Staging</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Stage</th>
-                <th>Start Date</th>
-                <th>End Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${stageRows}
-        </tbody>
-    </table>
-
-    <!-- Risk -->
-    <h3>Risk</h3>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 25%;">Risk</th>
-                <th style="width: 15%;">Rating</th>
-                <th>Mitigation</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${riskRows}
-        </tbody>
-    </table>
-
     <!-- Brief -->
     <h3>Brief</h3>
     <table class="section-table">
@@ -389,6 +512,9 @@ function generateRFTNewHTML(params: HTMLParams): string {
             <td><div class="brief-content">${escapeHtml(brief.deliverables || '-')}</div></td>
         </tr>
     </table>
+
+    <!-- Program -->
+    ${programHtml}
 
     <!-- Fee -->
     <h3>Fee Structure</h3>

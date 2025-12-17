@@ -190,16 +190,12 @@ export async function POST(
             // Determine category and subcategory
             const categoryId = isDiscipline ? 'consultants' : 'contractors';
 
-            // Ensure category exists
-            try {
-                await db.insert(categories).values({
-                    id: categoryId,
-                    name: isDiscipline ? 'Consultants' : 'Contractors',
-                    isSystem: true,
-                });
-            } catch {
-                // Category already exists, ignore
-            }
+            // Ensure category exists (upsert)
+            await db.insert(categories).values({
+                id: categoryId,
+                name: isDiscipline ? 'Consultants' : 'Contractors',
+                isSystem: true,
+            }).onConflictDoNothing();
 
             // Create document
             const documentId = uuidv4();
@@ -222,7 +218,7 @@ export async function POST(
 
             // Update document's latest version
             await db.update(documents)
-                .set({ latestVersionId: versionId, updatedAt: new Date().toISOString() })
+                .set({ latestVersionId: versionId, updatedAt: new Date() })
                 .where(eq(documents.id, documentId));
 
             console.log(`[non-price-parse] Uploaded to document repository: ${documentId}`);
@@ -266,7 +262,7 @@ export async function POST(
                 ),
             });
 
-            const now = new Date().toISOString();
+            const now = new Date();
 
             if (existingCell) {
                 // Update existing cell - only update AI fields (T032)

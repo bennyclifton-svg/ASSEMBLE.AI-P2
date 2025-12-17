@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
                 await db
                     .update(transmittals)
-                    .set({ name, updatedAt: new Date().toISOString() })
+                    .set({ name, updatedAt: new Date() })
                     .where(eq(transmittals.id, transmittalId));
 
                 // Clear old items

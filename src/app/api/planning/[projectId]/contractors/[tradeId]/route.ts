@@ -48,7 +48,7 @@ export async function PUT(
             .update(contractorTrades)
             .set({
                 ...validated,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(contractorTrades.id, tradeId))
             .returning();

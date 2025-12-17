@@ -13,6 +13,14 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(request: NextRequest) {
     try {
+        // Check if RAG database is configured
+        if (!process.env.SUPABASE_POSTGRES_URL) {
+            // Return empty statuses when RAG database is not configured
+            return NextResponse.json({
+                statuses: {},
+            });
+        }
+
         const searchParams = request.nextUrl.searchParams;
         const documentIdsParam = searchParams.get('documentIds');
 
@@ -119,9 +127,10 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         console.error('[document-sets/sync-status] GET error:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch sync status' },
-            { status: 500 }
-        );
+        // Return empty statuses when RAG database is unavailable
+        // This allows the app to function without RAG integration
+        return NextResponse.json({
+            statuses: {},
+        });
     }
 }

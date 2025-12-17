@@ -28,7 +28,7 @@ export async function PATCH(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         // Update each cost line's sortOrder
         await Promise.all(

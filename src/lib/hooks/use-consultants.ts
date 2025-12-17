@@ -23,7 +23,7 @@ export interface ConsultantFormData {
   companyName: string;
   contactPerson?: string;
   discipline: string;
-  email: string;
+  email?: string;
   phone?: string;
   mobile?: string;
   address?: string;

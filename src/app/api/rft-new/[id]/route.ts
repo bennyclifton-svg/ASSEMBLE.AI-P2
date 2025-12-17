@@ -56,7 +56,7 @@ export async function PUT(
             .update(rftNew)
             .set({
                 rftDate,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(rftNew.id, id));
 

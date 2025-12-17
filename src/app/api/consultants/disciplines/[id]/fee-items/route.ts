@@ -72,8 +72,8 @@ export async function POST(
                 disciplineId,
                 description: description.trim(),
                 sortOrder: nextSortOrder,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                createdAt: new Date(),
+                updatedAt: new Date(),
             })
             .returning();
 
@@ -104,7 +104,7 @@ export async function PUT(
             await db.update(disciplineFeeItems)
                 .set({
                     sortOrder: i,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(eq(disciplineFeeItems.id, itemIds[i]));
         }

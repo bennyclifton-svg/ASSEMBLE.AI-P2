@@ -32,7 +32,7 @@ export interface RetrievalOptions {
 
 const DEFAULT_TOP_K = 20; // Initial vector search results
 const DEFAULT_RERANK_TOP_K = 5; // Final reranked results
-const MIN_RELEVANCE_SCORE = 0.3;
+const MIN_RELEVANCE_SCORE = 0.1; // Low threshold to allow fallback scoring to pass
 
 /**
  * Stage 1: Generate query embedding
@@ -64,6 +64,12 @@ async function vectorSearch(
     const topK = options.topK || DEFAULT_TOP_K;
     const embeddingStr = `[${queryEmbedding.join(',')}]`;
 
+    // Build document filter clause
+    // Format array as PostgreSQL array literal for ANY() operator
+    const documentFilter = options.documentIds && options.documentIds.length > 0
+        ? sql`AND document_id = ANY(${`{${options.documentIds.join(',')}}`}::text[])`
+        : sql``;
+
     // Build base query with cosine distance
     // Using raw SQL for pgvector operations
     const results = await ragDb.execute(sql`
@@ -78,9 +84,7 @@ async function vectorSearch(
             embedding <=> ${embeddingStr}::vector as distance
         FROM document_chunks
         WHERE embedding IS NOT NULL
-        ${options.documentIds && options.documentIds.length > 0
-            ? sql`AND document_id = ANY(${options.documentIds})`
-            : sql``}
+        ${documentFilter}
         ORDER BY distance ASC
         LIMIT ${topK}
     `);
@@ -140,17 +144,19 @@ async function rerank(
             };
         });
     } catch (error) {
-        // Fallback to simple relevance scoring
-        console.warn('[retrieval] Reranking failed, using simple scoring:', error);
+        // Fallback to vector distance-based scoring
+        // Since vector search already found relevant matches, use distance as relevance
+        console.warn('[retrieval] Reranking failed, using vector distance scoring:', error);
 
+        // Convert cosine distance to similarity score (lower distance = higher similarity)
+        // Cosine distance ranges 0-2, but similar docs are typically 0-1
+        // We use 1 - distance, clamped to [0, 1]
         const scored = candidates.map(c => ({
             ...c,
-            relevanceScore: simpleRelevanceScore(query, c.content),
+            relevanceScore: Math.max(0, Math.min(1, 1 - c.distance)),
         }));
 
-        // Sort by relevance and take top K
-        scored.sort((a, b) => b.relevanceScore - a.relevanceScore);
-
+        // Already sorted by distance ASC from vector search, so best matches are first
         return scored.slice(0, topK).map(c => ({
             chunkId: c.id,
             documentId: c.documentId,
@@ -181,6 +187,7 @@ async function enrichWithContext(
     const chunkIds = results.map(r => r.chunkId);
 
     // Fetch parent chunks for hierarchical context
+    const chunkIdsArray = `{${chunkIds.join(',')}}`;
     const parentChunks = await ragDb.execute(sql`
         SELECT
             c.id,
@@ -191,7 +198,7 @@ async function enrichWithContext(
             p.section_title as "parentSectionTitle"
         FROM document_chunks c
         LEFT JOIN document_chunks p ON c.parent_chunk_id = p.id
-        WHERE c.id = ANY(${chunkIds})
+        WHERE c.id = ANY(${chunkIdsArray}::text[])
     `);
 
     // Create lookup map
@@ -233,10 +240,11 @@ async function resolveDocumentSetIds(documentSetIds: string[]): Promise<string[]
 
     console.log(`[retrieval] Resolving document IDs from ${documentSetIds.length} repo(s)`);
 
+    const setIdsArray = `{${documentSetIds.join(',')}}`;
     const members = await ragDb.execute(sql`
         SELECT DISTINCT document_id as "documentId"
         FROM document_set_members
-        WHERE document_set_id = ANY(${documentSetIds})
+        WHERE document_set_id = ANY(${setIdsArray}::uuid[])
         AND sync_status = 'synced'
     `);
 

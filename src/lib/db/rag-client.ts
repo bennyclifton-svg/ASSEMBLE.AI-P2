@@ -2,16 +2,17 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from './rag-schema';
 
-// Create PostgreSQL pool with Supabase connection
+// Determine if we need SSL (production/Supabase) or not (local Docker)
+const isProduction = process.env.NODE_ENV === 'production';
+const isSupabase = process.env.SUPABASE_POSTGRES_URL?.includes('supabase');
+
+// Create PostgreSQL pool
 const pool = new Pool({
     connectionString: process.env.SUPABASE_POSTGRES_URL,
-    // Supabase connection pooler settings
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
-    ssl: {
-        rejectUnauthorized: false, // Required for Supabase connection pooler
-    },
+    ssl: (isProduction || isSupabase) ? { rejectUnauthorized: false } : false,
 });
 
 // Export the drizzle client for PostgreSQL (RAG operations)

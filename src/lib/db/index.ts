@@ -92,4 +92,7 @@ export const {
     evaluationNonPriceCells,
     trr,
     trrTransmittals,
+    programActivities,
+    programDependencies,
+    programMilestones,
 } = usePostgres ? pgSchema : sqliteSchema;
