@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { toast } from 'sonner';
+import { useToast } from '@/lib/hooks/use-toast';
 import EditableContentArea from './EditableContentArea';
 import RefreshConfirmationModal from './RefreshConfirmationModal';
 
@@ -32,6 +32,7 @@ export default function UnifiedReportEditor({
   onSave,
   onRefresh,
 }: UnifiedReportEditorProps) {
+  const { toast } = useToast();
   const [content, setContent] = useState(initialContent);
   const [isSaving, setSaving] = useState(false);
   const [isRefreshing, setRefreshing] = useState(false);
@@ -70,14 +71,14 @@ export default function UnifiedReportEditor({
             setTimeout(() => setShowSavedIndicator(false), 2000);
           } catch (error) {
             console.error('Auto-save failed:', error);
-            toast.error('Failed to auto-save report');
+            toast({ title: 'Failed to auto-save report', variant: 'destructive' });
           } finally {
             setSaving(false);
           }
         }
       }, 2000);
     },
-    [onSave]
+    [onSave, toast]
   );
 
   /**
@@ -107,16 +108,16 @@ export default function UnifiedReportEditor({
       await onSave(content);
       setLastSaved(new Date());
       setShowSavedIndicator(true);
-      toast.success('Report saved');
+      toast({ title: 'Report saved', variant: 'success' });
       // Hide "Saved" indicator after 2 seconds
       setTimeout(() => setShowSavedIndicator(false), 2000);
     } catch (error) {
       console.error('Save failed:', error);
-      toast.error('Failed to save report');
+      toast({ title: 'Failed to save report', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
-  }, [content, onSave]);
+  }, [content, onSave, toast]);
 
   /**
    * Refresh handler for Short RFT
@@ -133,14 +134,14 @@ export default function UnifiedReportEditor({
     setRefreshing(true);
     try {
       await onRefresh();
-      toast.success('Report refreshed with latest data');
+      toast({ title: 'Report refreshed with latest data', variant: 'success' });
     } catch (error) {
       console.error('Refresh failed:', error);
-      toast.error('Failed to refresh report');
+      toast({ title: 'Failed to refresh report', variant: 'destructive' });
     } finally {
       setRefreshing(false);
     }
-  }, [isEdited, onRefresh]);
+  }, [isEdited, onRefresh, toast]);
 
   /**
    * Confirm refresh from modal
@@ -153,14 +154,14 @@ export default function UnifiedReportEditor({
       if (onRefresh) {
         await onRefresh();
       }
-      toast.success('Report refreshed with latest data');
+      toast({ title: 'Report refreshed with latest data', variant: 'success' });
     } catch (error) {
       console.error('Refresh failed:', error);
-      toast.error('Failed to refresh report');
+      toast({ title: 'Failed to refresh report', variant: 'destructive' });
     } finally {
       setRefreshing(false);
     }
-  }, [onRefresh]);
+  }, [onRefresh, toast]);
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] text-gray-100">

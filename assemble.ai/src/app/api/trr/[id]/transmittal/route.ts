@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr, trrTransmittals, documents, versions, fileAssets, categories, subcategories } from '@/lib/db/schema';
+import { trr, trrTransmittals, documents, versions, fileAssets, categories, subcategories } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
 
@@ -25,11 +25,11 @@ export async function GET(
         const { id } = await context.params;
 
         // Verify TRR exists
-        const existing = await db
+        const [existing] = await db
             .select()
             .from(trr)
             .where(eq(trr.id, id))
-            .get();
+            .limit(1);
 
         if (!existing) {
             return NextResponse.json({ error: 'TRR not found' }, { status: 404 });
@@ -81,13 +81,13 @@ export async function POST(
         const body = await request.json();
 
         // Verify TRR exists
-        const existing = await db
+        const [existing2] = await db
             .select()
             .from(trr)
             .where(eq(trr.id, id))
-            .get();
+            .limit(1);
 
-        if (!existing) {
+        if (!existing2) {
             return NextResponse.json({ error: 'TRR not found' }, { status: 404 });
         }
 

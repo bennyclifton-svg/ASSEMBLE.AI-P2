@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractors } from '@/lib/db/schema';
+import { contractors } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -18,18 +18,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let query = db.select().from(contractors).where(eq(contractors.projectId, projectId));
-
+    let result;
     if (trade) {
-      query = query.where(
+      result = await db.select().from(contractors).where(
         and(
           eq(contractors.projectId, projectId),
           eq(contractors.trade, trade)
         )
       );
+    } else {
+      result = await db.select().from(contractors).where(eq(contractors.projectId, projectId));
     }
 
-    const result = await query.all();
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching contractors:', error);
@@ -60,16 +60,16 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!projectId || !companyName || !trade || !email) {
+    if (!projectId || !companyName || !trade) {
       return NextResponse.json(
-        { error: 'projectId, companyName, trade, and email are required' },
+        { error: 'projectId, companyName, and trade are required' },
         { status: 400 }
       );
     }
 
     // Create new contractor
     const id = uuidv4();
-    const now = new Date().toISOString();
+    const now = new Date();
 
     await db.insert(contractors).values({
       id,
@@ -89,11 +89,11 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     });
 
-    const newContractor = await db
+    const [newContractor] = await db
       .select()
       .from(contractors)
       .where(eq(contractors.id, id))
-      .get();
+      .limit(1);
 
     return NextResponse.json(newContractor, { status: 201 });
   } catch (error) {

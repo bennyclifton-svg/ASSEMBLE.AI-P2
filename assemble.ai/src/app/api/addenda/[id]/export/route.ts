@@ -9,7 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { addenda, addendumTransmittals, documents, versions, fileAssets, projectDetails, projects, categories, subcategories } from '@/lib/db/schema';
+import { addenda, addendumTransmittals, documents, versions, fileAssets, projectDetails, projects, categories, subcategories } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { exportToPDF } from '@/lib/export/pdf-enhanced';
 import { exportToDOCX } from '@/lib/export/docx-enhanced';
@@ -34,11 +34,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Fetch addendum
-        const addendum = await db
+        const [addendum] = await db
             .select()
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
         if (!addendum) {
             return NextResponse.json(
@@ -48,22 +48,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Fetch project details
-        const project = await db
+        const [project] = await db
             .select({
                 name: projects.name,
             })
             .from(projects)
             .where(eq(projects.id, addendum.projectId))
-            .get();
+            .limit(1);
 
-        const details = await db
+        const [details] = await db
             .select({
                 projectName: projectDetails.projectName,
                 address: projectDetails.address,
             })
             .from(projectDetails)
             .where(eq(projectDetails.projectId, addendum.projectId))
-            .get();
+            .limit(1);
 
         // Fetch transmittal documents with category/subcategory info
         const transmittalDocs = await db

@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users, sessions, organizations } from '@/lib/db/schema';
+import { users, sessions, organizations } from '@/lib/db';
 import { getSessionToken, hashToken, isSessionExpired } from '@/lib/auth/session';
 import { eq } from 'drizzle-orm';
 
@@ -22,11 +22,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Find session
-    const session = await db
+    const [session] = await db
       .select()
       .from(sessions)
       .where(eq(sessions.tokenHash, hashToken(sessionToken)))
-      .get();
+      .limit(1);
 
     if (!session) {
       return NextResponse.json(
@@ -46,11 +46,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user
-    const user = await db
+    const [user] = await db
       .select()
       .from(users)
       .where(eq(users.id, session.userId))
-      .get();
+      .limit(1);
 
     if (!user) {
       return NextResponse.json(
@@ -60,13 +60,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Get organization
-    const organization = user.organizationId
+    const [organization] = user.organizationId
       ? await db
           .select()
           .from(organizations)
           .where(eq(organizations.id, user.organizationId))
-          .get()
-      : null;
+          .limit(1)
+      : [null];
 
     return NextResponse.json({
       user: {

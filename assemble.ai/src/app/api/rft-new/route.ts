@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { rftNew, rftNewTransmittals } from '@/lib/db/schema';
+import { rftNew, rftNewTransmittals } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, isNull } from 'drizzle-orm';
 
@@ -38,11 +38,11 @@ export async function GET(request: NextRequest) {
         }
 
         // Try to find existing RFT NEW
-        let existing = await db
+        let [existing] = await db
             .select()
             .from(rftNew)
             .where(and(...conditions))
-            .get();
+            .limit(1);
 
         // If doesn't exist, create it with default date (today)
         if (!existing) {
@@ -56,11 +56,11 @@ export async function GET(request: NextRequest) {
                 rftDate: defaultRftDate,
             });
 
-            existing = await db
+            [existing] = await db
                 .select()
                 .from(rftNew)
                 .where(eq(rftNew.id, id))
-                .get();
+                .limit(1);
         }
 
         // Count transmittal documents

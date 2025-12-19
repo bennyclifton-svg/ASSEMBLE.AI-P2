@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractorStatuses } from '@/lib/db/schema';
+import { contractorStatuses } from '@/lib/db';
 import { and, eq } from 'drizzle-orm';
 import { contractorStatusSchema } from '@/lib/validations/planning-schema';
 
@@ -14,12 +14,13 @@ export async function PUT(
         const { statusType, isActive } = contractorStatusSchema.parse(body);
 
         // Update the specific status
+        const now = new Date();
         const [updated] = await db
             .update(contractorStatuses)
             .set({
                 isActive,
-                completedAt: isActive ? new Date().toISOString() : null,
-                updatedAt: new Date().toISOString(),
+                completedAt: isActive ? now : null,
+                updatedAt: now,
             })
             .where(
                 and(

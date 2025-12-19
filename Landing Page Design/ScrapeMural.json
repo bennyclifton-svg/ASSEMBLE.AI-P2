@@ -1,0 +1,153 @@
+{
+  "branding": {
+    "colorScheme": "light",
+    "fonts": [
+      {
+        "family": "sans-serif",
+        "count": 178
+      },
+      {
+        "family": "ABC Social",
+        "count": 176
+      },
+      {
+        "family": "Arial",
+        "count": 176
+      },
+      {
+        "family": "Times New Roman",
+        "count": 3
+      },
+      {
+        "family": "STK Bureau",
+        "count": 2
+      }
+    ],
+    "colors": {
+      "primary": "#00C27A",
+      "accent": "#B4F5C8",
+      "background": "#FFFFFF",
+      "textPrimary": "#000000",
+      "link": "#B4F5C8"
+    },
+    "typography": {
+      "fontFamilies": {
+        "primary": "ABC Social",
+        "heading": "STK Bureau"
+      },
+      "fontStacks": {
+        "body": [
+          "ABC Social",
+          "Arial",
+          "sans-serif"
+        ],
+        "heading": [
+          "STK Bureau",
+          "Times New Roman",
+          "sans-serif"
+        ],
+        "paragraph": [
+          "ABC Social",
+          "Arial",
+          "sans-serif"
+        ]
+      },
+      "fontSizes": {
+        "h1": "80px",
+        "h2": "14px",
+        "body": "16px"
+      }
+    },
+    "spacing": {
+      "baseUnit": 4,
+      "borderRadius": "4px"
+    },
+    "components": {
+      "input": {
+        "background": "#000000",
+        "textColor": "#FFFFFF",
+        "borderColor": "#4F5457",
+        "borderRadius": "8px",
+        "borderRadiusCorners": {
+          "topLeft": "8px",
+          "topRight": "8px",
+          "bottomRight": "8px",
+          "bottomLeft": "8px"
+        },
+        "shadow": "none"
+      }
+    },
+    "images": {
+      "logo": "https://cdn.prod.website-files.com/62e11362da2667ac3d0e6ed5/6310bb11874afdba54b2cbf7_mural-logo-color.svg",
+      "favicon": "https://cdn.prod.website-files.com/62e11362da2667ac3d0e6ed5/63f8b1b0585b45a64baf52da_Mural_Favicon_32x32.png",
+      "ogImage": "https://cdn.prod.website-files.com/62e11362da2667ac3d0e6ed5/638f50f56076f389d91406a0_Mural_OG_image_launch.png"
+    },
+    "__framework_hints": [],
+    "__llm_logo_reasoning": {
+      "selectedIndex": 1,
+      "reasoning": "Strong indicators: header logo linking to homepage, header location, visible, top-left position, alt matches logo/brand, src contains logo, class contains logo, reasonable size. Score: 118 (clear winner by 63 points)",
+      "confidence": 0.9
+    },
+    "__llm_button_reasoning": {
+      "primary": {
+        "index": -1,
+        "text": "N/A",
+        "reasoning": "LLM failed"
+      },
+      "secondary": {
+        "index": -1,
+        "text": "N/A",
+        "reasoning": "LLM failed"
+      },
+      "confidence": 0
+    },
+    "confidence": {
+      "buttons": 0,
+      "colors": 0,
+      "overall": 0
+    }
+  },
+  "metadata": {
+    "viewport": [
+      "width=device-width, initial-scale=1",
+      "width=device-width, initial-scale=1, maximum-scale=1",
+      "width=device-width, initial-scale=1.0, maximum-scale=5.0",
+      "width=device-width, initial-scale=1.0, maximum-scale=5.0"
+    ],
+    "og:title": "AI-powered visual workspace for team collaboration | Mural",
+    "language": "en",
+    "twitter:image": "https://cdn.prod.website-files.com/62e11362da2667ac3d0e6ed5/638f50f56076f389d91406a0_Mural_OG_image_launch.png",
+    "twitter:title": "AI-powered visual workspace for team collaboration | Mural",
+    "twitter:card": "summary_large_image",
+    "color-scheme": "light dark",
+    "google-site-verification": "WPAtwNLEGB7kUCjp9KYpiFy2yJPON7GqlxkNXcvcrCA",
+    "ogImage": "https://cdn.prod.website-files.com/62e11362da2667ac3d0e6ed5/638f50f56076f389d91406a0_Mural_OG_image_launch.png",
+    "ogTitle": "AI-powered visual workspace for team collaboration | Mural",
+    "og:description": "Boost team collaboration and innovation with Mural, the AI-powered visual workspace. Plan, strategize, and execute projects seamlessly on one intuitive tool.",
+    "referrer": "strict-origin-when-cross-origin",
+    "title": "AI-powered visual workspace for team collaboration | Mural",
+    "og:image": "https://cdn.prod.website-files.com/62e11362da2667ac3d0e6ed5/638f50f56076f389d91406a0_Mural_OG_image_launch.png",
+    "description": "Boost team collaboration and innovation with Mural, the AI-powered visual workspace. Plan, strategize, and execute projects seamlessly on one intuitive tool.",
+    "twitter:description": "Boost team collaboration and innovation with Mural, the AI-powered visual workspace. Plan, strategize, and execute projects seamlessly on one intuitive tool.",
+    "segment-site-verification": "O7qev0Rqq5iiujlStvjiKrJriQ0BJ5oH",
+    "facebook-domain-verification": "dcvcmk6uodmxvlg4wpl85ruj6koel8",
+    "robots": [
+      "noindex, nofollow",
+      "noindex",
+      "noindex"
+    ],
+    "og:type": "website",
+    "ogDescription": "Boost team collaboration and innovation with Mural, the AI-powered visual workspace. Plan, strategize, and execute projects seamlessly on one intuitive tool.",
+    "favicon": "https://cdn.prod.website-files.com/62e11362da2667ac3d0e6ed5/63f8b1b0585b45a64baf52da_Mural_Favicon_32x32.png",
+    "scrapeId": "019b3078-86b2-724e-a246-a69b0690fd02",
+    "sourceURL": "https://www.mural.co/",
+    "url": "https://www.mural.co/",
+    "statusCode": 200,
+    "contentType": "text/html",
+    "timezone": "America/New_York",
+    "proxyUsed": "basic",
+    "indexId": "612c58b9-010e-48d9-9f18-55cf7b0fbf48",
+    "creditsUsed": 1,
+    "concurrencyLimited": false
+  }
+}

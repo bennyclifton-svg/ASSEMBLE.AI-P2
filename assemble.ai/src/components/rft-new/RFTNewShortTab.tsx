@@ -1,7 +1,7 @@
 /**
  * RFTNewShortTab Component
  * Renders the SHORT tab content for RFT NEW reports
- * Includes: Project Info, Objectives, Staging, Risk, Brief, Fee, and Transmittal sections
+ * Includes: Project Info, Objectives, Brief, Program, Fee, and Transmittal sections
  */
 
 'use client';
@@ -10,6 +10,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { type RftNew } from '@/lib/hooks/use-rft-new';
 import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
 import { Textarea } from '@/components/ui/textarea';
+import { AIGenerateIcon } from '@/components/ui/ai-generate-icon';
+import { useToast } from '@/components/ui/use-toast';
+import { useFieldGeneration } from '@/lib/hooks/use-field-generation';
 
 function formatDisplayDate(dateString: string): string {
     if (!dateString) return '';
@@ -38,23 +41,14 @@ interface CostLine {
     amount?: number | null;
 }
 
-interface ProjectStage {
+interface ProgramActivity {
     id: string;
-    stageNumber: number;
-    stageName: string;
+    parentId: string | null;
+    name: string;
     startDate: string | null;
     endDate: string | null;
-    status: string;
-}
-
-interface ProjectRisk {
-    id: string;
-    title: string;
-    description: string | null;
-    likelihood: 'low' | 'medium' | 'high' | null;
-    impact: 'low' | 'medium' | 'high' | null;
-    mitigation: string | null;
-    status: string;
+    color: string | null;
+    sortOrder: number;
 }
 
 interface RFTNewShortTabProps {
@@ -65,6 +59,270 @@ interface RFTNewShortTabProps {
     disciplineId?: string | null;
     tradeId?: string | null;
     onDateChange?: (date: string) => void;
+}
+
+// Helper to get week start (Monday) for a date
+function getWeekStart(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+// Generate weekly columns with month grouping
+interface WeekColumn {
+    start: Date;
+    dayLabel: number;
+    month: string;
+    year: number;
+}
+
+function generateWeekColumnsWithMonths(startDate: Date, endDate: Date): WeekColumn[] {
+    const columns: WeekColumn[] = [];
+    const current = getWeekStart(startDate);
+    const end = new Date(endDate);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    while (current <= end) {
+        columns.push({
+            start: new Date(current),
+            dayLabel: current.getDate(),
+            month: months[current.getMonth()],
+            year: current.getFullYear(),
+        });
+        current.setDate(current.getDate() + 7);
+    }
+    return columns;
+}
+
+// Group columns by month for header
+function groupColumnsByMonth(columns: WeekColumn[]): { label: string; count: number }[] {
+    const groups: { label: string; count: number }[] = [];
+    let currentGroup: { label: string; count: number } | null = null;
+
+    columns.forEach(col => {
+        const label = `${col.month} ${col.year}`;
+        if (!currentGroup || currentGroup.label !== label) {
+            if (currentGroup) groups.push(currentGroup);
+            currentGroup = { label, count: 1 };
+        } else {
+            currentGroup.count++;
+        }
+    });
+    if (currentGroup) groups.push(currentGroup);
+    return groups;
+}
+
+// Program Gantt Section Component - matches Program module appearance
+function ProgramGanttSection({ activities }: { activities: ProgramActivity[] }) {
+    // Filter activities with dates and calculate date range
+    const activitiesWithDates = activities.filter(a => a.startDate && a.endDate);
+
+    if (activitiesWithDates.length === 0) {
+        return (
+            <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                    Program
+                </h3>
+                <div className="border border-[#3e3e42] rounded overflow-hidden">
+                    <div className="px-4 py-3 text-[#858585] text-sm">
+                        No program activities with dates.
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Calculate overall date range
+    const allDates = activitiesWithDates.flatMap(a => [
+        new Date(a.startDate!),
+        new Date(a.endDate!),
+    ]);
+    const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+
+    // Generate week columns with month info
+    const weekColumns = generateWeekColumnsWithMonths(minDate, maxDate);
+    const monthGroups = groupColumnsByMonth(weekColumns);
+    const totalDuration = maxDate.getTime() - minDate.getTime();
+    const columnWidth = 50; // pixels per week column
+
+    // Build hierarchy (parent activities first, then children)
+    const parentActivities = activities.filter(a => !a.parentId);
+    const childActivities = activities.filter(a => a.parentId);
+
+    // Order activities: parent followed by its children
+    const orderedActivities: ProgramActivity[] = [];
+    parentActivities.forEach(parent => {
+        orderedActivities.push(parent);
+        const children = childActivities.filter(c => c.parentId === parent.id);
+        children.sort((a, b) => a.sortOrder - b.sortOrder);
+        orderedActivities.push(...children);
+    });
+    // Add any orphaned activities
+    childActivities.filter(c => !parentActivities.some(p => p.id === c.parentId)).forEach(a => {
+        orderedActivities.push(a);
+    });
+
+    // Calculate bar position for an activity
+    const calculateBarPosition = (activity: ProgramActivity) => {
+        if (!activity.startDate || !activity.endDate) return null;
+
+        const activityStart = new Date(activity.startDate);
+        const activityEnd = new Date(activity.endDate);
+
+        if (totalDuration === 0) {
+            return { left: 0, width: weekColumns.length * columnWidth };
+        }
+
+        const leftPercent = (activityStart.getTime() - minDate.getTime()) / totalDuration;
+        const widthPercent = (activityEnd.getTime() - activityStart.getTime()) / totalDuration;
+        const totalWidth = weekColumns.length * columnWidth;
+
+        return {
+            left: Math.max(0, leftPercent * totalWidth),
+            width: Math.max(30, widthPercent * totalWidth), // min 30px to show some text
+        };
+    };
+
+    // All bars use consistent teal/blue color with transparency matching Program module
+    const getActivityColor = (): string => {
+        return 'rgba(13, 148, 136, 0.7)'; // Teal color with transparency
+    };
+
+    // Today line position
+    const today = new Date();
+    const todayPosition = totalDuration > 0
+        ? ((today.getTime() - minDate.getTime()) / totalDuration) * (weekColumns.length * columnWidth)
+        : null;
+    const showTodayLine = todayPosition !== null && todayPosition >= 0 && todayPosition <= weekColumns.length * columnWidth;
+
+    return (
+        <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                Program
+            </h3>
+            <div className="border border-[#3e3e42] rounded overflow-hidden bg-[#1e1e1e]">
+                <div className="overflow-x-auto">
+                    <div style={{ minWidth: `${160 + weekColumns.length * columnWidth}px` }}>
+                        {/* Header: Month row */}
+                        <div className="flex border-b border-[#3e3e42] bg-[#252526]">
+                            <div className="w-40 flex-shrink-0 px-3 py-1.5 text-[#858585] text-xs font-medium border-r border-[#3e3e42]">
+                                Activity
+                            </div>
+                            <div className="flex">
+                                {monthGroups.map((group, i) => (
+                                    <div
+                                        key={i}
+                                        className="text-center text-[#858585] text-xs py-1.5 border-r border-[#3e3e42] last:border-r-0"
+                                        style={{ width: `${group.count * columnWidth}px` }}
+                                    >
+                                        {group.label}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Header: Day numbers row */}
+                        <div className="flex border-b border-[#3e3e42] bg-[#252526]">
+                            <div className="w-40 flex-shrink-0 border-r border-[#3e3e42]" />
+                            <div className="flex">
+                                {weekColumns.map((col, i) => (
+                                    <div
+                                        key={i}
+                                        className="text-center text-[#858585] text-xs py-1 border-r border-[#3e3e42] last:border-r-0"
+                                        style={{ width: `${columnWidth}px` }}
+                                    >
+                                        {col.dayLabel}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Activity rows */}
+                        {orderedActivities.map((activity) => {
+                            const barPos = calculateBarPosition(activity);
+                            const isChild = !!activity.parentId;
+                            const color = getActivityColor();
+
+                            return (
+                                <div
+                                    key={activity.id}
+                                    className="flex border-b border-[#3e3e42] last:border-b-0 hover:bg-[#2a2a2a]"
+                                >
+                                    {/* Activity name cell with indentation for children */}
+                                    <div
+                                        className={`w-40 flex-shrink-0 py-2 border-r border-[#3e3e42] flex items-center gap-2 ${isChild ? 'pl-6 pr-2' : 'px-3'}`}
+                                    >
+                                        {/* Collapse indicator for parents */}
+                                        {!isChild && (
+                                            <svg className="w-3 h-3 text-[#858585] flex-shrink-0" viewBox="0 0 12 12" fill="currentColor">
+                                                <path d="M4 2l4 4-4 4V2z" />
+                                            </svg>
+                                        )}
+                                        {/* Color indicator for children */}
+                                        {isChild && (
+                                            <div
+                                                className="w-1 h-4 flex-shrink-0"
+                                                style={{ backgroundColor: color }}
+                                            />
+                                        )}
+                                        <span className={`text-xs truncate ${isChild ? 'text-[#a0a0a0]' : 'text-[#cccccc] font-medium'}`}>
+                                            {activity.name}
+                                        </span>
+                                    </div>
+
+                                    {/* Timeline cell */}
+                                    <div
+                                        className="relative py-2"
+                                        style={{ width: `${weekColumns.length * columnWidth}px` }}
+                                    >
+                                        {/* Grid lines */}
+                                        <div className="absolute inset-0 flex">
+                                            {weekColumns.map((_, i) => (
+                                                <div
+                                                    key={i}
+                                                    className="border-r border-[#3e3e42] last:border-r-0"
+                                                    style={{ width: `${columnWidth}px` }}
+                                                />
+                                            ))}
+                                        </div>
+
+                                        {/* Today line */}
+                                        {showTodayLine && (
+                                            <div
+                                                className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+                                                style={{ left: `${todayPosition}px` }}
+                                            />
+                                        )}
+
+                                        {/* Activity bar with name - square edges */}
+                                        {barPos && (
+                                            <div
+                                                className="absolute top-1/2 -translate-y-1/2 h-5 flex items-center justify-center overflow-hidden"
+                                                style={{
+                                                    left: `${barPos.left}px`,
+                                                    width: `${barPos.width}px`,
+                                                    backgroundColor: color,
+                                                }}
+                                                title={activity.name}
+                                            >
+                                                <span className="text-[10px] text-white font-medium truncate px-1">
+                                                    {activity.name}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export function RFTNewShortTab({
@@ -78,15 +336,36 @@ export function RFTNewShortTab({
 }: RFTNewShortTabProps) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
     const [objectives, setObjectives] = useState<PlanningObjectives>({});
-    const [stages, setStages] = useState<ProjectStage[]>([]);
-    const [risks, setRisks] = useState<ProjectRisk[]>([]);
+    const [programActivities, setProgramActivities] = useState<ProgramActivity[]>([]);
     const [briefData, setBriefData] = useState({ service: '', deliverables: '' });
     const [isSavingBrief, setIsSavingBrief] = useState(false);
     const [costLines, setCostLines] = useState<CostLine[]>([]);
+
+    // Unified Field Generation hooks for Brief fields
+    const {
+        generate: generateService,
+        isGenerating: isGeneratingService,
+    } = useFieldGeneration({
+        fieldType: 'brief.service',
+        projectId,
+        disciplineId: disciplineId || undefined,
+        tradeId: tradeId || undefined,
+    });
+
+    const {
+        generate: generateDeliverables,
+        isGenerating: isGeneratingDeliverables,
+    } = useFieldGeneration({
+        fieldType: 'brief.deliverables',
+        projectId,
+        disciplineId: disciplineId || undefined,
+        tradeId: tradeId || undefined,
+    });
     const [isLoading, setIsLoading] = useState(true);
     const [rftDate, setRftDate] = useState(rftNew.rftDate || new Date().toISOString().split('T')[0]);
     const dateInputRef = useRef<HTMLInputElement>(null);
     const hasAutoSavedDateRef = useRef(false);
+    const { toast } = useToast();
 
     // Update rftDate when rftNew changes, and persist default if not set
     useEffect(() => {
@@ -146,14 +425,14 @@ export function RFTNewShortTab({
                         });
                     }
 
-                    // Set Stages
-                    if (Array.isArray(data.stages)) {
-                        setStages(data.stages.sort((a: ProjectStage, b: ProjectStage) => a.stageNumber - b.stageNumber));
-                    }
+                }
 
-                    // Set Risks
-                    if (Array.isArray(data.risks)) {
-                        setRisks(data.risks);
+                // Fetch Program Activities
+                const programRes = await fetch(`/api/projects/${projectId}/program`);
+                if (programRes.ok) {
+                    const programData = await programRes.json();
+                    if (Array.isArray(programData.activities)) {
+                        setProgramActivities(programData.activities.sort((a: ProgramActivity, b: ProgramActivity) => a.sortOrder - b.sortOrder));
                     }
                 }
 
@@ -202,6 +481,53 @@ export function RFTNewShortTab({
         fetchData();
     }, [projectId, disciplineId, tradeId]);
 
+    /**
+     * Generate Service field using Unified Field Generation
+     * Uses existing text as input for interpretation (instruction, enhance, generate)
+     */
+    const handleGenerateService = useCallback(async () => {
+        try {
+            const result = await generateService(briefData.service);
+            setBriefData(prev => ({
+                ...prev,
+                service: result.content,
+            }));
+            toast({
+                title: 'Service Generated',
+                description: `Generated using ${result.sources.length} source(s) from Knowledge Source`,
+            });
+        } catch (error) {
+            toast({
+                title: 'Generation Failed',
+                description: error instanceof Error ? error.message : 'Failed to generate',
+                variant: 'destructive',
+            });
+        }
+    }, [generateService, briefData.service, toast]);
+
+    /**
+     * Generate Deliverables field using Unified Field Generation
+     */
+    const handleGenerateDeliverables = useCallback(async () => {
+        try {
+            const result = await generateDeliverables(briefData.deliverables);
+            setBriefData(prev => ({
+                ...prev,
+                deliverables: result.content,
+            }));
+            toast({
+                title: 'Deliverables Generated',
+                description: `Generated using ${result.sources.length} source(s) from Knowledge Source`,
+            });
+        } catch (error) {
+            toast({
+                title: 'Generation Failed',
+                description: error instanceof Error ? error.message : 'Failed to generate',
+                variant: 'destructive',
+            });
+        }
+    }, [generateDeliverables, briefData.deliverables, toast]);
+
     if (isLoading) {
         return (
             <div className="p-8 text-center text-[#858585]">
@@ -219,7 +545,7 @@ export function RFTNewShortTab({
     const handleSaveBrief = async (field: 'service' | 'deliverables') => {
         setIsSavingBrief(true);
         try {
-            const payload: any = {};
+            const payload: Record<string, string> = {};
             if (disciplineId) {
                 if (field === 'service') payload.briefServices = briefData.service;
                 if (field === 'deliverables') payload.briefDeliverables = briefData.deliverables;
@@ -272,7 +598,7 @@ export function RFTNewShortTab({
                                 {rftLabel}
                             </td>
                             <td
-                                className="w-36 px-4 py-2.5 text-[#cccccc] border-l border-[#3e3e42] cursor-pointer hover:bg-[#2a2a2a] transition-colors relative"
+                                className="w-36 px-4 py-2.5 text-[rgb(187,235,255)] border-l border-[#3e3e42] cursor-pointer hover:bg-[#2a2a2a] transition-colors relative"
                                 onClick={handleDateClick}
                             >
                                 <span className="select-none">{formatDisplayDate(rftDate)}</span>
@@ -335,114 +661,67 @@ export function RFTNewShortTab({
                 </div>
             </div>
 
-            {/* 3. Staging Section */}
-            <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
-                    Staging
-                </h3>
-                <div className="border border-[#3e3e42] rounded overflow-hidden">
-                    {stages.length > 0 ? (
-                        <table className="w-full text-sm">
-                            <thead className="bg-[#2d2d30]">
-                                <tr className="border-b border-[#3e3e42]">
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium w-1/3">Stage</th>
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium w-1/3">Start Date</th>
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium w-1/3">End Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {stages.map((stage) => (
-                                    <tr key={stage.id} className="border-b border-[#3e3e42] last:border-0">
-                                        <td className="px-4 py-2.5 text-[#cccccc]">{stage.stageName}</td>
-                                        <td className="px-4 py-2.5 text-[#cccccc]">{stage.startDate || '-'}</td>
-                                        <td className="px-4 py-2.5 text-[#cccccc]">{stage.endDate || '-'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <div className="px-4 py-3 text-[#858585] text-sm">
-                            No staging information available.
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* 4. Risk Section */}
-            <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
-                    Risk
-                </h3>
-                <div className="border border-[#3e3e42] rounded overflow-hidden">
-                    {risks.length > 0 ? (
-                        <table className="w-full text-sm">
-                            <thead className="bg-[#2d2d30]">
-                                <tr className="border-b border-[#3e3e42]">
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium w-1/4">Risk</th>
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium w-1/4">Rating</th>
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium w-1/2">Mitigation</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {risks.map((risk) => (
-                                    <tr key={risk.id} className="border-b border-[#3e3e42] last:border-0">
-                                        <td className="px-4 py-2.5 text-[#cccccc] font-medium">{risk.title}</td>
-                                        <td className="px-4 py-2.5 text-[#cccccc]">
-                                            <div className="flex flex-col text-xs">
-                                                <span>L: {risk.likelihood || '-'}</span>
-                                                <span>I: {risk.impact || '-'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-2.5 text-[#cccccc] whitespace-pre-wrap">{risk.mitigation || '-'}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    ) : (
-                        <div className="px-4 py-3 text-[#858585] text-sm">
-                            No risk information available.
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* 5. Brief Section */}
+            {/* 3. Brief Section */}
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
                         Brief
                     </h3>
-                    {isSavingBrief && <span className="text-xs text-[#4fc1ff]">Saving...</span>}
+                    {isSavingBrief && (
+                        <span className="text-xs text-[#4fc1ff]">Saving...</span>
+                    )}
                 </div>
                 <div className="border border-[#3e3e42] rounded overflow-hidden">
                     <table className="w-full text-sm">
                         <tbody>
                             <tr className="border-b border-[#3e3e42]">
                                 <td className="w-36 px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium align-top pt-4">
-                                    Service
+                                    <div className="flex items-center gap-2">
+                                        <span>Service</span>
+                                        <AIGenerateIcon
+                                            size={12}
+                                            className="text-[#4fc1ff] hover:text-[#6fd1ff]"
+                                            onClick={handleGenerateService}
+                                            isLoading={isGeneratingService}
+                                            disabled={isGeneratingService}
+                                            title="Generate service description with AI"
+                                        />
+                                    </div>
                                 </td>
                                 <td className="p-0">
                                     <Textarea
                                         value={briefData.service}
                                         onChange={(e) => handleBriefChange('service', e.target.value)}
                                         onBlur={() => handleSaveBrief('service')}
-                                        placeholder="Enter service details..."
-                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text"
+                                        placeholder="Enter service details or instructions for AI (e.g., 'list 4 key services')..."
+                                        disabled={isGeneratingService}
+                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text disabled:opacity-70"
                                         style={{ fieldSizing: 'content' } as React.CSSProperties}
                                     />
                                 </td>
                             </tr>
                             <tr>
                                 <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium align-top pt-4">
-                                    Deliverables
+                                    <div className="flex items-center gap-2">
+                                        <span>Deliverables</span>
+                                        <AIGenerateIcon
+                                            size={12}
+                                            className="text-[#4fc1ff] hover:text-[#6fd1ff]"
+                                            onClick={handleGenerateDeliverables}
+                                            isLoading={isGeneratingDeliverables}
+                                            disabled={isGeneratingDeliverables}
+                                            title="Generate deliverables with AI"
+                                        />
+                                    </div>
                                 </td>
                                 <td className="p-0">
                                     <Textarea
                                         value={briefData.deliverables}
                                         onChange={(e) => handleBriefChange('deliverables', e.target.value)}
                                         onBlur={() => handleSaveBrief('deliverables')}
-                                        placeholder="Enter deliverables..."
-                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text"
+                                        placeholder="Enter deliverables or instructions for AI..."
+                                        disabled={isGeneratingDeliverables}
+                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text disabled:opacity-70"
                                         style={{ fieldSizing: 'content' } as React.CSSProperties}
                                     />
                                 </td>
@@ -452,7 +731,10 @@ export function RFTNewShortTab({
                 </div>
             </div>
 
-            {/* 6. Fee Section */}
+            {/* 4. Program Section - Visual Gantt */}
+            <ProgramGanttSection activities={programActivities} />
+
+            {/* 5. Fee Section */}
             <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
                     Fee
@@ -486,7 +768,7 @@ export function RFTNewShortTab({
                 </div>
             </div>
 
-            {/* 7. Transmittal Section */}
+            {/* 6. Transmittal Section */}
             <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
                     Transmittal

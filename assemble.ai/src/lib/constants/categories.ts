@@ -13,7 +13,7 @@ export const DOCUMENT_CATEGORIES = {
     SCHEME_DESIGN: {
         id: 'scheme-design',
         name: 'Scheme Design',
-        color: '#6B9BD1', // Sky Blue
+        color: '#5B9E9E', // Teal
         hasSubcategories: true,
         subcategorySource: 'consultants' as const,
         row: 1,
@@ -29,7 +29,7 @@ export const DOCUMENT_CATEGORIES = {
     PROCUREMENT: {
         id: 'procurement',
         name: 'Procurement',
-        color: '#C9B616', // Muted Yellow
+        color: '#A67373', // Muted red
         hasSubcategories: false,
         row: 1,
     },
@@ -57,19 +57,20 @@ export const DOCUMENT_CATEGORIES = {
         subcategorySource: 'contractors' as const,
         row: 2,
     },
-    COST_PLANNING: {
-        id: 'cost-planning',
-        name: 'Cost Planning',
-        color: '#B85C5C', // Terracotta
-        hasSubcategories: false,
-        row: 2,
-    },
     ADMINISTRATION: {
         id: 'administration',
         name: 'Administration',
         color: '#6B7B8C', // Slate Gray
         hasSubcategories: false,
         row: 2,
+    },
+    KNOWLEDGE: {
+        id: 'knowledge',
+        name: 'Knowledge',
+        color: '#6B9BD1', // Sky Blue (AI/knowledge indicator)
+        hasSubcategories: false,
+        row: 2,
+        isKnowledgeSource: true, // Triggers auto-RAG when files dropped/assigned
     },
 } as const;
 
@@ -82,6 +83,7 @@ export interface Category {
     hasSubcategories: boolean;
     subcategorySource?: 'consultants' | 'contractors';
     row: number;
+    isKnowledgeSource?: boolean; // When true, triggers auto-RAG on file drop/assign
 }
 
 export interface Subcategory {

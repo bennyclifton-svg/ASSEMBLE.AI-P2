@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { rftNew, rftNewTransmittals, documents, versions, fileAssets, categories, subcategories } from '@/lib/db/schema';
+import { rftNew, rftNewTransmittals, documents, versions, fileAssets, categories, subcategories } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { eq } from 'drizzle-orm';
 
@@ -14,11 +14,11 @@ export async function GET(
         const { id } = await params;
 
         // Verify RFT NEW exists
-        const report = await db
+        const [report] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
         if (!report) {
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
@@ -74,13 +74,13 @@ export async function POST(
         }
 
         // Verify RFT NEW exists
-        const report = await db
+        const [report2] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
-        if (!report) {
+        if (!report2) {
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
         }
 

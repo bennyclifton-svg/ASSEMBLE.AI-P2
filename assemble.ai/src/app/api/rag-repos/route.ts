@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
 
         // Check if global repos need to be initialized
         const missingGlobalRepoTypes = GLOBAL_REPO_TYPES.filter(
-            (type) => !globalRepos.find((repo: { repoType: string }) => repo.repoType === type)
+            (type) => !globalRepos.find((repo) => (repo as { repoType: string }).repoType === type)
         );
 
         // Also need initialization if project repo is missing

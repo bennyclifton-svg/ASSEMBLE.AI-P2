@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { projects } from '@/lib/db/schema';
+import { projects } from '@/lib/db';
 
 export async function POST() {
     try {
@@ -10,8 +10,8 @@ export async function POST() {
             name: 'Default Project',
             code: 'DEFAULT',
             status: 'active',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
         }).onConflictDoNothing();
 
         return NextResponse.json({ success: true, message: 'Default project seeded successfully' });

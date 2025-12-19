@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { organizations } from '@/lib/db/schema';
+import { organizations } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { eq } from 'drizzle-orm';
 
@@ -42,11 +42,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get current organization settings
-    const org = await db
+    const [org] = await db
       .select()
       .from(organizations)
       .where(eq(organizations.id, authResult.user.organizationId))
-      .get();
+      .limit(1);
 
     if (!org) {
       return NextResponse.json(
@@ -104,11 +104,11 @@ export async function GET() {
       );
     }
 
-    const org = await db
+    const [org] = await db
       .select()
       .from(organizations)
       .where(eq(organizations.id, authResult.user.organizationId))
-      .get();
+      .limit(1);
 
     if (!org) {
       return NextResponse.json(

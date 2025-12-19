@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useContractors } from '@/lib/hooks/use-contractors';
 import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
-import { PriceStructureSection } from './PriceStructureSection';
 import { useToast } from '@/lib/hooks/use-toast';
 
 import { RFTNewSection } from '@/components/rft-new';
@@ -70,11 +69,13 @@ export function ContractorGallery({
   const handleSave = async (id: string, data: Partial<FirmData>) => {
     try {
       if (id === 'new' && newFirm) {
-        // Creating new contractor
-        if (data.companyName && data.email) {
+        // Creating new contractor - only companyName is required
+        const companyName = data.companyName || newFirm.companyName;
+        if (companyName) {
           const newContractor = await addContractor({
             ...newFirm,
             ...data,
+            companyName,
             trade,
           });
           toast({
@@ -485,16 +486,6 @@ export function ContractorGallery({
         />
       )}
 
-      {/* Price Structure Section */}
-      {tradeId && (
-        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
-          <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Price Structure</h3>
-          <PriceStructureSection
-            tradeId={tradeId}
-            tradeName={trade}
-          />
-        </div>
-      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>

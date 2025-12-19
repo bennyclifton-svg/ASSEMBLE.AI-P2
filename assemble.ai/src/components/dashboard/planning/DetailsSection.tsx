@@ -2,7 +2,7 @@
 
 import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Upload, UploadCloud } from 'lucide-react';
+import { Upload } from 'lucide-react';
 
 // Props for DetailRow component
 interface DetailRowProps {
@@ -134,7 +134,7 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
                     className={`
                         absolute right-0 top-0 bottom-0 w-[2px]
                         transition-opacity duration-150
-                        ${isHovered || isFocused ? 'opacity-100 bg-[#4fc3f7]' : 'opacity-0 bg-transparent'}
+                        ${isHovered || isFocused ? 'opacity-100 bg-[#56b6c2]' : 'opacity-0 bg-transparent'}
                     `}
                 />
             </div>
@@ -156,7 +156,7 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
                         disabled:opacity-50
                         resize-none overflow-hidden
                         placeholder:text-[#5a5a5a]
-                        text-[#4fc3f7]
+                        text-[rgb(187,235,255)]
                         break-words whitespace-pre-wrap
                     `}
                     placeholder={placeholder}
@@ -167,7 +167,7 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
                 {/* Save indicator */}
                 {isSaving && (
                     <div className="absolute right-2 top-1.5 pointer-events-none">
-                        <div className="w-3 h-3 border-2 border-[#4fc3f7] border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-3 h-3 border-2 border-[#56b6c2] border-t-transparent rounded-full animate-spin"></div>
                     </div>
                 )}
                 {showSuccess && !isSaving && (
@@ -445,7 +445,7 @@ export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange 
 
             <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-[#cccccc]">Details</h3>
-                <UploadCloud className="w-4 h-4 text-[#858585]" />
+                <Upload className="w-4 h-4 text-[#858585]" />
             </div>
 
             {/* Two-column table layout */}

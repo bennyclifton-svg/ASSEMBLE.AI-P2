@@ -14,7 +14,7 @@ import {
     contractors,
     consultantDisciplines,
     contractorTrades,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { NON_PRICE_CRITERIA } from '@/lib/constants/non-price-criteria';
@@ -247,7 +247,7 @@ export async function PUT(
             ),
         });
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         if (existingCell) {
             // Update existing cell - user edits override AI content (T020)

@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr, trrTransmittals } from '@/lib/db/schema';
+import { trr, trrTransmittals } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, isNull } from 'drizzle-orm';
 
@@ -40,11 +40,11 @@ export async function GET(request: NextRequest) {
         }
 
         // Try to find existing TRR
-        let existing = await db
+        let [existing] = await db
             .select()
             .from(trr)
             .where(and(...conditions))
-            .get();
+            .limit(1);
 
         // If doesn't exist, create it with today's date as default
         if (!existing) {
@@ -59,11 +59,11 @@ export async function GET(request: NextRequest) {
                 reportDate: today,
             });
 
-            existing = await db
+            [existing] = await db
                 .select()
                 .from(trr)
                 .where(eq(trr.id, id))
-                .get();
+                .limit(1);
         }
 
         // Count transmittal documents

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { categories, subcategories } from '@/lib/db/schema';
+import { categories, subcategories } from '@/lib/db';
 
 export async function GET() {
     return handleApiError(async () => {

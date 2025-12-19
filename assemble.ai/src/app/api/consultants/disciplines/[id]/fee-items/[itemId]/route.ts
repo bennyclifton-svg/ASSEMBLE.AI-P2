@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { disciplineFeeItems } from '@/lib/db/schema';
+import { disciplineFeeItems } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 
 // PUT /api/consultants/disciplines/[id]/fee-items/[itemId] - Update fee item
@@ -22,7 +22,7 @@ export async function PUT(
         const updated = await db.update(disciplineFeeItems)
             .set({
                 description: description.trim(),
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(
                 and(

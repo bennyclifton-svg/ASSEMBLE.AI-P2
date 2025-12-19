@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
-import { projects } from '@/lib/db/schema';
+import { projects } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { eq, and } from 'drizzle-orm';
 
@@ -28,8 +28,8 @@ export async function PATCH(
         const { name, code, status } = body;
 
         // Build update object with only provided fields
-        const updateData: Record<string, string> = {
-            updatedAt: new Date().toISOString(),
+        const updateData: Record<string, unknown> = {
+            updatedAt: new Date(),
         };
 
         if (name !== undefined) {

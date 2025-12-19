@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { projectObjectives } from '@/lib/db/schema';
+import { projectObjectives } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { projectObjectivesSchema } from '@/lib/validations/planning-schema';
 
@@ -41,7 +41,7 @@ export async function PUT(
             await db.update(projectObjectives)
                 .set({
                     ...validated,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(eq(projectObjectives.projectId, projectId));
         } else {

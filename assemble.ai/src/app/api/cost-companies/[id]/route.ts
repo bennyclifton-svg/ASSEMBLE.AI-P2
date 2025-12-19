@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { companies } from '@/lib/db/schema';
+import { companies } from '@/lib/db';
 import { eq, isNull, and } from 'drizzle-orm';
 import type { UpdateCompanyInput } from '@/types/cost-plan';
 
@@ -71,7 +71,7 @@ export async function PATCH(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         const updateData: Record<string, unknown> = {
             updatedAt: now,
@@ -132,7 +132,7 @@ export async function DELETE(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         await db
             .update(companies)

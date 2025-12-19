@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, Upload, Check, X, Trash, ChevronUp, ChevronDown } from 'lucide-react';
 import { useVariations, useVariationMutations, useCostLines } from '@/lib/hooks/cost-plan';
 import { formatCurrency } from '@/lib/calculations/cost-plan-formulas';
+import { VariationDropZone } from './VariationDropZone';
 import type { VariationStatus, VariationCategory, VariationWithCostLine, CreateVariationInput } from '@/types/variation';
 import type { CostLineWithCalculations } from '@/types/cost-plan';
 
@@ -148,27 +149,33 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
         return sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
     };
 
-    return (
-        <div className="h-full flex flex-col bg-[#1e1e1e] text-xs">
-            {/* Toolbar */}
-            <div className="flex items-center justify-end px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
-                <span className="text-[10px] text-[#6e6e6e] flex items-center gap-1">
-                    <Upload className="h-3 w-3" />
-                    Drop Variation
-                </span>
-            </div>
+    // Handle upload complete - refresh variations list
+    const handleUploadComplete = () => {
+        refetch();
+    };
 
-            {/* Table */}
-            <div className="flex-1 overflow-auto">
-                <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
-                    <thead className="sticky top-0 z-10" style={{ backgroundColor: COLORS.accent.variation }}>
+    return (
+        <VariationDropZone projectId={projectId} onUploadComplete={handleUploadComplete}>
+            <div className="h-full flex flex-col bg-[#1e1e1e] text-xs">
+                {/* Toolbar */}
+                <div className="flex items-center justify-end px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
+                    <span className="text-[10px] text-[#6e6e6e] flex items-center gap-1">
+                        <Upload className="h-3 w-3" />
+                        Drop Variation
+                    </span>
+                </div>
+
+                {/* Table */}
+                <div className="flex-1 overflow-auto @container">
+                    <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
+                        <thead className="sticky top-0 z-10" style={{ backgroundColor: COLORS.accent.variation }}>
                         <tr>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[70px] cursor-pointer hover:bg-[#c09060] select-none"
                                 onClick={() => handleSort('variationNumber')}
                             >
                                 <div className="flex items-center gap-1">
-                                    Variation No.
+                                    Var No.
                                     <SortIndicator column="variationNumber" />
                                 </div>
                             </th>
@@ -182,7 +189,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[200px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[180px] cursor-pointer hover:bg-[#c09060] select-none hidden @[800px]:table-cell"
                                 onClick={() => handleSort('costLine')}
                             >
                                 <div className="flex items-center gap-1">
@@ -191,7 +198,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px] cursor-pointer hover:bg-[#c09060] select-none hidden @[700px]:table-cell"
                                 onClick={() => handleSort('status')}
                             >
                                 <div className="flex items-center gap-1">
@@ -200,7 +207,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[85px] cursor-pointer hover:bg-[#c09060] select-none"
                                 onClick={() => handleSort('forecast')}
                             >
                                 <div className="flex items-center justify-end gap-1">
@@ -209,7 +216,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[85px] cursor-pointer hover:bg-[#c09060] select-none"
                                 onClick={() => handleSort('approved')}
                             >
                                 <div className="flex items-center justify-end gap-1">
@@ -218,7 +225,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px] cursor-pointer hover:bg-[#c09060] select-none hidden @[600px]:table-cell"
                                 onClick={() => handleSort('date')}
                             >
                                 <div className="flex items-center gap-1">
@@ -227,7 +234,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[60px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[#a08050] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[50px] cursor-pointer hover:bg-[#c09060] select-none hidden @[500px]:table-cell"
                                 onClick={() => handleSort('category')}
                             >
                                 <div className="flex items-center justify-center gap-1">
@@ -280,19 +287,20 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                         )}
                     </tbody>
                 </table>
-            </div>
+                </div>
 
-            {/* Delete Confirmation Dialog */}
-            {deleteConfirm && (
-                <DeleteConfirmDialog
-                    itemName={deleteConfirm.variationNo}
-                    itemType="variation"
-                    onClose={() => setDeleteConfirm(null)}
-                    onConfirm={() => handleDeleteVariation(deleteConfirm.id)}
-                    isSubmitting={isSubmitting}
-                />
-            )}
-        </div>
+                {/* Delete Confirmation Dialog */}
+                {deleteConfirm && (
+                    <DeleteConfirmDialog
+                        itemName={deleteConfirm.variationNo}
+                        itemType="variation"
+                        onClose={() => setDeleteConfirm(null)}
+                        onConfirm={() => handleDeleteVariation(deleteConfirm.id)}
+                        isSubmitting={isSubmitting}
+                    />
+                )}
+            </div>
+        </VariationDropZone>
     );
 }
 
@@ -403,7 +411,7 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
 
     return (
         <tr className="group bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42] transition-colors">
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 font-mono font-medium text-[#D4A574] w-[100px]">
+            <td className="border-x border-[#3e3e42] px-2 py-1.5 font-mono font-medium text-[#D4A574] w-[70px]">
                 {variation.variationNumber}
             </td>
             <td
@@ -427,14 +435,15 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                     </span>
                 )}
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[200px]">
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[180px] hidden @[800px]:table-cell">
                 <select
                     value={variation.costLineId || ''}
                     onChange={(e) => handleCostLineChange(e.target.value)}
-                    className="w-full px-1 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[11px] text-[#858585] focus:outline-none cursor-pointer"
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
                     title={variation.costLine?.activity || ''}
+                    style={{ colorScheme: 'dark' }}
                 >
-                    <option value="">None</option>
+                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
                     {sortedCostLines.map((line) => {
                         const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
                         const label = line.costCode
@@ -445,27 +454,28 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                                 ? `${disciplineOrTrade} - ${line.activity}`
                                 : line.activity;
                         return (
-                            <option key={line.id} value={line.id} title={label}>
+                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
                                 {label}
                             </option>
                         );
                     })}
                 </select>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[90px]">
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[90px] hidden @[700px]:table-cell">
                 <select
                     value={variation.status}
                     onChange={(e) => handleStatusChange(e.target.value as VariationStatus)}
-                    className="w-full px-1 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
+                    style={{ colorScheme: 'dark' }}
                 >
-                    <option value="Forecast">Forecast</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Rejected">Rejected</option>
-                    <option value="Withdrawn">Withdrawn</option>
+                    <option value="Forecast" className="bg-[#2d2d30] text-[#cccccc]">Forecast</option>
+                    <option value="Approved" className="bg-[#2d2d30] text-[#cccccc]">Approved</option>
+                    <option value="Rejected" className="bg-[#2d2d30] text-[#cccccc]">Rejected</option>
+                    <option value="Withdrawn" className="bg-[#2d2d30] text-[#cccccc]">Withdrawn</option>
                 </select>
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-right cursor-pointer w-[100px]"
+                className="border-x border-[#3e3e42] px-2 py-1.5 text-right cursor-pointer w-[85px]"
                 onClick={() => handleStartEdit('forecast', (variation.amountForecastCents / 100).toString())}
             >
                 {editingField === 'forecast' ? (
@@ -485,7 +495,7 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                 )}
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-right cursor-pointer w-[100px]"
+                className="border-x border-[#3e3e42] px-2 py-1.5 text-right cursor-pointer w-[85px]"
                 onClick={() => handleStartEdit('approved', (variation.amountApprovedCents / 100).toString())}
             >
                 {editingField === 'approved' ? (
@@ -505,7 +515,7 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                 )}
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-[#858585] cursor-pointer w-[100px]"
+                className="border-x border-[#3e3e42] px-2 py-1.5 text-[#858585] cursor-pointer w-[90px] hidden @[600px]:table-cell"
                 onClick={() => handleStartEdit('dateSubmitted', variation.dateSubmitted || '')}
             >
                 {editingField === 'dateSubmitted' ? (
@@ -524,15 +534,16 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                     </span>
                 )}
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[60px]">
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[50px] hidden @[500px]:table-cell">
                 <select
                     value={variation.category}
                     onChange={(e) => handleCategoryChange(e.target.value as VariationCategory)}
-                    className="w-full px-0.5 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[10px] text-[#cccccc] focus:outline-none cursor-pointer text-center"
+                    className="w-full px-0.5 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[10px] text-[#cccccc] focus:outline-none cursor-pointer text-center"
+                    style={{ colorScheme: 'dark' }}
                 >
-                    <option value="Principal">PV</option>
-                    <option value="Contractor">CV</option>
-                    <option value="Lessor Works">LV</option>
+                    <option value="Principal" className="bg-[#2d2d30] text-[#cccccc]">PV</option>
+                    <option value="Contractor" className="bg-[#2d2d30] text-[#cccccc]">CV</option>
+                    <option value="Lessor Works" className="bg-[#2d2d30] text-[#cccccc]">LV</option>
                 </select>
             </td>
             <td className="border-x border-[#3e3e42] px-1 py-1 text-center w-[40px]">
@@ -615,14 +626,15 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                     className={inputClass}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[#3e3e42] px-1 py-1 hidden @[800px]:table-cell">
                 <select
                     value={formData.costLineId}
                     onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
-                    className={inputClass}
+                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
                     title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
+                    style={{ colorScheme: 'dark' }}
                 >
-                    <option value="">None</option>
+                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
                     {sortedCostLines.map((line) => {
                         const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
                         const label = line.costCode
@@ -633,19 +645,19 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                                 ? `${disciplineOrTrade} - ${line.activity}`
                                 : line.activity;
                         return (
-                            <option key={line.id} value={line.id} title={label}>
+                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
                                 {label}
                             </option>
                         );
                     })}
                 </select>
             </td>
-            <td className="border-x border-[#3e3e42] px-2 py-1.5">
+            <td className="border-x border-[#3e3e42] px-2 py-1.5 hidden @[700px]:table-cell">
                 <span className="px-1.5 py-0.5 rounded text-[10px] border bg-yellow-900/40 text-yellow-400 border-yellow-600">
                     Forecast
                 </span>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[85px]">
                 <input
                     type="number"
                     value={formData.amountForecastCents / 100 || ''}
@@ -654,41 +666,44 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                     className={numberInputClass}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 text-right font-mono text-[#6e6e6e]">
+            <td className="border-x border-[#3e3e42] px-2 py-1.5 text-right font-mono text-[#6e6e6e] w-[85px]">
                 -
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
-                <div className="flex items-center justify-center gap-1">
+            <td className="border-x border-[#3e3e42] px-1 py-1 hidden @[600px]:table-cell">
+                <span className="text-[#6e6e6e] text-[10px]">-</span>
+            </td>
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[50px] hidden @[500px]:table-cell">
+                <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value as VariationCategory })}
+                    className="w-full px-0.5 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[10px] text-[#cccccc] focus:outline-none cursor-pointer text-center"
+                    style={{ colorScheme: 'dark' }}
+                >
+                    <option value="Principal" className="bg-[#2d2d30] text-[#cccccc]">PV</option>
+                    <option value="Contractor" className="bg-[#2d2d30] text-[#cccccc]">CV</option>
+                    <option value="Lessor Works" className="bg-[#2d2d30] text-[#cccccc]">LV</option>
+                </select>
+            </td>
+            <td className="border-x border-[#3e3e42] px-1 py-1 w-[40px]">
+                <div className="flex items-center justify-center gap-0.5">
                     <button
                         onClick={handleSave}
                         disabled={!formData.description.trim() || isSubmitting}
-                        className="p-1 text-green-400 hover:text-green-300 hover:bg-green-900/30 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="p-0.5 text-green-400 hover:text-green-300 hover:bg-green-900/30 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="Save (Enter)"
                     >
-                        <Check className="h-4 w-4" />
+                        <Check className="h-3.5 w-3.5" />
                     </button>
                     <button
                         onClick={onCancel}
                         disabled={isSubmitting}
-                        className="p-1 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded disabled:opacity-50 transition-colors"
+                        className="p-0.5 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded disabled:opacity-50 transition-colors"
                         title="Cancel (Esc)"
                     >
-                        <X className="h-4 w-4" />
+                        <X className="h-3.5 w-3.5" />
                     </button>
                 </div>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
-                <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value as VariationCategory })}
-                    className={`${inputClass} text-center`}
-                >
-                    <option value="Principal">PV</option>
-                    <option value="Contractor">CV</option>
-                    <option value="Lessor Works">LV</option>
-                </select>
-            </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[40px]"></td>
         </tr>
     );
 }

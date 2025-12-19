@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { transmittals, subcategories, documents, transmittalItems, versions, fileAssets } from '@/lib/db/schema';
+import { transmittals, subcategories, documents, transmittalItems, versions, fileAssets } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, desc, inArray, and, isNull } from 'drizzle-orm';
 
@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
                 conditions.push(isNull(transmittals.disciplineId));
             }
 
-            const transmittal = await db
+            const [transmittal] = await db
                 .select()
                 .from(transmittals)
                 .where(and(...conditions))
-                .get();
+                .limit(1);
 
             if (!transmittal) {
                 return NextResponse.json({ error: 'Transmittal not found' }, { status: 404 });
@@ -108,11 +108,11 @@ export async function POST(request: NextRequest) {
                 conditions.push(isNull(transmittals.disciplineId));
             }
 
-            const existing = await db
+            const [existing] = await db
                 .select({ id: transmittals.id })
                 .from(transmittals)
                 .where(and(...conditions))
-                .get();
+                .limit(1);
 
             if (existing) {
                 // Update existing transmittal
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
                 await db
                     .update(transmittals)
-                    .set({ name, updatedAt: new Date().toISOString() })
+                    .set({ name, updatedAt: new Date() })
                     .where(eq(transmittals.id, transmittalId));
 
                 // Clear old items

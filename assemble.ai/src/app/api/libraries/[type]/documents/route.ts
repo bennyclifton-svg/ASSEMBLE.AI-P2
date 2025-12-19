@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { knowledgeLibraries, libraryDocuments, fileAssets } from '@/lib/db/schema';
+import { knowledgeLibraries, libraryDocuments, fileAssets } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { KNOWLEDGE_LIBRARY_TYPES, type LibraryType } from '@/lib/constants/libraries';
 import { eq, and, inArray } from 'drizzle-orm';
@@ -51,7 +51,7 @@ export async function GET(
     }
 
     // Get the library for this type and organization
-    const library = await db
+    const [library] = await db
       .select()
       .from(knowledgeLibraries)
       .where(
@@ -60,7 +60,7 @@ export async function GET(
           eq(knowledgeLibraries.type, type)
         )
       )
-      .get();
+      .limit(1);
 
     if (!library) {
       return NextResponse.json([]);
@@ -133,7 +133,7 @@ export async function POST(
     }
 
     // Get or create library
-    let library = await db
+    let [library] = await db
       .select()
       .from(knowledgeLibraries)
       .where(
@@ -142,7 +142,7 @@ export async function POST(
           eq(knowledgeLibraries.type, type)
         )
       )
-      .get();
+      .limit(1);
 
     const now = Math.floor(Date.now() / 1000);
 
@@ -279,7 +279,7 @@ export async function DELETE(
     }
 
     // Get the library
-    const library = await db
+    const [library2] = await db
       .select()
       .from(knowledgeLibraries)
       .where(
@@ -288,9 +288,9 @@ export async function DELETE(
           eq(knowledgeLibraries.type, type)
         )
       )
-      .get();
+      .limit(1);
 
-    if (!library) {
+    if (!library2) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Library not found' } },
         { status: 404 }
@@ -302,7 +302,7 @@ export async function DELETE(
       .delete(libraryDocuments)
       .where(
         and(
-          eq(libraryDocuments.libraryId, library.id),
+          eq(libraryDocuments.libraryId, library2.id),
           inArray(libraryDocuments.id, documentIds)
         )
       );
@@ -312,7 +312,7 @@ export async function DELETE(
     const remainingDocs = await db
       .select()
       .from(libraryDocuments)
-      .where(eq(libraryDocuments.libraryId, library.id));
+      .where(eq(libraryDocuments.libraryId, library2.id));
 
     await db
       .update(knowledgeLibraries)
@@ -320,7 +320,7 @@ export async function DELETE(
         documentCount: remainingDocs.length,
         updatedAt: now,
       })
-      .where(eq(knowledgeLibraries.id, library.id));
+      .where(eq(knowledgeLibraries.id, library2.id));
 
     return NextResponse.json({
       deleted: documentIds.length,

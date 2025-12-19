@@ -7,7 +7,7 @@ export interface Toast {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
-  variant?: "default" | "destructive"
+  variant?: "default" | "destructive" | "success" | "warning" | "info"
 }
 
 const TOAST_LIMIT = 3
@@ -141,7 +141,7 @@ export interface ToastOptions {
   title?: string
   description?: string
   action?: ToastActionElement
-  variant?: "default" | "destructive"
+  variant?: "default" | "destructive" | "success" | "warning" | "info"
 }
 
 function toast(props: ToastOptions) {

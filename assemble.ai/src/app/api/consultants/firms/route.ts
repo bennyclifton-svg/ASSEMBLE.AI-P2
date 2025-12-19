@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { consultants } from '@/lib/db/schema';
-import { eq, and, or } from 'drizzle-orm';
+import { consultants } from '@/lib/db';
+import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET /api/consultants/firms?projectId=X&discipline=Y
@@ -18,18 +18,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let query = db.select().from(consultants).where(eq(consultants.projectId, projectId));
-
+    let result;
     if (discipline) {
-      query = query.where(
+      result = await db.select().from(consultants).where(
         and(
           eq(consultants.projectId, projectId),
           eq(consultants.discipline, discipline)
         )
       );
+    } else {
+      result = await db.select().from(consultants).where(eq(consultants.projectId, projectId));
     }
 
-    const result = await query.all();
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error fetching consultants:', error);
@@ -61,16 +61,16 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!projectId || !companyName || !discipline || !email) {
+    if (!projectId || !companyName || !discipline) {
       return NextResponse.json(
-        { error: 'projectId, companyName, discipline, and email are required' },
+        { error: 'projectId, companyName, and discipline are required' },
         { status: 400 }
       );
     }
 
     // Create new consultant
     const id = uuidv4();
-    const now = new Date().toISOString();
+    const now = new Date();
 
     await db.insert(consultants).values({
       id,
@@ -91,11 +91,11 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     });
 
-    const newConsultant = await db
+    const [newConsultant] = await db
       .select()
       .from(consultants)
       .where(eq(consultants.id, id))
-      .get();
+      .limit(1);
 
     return NextResponse.json(newConsultant, { status: 201 });
   } catch (error) {

@@ -1,39 +1,49 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
+require('dotenv').config({ path: '.env.development' });
 
-const dbPath = path.join(__dirname, 'sqlite.db');
-console.log('Database path:', dbPath);
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || process.env.SUPABASE_POSTGRES_URL
+});
 
-try {
-    const db = new Database(dbPath);
+async function check() {
+  try {
+    console.log('Connecting to:', process.env.DATABASE_URL || process.env.SUPABASE_POSTGRES_URL);
 
-    // Get all tables
-    const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
-    console.log('\nExisting tables:');
-    tables.forEach(table => {
-        console.log(`  - ${table.name}`);
-    });
+    // Check if sessions table exists
+    const result = await pool.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND table_name = 'sessions'
+    `);
+    console.log('Sessions table exists:', result.rows.length > 0);
 
-    // Check for trr and addenda
-    const trrTable = tables.find(t => t.name === 'trr');
-    const addendaTable = tables.find(t => t.name === 'addenda');
+    if (result.rows.length > 0) {
+      // Check table structure
+      const cols = await pool.query(`
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_name = 'sessions'
+        ORDER BY ordinal_position
+      `);
+      console.log('Columns:', cols.rows);
+    } else {
+      console.log('Sessions table does NOT exist!');
 
-    console.log('\ntrr table exists:', !!trrTable);
-    console.log('addenda table exists:', !!addendaTable);
-
-    if (addendaTable) {
-        const addendaColumns = db.prepare("PRAGMA table_info(addenda)").all();
-        console.log('\naddenda columns:');
-        addendaColumns.forEach(c => console.log('  -', c.name, c.type));
+      // List all tables
+      const tables = await pool.query(`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        ORDER BY table_name
+      `);
+      console.log('All tables in database:', tables.rows.map(r => r.table_name));
     }
 
-    if (trrTable) {
-        const trrColumns = db.prepare("PRAGMA table_info(trr)").all();
-        console.log('\ntrr columns:');
-        trrColumns.forEach(c => console.log('  -', c.name, c.type));
-    }
-
-    db.close();
-} catch (error) {
-    console.error('Error:', error.message);
+  } catch (err) {
+    console.error('Database Error:', err);
+  } finally {
+    await pool.end();
+  }
 }
+check();

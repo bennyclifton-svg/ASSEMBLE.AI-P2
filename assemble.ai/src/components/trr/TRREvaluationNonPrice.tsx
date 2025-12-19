@@ -134,7 +134,7 @@ export function TRREvaluationNonPrice({
                                                     <div className="flex flex-col min-h-[40px]">
                                                         {/* Content - top */}
                                                         {content && (
-                                                            <p className="text-[#858585] text-xs line-clamp-2 flex-1 mb-1">
+                                                            <p className="text-[#858585] text-xs flex-1 mb-1">
                                                                 {content}
                                                             </p>
                                                         )}

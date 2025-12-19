@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { transmittals, transmittalItems, versions, fileAssets, documents } from '@/lib/db/schema';
+import { transmittals, transmittalItems, versions, fileAssets, documents } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 export async function GET(
@@ -10,7 +10,7 @@ export async function GET(
 ) {
     return handleApiError(async () => {
         const { id } = await params;
-        const transmittal = await db.select().from(transmittals).where(eq(transmittals.id, id)).get();
+        const [transmittal] = await db.select().from(transmittals).where(eq(transmittals.id, id)).limit(1);
 
         if (!transmittal) {
             return NextResponse.json({ error: 'Transmittal not found' }, { status: 404 });
@@ -49,7 +49,7 @@ export async function PATCH(
                 ...(name && { name }),
                 ...(status && { status }),
                 ...(issuedAt && { issuedAt }),
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(transmittals.id, id));
 

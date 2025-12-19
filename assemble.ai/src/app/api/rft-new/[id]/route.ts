@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { rftNew } from '@/lib/db/schema';
+import { rftNew } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -16,11 +16,11 @@ export async function GET(
     return handleApiError(async () => {
         const { id } = await params;
 
-        const report = await db
+        const [report] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
         if (!report) {
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
@@ -42,11 +42,11 @@ export async function PUT(
         const body = await request.json();
         const { rftDate } = body;
 
-        const existing = await db
+        const [existing] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
         if (!existing) {
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
@@ -56,15 +56,15 @@ export async function PUT(
             .update(rftNew)
             .set({
                 rftDate,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(rftNew.id, id));
 
-        const updated = await db
+        const [updated] = await db
             .select()
             .from(rftNew)
             .where(eq(rftNew.id, id))
-            .get();
+            .limit(1);
 
         return NextResponse.json(updated);
     });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractorTrades } from '@/lib/db/schema';
+import { contractorTrades } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 export async function PUT(
@@ -15,7 +15,7 @@ export async function PUT(
 
         // Build update object with only provided fields
         const updateData: Record<string, unknown> = {
-            updatedAt: new Date().toISOString(),
+            updatedAt: new Date(),
         };
 
         if (typeof isEnabled === 'boolean') {

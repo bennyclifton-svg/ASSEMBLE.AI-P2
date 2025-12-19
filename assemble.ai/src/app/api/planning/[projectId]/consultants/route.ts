@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { consultantDisciplines, consultantStatuses } from '@/lib/db/schema';
+import { consultantDisciplines, consultantStatuses } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { CONSULTANT_DISCIPLINES, STATUS_TYPES } from '@/lib/constants/disciplines';
 

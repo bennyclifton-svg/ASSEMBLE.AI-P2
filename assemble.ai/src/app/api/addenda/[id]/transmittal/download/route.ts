@@ -6,13 +6,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { addenda, addendumTransmittals, documents, versions, fileAssets, categories, subcategories } from '@/lib/db/schema';
+import { addenda, addendumTransmittals, documents, versions, fileAssets, categories, subcategories } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import JSZip from 'jszip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import fs from 'fs';
-import path from 'path';
+import { getFileFromStorage } from '@/lib/storage';
 
 interface RouteContext {
     params: Promise<{ id: string }>;
@@ -26,7 +25,7 @@ export async function GET(
         const { id } = await context.params;
 
         // 1. Verify Addendum exists and get context info
-        const existing = await db
+        const [existing] = await db
             .select({
                 id: addenda.id,
                 addendumNumber: addenda.addendumNumber,
@@ -35,7 +34,7 @@ export async function GET(
             })
             .from(addenda)
             .where(eq(addenda.id, id))
-            .get();
+            .limit(1);
 
         if (!existing) {
             return NextResponse.json({ error: 'Addendum not found' }, { status: 404 });
@@ -73,15 +72,17 @@ export async function GET(
         // Add files to ZIP
         for (const item of items) {
             try {
-                // Storage paths are relative like /uploads/filename.ext
-                // Need to join with process.cwd() to get full path
-                const fullPath = item.storagePath ? path.join(process.cwd(), item.storagePath) : null;
-                if (fullPath && fs.existsSync(fullPath)) {
-                    const fileData = fs.readFileSync(fullPath);
-                    folder.file(item.originalName || 'unknown_file', fileData);
+                // Use getFileFromStorage to support both local and Supabase storage
+                if (item.storagePath) {
+                    const fileData = await getFileFromStorage(item.storagePath);
+                    if (fileData) {
+                        folder.file(item.originalName || 'unknown_file', fileData);
+                    } else {
+                        console.warn(`File not found: ${item.storagePath}`);
+                        folder.file(`${item.originalName || 'unknown'}.txt`, `Error: File not found on server.`);
+                    }
                 } else {
-                    console.warn(`File not found: ${fullPath}`);
-                    folder.file(`${item.originalName || 'unknown'}.txt`, `Error: File not found on server.`);
+                    folder.file(`${item.originalName || 'unknown'}.txt`, `Error: No storage path.`);
                 }
             } catch (e) {
                 console.error(`Failed to add file ${item.originalName} to zip`, e);
@@ -97,7 +98,7 @@ export async function GET(
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 14, 32);
         doc.text(`Total Documents: ${items.length}`, 14, 38);
 
-        const tableData = items.map((item, index) => [
+        const tableData = items.map((item: typeof items[number], index: number) => [
             (index + 1).toString(),
             item.originalName || 'Unknown',
             `v${item.versionNumber || 1}`,

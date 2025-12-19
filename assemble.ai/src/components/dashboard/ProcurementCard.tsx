@@ -7,6 +7,7 @@ import { useContractorTrades } from '@/lib/hooks/use-contractor-trades';
 import { ConsultantGallery } from '@/components/consultants/ConsultantGallery';
 import { ContractorGallery } from '@/components/contractors/ContractorGallery';
 import { CostPlanPanel } from '@/components/cost-plan/CostPlanPanel';
+import { ProgramPanel } from '@/components/program/ProgramPanel';
 
 interface ProcurementCardProps {
     projectId: string;
@@ -66,6 +67,12 @@ export function ProcurementCard({ projectId, selectedDocumentIds, onSetSelectedD
                         className="data-[state=active]:bg-[#252526] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#0e639c] rounded-none px-4 py-2 text-[#858585] text-2xl font-bold"
                     >
                         Cost Planning
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="program"
+                        className="data-[state=active]:bg-[#252526] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#0e639c] rounded-none px-4 py-2 text-[#858585] text-2xl font-bold"
+                    >
+                        Program
                     </TabsTrigger>
                 </TabsList>
 
@@ -152,6 +159,10 @@ export function ProcurementCard({ projectId, selectedDocumentIds, onSetSelectedD
 
                 <TabsContent value="cost-planning" className="flex-1 mt-0 overflow-hidden">
                     <CostPlanPanel projectId={projectId} />
+                </TabsContent>
+
+                <TabsContent value="program" className="flex-1 mt-0 overflow-hidden">
+                    <ProgramPanel projectId={projectId} />
                 </TabsContent>
             </Tabs>
         </div>

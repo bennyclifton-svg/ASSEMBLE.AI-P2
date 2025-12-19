@@ -449,10 +449,11 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                 <select
                     value={invoice.costLineId || ''}
                     onChange={(e) => handleCostLineChange(e.target.value)}
-                    className="w-full px-1 py-0.5 bg-transparent border border-transparent hover:border-[#3e3e42] focus:border-[#0e639c] rounded text-[11px] text-[#858585] focus:outline-none cursor-pointer"
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
                     title={invoice.costLine?.activity || ''}
+                    style={{ colorScheme: 'dark' }}
                 >
-                    <option value="">None</option>
+                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
                     {sortedCostLines.map((line) => {
                         const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
                         const label = line.costCode
@@ -463,7 +464,7 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                                 ? `${disciplineOrTrade} - ${line.activity}`
                                 : line.activity;
                         return (
-                            <option key={line.id} value={line.id} title={label}>
+                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
                                 {label}
                             </option>
                         );
@@ -637,10 +638,11 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                 <select
                     value={formData.costLineId}
                     onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
-                    className={inputClass}
+                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
                     title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
+                    style={{ colorScheme: 'dark' }}
                 >
-                    <option value="">None</option>
+                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
                     {sortedCostLines.map((line) => {
                         const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
                         const label = line.costCode
@@ -651,7 +653,7 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                                 ? `${disciplineOrTrade} - ${line.activity}`
                                 : line.activity;
                         return (
-                            <option key={line.id} value={line.id} title={label}>
+                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
                                 {label}
                             </option>
                         );

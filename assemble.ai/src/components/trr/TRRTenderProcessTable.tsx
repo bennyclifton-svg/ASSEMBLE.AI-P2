@@ -108,7 +108,7 @@ export function TRRTenderProcessTable({
                                         {firm.shortlisted && (
                                             <Star
                                                 className="w-4 h-4 mx-auto"
-                                                style={{ color: '#f1c40f', fill: '#f1c40f' }}
+                                                style={{ color: '#D4A574', fill: '#D4A574' }}
                                             />
                                         )}
                                     </td>

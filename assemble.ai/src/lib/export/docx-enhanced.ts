@@ -59,58 +59,89 @@ function processTextContent(element: Element): string {
 }
 
 /**
- * Create a two-column info table (like project info)
+ * Create a generic table that handles any structure (headers, multiple columns, etc.)
  */
-function createInfoTable(element: Element): Table {
+function createInfoTable(element: Element): Table | null {
   const rows: TableRow[] = [];
-  const trs = element.querySelectorAll('tr');
+
+  // Process header row if present
+  const thead = element.querySelector('thead');
+  if (thead) {
+    const ths = thead.querySelectorAll('th');
+    if (ths.length > 0) {
+      const headerCells: TableCell[] = [];
+      ths.forEach(th => {
+        headerCells.push(
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: th.textContent?.trim() || '',
+                    bold: true,
+                  }),
+                ],
+              }),
+            ],
+            shading: {
+              type: ShadingType.SOLID,
+              color: 'F5F5F5',
+              fill: 'F5F5F5',
+            },
+          })
+        );
+      });
+      rows.push(new TableRow({ children: headerCells }));
+    }
+  }
+
+  // Process body rows
+  const tbody = element.querySelector('tbody') || element;
+  const trs = tbody.querySelectorAll('tr');
 
   trs.forEach(tr => {
-    const tds = tr.querySelectorAll('td');
-    if (tds.length >= 2) {
-      const label = tds[0].textContent?.trim() || '';
-      const value = tds[1].textContent?.trim() || '';
-      const isBold = tds[1].querySelector('strong') !== null;
+    // Skip rows in thead (already processed)
+    if (tr.closest('thead')) return;
 
-      rows.push(
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: label,
-                      bold: true,
-                    }),
-                  ],
-                }),
-              ],
-              width: { size: 25, type: WidthType.PERCENTAGE },
+    const cells = tr.querySelectorAll('td, th');
+    if (cells.length > 0) {
+      const rowCells: TableCell[] = [];
+      cells.forEach((cell, index) => {
+        const isFirstCol = index === 0;
+        const isHeader = cell.tagName.toLowerCase() === 'th';
+        const isBold = cell.querySelector('strong') !== null || isHeader;
+
+        rowCells.push(
+          new TableCell({
+            children: [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: cell.textContent?.trim() || '',
+                    bold: isBold,
+                  }),
+                ],
+              }),
+            ],
+            // Apply gray background to first column for label-style tables
+            ...(isFirstCol && cells.length === 2 ? {
               shading: {
                 type: ShadingType.SOLID,
                 color: 'F5F5F5',
                 fill: 'F5F5F5',
               },
-            }),
-            new TableCell({
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: value,
-                      bold: isBold,
-                    }),
-                  ],
-                }),
-              ],
-              width: { size: 75, type: WidthType.PERCENTAGE },
-            }),
-          ],
-        })
-      );
+            } : {}),
+          })
+        );
+      });
+      rows.push(new TableRow({ children: rowCells }));
     }
   });
+
+  // Return null if no rows (caller should handle this)
+  if (rows.length === 0) {
+    return null;
+  }
 
   return new Table({
     rows,
@@ -129,7 +160,7 @@ function createInfoTable(element: Element): Table {
 /**
  * Create transmittal table with proper columns
  */
-function createTransmittalTable(element: Element): Table {
+function createTransmittalTable(element: Element): Table | null {
   const rows: TableRow[] = [];
 
   // Get header row
@@ -167,7 +198,9 @@ function createTransmittalTable(element: Element): Table {
       );
     });
 
-    rows.push(new TableRow({ children: headerCells }));
+    if (headerCells.length > 0) {
+      rows.push(new TableRow({ children: headerCells }));
+    }
   }
 
   // Get data rows
@@ -218,6 +251,11 @@ function createTransmittalTable(element: Element): Table {
         rows.push(new TableRow({ children: cells }));
       }
     });
+  }
+
+  // Return null if no rows (caller should handle this)
+  if (rows.length === 0) {
+    return null;
   }
 
   return new Table({
@@ -297,7 +335,10 @@ function processDiv(element: Element, children: (Paragraph | Table)[]): void {
         );
       }
     } else if (tagName === 'table') {
-      children.push(createTransmittalTable(child));
+      const table = createTransmittalTable(child);
+      if (table) {
+        children.push(table);
+      }
     }
   });
 }
@@ -326,8 +367,11 @@ export async function exportToDOCX(
 
     if (tagName === 'table' && className.includes('project-info-table')) {
       // Project info table
-      children.push(createInfoTable(element));
-      children.push(new Paragraph({ text: '', spacing: { after: 200 } })); // Spacer
+      const table = createInfoTable(element);
+      if (table) {
+        children.push(table);
+        children.push(new Paragraph({ text: '', spacing: { after: 200 } })); // Spacer
+      }
 
     } else if (tagName === 'div' && (className.includes('content-section') || className.includes('transmittal-section'))) {
       // Content or transmittal section
@@ -411,11 +455,11 @@ export async function exportToDOCX(
     } else if (tagName === 'table') {
       // Generic table - check if it's a transmittal table
       const hasTransmittalClass = className.includes('transmittal-table');
-      if (hasTransmittalClass) {
-        children.push(createTransmittalTable(element));
-      } else {
-        // Treat as info table
-        children.push(createInfoTable(element));
+      const table = hasTransmittalClass
+        ? createTransmittalTable(element)
+        : createInfoTable(element);
+      if (table) {
+        children.push(table);
       }
     }
   }

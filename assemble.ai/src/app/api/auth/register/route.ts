@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users, organizations, sessions, knowledgeLibraries } from '@/lib/db/schema';
+import { users, organizations, sessions, knowledgeLibraries } from '@/lib/db';
 import { hashPassword, validatePassword } from '@/lib/auth/password';
 import { generateSessionToken, hashToken, setSessionCookie, getSessionExpiry } from '@/lib/auth/session';
 import { KNOWLEDGE_LIBRARY_TYPES } from '@/lib/constants/libraries';
@@ -49,11 +49,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists
-    const existingUser = await db
+    const [existingUser] = await db
       .select()
       .from(users)
       .where(eq(users.email, email.toLowerCase()))
-      .get();
+      .limit(1);
 
     if (existingUser) {
       return NextResponse.json(

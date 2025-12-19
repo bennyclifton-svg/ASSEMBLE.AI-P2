@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { evaluations, evaluationRows, evaluationCells } from '@/lib/db/schema';
+import { evaluations, evaluationRows, evaluationCells } from '@/lib/db';
 import { eq, and, inArray, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 

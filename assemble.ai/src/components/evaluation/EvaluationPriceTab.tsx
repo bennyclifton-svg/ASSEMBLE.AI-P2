@@ -86,20 +86,30 @@ export function EvaluationPriceTab({
         };
     }, [isSaving, saveStatus]);
 
-    // Filter out empty rows (rows with no cell data)
-    // A row is considered empty if no firm has entered any amount
+    // T111: Filter out empty AI-generated rows (rows with no cell data)
+    // BUT always show cost_plan and manual rows (they are expected line items)
     const visibleInitialPriceRows = useMemo(() => {
         return initialPriceRows.filter(row => {
-            // Keep row if it has any cell with data
-            const hasData = row.cells?.some(cell => cell.amountCents > 0);
+            // Always show cost_plan rows (expected line items from cost plan)
+            // and manual rows (user-created) - they should always be visible
+            // source defaults to 'cost_plan' if not set
+            if (row.source === 'cost_plan' || row.source === 'manual' || !row.source) {
+                return true;
+            }
+            // For AI-parsed rows, only show if they have data (non-zero amount)
+            const hasData = row.cells?.some(cell => cell.amountCents !== 0);
             return hasData;
         });
     }, [initialPriceRows]);
 
     const visibleAddSubsRows = useMemo(() => {
         return addSubsRows.filter(row => {
-            // Keep row if it has any cell with data
-            const hasData = row.cells?.some(cell => cell.amountCents > 0);
+            // Always show manual rows
+            if (row.source === 'manual' || !row.source) {
+                return true;
+            }
+            // For AI-parsed rows, only show if they have data
+            const hasData = row.cells?.some(cell => cell.amountCents !== 0);
             return hasData;
         });
     }, [addSubsRows]);

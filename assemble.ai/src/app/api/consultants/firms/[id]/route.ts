@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { consultants } from '@/lib/db/schema';
+import { consultants } from '@/lib/db';
 import { eq, and, or, ne } from 'drizzle-orm';
 
 // PUT /api/consultants/firms/[id]
@@ -36,7 +36,6 @@ export async function PUT(
     }
 
     // Update consultant
-    const now = new Date().toISOString();
     await db
       .update(consultants)
       .set({
@@ -52,15 +51,15 @@ export async function PUT(
         shortlisted,
         awarded,
         companyId,
-        updatedAt: now,
+        updatedAt: new Date(),
       })
       .where(eq(consultants.id, id));
 
-    const updatedConsultant = await db
+    const [updatedConsultant] = await db
       .select()
       .from(consultants)
       .where(eq(consultants.id, id))
-      .get();
+      .limit(1);
 
     if (!updatedConsultant) {
       return NextResponse.json(
@@ -88,11 +87,11 @@ export async function DELETE(
     const { id } = await params;
 
     // Check if consultant exists
-    const consultant = await db
+    const [consultant] = await db
       .select()
       .from(consultants)
       .where(eq(consultants.id, id))
-      .get();
+      .limit(1);
 
     if (!consultant) {
       return NextResponse.json(

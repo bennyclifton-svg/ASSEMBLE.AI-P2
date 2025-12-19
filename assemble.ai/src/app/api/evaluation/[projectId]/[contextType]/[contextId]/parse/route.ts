@@ -18,11 +18,11 @@ import {
     consultantDisciplines,
     contractorTrades,
     tenderSubmissions,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, and, asc, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
-import { storage } from '@/lib/storage/local';
+import { storage } from '@/lib/storage';
 import { parseTenderForEvaluation } from '@/lib/services/tender-parser';
 import type { TenderParseResult } from '@/types/evaluation';
 
@@ -108,6 +108,11 @@ export async function POST(
             orderBy: [asc(evaluationRows.orderIndex)],
         });
 
+        console.log(`[parse-route] Found ${dbRows.length} evaluation rows for evaluation ${evaluation.id}`);
+        dbRows.forEach((row, i) => {
+            console.log(`[parse-route]   Row ${i + 1}: id=${row.id}, desc="${row.description}"`);
+        });
+
         // Convert DB rows to EvaluationRow type (handle null -> undefined conversion)
         const rows = dbRows.map(row => ({
             ...row,
@@ -176,16 +181,12 @@ export async function POST(
                 subcategoryName = trade?.tradeName || null;
             }
 
-            // Ensure category exists
-            try {
-                await db.insert(categories).values({
-                    id: categoryId,
-                    name: isDiscipline ? 'Consultants' : 'Contractors',
-                    isSystem: true,
-                });
-            } catch {
-                // Category already exists, ignore
-            }
+            // Ensure category exists (upsert)
+            await db.insert(categories).values({
+                id: categoryId,
+                name: isDiscipline ? 'Consultants' : 'Contractors',
+                isSystem: true,
+            }).onConflictDoNothing();
 
             // Create document
             const documentId = uuidv4();
@@ -208,7 +209,7 @@ export async function POST(
 
             // Update document's latest version
             await db.update(documents)
-                .set({ latestVersionId: versionId, updatedAt: new Date().toISOString() })
+                .set({ latestVersionId: versionId, updatedAt: new Date() })
                 .where(eq(documents.id, documentId));
 
             console.log(`[parse-route] Uploaded to document repository: ${documentId}`);
@@ -251,9 +252,24 @@ export async function POST(
         const mappedItems = parseResult.items.filter(i => i.matchedRowId);
         const unmappedItems = parseResult.items.filter(i => !i.matchedRowId);
 
+        console.log(`[parse-route] Mapped items: ${mappedItems.length}, Unmapped items: ${unmappedItems.length}`);
+        mappedItems.forEach((item, i) => {
+            console.log(`[parse-route]   Mapped ${i + 1}: rowId=${item.matchedRowId}, desc="${item.description}"`);
+        });
+
         // Update evaluation cells with parsed amounts for MAPPED items
         for (const item of mappedItems) {
             if (!item.matchedRowId) continue;
+
+            // Verify the row still exists before inserting cell
+            const rowExists = await db.query.evaluationRows.findFirst({
+                where: eq(evaluationRows.id, item.matchedRowId),
+            });
+
+            if (!rowExists) {
+                console.warn(`[parse-route] Row ${item.matchedRowId} no longer exists, skipping cell insert`);
+                continue;
+            }
 
             // Check if cell exists
             const existingCell = await db.query.evaluationCells.findFirst({
@@ -263,14 +279,17 @@ export async function POST(
                 ),
             });
 
+            // Convert confidence from decimal (0.0-1.0) to integer percentage (0-100)
+            const confidencePercent = Math.round((item.confidence || 0) * 100);
+
             if (existingCell) {
                 // Update existing cell
                 await db.update(evaluationCells)
                     .set({
                         amountCents: item.amountCents,
                         source: 'ai',
-                        confidence: item.confidence,
-                        updatedAt: new Date().toISOString(),
+                        confidence: confidencePercent,
+                        updatedAt: new Date(),
                     })
                     .where(eq(evaluationCells.id, existingCell.id));
             } else {
@@ -282,7 +301,7 @@ export async function POST(
                     firmType,
                     amountCents: item.amountCents,
                     source: 'ai',
-                    confidence: item.confidence,
+                    confidence: confidencePercent,
                 });
             }
         }
@@ -319,6 +338,8 @@ export async function POST(
                 });
 
                 // Create cell for this new row
+                // Convert confidence from decimal (0.0-1.0) to integer percentage (0-100)
+                const confidencePercent = Math.round((item.confidence || 0) * 100);
                 await db.insert(evaluationCells).values({
                     id: nanoid(),
                     rowId: newRowId,
@@ -326,7 +347,7 @@ export async function POST(
                     firmType,
                     amountCents: item.amountCents,
                     source: 'ai',
-                    confidence: item.confidence,
+                    confidence: confidencePercent,
                 });
 
                 newRowsCreated.push({
@@ -363,8 +384,9 @@ export async function POST(
         });
     } catch (error) {
         console.error('Error parsing tender:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         return NextResponse.json(
-            { error: 'Failed to parse tender document' },
+            { error: `Failed to parse tender document: ${errorMessage}` },
             { status: 500 }
         );
     }

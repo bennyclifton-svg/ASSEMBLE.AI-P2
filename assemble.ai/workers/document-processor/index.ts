@@ -9,7 +9,11 @@
 import { config } from 'dotenv';
 
 // Load environment variables FIRST - before any other imports
-config({ path: '.env.local' });
+// In production (Docker), env vars are injected so this is a no-op
+// In development, load from .env.local
+if (process.env.NODE_ENV !== 'production') {
+    config({ path: '.env.local' });
+}
 
 // Verify required env vars
 console.log('[worker] Checking environment variables...');

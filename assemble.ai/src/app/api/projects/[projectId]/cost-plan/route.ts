@@ -8,7 +8,7 @@ import {
     invoices,
     consultantDisciplines,
     contractorTrades,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, isNull, and } from 'drizzle-orm';
 import {
     calculateCostLineFields,
@@ -117,9 +117,13 @@ export async function GET(
             );
 
         // Fetch disciplines for cost lines
-        const disciplineIds = [...new Set(projectCostLines.filter(cl => cl.disciplineId).map(cl => cl.disciplineId!))];
+        const disciplineIds: string[] = projectCostLines
+            .filter(cl => cl.disciplineId)
+            .map(cl => cl.disciplineId as string)
+            .filter((v, i, a) => a.indexOf(v) === i);
         const disciplinesMap = new Map<string, typeof consultantDisciplines.$inferSelect>();
-        for (const disciplineId of disciplineIds) {
+        for (let i = 0; i < disciplineIds.length; i++) {
+            const disciplineId: string = disciplineIds[i];
             const [discipline] = await db
                 .select()
                 .from(consultantDisciplines)
@@ -130,9 +134,13 @@ export async function GET(
         }
 
         // Fetch trades for cost lines
-        const tradeIds = [...new Set(projectCostLines.filter(cl => cl.tradeId).map(cl => cl.tradeId!))];
+        const tradeIds: string[] = projectCostLines
+            .filter(cl => cl.tradeId)
+            .map(cl => cl.tradeId as string)
+            .filter((v, i, a) => a.indexOf(v) === i);
         const tradesMap = new Map<string, typeof contractorTrades.$inferSelect>();
-        for (const tradeId of tradeIds) {
+        for (let i = 0; i < tradeIds.length; i++) {
+            const tradeId: string = tradeIds[i];
             const [trade] = await db
                 .select()
                 .from(contractorTrades)

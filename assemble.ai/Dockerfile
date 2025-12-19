@@ -56,10 +56,20 @@ COPY --from=builder /app/public ./public
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 
+# Create uploads directory with correct permissions
+RUN mkdir -p uploads
+RUN chown nextjs:nodejs uploads
+
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy worker files
+COPY --from=builder --chown=nextjs:nodejs /app/dist/workers ./dist/workers
+
+# Install concurrently for running both processes
+RUN npm install -g concurrently
 
 # Switch to non-root user
 USER nextjs
@@ -75,5 +85,5 @@ ENV PORT=3000
 # HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 #   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# Start the application
-CMD ["node", "server.js"]
+# Start both Next.js and worker processes
+CMD ["concurrently", "-n", "next,worker", "node server.js", "node dist/workers/index.js"]

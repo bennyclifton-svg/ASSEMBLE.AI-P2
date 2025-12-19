@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractorStatuses } from '@/lib/db/schema';
+import { contractorStatuses } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -27,13 +27,14 @@ export async function PUT(
             ));
 
         let result;
+        const now = new Date();
         if (existing.length > 0) {
             // Update
             result = await db.update(contractorStatuses)
                 .set({
                     isActive,
-                    updatedAt: new Date().toISOString(),
-                    completedAt: isActive ? new Date().toISOString() : null
+                    updatedAt: now,
+                    completedAt: isActive ? now : null
                 })
                 .where(eq(contractorStatuses.id, existing[0].id))
                 .returning();
@@ -45,7 +46,7 @@ export async function PUT(
                     tradeId,
                     statusType,
                     isActive,
-                    completedAt: isActive ? new Date().toISOString() : null
+                    completedAt: isActive ? now : null
                 })
                 .returning();
         }

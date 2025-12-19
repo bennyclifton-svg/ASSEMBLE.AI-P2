@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { transmittals, transmittalItems, versions, fileAssets, documents, subcategories } from '@/lib/db/schema';
+import { transmittals, transmittalItems, versions, fileAssets, documents, subcategories } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import JSZip from 'jszip';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import fs from 'fs';
-import path from 'path';
+import { getFileFromStorage } from '@/lib/storage';
 
 export async function GET(
     request: NextRequest,
@@ -17,7 +16,7 @@ export async function GET(
         const { id: transmittalId } = await params;
 
         // 1. Fetch Transmittal Details
-        const transmittal = await db.select({
+        const [transmittal] = await db.select({
             id: transmittals.id,
             name: transmittals.name,
             status: transmittals.status,
@@ -27,7 +26,7 @@ export async function GET(
             .from(transmittals)
             .leftJoin(subcategories, eq(transmittals.subcategoryId, subcategories.id))
             .where(eq(transmittals.id, transmittalId))
-            .get();
+            .limit(1);
 
         if (!transmittal) {
             return NextResponse.json({ error: 'Transmittal not found' }, { status: 404 });
@@ -57,8 +56,9 @@ export async function GET(
         // Add files to ZIP
         for (const item of items) {
             try {
-                if (fs.existsSync(item.storagePath)) {
-                    const fileData = fs.readFileSync(item.storagePath);
+                // Use getFileFromStorage to support both local and Supabase storage
+                const fileData = await getFileFromStorage(item.storagePath);
+                if (fileData) {
                     folder.file(item.originalName, fileData);
                 } else {
                     console.warn(`File not found: ${item.storagePath}`);

@@ -1,80 +1,89 @@
-/**
- * Features Section Component
- * Highlights key product features
- */
+import { SectionContainer } from './shared/SectionContainer';
+import { ScrollReveal } from './shared/ScrollReveal';
+import { featuresContent } from './data/landing-data';
 
-'use client';
+function FeatureMockup({ index }: { index: number }) {
+    // Different mockup styles for visual variety
+    const mockupStyles = [
+        'from-[var(--primary)] to-[var(--primary-dark)]', // Dashboard
+        'from-[var(--gray-700)] to-[var(--gray-800)]', // Document
+        'from-[var(--primary-light)] to-[var(--primary)]', // AI
+        'from-[var(--gray-600)] to-[var(--gray-700)]', // Cost
+        'from-[var(--primary)] to-[var(--primary-light)]', // Hub
+        'from-[var(--gray-800)] to-[var(--black)]', // Reports
+        'from-[var(--primary-dark)] to-[var(--primary)]', // Knowledge
+    ];
 
-import { FileText, Users, BarChart3, Zap, Shield, Clock } from 'lucide-react';
-
-const features = [
-    {
-        name: 'Intelligent Document Management',
-        description: 'Automatically organize, version, and track all project documents. AI-powered OCR and search across your entire document library.',
-        icon: FileText,
-    },
-    {
-        name: 'Procurement Automation',
-        description: 'Streamline tender processes with automated RFT generation, evaluation scoring, and recommendation reports.',
-        icon: Users,
-    },
-    {
-        name: 'Cost Planning & Tracking',
-        description: 'Real-time budget tracking, variation management, and invoice processing with AI-powered data extraction.',
-        icon: BarChart3,
-    },
-    {
-        name: 'AI-Powered Insights',
-        description: 'Ask questions about your projects in natural language. Get instant answers backed by your project documents.',
-        icon: Zap,
-    },
-    {
-        name: 'Australian Compliance',
-        description: 'Built for Australian construction standards. GST handling, local regulatory awareness, and AUD-first design.',
-        icon: Shield,
-    },
-    {
-        name: 'Real-Time Collaboration',
-        description: 'Work together with your team in real-time. All changes sync instantly across devices and users.',
-        icon: Clock,
-    },
-];
+    return (
+        <div className={`w-full aspect-[4/3] rounded-2xl bg-gradient-to-br ${mockupStyles[index % mockupStyles.length]} shadow-xl flex items-center justify-center overflow-hidden`}>
+            <div className="w-[85%] h-[75%] bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 p-4">
+                <div className="flex gap-1.5 mb-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--logo-red)]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--logo-yellow)]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--logo-green)]" />
+                </div>
+                <div className="space-y-2">
+                    <div className="h-3 bg-white/20 rounded w-3/4" />
+                    <div className="h-3 bg-white/20 rounded w-1/2" />
+                    <div className="h-3 bg-white/20 rounded w-2/3" />
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                        <div className="h-16 bg-white/15 rounded" />
+                        <div className="h-16 bg-white/15 rounded" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 export function FeaturesSection() {
     return (
-        <section className="py-20 sm:py-32" id="features">
-            <div className="mx-auto max-w-7xl px-6 lg:px-8">
-                <div className="mx-auto max-w-2xl text-center">
-                    <h2 className="text-base font-semibold leading-7 text-blue-400">
-                        Everything you need
+        <SectionContainer id="features" background="bg-white" className="py-24">
+            <ScrollReveal>
+                <div className="text-center mb-20">
+                    <p className="text-[var(--gray-500)] text-sm font-medium mb-3">
+                        {featuresContent.label}
+                    </p>
+                    <h2 className="serif text-[clamp(36px,4vw,52px)] leading-[1.1] text-[var(--gray-800)]">
+                        {featuresContent.headline}
                     </h2>
-                    <p className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                        Built for Construction Professionals
-                    </p>
-                    <p className="mt-6 text-lg leading-8 text-gray-400">
-                        Comprehensive tools designed specifically for the Australian construction industry.
-                        From small firms to enterprise projects.
-                    </p>
                 </div>
+            </ScrollReveal>
 
-                <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
-                    <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
-                        {features.map((feature) => (
-                            <div key={feature.name} className="flex flex-col">
-                                <dt className="flex items-center gap-x-3 text-lg font-semibold leading-7 text-white">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600/10 ring-1 ring-blue-600/30">
-                                        <feature.icon className="h-5 w-5 text-blue-400" aria-hidden="true" />
+            <div className="space-y-24">
+                {featuresContent.features.map((feature, index) => {
+                    const isReversed = index % 2 === 1;
+                    return (
+                        <ScrollReveal key={feature.title} delay={index * 100}>
+                            <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center ${isReversed ? 'lg:flex-row-reverse' : ''}`}>
+                                {/* Text content */}
+                                <div className={`${isReversed ? 'lg:order-2' : 'lg:order-1'}`}>
+                                    <h3 className="serif text-[28px] lg:text-[32px] text-[var(--gray-800)] mb-4">
+                                        {feature.title}
+                                    </h3>
+                                    <p className="text-[var(--gray-600)] text-base lg:text-lg mb-6 leading-relaxed">
+                                        {feature.description}
+                                    </p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-6 h-6 rounded-full bg-[var(--primary)] flex items-center justify-center">
+                                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
+                                        </div>
+                                        <span className="text-[var(--gray-700)] font-medium">
+                                            {feature.benefit}
+                                        </span>
                                     </div>
-                                    {feature.name}
-                                </dt>
-                                <dd className="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-400">
-                                    <p className="flex-auto">{feature.description}</p>
-                                </dd>
+                                </div>
+                                {/* Mockup */}
+                                <div className={`${isReversed ? 'lg:order-1' : 'lg:order-2'}`}>
+                                    <FeatureMockup index={index} />
+                                </div>
                             </div>
-                        ))}
-                    </dl>
-                </div>
+                        </ScrollReveal>
+                    );
+                })}
             </div>
-        </section>
+        </SectionContainer>
     );
 }

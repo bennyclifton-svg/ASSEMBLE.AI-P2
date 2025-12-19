@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr } from '@/lib/db/schema';
+import { trr } from '@/lib/db';
 import { eq, sql } from 'drizzle-orm';
 
 interface RouteContext {
@@ -23,11 +23,11 @@ export async function GET(
     return handleApiError(async () => {
         const { id } = await context.params;
 
-        const existing = await db
+        const [existing] = await db
             .select()
             .from(trr)
             .where(eq(trr.id, id))
-            .get();
+            .limit(1);
 
         if (!existing) {
             return NextResponse.json({ error: 'TRR not found' }, { status: 404 });
@@ -46,13 +46,13 @@ export async function PUT(
         const body = await request.json();
 
         // Validate TRR exists
-        const existing = await db
+        const [existing2] = await db
             .select()
             .from(trr)
             .where(eq(trr.id, id))
-            .get();
+            .limit(1);
 
-        if (!existing) {
+        if (!existing2) {
             return NextResponse.json({ error: 'TRR not found' }, { status: 404 });
         }
 
@@ -80,11 +80,11 @@ export async function PUT(
             .where(eq(trr.id, id));
 
         // Fetch and return the updated TRR
-        const updated = await db
+        const [updated] = await db
             .select()
             .from(trr)
             .where(eq(trr.id, id))
-            .get();
+            .limit(1);
 
         return NextResponse.json(updated);
     });

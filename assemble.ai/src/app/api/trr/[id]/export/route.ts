@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr, consultantDisciplines, contractorTrades } from '@/lib/db/schema';
+import { trr, consultantDisciplines, contractorTrades } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 interface RouteContext {
@@ -25,11 +25,11 @@ export async function POST(
         const { format } = body;
 
         // Verify TRR exists
-        const existing = await db
+        const [existing] = await db
             .select()
             .from(trr)
             .where(eq(trr.id, id))
-            .get();
+            .limit(1);
 
         if (!existing) {
             return NextResponse.json({ error: 'TRR not found' }, { status: 404 });
@@ -38,18 +38,18 @@ export async function POST(
         // Get discipline or trade name
         let contextName = 'Unknown';
         if (existing.disciplineId) {
-            const discipline = await db
+            const [discipline] = await db
                 .select()
                 .from(consultantDisciplines)
                 .where(eq(consultantDisciplines.id, existing.disciplineId))
-                .get();
+                .limit(1);
             contextName = discipline?.disciplineName || 'Unknown';
         } else if (existing.tradeId) {
-            const trade = await db
+            const [trade] = await db
                 .select()
                 .from(contractorTrades)
                 .where(eq(contractorTrades.id, existing.tradeId))
-                .get();
+                .limit(1);
             contextName = trade?.tradeName || 'Unknown';
         }
 

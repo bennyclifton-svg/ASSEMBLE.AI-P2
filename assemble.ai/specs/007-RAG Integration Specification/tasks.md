@@ -487,7 +487,11 @@ Phase 2 (Foundational) ──────────── BLOCKS ALL USER STOR
      │
      ├─── Phase 11 (Unified Report Editor) ←── depends on Phase 4 (US2) for report generation
      │
-     └─── Phase 12 (RFT Tabbed Interface) ←── depends on Phase 11 for editor components
+     ├─── Phase 12 (RFT Tabbed Interface) ←── depends on Phase 11 for editor components
+     │
+     ├─── Phase 13 (Knowledge Source) ←── depends on Phase 2 (RAG pipeline)
+     │         ↓
+     └─── Phase 14 (Unified Field Generation) ←── depends on Phase 13
                ↓
          Phase 8 (Polish)
 ```
@@ -573,9 +577,11 @@ T036, T037, T038
 | Phase 10: Global & Project Repos | 27 | 19 | 8 |
 | Phase 11: Unified Report Editor | 45 | 25 | 20 |
 | Phase 12: RFT Tabbed Interface | 13 | 13 ✅ | 0 |
-| **Total** | **195** | **139** | **56** |
+| Phase 13: Knowledge Source | 10 | 0 | 10 |
+| Phase 14: Unified Field Generation | 8 | 0 | 8 |
+| **Total** | **213** | **139** | **74** |
 
-**Overall Progress: 71% Complete** (139/195 tasks)
+**Overall Progress: 65% Complete** (139/213 tasks)
 
 ---
 
@@ -1390,6 +1396,184 @@ Custom user-added sections: **No icon** (helps differentiate)
 
 ---
 
+## Phase 13: Knowledge Source Feature (Simplified V1)
+
+**Purpose**: Enable simplified per-project RAG with automatic Knowledge tile triggering and AI-assisted Brief generation.
+
+**Prerequisites**: Phase 2 complete, RAG pipeline operational
+
+### Overview
+
+| Feature | Description |
+|---------|-------------|
+| Knowledge Category | Replaces "Cost Planning" tile with auto-RAG trigger |
+| Per-Project Scope | One document set per project (defer global libraries) |
+| AI Generate Icon | Diamond icon (◇) for RAG-powered Brief generation |
+
+### Tasks
+
+- [ ] T213 Enable RAG by setting `RAG_DISABLED = false` in src/lib/hooks/use-rag-repos.ts:68
+- [ ] T214 Rename "Cost Planning" → "Knowledge" category in src/lib/constants/categories.ts:
+  - Change id: 'cost-planning' → 'knowledge'
+  - Change name: 'Cost Planning' → 'Knowledge'
+  - Change color: '#B85C5C' → '#6B9BD1' (sky blue)
+- [ ] T215 [P] Add `isKnowledgeSource: boolean` flag to Category type definition
+- [ ] T216 Add `onKnowledgeAction` callback to src/components/documents/CategoryTile.tsx:
+  - Detect Knowledge tile in onDrop handler
+  - Detect Knowledge tile in click handler when hasSelection
+  - Call callback with document IDs to trigger RAG
+- [ ] T217 [P] Add `onKnowledgeAction` callback to src/components/documents/CategoryUploadTiles.tsx:
+  - Thread callback through to CategoryTile components
+- [ ] T218 Wire up RAG trigger in parent component (DocumentRepository or page.tsx):
+  - Find or create project document set
+  - Add documents to set via API
+  - Show toast notification with queue status
+- [ ] T219 Create src/components/ui/ai-generate-icon.tsx:
+  - Diamond SVG icon (square rotated 45° with inner square)
+  - onClick handler prop
+  - Hover and disabled states
+- [ ] T220 Add AI Generate icon to Brief section in src/components/rft-new/RFTNewShortTab.tsx:
+  - Import AIGenerateIcon component
+  - Place next to "Brief" heading
+  - Wire up handleGenerateBrief callback
+- [ ] T221 [P] Add isGenerating state and handleGenerateBrief function to RFTNewShortTab:
+  - Use existing text as keywords
+  - Call /api/retrieval/generate-brief endpoint
+  - Update brief fields with generated content
+  - Show loading and error states
+- [ ] T222 Create src/app/api/retrieval/generate-brief/route.ts:
+  - Accept projectId, disciplineId/tradeId, keywords, contextType
+  - Get project's document set
+  - Retrieve relevant chunks using keywords
+  - Generate brief using Claude with RAG context
+  - Return { service, deliverables }
+
+### Estimated Task Counts for Phase 13
+
+| Category | Tasks | Status |
+|----------|-------|--------|
+| RAG Enable | 1 | Pending |
+| Category Rename | 2 | Pending |
+| Auto-RAG Trigger | 3 | Pending |
+| AI Generate Icon | 2 | Pending |
+| Brief Generation | 2 | Pending |
+| **Total Phase 13** | **10** | **0% Complete** |
+
+**Checkpoint**: Knowledge Source works - verify auto-RAG on Knowledge tile, AI Brief generation with diamond icon
+
+---
+
+## Phase 14: Unified Field Generation
+
+**Purpose**: Universal pattern for AI-assisted field generation across all text fields, replacing single-purpose endpoints with a flexible, reusable system.
+
+**Prerequisites**: Phase 13 (Knowledge Source) complete
+
+### Overview
+
+| Component | Description |
+|-----------|-------------|
+| `/api/retrieval/generate-field` | Generic endpoint replacing `generate-brief` |
+| `useFieldGeneration` hook | Universal React hook for any field type |
+| `<GenerativeField />` | Reusable component wrapping textarea with AI generation |
+| Input Interpretation | Instruction / Enhance / Generate modes based on user input |
+
+### Field Type Taxonomy
+
+```typescript
+type FieldType =
+  | 'brief.service'       // Consultant briefServices
+  | 'brief.deliverables'  // Consultant briefDeliverables
+  | 'scope.works'         // Contractor scopeWorks
+  | 'trr.executiveSummary'
+  | 'trr.clarifications'
+  | 'trr.recommendation'
+  | 'report.section'
+  | 'report.summary'
+```
+
+### Tasks
+
+- [X] T230 Create src/lib/constants/field-types.ts:
+  - Define FieldType union type
+  - Field metadata: displayName, promptTemplate, contextRequirements
+  - isInstructionInput(input: string) detection helper
+
+- [X] T231 Create src/lib/hooks/use-field-generation.ts:
+  - useFieldGeneration({ fieldType, projectId, disciplineId?, tradeId? })
+  - Returns: { generate, isGenerating, error, lastGeneration }
+  - generate(userInput: string) → Promise<GenerateFieldResponse>
+  - Calls /api/retrieval/generate-field endpoint
+
+- [X] T232 Create src/app/api/retrieval/generate-field/route.ts:
+  - POST handler accepting: projectId, fieldType, userInput, disciplineId?, tradeId?, additionalContext?
+  - Auto-fetch discipline/trade name from ID
+  - Auto-fetch project objectives from planning context
+  - Query Knowledge Source with intelligent fallback
+  - Implement input interpretation logic:
+    - INSTRUCTION: Input starts with verb or contains "list", "write", "describe"
+    - ENHANCE: Non-empty text content
+    - GENERATE: Empty input
+  - Field-specific prompt templates
+  - Return: { content, sources, inputInterpretation }
+
+- [X] T233 [P] Create src/components/ui/GenerativeField.tsx:
+  - Props: type, value, onChange, context, placeholder, rows, disabled
+  - Textarea wrapper with AIGenerateIcon button
+  - Integrates useFieldGeneration hook
+  - Loading spinner during generation
+  - Error toast on failure
+  - Keyboard shortcut: Ctrl+G to generate
+
+- [X] T234 Update src/components/rft-new/RFTNewShortTab.tsx to use new pattern:
+  - Replace handleGenerateBrief() with useFieldGeneration
+  - Use GenerativeField for service field (fieldType: 'brief.service')
+  - Use GenerativeField for deliverables field (fieldType: 'brief.deliverables')
+  - Test all three input modes
+
+- [X] T235 [P] Delete src/app/api/retrieval/generate-brief/route.ts after migration complete
+
+- [X] T236 [P] Add GenerativeField to TRR fields (future integration):
+  - trr.executiveSummary
+  - trr.clarifications
+  - trr.recommendation
+
+- [X] T237 [P] Add GenerativeField to Report Editor (future integration):
+  - report.section for section editing
+  - Support selected text enhancement
+
+### Input Interpretation Logic
+
+```
+IF input matches instruction patterns (starts with verb, contains "list", "write", "describe", etc.)
+  → Mode: INSTRUCTION
+  → Prompt: "Follow these instructions: {input}. Use context from: {RAG chunks}"
+
+ELSE IF input is non-empty text
+  → Mode: ENHANCE
+  → Prompt: "Enhance and expand this content professionally: {input}. Use context from: {RAG chunks}"
+
+ELSE (empty input)
+  → Mode: GENERATE
+  → Prompt: "Generate professional {fieldType} content for {disciplineName} discipline. Use context from: {RAG chunks}"
+```
+
+### Estimated Task Counts for Phase 14
+
+| Category | Tasks | Status |
+|----------|-------|--------|
+| Constants & Types | 1 | Complete |
+| Hook | 1 | Complete |
+| API Endpoint | 1 | Complete |
+| Component | 1 | Complete |
+| Integration (RFT) | 2 | Complete |
+| Future Integration | 2 | Complete |
+| **Total Phase 14** | **8** | **100% Complete** |
+
+**Checkpoint**: Unified Field Generation works - verify brief.service generation, test instruction/enhance/generate modes, verify generate-brief endpoint deleted
+
+---
+
 ## Notes
 
 - [P] tasks = different files, no dependencies, can run in parallel
@@ -1401,9 +1585,9 @@ Custom user-added sections: **No icon** (helps differentiate)
 
 ### Database Architecture Notes
 
-- **SQLite (local.db)**: Existing app data - projects, documents, planning, categories
-- **Supabase PostgreSQL**: RAG data - chunks, embeddings, document sets, reports
+**Updated 2025-12-16**: Project migrated from SQLite to PostgreSQL.
+
+- **PostgreSQL (Docker)**: All app data - projects, documents, planning, categories, RAG
+- **pgvector extension**: Vector embeddings for RAG retrieval
 - **Upstash Redis**: BullMQ job queue for document processing
-- Planning context (T039a) queries SQLite via existing Drizzle client
-- RAG operations (T006-T017) use Supabase PostgreSQL via rag-client.ts
-- No migration of existing SQLite data required
+- All operations use PostgreSQL via Drizzle ORM

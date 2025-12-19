@@ -114,8 +114,9 @@ export function EvaluationSheet({
     };
 
     // T050: Check if cell has low confidence (< 70%)
+    // Note: confidence is stored as integer percentage (0-100), not decimal
     const isLowConfidence = (confidence: number | null): boolean => {
-        return confidence !== null && confidence < 0.7;
+        return confidence !== null && confidence < 70;
     };
 
     // T104-T106: Check if row was AI-generated
@@ -358,7 +359,7 @@ export function EvaluationSheet({
                                                     e.stopPropagation();
                                                     handleCellClick(row.id, firm.id, value, e);
                                                 }}
-                                                title={isAI ? `AI-extracted (${Math.round((confidence || 0) * 100)}% confidence)` : undefined}
+                                                title={isAI ? `AI-extracted (${confidence || 0}% confidence)` : undefined}
                                             >
                                                 {isEditing ? (
                                                     <input
@@ -375,7 +376,7 @@ export function EvaluationSheet({
                                                     <div className="flex items-center justify-end">
                                                         {/* T050: Low confidence warning indicator */}
                                                         {isAI && lowConfidence && (
-                                                            <span title={`Low confidence: ${Math.round((confidence || 0) * 100)}%`}>
+                                                            <span title={`Low confidence: ${confidence || 0}%`}>
                                                                 <AlertTriangle
                                                                     className="w-3 h-3 text-yellow-500 mr-1 flex-shrink-0"
                                                                 />

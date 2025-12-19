@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { evaluations, evaluationRows } from '@/lib/db/schema';
+import { evaluations, evaluationRows } from '@/lib/db';
 import { eq, and, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
@@ -80,6 +80,7 @@ export async function POST(
             tableType,
             description: description || '',
             orderIndex: nextOrderIndex,
+            source: 'manual' as const, // Manual rows should always be visible
         });
 
         // Fetch and return the created row

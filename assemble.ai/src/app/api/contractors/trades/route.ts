@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { contractorTrades } from '@/lib/db/schema';
+import { contractorTrades } from '@/lib/db';
 import { eq, asc } from 'drizzle-orm';
 
 export async function GET(request: Request) {

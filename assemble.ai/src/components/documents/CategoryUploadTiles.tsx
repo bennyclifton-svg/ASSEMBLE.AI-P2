@@ -11,6 +11,8 @@ interface CategoryUploadTilesProps {
     selectedDocumentIds?: string[];
     /** Callback for Ctrl+click to bulk-select all documents in a category. */
     onBulkSelectCategory?: (categoryId: string, subcategoryId?: string) => void;
+    /** Callback when files are added to Knowledge category (triggers RAG). Empty array = use selected documents. */
+    onKnowledgeAction?: (files: File[]) => void;
 }
 
 export function CategoryUploadTiles({
@@ -18,6 +20,7 @@ export function CategoryUploadTiles({
     onFilesDropped,
     selectedDocumentIds = [],
     onBulkSelectCategory,
+    onKnowledgeAction,
 }: CategoryUploadTilesProps) {
     const { categories, isLoading } = useActiveCategories(projectId);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -75,6 +78,7 @@ export function CategoryUploadTiles({
                         onFilesDropped={onFilesDropped}
                         onClick={category.hasSubcategories ? () => toggleCategory(category.id) : undefined}
                         onBulkSelectCategory={onBulkSelectCategory}
+                        onKnowledgeAction={onKnowledgeAction}
                         isExpanded={expandedCategories.has(category.id)}
                         hasSelection={hasSelection}
                     />

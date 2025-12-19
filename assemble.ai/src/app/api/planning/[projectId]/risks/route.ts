@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { risks } from '@/lib/db/schema';
+import { risks } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { riskSchema } from '@/lib/validations/planning-schema';
 

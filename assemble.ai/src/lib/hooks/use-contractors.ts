@@ -22,7 +22,7 @@ export interface ContractorFormData {
   companyName: string;
   contactPerson?: string;
   trade: string;
-  email: string;
+  email?: string;
   phone?: string;
   address?: string;
   abn?: string;

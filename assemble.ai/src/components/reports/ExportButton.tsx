@@ -11,7 +11,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download, ChevronDown } from 'lucide-react';
-import { toast } from 'sonner';
+import { useToast } from '@/lib/hooks/use-toast';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
 interface ExportButtonProps {
@@ -23,6 +23,7 @@ export default function ExportButton({ reportId, content }: ExportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   /**
    * Close dropdown when clicking outside
@@ -78,10 +79,10 @@ export default function ExportButton({ reportId, content }: ExportButtonProps) {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success(`Report exported as ${format.toUpperCase()}`);
+      toast({ title: `Report exported as ${format.toUpperCase()}`, variant: 'success' });
     } catch (error) {
       console.error('Export error:', error);
-      toast.error(`Failed to export as ${format.toUpperCase()}`);
+      toast({ title: `Failed to export as ${format.toUpperCase()}`, variant: 'destructive' });
     } finally {
       setIsExporting(false);
     }

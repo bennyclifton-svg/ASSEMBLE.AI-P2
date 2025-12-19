@@ -94,7 +94,7 @@ export function ConsultantGallery({
           email: data.email || newFirm.email || '',
         };
 
-        if (mergedData.companyName && mergedData.email) {
+        if (mergedData.companyName) {
           const newConsultant = await addConsultant(mergedData);
           toast({
             title: 'Success',

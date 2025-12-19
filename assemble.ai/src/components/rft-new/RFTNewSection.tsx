@@ -139,7 +139,10 @@ export function RFTNewSection({
                     alert(data.message || 'Export functionality coming soon in Phase 3');
                     return;
                 }
-                throw new Error('Export failed');
+                // Get detailed error from server
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Export error details:', errorData);
+                throw new Error(errorData.details || errorData.error || 'Export failed');
             }
 
             // Download the file
@@ -161,6 +164,7 @@ export function RFTNewSection({
             document.body.removeChild(a);
         } catch (error) {
             console.error('Export error:', error);
+            alert(`Export failed: ${(error as Error).message}`);
         } finally {
             setIsExporting(false);
         }

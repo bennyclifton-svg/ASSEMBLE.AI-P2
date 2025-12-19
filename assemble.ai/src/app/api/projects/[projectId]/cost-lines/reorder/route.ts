@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { costLines } from '@/lib/db/schema';
+import { costLines } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 
 interface ReorderUpdate {
@@ -28,7 +28,7 @@ export async function PATCH(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         // Update each cost line's sortOrder
         await Promise.all(

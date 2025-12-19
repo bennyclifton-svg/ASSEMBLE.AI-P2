@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { InlineEditField } from './InlineEditField';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Upload, UploadCloud } from 'lucide-react';
+import { Upload } from 'lucide-react';
 
 interface ObjectivesSectionProps {
     projectId: string;
@@ -249,7 +249,7 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
 
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-[#cccccc]">Objectives</h3>
-                <UploadCloud className="w-5 h-5 text-[#858585]" />
+                <Upload className="w-5 h-5 text-[#858585]" />
             </div>
             <div className="space-y-4">
                 <InlineEditField

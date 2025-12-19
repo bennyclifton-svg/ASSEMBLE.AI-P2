@@ -5,20 +5,36 @@
  */
 
 import { Metadata } from 'next';
+import { DM_Sans, Spectral } from 'next/font/google';
+import '@/styles/landing.css';
+
+const dmSans = DM_Sans({
+    subsets: ['latin'],
+    variable: '--font-dm-sans',
+    weight: ['400', '500', '600', '700'],
+    display: 'swap',
+});
+
+const spectral = Spectral({
+    subsets: ['latin'],
+    variable: '--font-spectral',
+    weight: ['400', '500', '600', '700'],
+    display: 'swap',
+});
 
 export const metadata: Metadata = {
-    title: 'Assemble.ai - AI-Powered Construction Project Management',
-    description: 'Streamline your construction projects with intelligent document management, procurement automation, and AI-powered insights. Built for Australian construction firms.',
+    title: 'ASSEMBLE.AI - AI-Powered Construction Project Management',
+    description: 'Build faster. Save time. Stand out. ASSEMBLE.AI is the AI platform that turns project chaos into an ongoing way of working for AEC firms.',
     openGraph: {
-        title: 'Assemble.ai - AI-Powered Construction Project Management',
-        description: 'Streamline your construction projects with intelligent document management, procurement automation, and AI-powered insights.',
+        title: 'ASSEMBLE.AI - AI-Powered Construction Project Management',
+        description: 'Build faster. Save time. Stand out. The AI platform for architecture, engineering, and construction firms.',
         type: 'website',
         locale: 'en_AU',
-        siteName: 'Assemble.ai',
+        siteName: 'ASSEMBLE.AI',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Assemble.ai',
+        title: 'ASSEMBLE.AI',
         description: 'AI-Powered Construction Project Management',
     },
     robots: {
@@ -33,7 +49,7 @@ export default function PublicLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="min-h-screen bg-[#1e1e1e] text-white">
+        <div className={`${dmSans.variable} ${spectral.variable} min-h-screen font-sans`}>
             {children}
         </div>
     );

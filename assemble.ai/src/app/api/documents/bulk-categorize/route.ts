@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { documents } from '@/lib/db/schema';
+import { documents, categories, subcategories } from '@/lib/db';
 import { inArray } from 'drizzle-orm';
+import { getCategoryById } from '@/lib/constants/categories';
 
 export async function PUT(request: NextRequest) {
     try {
         const body = await request.json();
-        const { documentIds, categoryId, subcategoryId } = body;
+        const { documentIds, categoryId, subcategoryId, subcategoryName } = body;
 
         if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
             return NextResponse.json({ error: 'documentIds array is required' }, { status: 400 });
@@ -16,17 +17,32 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: 'categoryId is required' }, { status: 400 });
         }
 
-        // For now, we'll store categoryId and subcategoryId as strings
-        // The foreign key constraints reference the old categories/subcategories tables
-        // which we're not using for this feature. We'll store the IDs directly.
-        // TODO: Either remove FK constraints or populate categories/subcategories tables
+        // Ensure category exists in the categories table for proper JOIN in GET queries
+        const categoryInfo = getCategoryById(categoryId);
+        if (categoryInfo) {
+            await db.insert(categories).values({
+                id: categoryId,
+                name: categoryInfo.name,
+                isSystem: true
+            }).onConflictDoNothing();
+        }
+
+        // Ensure subcategory exists if provided (for legacy subcategories, not consultant/contractor disciplines)
+        if (subcategoryId && subcategoryName) {
+            await db.insert(subcategories).values({
+                id: subcategoryId,
+                categoryId: categoryId,
+                name: subcategoryName,
+                isSystem: false
+            }).onConflictDoNothing();
+        }
 
         // Update all selected documents with the new category/subcategory
         await db.update(documents)
             .set({
                 categoryId: categoryId,
                 subcategoryId: subcategoryId || null,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(inArray(documents.id, documentIds));
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { consultantDisciplines } from '@/lib/db/schema';
+import { consultantDisciplines } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -48,7 +48,7 @@ export async function PUT(
             .update(consultantDisciplines)
             .set({
                 ...validated,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(consultantDisciplines.id, disciplineId))
             .returning();

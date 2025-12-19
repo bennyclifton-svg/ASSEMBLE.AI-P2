@@ -36,8 +36,6 @@ All support manual entry, edit, delete, and AI-assisted creation via drag & drop
 
 **US-09** As a Project Manager, I want to define fee structure items for each consultant discipline (with drag-and-drop reordering) so that I can document pricing expectations before tendering.
 
-**US-10** As a Project Manager, I want to define price structure items for each contractor trade (with drag-and-drop reordering) so that I can document budget line items for tender packages.
-
 ### Addendum Reports
 
 **US-11** As a Project Manager, I want an "Addendum" section located directly below the RFT section in each discipline/trade tab so that I can create and manage contract addenda without navigating away.
@@ -89,8 +87,7 @@ All support manual entry, edit, delete, and AI-assisted creation via drag & drop
 | FR-022 | System MUST support inline report generation within each discipline/trade tab with lifecycle states: draft, toc_pending, generating, complete, failed |
 | FR-023 | System MUST offer two report generation modes: Data Only (template-based using planning card data) and AI Assisted (RAG-enabled with synced documents) |
 | FR-024 | System MUST allow users to define fee structure items for consultant disciplines with drag-and-drop reordering and inline editing |
-| FR-025 | System MUST allow users to define price structure items for contractor trades with drag-and-drop reordering and inline editing |
-| FR-026 | System MUST support drag & drop extraction on ANY empty firm card, not just the first one |
+| FR-025 | System MUST support drag & drop extraction on ANY empty firm card, not just the first one |
 
 ### Addendum Reports
 
@@ -163,12 +160,6 @@ All support manual entry, edit, delete, and AI-assisted creation via drag & drop
 - description (text)
 - order (integer for drag-and-drop)
 
-**ContractorTradeItem**
-- id
-- tradeId (FK to contractor_trades)
-- description (text)
-- order (integer for drag-and-drop)
-
 ### Addendum (New)
 
 **Addendum**
@@ -210,9 +201,8 @@ Located within each discipline/trade tab, provides tile-based interface for:
 ### ~~Report Generation Section (ReportsSection)~~ - REMOVED
 *Replaced by RFT NEW. See [rft-new-spec.md](./rft-new-spec.md) for the new RFT implementation.*
 
-### Fee/Price Structure Management
+### Fee Structure Management
 - **FeeStructureSection** (Consultants): Drag-and-drop reorderable fee items with inline editing
-- **PriceStructureSection** (Contractors): Drag-and-drop reorderable price items with inline editing
 - Keyboard support (Enter to save, Escape to cancel)
 - Auto-save with debounced updates
 

@@ -64,6 +64,9 @@ const fetcher = async (url: string) => {
     return res.json();
 };
 
+// RAG functionality enabled for Knowledge Source feature
+export const RAG_DISABLED = false;
+
 /**
  * Hook for managing RAG repos (global + project)
  */
@@ -72,8 +75,8 @@ export function useRAGRepos(projectId: string | null, organizationId: string | n
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Build query URL
-    const hasRequiredParams = projectId && organizationId;
+    // Build query URL - disabled when RAG_DISABLED is true
+    const hasRequiredParams = projectId && organizationId && !RAG_DISABLED;
     const url = hasRequiredParams
         ? `/api/rag-repos?projectId=${projectId}&organizationId=${organizationId}`
         : null;
@@ -93,6 +96,9 @@ export function useRAGRepos(projectId: string | null, organizationId: string | n
      * Creates missing global repos (6) and project repo if needed
      */
     const initializeRepos = useCallback(async (): Promise<boolean> => {
+        if (RAG_DISABLED) {
+            return true; // No-op when disabled
+        }
         if (!organizationId) {
             setError('organizationId is required');
             return false;
@@ -133,6 +139,9 @@ export function useRAGRepos(projectId: string | null, organizationId: string | n
         repoId: string,
         documentIds: string[]
     ): Promise<SyncRepoResponse | null> => {
+        if (RAG_DISABLED) {
+            return null; // No-op when disabled
+        }
         setIsSaving(true);
         setError(null);
 
@@ -169,6 +178,9 @@ export function useRAGRepos(projectId: string | null, organizationId: string | n
      * Used to restore selection in DocumentRepository
      */
     const loadFromRepo = useCallback(async (repoId: string): Promise<string[] | null> => {
+        if (RAG_DISABLED) {
+            return []; // No-op when disabled
+        }
         setIsLoading(true);
         setError(null);
 
@@ -195,6 +207,9 @@ export function useRAGRepos(projectId: string | null, organizationId: string | n
      * Get detailed info about a repo's contents
      */
     const getRepoInfo = useCallback(async (repoId: string): Promise<LoadRepoResponse | null> => {
+        if (RAG_DISABLED) {
+            return null; // No-op when disabled
+        }
         try {
             const res = await fetch(`/api/rag-repos/${repoId}/load`);
 

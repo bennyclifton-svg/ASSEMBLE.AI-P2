@@ -16,7 +16,7 @@ import {
     contractors,
     consultantDisciplines,
     contractorTrades,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
@@ -81,6 +81,7 @@ export async function GET(
                 tableType: 'adds_subs' as const,
                 description: '',
                 orderIndex: i,
+                source: 'manual' as const, // Default rows should always be visible
             }));
 
             if (addSubsRowsData.length > 0) {
@@ -115,12 +116,13 @@ export async function GET(
             description: string;
             orderIndex: number;
             costLineId: string;
+            source: 'cost_plan';
         }> = [];
 
         const rowsToUpdate: Array<{ id: string; description: string; orderIndex: number }> = [];
 
         // Build a map of costLineId to existing row for updates
-        const costLineIdToRow = new Map(
+        const costLineIdToRow = new Map<string | null, typeof existingRows[number]>(
             existingRows.filter(r => r.costLineId).map(r => [r.costLineId, r])
         );
 
@@ -134,6 +136,7 @@ export async function GET(
                     description: line.activity,
                     orderIndex: i,
                     costLineId: line.id,
+                    source: 'cost_plan' as const, // Explicitly set source for visibility filtering
                 });
             } else {
                 // Existing cost line - check if description or order needs update
@@ -261,7 +264,7 @@ export async function PUT(
                         amountCents,
                         source: source || 'manual',
                         confidence,
-                        updatedAt: new Date().toISOString(),
+                        updatedAt: new Date(),
                     })
                     .where(eq(evaluationCells.id, existingCell.id));
             } else {

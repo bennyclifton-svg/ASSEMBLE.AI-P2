@@ -63,7 +63,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .orderBy(asc(reportSections.sectionIndex));
 
       const tableOfContents = report.tableOfContents as any;
-      htmlContent = sectionsToHTML(sections, tableOfContents);
+      // Transform sections for compatibility with sectionsToHTML
+      const sectionsWithSources = sections.map(s => ({
+        ...s,
+        sources: [],
+        sourceChunkIds: s.sourceChunkIds ?? [],
+        status: s.status ?? 'complete',
+        content: s.content ?? '',
+        generatedAt: s.generatedAt ?? new Date(),
+        regenerationCount: s.regenerationCount ?? 0,
+        createdAt: s.createdAt ?? new Date(),
+      })) as any[];
+      htmlContent = sectionsToHTML(sectionsWithSources, tableOfContents);
     }
 
     // Generate export buffer

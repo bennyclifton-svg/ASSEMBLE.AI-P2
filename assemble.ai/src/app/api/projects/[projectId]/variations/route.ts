@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { variations, costLines } from '@/lib/db/schema';
+import { variations, costLines } from '@/lib/db';
 import { eq, isNull, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { generateVariationNumber } from '@/lib/calculations/cost-plan-formulas';
@@ -100,7 +100,7 @@ export async function POST(
         const variationNumber = generateVariationNumber(existingVariations, body.category);
 
         const id = uuidv4();
-        const now = new Date().toISOString();
+        const now = new Date();
 
         await db.insert(variations).values({
             id,

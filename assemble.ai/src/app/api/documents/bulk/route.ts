@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { documents } from '@/lib/db/schema';
+import { documents } from '@/lib/db';
 import { inArray } from 'drizzle-orm';
 
 export async function PATCH(request: NextRequest) {
@@ -27,7 +27,7 @@ export async function PATCH(request: NextRequest) {
         await db.update(documents)
             .set({
                 ...updates,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(and(
                 inArray(documents.id, documentIds),

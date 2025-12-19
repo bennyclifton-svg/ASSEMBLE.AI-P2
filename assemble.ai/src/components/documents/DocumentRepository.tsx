@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { CategoryUploadTiles } from './CategoryUploadTiles';
 import { CategorizedList } from './CategorizedList';
 import { UploadProgress, UploadFileStatus } from './UploadProgress';
 import { useToast } from '@/components/ui/use-toast';
 import { getCategoryById } from '@/lib/constants/categories';
+import { useDocumentSets, useDocumentSetMutations } from '@/lib/hooks/use-document-sets';
+import { RAG_DISABLED } from '@/lib/hooks/use-rag-repos';
 
 interface DocumentRepositoryProps {
     projectId: string;
@@ -17,8 +19,83 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     const [uploading, setUploading] = useState(false);
     const [uploadFiles, setUploadFiles] = useState<UploadFileStatus[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [knowledgeSetId, setKnowledgeSetId] = useState<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
+
+    // RAG document set hooks
+    const { documentSets, isLoading: setsLoading } = useDocumentSets(projectId);
+    const { createDocumentSet, addDocuments, isLoading: mutationLoading } = useDocumentSetMutations();
+
+    // Find or create the project's Knowledge document set
+    useEffect(() => {
+        if (RAG_DISABLED || setsLoading) return;
+
+        const existingSet = documentSets.find(ds => ds.projectId === projectId && ds.name === 'Knowledge');
+        if (existingSet) {
+            setKnowledgeSetId(existingSet.id);
+        }
+    }, [projectId, documentSets, setsLoading]);
+
+    /**
+     * Handle Knowledge category action - triggers RAG processing for BULK ASSIGN only.
+     * File drops are handled in handleFilesSelected after upload completes.
+     * @param files - Empty array means use selectedIds (bulk assign)
+     */
+    const handleKnowledgeAction = useCallback(async (files: File[]) => {
+        if (RAG_DISABLED) {
+            toast({
+                title: 'RAG Disabled',
+                description: 'Knowledge Source feature is currently disabled.',
+            });
+            return;
+        }
+
+        // For file drops (files.length > 0), RAG is triggered in handleFilesSelected
+        // after upload completes with document IDs. Nothing to do here.
+        if (files.length > 0) {
+            return;
+        }
+
+        // For bulk assign (files.length === 0), add selected documents to Knowledge set
+        if (selectedIds.size === 0) {
+            return; // Nothing to do
+        }
+
+        let setId = knowledgeSetId;
+
+        // Create Knowledge set if it doesn't exist
+        if (!setId) {
+            const newSet = await createDocumentSet({
+                projectId,
+                name: 'Knowledge',
+                description: 'Project knowledge source for AI-assisted content generation',
+            });
+
+            if (!newSet) {
+                toast({
+                    title: 'Error',
+                    description: 'Failed to create Knowledge Source',
+                    variant: 'destructive',
+                });
+                return;
+            }
+
+            setId = newSet.id;
+            setKnowledgeSetId(setId);
+        }
+
+        // Add selected documents to Knowledge set
+        const documentIds = Array.from(selectedIds);
+        const result = await addDocuments(setId, documentIds);
+
+        if (result) {
+            toast({
+                title: 'Adding to Knowledge Source',
+                description: `${result.added.length} document(s) queued for AI processing`,
+            });
+        }
+    }, [projectId, knowledgeSetId, selectedIds, createDocumentSet, addDocuments, toast]);
 
     /**
      * T030a: Handle Ctrl+click on category tile to bulk-select all documents in that category.
@@ -132,6 +209,10 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
         let localFailureCount = 0;
 
         try {
+            // Track uploaded document IDs for Knowledge category RAG processing
+            const uploadedDocumentIds: string[] = [];
+            const isKnowledgeCategory = categoryId === 'knowledge';
+
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
 
@@ -166,6 +247,20 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     setUploadFiles(prev => prev.map((f, idx) =>
                         idx === i ? { ...f, status: 'completed' as const, progress: 100 } : f
                     ));
+
+                    // Capture document ID for Knowledge category RAG processing
+                    if (isKnowledgeCategory) {
+                        try {
+                            const responseData = await res.clone().json();
+                            // API returns { documentId: '...' } not { id: '...' }
+                            if (responseData.documentId) {
+                                uploadedDocumentIds.push(responseData.documentId);
+                                console.log('[Knowledge] Captured document ID:', responseData.documentId);
+                            }
+                        } catch (e) {
+                            console.warn('Could not parse upload response for RAG:', e);
+                        }
+                    }
                 } else {
                     localFailureCount++;
                     const errorText = await res.text();
@@ -204,6 +299,37 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     title: 'Upload complete',
                     description: `${localSuccessCount} file(s) → ${categoryName}`,
                 });
+
+                // Trigger RAG processing for Knowledge category uploads
+                if (isKnowledgeCategory && uploadedDocumentIds.length > 0) {
+                    console.log('[Knowledge] Triggering RAG for uploaded documents:', uploadedDocumentIds);
+
+                    // Get or create Knowledge set, then add documents
+                    let setId = knowledgeSetId;
+
+                    if (!setId && !RAG_DISABLED) {
+                        const newSet = await createDocumentSet({
+                            projectId,
+                            name: 'Knowledge',
+                            description: 'Project knowledge source for AI-assisted content generation',
+                        });
+
+                        if (newSet) {
+                            setId = newSet.id;
+                            setKnowledgeSetId(setId);
+                        }
+                    }
+
+                    if (setId) {
+                        const result = await addDocuments(setId, uploadedDocumentIds);
+                        if (result) {
+                            toast({
+                                title: 'Knowledge Source',
+                                description: `${result.added.length} document(s) queued for AI processing`,
+                            });
+                        }
+                    }
+                }
             } else if (localFailureCount > 0) {
                 toast({
                     title: 'Upload error',
@@ -245,6 +371,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     onFilesDropped={handleFilesSelected}
                     selectedDocumentIds={Array.from(selectedIds)}
                     onBulkSelectCategory={handleBulkSelectCategory}
+                    onKnowledgeAction={handleKnowledgeAction}
                 />
             </div>
 

@@ -32,10 +32,15 @@ export function hashToken(token: string): string {
  */
 export async function setSessionCookie(token: string): Promise<void> {
   const cookieStore = await cookies();
+
+  // In Docker/proxy environments, the app receives HTTP even when users access via HTTPS
+  // Use SECURE_COOKIES env var to control, defaulting to false for compatibility
+  const useSecureCookies = process.env.SECURE_COOKIES === 'true';
+
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: useSecureCookies,
+    sameSite: 'lax', // 'lax' is more compatible with proxies and redirects than 'strict'
     maxAge: SESSION_DURATION_SECONDS,
     path: '/',
   });
