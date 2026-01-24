@@ -1,57 +1,362 @@
 @import "tailwindcss";
 
+/* ============================================
+   TESSERA Design System
+   Version: 3.0 - Architectural Precision Themes
+   ============================================ */
+
+/* ============================================
+   TIER 1: PRIMITIVE TOKENS (Raw Values)
+   ============================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary Brand Colors (Pop Colors for accents) */
+  --primitive-green: #00C27A;
+  --primitive-green-light: #B4F5C8;
+  --primitive-green-lighter: #E8FDF0;
+  --primitive-green-dark: #00A366;
+  --primitive-green-on-dark: #00D68A;
+
+  --primitive-yellow: #FFD93D;
+  --primitive-yellow-light: #FFF9E6;
+  --primitive-yellow-dark: #E6C235;
+  --primitive-yellow-on-dark: #FFE066;
+
+  --primitive-coral: #B85C5C;
+  --primitive-coral-light: #F2E6E6;
+  --primitive-coral-dark: #8A4545;
+  --primitive-coral-on-dark: #CC7070;
+
+  --primitive-teal: #4ECDC4;
+  --primitive-teal-light: #E6FAF8;
+  --primitive-teal-dark: #3DB8AF;
+  --primitive-teal-darker: #115E59;
+  --primitive-teal-on-dark: #6EDED6;
+
+  --primitive-purple: #A855F7;
+  --primitive-purple-light: #F3E8FF;
+  --primitive-purple-dark: #9333EA;
+  --primitive-purple-on-dark: #C084FC;
+
+  /* Copper/Bronze Palette (Architectural Precision) */
+  --primitive-copper: #D4A574;
+  --primitive-copper-light: #E8C4A0;
+  --primitive-copper-lighter: #F5E6D3;
+  --primitive-copper-dark: #C49464;
+  --primitive-copper-darker: #8B7355;
+
+  /* Slate Palette (Deep neutrals for Precision dark theme) */
+  --primitive-slate-950: #0F1115;
+  --primitive-slate-900: #141618;
+  --primitive-slate-850: #1A1D21;
+  --primitive-slate-800: #22262B;
+  --primitive-slate-700: #2E3338;
+  --primitive-slate-600: #3D4349;
+
+  /* Warm Browns (Precision light theme text) */
+  --primitive-brown-900: #2A2520;
+  --primitive-brown-700: #5C554C;
+  --primitive-brown-500: #8A8279;
+
+  /* Warm Creams (Precision light theme backgrounds) */
+  --primitive-cream-50: #FAF8F5;
+  --primitive-cream-100: #F5F2ED;
+  --primitive-cream-200: #EBE7E0;
+
+  /* Neutral Scale (legacy support) */
+  --primitive-white: #FFFFFF;
+  --primitive-black: #000000;
+  --primitive-gray-50: #FAFAFA;
+  --primitive-gray-100: #F5F5F5;
+  --primitive-gray-200: #E5E5E5;
+  --primitive-gray-300: #D4D4D4;
+  --primitive-gray-400: #A3A3A3;
+  --primitive-gray-500: #737373;
+  --primitive-gray-600: #525252;
+  --primitive-gray-700: #404040;
+  --primitive-gray-800: #262626;
+  --primitive-gray-900: #171717;
+  --primitive-gray-950: #0A0A0A;
+
+  /* Typography */
+  --font-body: var(--font-dm-sans), 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: var(--font-spectral), 'Spectral', Georgia, serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+
+  /* Font Sizes */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 100px;
 }
 
+/* ============================================
+   TIER 2: SEMANTIC TOKENS - PRECISION THEME
+   "Architectural Precision" Dark - Copper on Slate
+   ============================================ */
+[data-theme="precision"], :root:not([data-theme="precision-light"]) {
+  /* Backgrounds - Deep slate with warmth */
+  --color-bg-primary: var(--primitive-slate-850);
+  --color-bg-secondary: var(--primitive-slate-900);
+  --color-bg-tertiary: var(--primitive-slate-800);
+  --color-bg-elevated: rgba(26, 29, 33, 0.7);
+  --color-bg-inverse: var(--primitive-copper-lighter);
+
+  /* Text - Warm off-whites */
+  --color-text-primary: #E8E6E3;
+  --color-text-secondary: #9CA3AF;
+  --color-text-muted: #6B7280;
+  --color-text-inverse: var(--primitive-slate-900);
+
+  /* Borders - Copper-tinted neutrals */
+  --color-border: rgba(107, 114, 128, 0.25);
+  --color-border-subtle: rgba(107, 114, 128, 0.15);
+  --color-border-strong: rgba(107, 114, 128, 0.4);
+  --color-border-accent: rgba(212, 165, 116, 0.18);
+
+  /* Primary accent is copper */
+  --color-accent-primary: var(--primitive-copper);
+  --color-accent-primary-hover: var(--primitive-copper-light);
+  --color-accent-primary-muted: var(--primitive-copper-darker);
+  --color-accent-primary-tint: rgba(212, 165, 116, 0.12);
+
+  /* Secondary accents (for status, etc.) */
+  --color-accent-green: #7A9E7E;
+  --color-accent-yellow: #E8B931;
+  --color-accent-coral: #CC7070;
+  --color-accent-teal: #6EDED6;
+  --color-accent-purple: #C084FC;
+  --color-accent-copper: var(--primitive-copper);
+
+  /* Accent Tints */
+  --color-accent-green-tint: rgba(122, 158, 126, 0.15);
+  --color-accent-yellow-tint: rgba(232, 185, 49, 0.15);
+  --color-accent-coral-tint: rgba(204, 112, 112, 0.15);
+  --color-accent-teal-tint: rgba(110, 222, 214, 0.15);
+  --color-accent-purple-tint: rgba(192, 132, 252, 0.15);
+  --color-accent-copper-tint: rgba(212, 165, 116, 0.12);
+
+  /* Semantic States - Earth tones */
+  --color-success: #7A9E7E;
+  --color-warning: #E8B931;
+  --color-error: #CC7070;
+  --color-info: var(--primitive-copper);
+
+  /* Shadows - Deep with optional glow */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 20px rgba(212, 165, 116, 0.15);
+
+  /* Scrollbar */
+  --scrollbar-track: var(--primitive-slate-900);
+  --scrollbar-thumb: var(--primitive-slate-700);
+  --scrollbar-thumb-hover: var(--primitive-slate-600);
+
+  /* Tailwind CSS Theme Integration */
+  --background: var(--color-bg-primary);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-secondary);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-secondary);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-primary);
+  --primary-foreground: var(--primitive-slate-900);
+  --secondary: var(--color-bg-tertiary);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-tertiary);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-accent-primary);
+  --accent-foreground: var(--primitive-slate-900);
+  --destructive: var(--color-error);
+  --destructive-foreground: var(--primitive-white);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-accent-primary);
+}
+
+/* ============================================
+   TIER 2: SEMANTIC TOKENS - PRECISION LIGHT THEME
+   "Architectural Precision" Light - Warm Cream with Copper
+   ============================================ */
+[data-theme="precision-light"] {
+  /* Backgrounds - Warm creams and off-whites */
+  --color-bg-primary: var(--primitive-cream-50);
+  --color-bg-secondary: var(--primitive-cream-100);
+  --color-bg-tertiary: var(--primitive-cream-200);
+  --color-bg-elevated: var(--primitive-white);
+  --color-bg-inverse: var(--primitive-brown-900);
+
+  /* Text - Warm browns instead of harsh blacks */
+  --color-text-primary: var(--primitive-brown-900);
+  --color-text-secondary: var(--primitive-brown-700);
+  --color-text-muted: var(--primitive-brown-500);
+  --color-text-inverse: var(--primitive-cream-50);
+
+  /* Borders - Warm tan tones */
+  --color-border: rgba(180, 140, 100, 0.2);
+  --color-border-subtle: rgba(180, 140, 100, 0.12);
+  --color-border-strong: rgba(180, 140, 100, 0.35);
+  --color-border-accent: rgba(180, 140, 100, 0.25);
+
+  /* Primary accent - Darker copper for better contrast on light */
+  --color-accent-primary: #B8895A;
+  --color-accent-primary-hover: #9A7348;
+  --color-accent-primary-muted: #C4A070;
+  --color-accent-primary-tint: rgba(184, 137, 90, 0.12);
+
+  /* Secondary accents - Darker earth tones for light mode */
+  --color-accent-green: #5D7E5F;
+  --color-accent-yellow: #C4960C;
+  --color-accent-coral: #A65454;
+  --color-accent-teal: #3D8B84;
+  --color-accent-purple: #8B5CF6;
+  --color-accent-copper: #B8895A;
+
+  /* Accent Tints - Subtle warm backgrounds */
+  --color-accent-green-tint: rgba(93, 126, 95, 0.12);
+  --color-accent-yellow-tint: rgba(196, 150, 12, 0.12);
+  --color-accent-coral-tint: rgba(166, 84, 84, 0.12);
+  --color-accent-teal-tint: rgba(61, 139, 132, 0.12);
+  --color-accent-purple-tint: rgba(139, 92, 246, 0.12);
+  --color-accent-copper-tint: rgba(184, 137, 90, 0.12);
+
+  /* Semantic States */
+  --color-success: #5D7E5F;
+  --color-warning: #C4960C;
+  --color-error: #A65454;
+  --color-info: #B8895A;
+
+  /* Shadows - Warm, subtle */
+  --shadow-sm: 0 1px 2px rgba(180, 140, 100, 0.08);
+  --shadow: 0 2px 4px rgba(180, 140, 100, 0.1), 0 1px 2px rgba(180, 140, 100, 0.06);
+  --shadow-md: 0 4px 8px rgba(180, 140, 100, 0.12);
+  --shadow-lg: 0 8px 16px rgba(180, 140, 100, 0.15);
+  --shadow-glow: 0 0 20px rgba(184, 137, 90, 0.15);
+
+  /* Scrollbar */
+  --scrollbar-track: var(--primitive-cream-100);
+  --scrollbar-thumb: #D4CCC0;
+  --scrollbar-thumb-hover: #C4B8A8;
+
+  /* Tailwind CSS Theme Integration */
+  --background: var(--color-bg-primary);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-elevated);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-elevated);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-primary);
+  --primary-foreground: var(--primitive-white);
+  --secondary: var(--color-bg-tertiary);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-tertiary);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-accent-primary);
+  --accent-foreground: var(--primitive-white);
+  --destructive: var(--color-error);
+  --destructive-foreground: var(--primitive-white);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-accent-primary);
+}
+
+/* ============================================
+   TAILWIND THEME INLINE
+   ============================================ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ============================================
+   BASE STYLES
+   ============================================ */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-/* Custom scrollbar styling - visible only on hover */
+/* Apply serif font to major headings */
+h1, h2, .heading-serif {
+  font-family: var(--font-heading);
+}
+
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
 * {
   scrollbar-width: auto;
-  scrollbar-color: transparent #1e1e1e;
+  scrollbar-color: transparent var(--scrollbar-track);
 }
 
 *:hover {
-  scrollbar-color: #3e3e42 #1e1e1e;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* WebKit browsers (Chrome, Safari, Edge) */
 *::-webkit-scrollbar {
-  width: 28px;
-  height: 28px;
+  width: 12px;
+  height: 12px;
 }
 
 *::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: var(--scrollbar-track);
 }
 
 *::-webkit-scrollbar-thumb {
   background: transparent;
-  border: 2px solid #1e1e1e;
+  border: 2px solid var(--scrollbar-track);
+  border-radius: var(--radius);
 }
 
 *:hover::-webkit-scrollbar-thumb {
-  background: #3e3e42;
+  background: var(--scrollbar-thumb);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Remove scrollbar arrows completely */
@@ -61,3 +366,825 @@ body {
   width: 0;
 }
 
+/* ============================================
+   FOCUS STYLES
+   ============================================ */
+:focus-visible {
+  outline: 2px solid var(--color-accent-primary);
+  outline-offset: 2px;
+}
+
+/* Contextual focus colors */
+.focus-teal:focus-visible {
+  outline-color: var(--color-accent-teal);
+}
+
+.focus-yellow:focus-visible {
+  outline-color: var(--color-accent-yellow);
+}
+
+.focus-coral:focus-visible {
+  outline-color: var(--color-accent-coral);
+}
+
+/* ============================================
+   AUTOFILL STYLES
+   ============================================ */
+/* Override browser autofill background styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: var(--color-text-secondary);
+  transition: background-color 5000s ease-in-out 0s;
+  box-shadow: inset 0 0 20px 20px transparent;
+}
+
+.focus-copper:focus-visible {
+  outline-color: var(--color-accent-copper);
+}
+
+/* ============================================
+   PRECISION THEME UTILITIES - DARK
+   ============================================ */
+/* Blueprint grid background */
+[data-theme="precision"] .bg-blueprint {
+  background-image:
+    linear-gradient(rgba(212, 165, 116, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 165, 116, 0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+[data-theme="precision"] .bg-blueprint-dense {
+  background-image:
+    linear-gradient(rgba(212, 165, 116, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(212, 165, 116, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Translucent card style */
+[data-theme="precision"] .card-translucent {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(8px);
+}
+
+/* Copper accent card */
+[data-theme="precision"] .card-copper {
+  background: rgba(212, 165, 116, 0.06);
+  border: 1px solid rgba(212, 165, 116, 0.18);
+}
+
+/* Divider with gradient */
+[data-theme="precision"] .divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(212, 165, 116, 0.4), transparent);
+}
+
+/* Copper glow effect */
+[data-theme="precision"] .glow-copper {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Border utilities */
+[data-theme="precision"] .border-copper {
+  border-color: rgba(212, 165, 116, 0.25);
+}
+
+[data-theme="precision"] .border-copper-strong {
+  border-color: rgba(212, 165, 116, 0.4);
+}
+
+/* ============================================
+   PRECISION THEME UTILITIES - LIGHT
+   ============================================ */
+/* Blueprint grid - warmer tone for light bg */
+[data-theme="precision-light"] .bg-blueprint {
+  background-image:
+    linear-gradient(rgba(180, 140, 100, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 140, 100, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+[data-theme="precision-light"] .bg-blueprint-dense {
+  background-image:
+    linear-gradient(rgba(180, 140, 100, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 140, 100, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Card styles */
+[data-theme="precision-light"] .card-translucent {
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow);
+}
+
+[data-theme="precision-light"] .card-copper {
+  background: linear-gradient(135deg, rgba(184, 137, 90, 0.08), rgba(184, 137, 90, 0.03));
+  border: 1px solid rgba(180, 140, 100, 0.25);
+}
+
+/* Divider gradient */
+[data-theme="precision-light"] .divider-gradient {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(180, 140, 100, 0.5), transparent);
+}
+
+/* Copper glow */
+[data-theme="precision-light"] .glow-copper {
+  box-shadow: var(--shadow-glow);
+}
+
+/* Border utilities */
+[data-theme="precision-light"] .border-copper {
+  border-color: rgba(180, 140, 100, 0.25);
+}
+
+[data-theme="precision-light"] .border-copper-strong {
+  border-color: rgba(180, 140, 100, 0.4);
+}
+
+/* ============================================
+   PRECISION BADGES - DARK
+   ============================================ */
+[data-theme="precision"] .badge-active {
+  background: rgba(212, 165, 116, 0.2);
+  color: var(--primitive-copper);
+  border: 1px solid rgba(212, 165, 116, 0.4);
+}
+
+[data-theme="precision"] .badge-complete {
+  background: rgba(122, 158, 126, 0.2);
+  color: #7A9E7E;
+  border: 1px solid rgba(122, 158, 126, 0.4);
+}
+
+[data-theme="precision"] .badge-review {
+  background: rgba(232, 185, 49, 0.2);
+  color: #E8B931;
+  border: 1px solid rgba(232, 185, 49, 0.4);
+}
+
+[data-theme="precision"] .badge-draft {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9CA3AF;
+  border: 1px solid rgba(107, 114, 128, 0.4);
+}
+
+/* ============================================
+   PRECISION BADGES - LIGHT
+   ============================================ */
+[data-theme="precision-light"] .badge-active {
+  background: rgba(184, 137, 90, 0.15);
+  color: #9A7348;
+  border: 1px solid rgba(184, 137, 90, 0.4);
+}
+
+[data-theme="precision-light"] .badge-complete {
+  background: rgba(93, 126, 95, 0.15);
+  color: #4A6B4C;
+  border: 1px solid rgba(93, 126, 95, 0.4);
+}
+
+[data-theme="precision-light"] .badge-review {
+  background: rgba(196, 150, 12, 0.15);
+  color: #8B6914;
+  border: 1px solid rgba(196, 150, 12, 0.4);
+}
+
+[data-theme="precision-light"] .badge-draft {
+  background: rgba(138, 130, 121, 0.15);
+  color: #5C554C;
+  border: 1px solid rgba(138, 130, 121, 0.35);
+}
+
+/* ============================================
+   PRECISION BUTTONS - DARK
+   ============================================ */
+[data-theme="precision"] {
+  .btn-copper {
+    background: linear-gradient(135deg, var(--primitive-copper), var(--primitive-copper-dark));
+    color: var(--primitive-slate-900);
+    font-weight: 600;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 8px rgba(212, 165, 116, 0.2);
+  }
+
+  .btn-copper:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+  }
+
+  .btn-copper-ghost {
+    background: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-strong);
+    transition: all 0.15s ease;
+  }
+
+  .btn-copper-ghost:hover {
+    background: rgba(212, 165, 116, 0.08);
+    border-color: rgba(212, 165, 116, 0.4);
+  }
+
+  .btn-copper-outline {
+    background: transparent;
+    color: var(--primitive-copper);
+    border: 1px solid rgba(212, 165, 116, 0.4);
+    transition: all 0.15s ease;
+  }
+
+  .btn-copper-outline:hover {
+    background: rgba(212, 165, 116, 0.1);
+    border-color: rgba(212, 165, 116, 0.6);
+  }
+}
+
+/* ============================================
+   PRECISION BUTTONS - LIGHT
+   ============================================ */
+[data-theme="precision-light"] {
+  .btn-copper {
+    background: linear-gradient(135deg, #B8895A, #9A7348);
+    color: var(--primitive-white);
+    font-weight: 600;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 8px rgba(184, 137, 90, 0.25);
+  }
+
+  .btn-copper:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 4px 12px rgba(184, 137, 90, 0.35);
+    transform: translateY(-1px);
+  }
+
+  .btn-copper-ghost {
+    background: transparent;
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border-strong);
+    transition: all 0.15s ease;
+  }
+
+  .btn-copper-ghost:hover {
+    background: rgba(184, 137, 90, 0.08);
+    border-color: rgba(184, 137, 90, 0.5);
+  }
+
+  .btn-copper-outline {
+    background: transparent;
+    color: #9A7348;
+    border: 1px solid rgba(184, 137, 90, 0.4);
+    transition: all 0.15s ease;
+  }
+
+  .btn-copper-outline:hover {
+    background: rgba(184, 137, 90, 0.1);
+    border-color: rgba(184, 137, 90, 0.6);
+  }
+}
+
+/* ============================================
+   PRECISION INTERACTIVE STATES
+   ============================================ */
+[data-theme="precision"] {
+  .interactive-row:hover {
+    background-color: rgba(212, 165, 116, 0.04);
+    border-color: rgba(212, 165, 116, 0.25);
+  }
+
+  .hover-lift:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 16px rgba(212, 165, 116, 0.2);
+  }
+}
+
+[data-theme="precision-light"] {
+  .interactive-row:hover {
+    background-color: rgba(184, 137, 90, 0.06);
+    border-color: rgba(184, 137, 90, 0.3);
+  }
+
+  .hover-lift:hover {
+    box-shadow: 0 4px 12px rgba(180, 140, 100, 0.15);
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 16px rgba(184, 137, 90, 0.12);
+  }
+}
+
+/* ============================================
+   LEGACY UTILITY CLASSES
+   (Maintained for backward compatibility)
+   ============================================ */
+
+/* Section accent colors */
+.section-planning {
+  --section-accent: var(--color-accent-green);
+  --section-tint: var(--color-accent-green-tint);
+}
+
+.section-procurement {
+  --section-accent: var(--color-accent-teal);
+  --section-tint: var(--color-accent-teal-tint);
+}
+
+.section-documents {
+  --section-accent: var(--color-accent-yellow);
+  --section-tint: var(--color-accent-yellow-tint);
+}
+
+.section-cost {
+  --section-accent: var(--color-accent-coral);
+  --section-tint: var(--color-accent-coral-tint);
+}
+
+/* Card with colored accent border */
+.card-accent-green {
+  border-left: 4px solid var(--color-accent-green);
+}
+
+.card-accent-yellow {
+  border-left: 4px solid var(--color-accent-yellow);
+}
+
+.card-accent-coral {
+  border-left: 4px solid var(--color-accent-coral);
+}
+
+.card-accent-teal {
+  border-left: 4px solid var(--color-accent-teal);
+}
+
+/* Status badge colors (legacy) */
+.badge-success {
+  background: var(--color-accent-green-tint);
+  color: var(--color-accent-green);
+  border: 1px solid var(--color-accent-green);
+}
+
+.badge-warning {
+  background: var(--color-accent-yellow-tint);
+  color: var(--color-accent-yellow);
+  border: 1px solid var(--color-accent-yellow);
+}
+
+.badge-error {
+  background: var(--color-accent-coral-tint);
+  color: var(--color-accent-coral);
+  border: 1px solid var(--color-accent-coral);
+}
+
+.badge-info {
+  background: var(--color-accent-teal-tint);
+  color: var(--color-accent-teal);
+  border: 1px solid var(--color-accent-teal);
+}
+
+/* Section-aware hover states */
+.section-planning .hover-section-accent:hover {
+  background-color: var(--color-accent-green-tint);
+  border-color: var(--color-accent-green);
+}
+
+.section-procurement .hover-section-accent:hover {
+  background-color: var(--color-accent-teal-tint);
+  border-color: var(--color-accent-teal);
+}
+
+.section-documents .hover-section-accent:hover {
+  background-color: var(--color-accent-yellow-tint);
+  border-color: var(--color-accent-yellow);
+}
+
+.section-cost .hover-section-accent:hover {
+  background-color: var(--color-accent-coral-tint);
+  border-color: var(--color-accent-coral);
+}
+
+/* Button hover states with accent colors (legacy) */
+.btn-accent-green {
+  background-color: var(--color-accent-green);
+  color: var(--primitive-white);
+  transition: all 0.15s ease;
+}
+
+.btn-accent-green:hover {
+  background-color: var(--primitive-green-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-accent-teal {
+  background-color: var(--color-accent-teal);
+  color: var(--primitive-white);
+  transition: all 0.15s ease;
+}
+
+.btn-accent-teal:hover {
+  background-color: var(--primitive-teal-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-accent-yellow {
+  background-color: var(--color-accent-yellow);
+  color: var(--primitive-gray-900);
+  transition: all 0.15s ease;
+}
+
+.btn-accent-yellow:hover {
+  background-color: var(--primitive-yellow-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-accent-coral {
+  background-color: var(--color-accent-coral);
+  color: var(--primitive-white);
+  transition: all 0.15s ease;
+}
+
+.btn-accent-coral:hover {
+  background-color: var(--primitive-coral-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Ghost button hover with accent tints (legacy) */
+.btn-ghost-green:hover {
+  background-color: var(--color-accent-green-tint);
+  color: var(--color-accent-green);
+}
+
+.btn-ghost-teal:hover {
+  background-color: var(--color-accent-teal-tint);
+  color: var(--color-accent-teal);
+}
+
+.btn-ghost-yellow:hover {
+  background-color: var(--color-accent-yellow-tint);
+  color: var(--color-accent-yellow);
+}
+
+.btn-ghost-coral:hover {
+  background-color: var(--color-accent-coral-tint);
+  color: var(--color-accent-coral);
+}
+
+/* Interactive row hover with subtle highlight */
+.interactive-row {
+  transition: background-color 0.1s ease, border-color 0.1s ease;
+}
+
+.interactive-row:not([data-theme]) {
+  background-color: var(--color-bg-tertiary);
+}
+
+/* Tab active indicators */
+.tab-indicator-green.active {
+  border-bottom-color: var(--color-accent-green);
+}
+
+.tab-indicator-teal.active {
+  border-bottom-color: var(--color-accent-teal);
+}
+
+.tab-indicator-yellow.active {
+  border-bottom-color: var(--color-accent-yellow);
+}
+
+.tab-indicator-coral.active {
+  border-bottom-color: var(--color-accent-coral);
+}
+
+/* Smooth theme transition */
+*, *::before, *::after {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.05s ease;
+}
+
+/* Disable transitions on initial page load */
+.no-transitions, .no-transitions * {
+  transition: none !important;
+}
+
+/* ============================================
+   NAVIGATION PANEL SYSTEM
+   Unified styling for left nav panels with
+   default, hover, and active states
+   ============================================ */
+
+/* Base nav panel - default state */
+.nav-panel {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Hover state - subtle copper warmth */
+.nav-panel:hover {
+  border-color: rgba(212, 165, 116, 0.3);
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-primary) 0%,
+    rgba(212, 165, 116, 0.03) 100%
+  );
+}
+
+/* Active/Selected state - full copper highlight */
+.nav-panel-active,
+.nav-panel.nav-panel-active {
+  border-color: var(--primitive-copper);
+  background: linear-gradient(
+    135deg,
+    rgba(212, 165, 116, 0.08) 0%,
+    rgba(212, 165, 116, 0.04) 50%,
+    var(--color-bg-primary) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(212, 165, 116, 0.15),
+    0 0 20px rgba(212, 165, 116, 0.08),
+    inset 0 1px 0 rgba(212, 165, 116, 0.1);
+}
+
+/* Active state header accent line */
+.nav-panel-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--primitive-copper) 20%,
+    var(--primitive-copper-light) 50%,
+    var(--primitive-copper) 80%,
+    transparent 100%
+  );
+  border-radius: 0 0 2px 2px;
+  opacity: 0.8;
+}
+
+/* Nav panel header title - active state copper text */
+.nav-panel-active .nav-panel-title {
+  color: var(--primitive-copper);
+}
+
+/* Nav panel header with interactive behavior */
+.nav-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nav-panel-header:hover .nav-panel-title {
+  color: var(--primitive-copper);
+}
+
+.nav-panel-header:hover .nav-panel-chevron {
+  color: var(--primitive-copper);
+  transform: translateX(2px);
+}
+
+/* Nav panel chevron icon */
+.nav-panel-chevron {
+  transition:
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* Light theme adjustments */
+[data-theme="precision-light"] .nav-panel:hover {
+  border-color: rgba(184, 137, 90, 0.35);
+  background: linear-gradient(
+    135deg,
+    var(--color-bg-primary) 0%,
+    rgba(184, 137, 90, 0.04) 100%
+  );
+}
+
+[data-theme="precision-light"] .nav-panel-active,
+[data-theme="precision-light"] .nav-panel.nav-panel-active {
+  border-color: #B8895A;
+  background: linear-gradient(
+    135deg,
+    rgba(184, 137, 90, 0.1) 0%,
+    rgba(184, 137, 90, 0.05) 50%,
+    var(--color-bg-primary) 100%
+  );
+  box-shadow:
+    0 0 0 1px rgba(184, 137, 90, 0.2),
+    0 0 20px rgba(184, 137, 90, 0.06),
+    inset 0 1px 0 rgba(184, 137, 90, 0.12);
+}
+
+[data-theme="precision-light"] .nav-panel-active::before {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #B8895A 20%,
+    #C4A070 50%,
+    #B8895A 80%,
+    transparent 100%
+  );
+}
+
+[data-theme="precision-light"] .nav-panel-active .nav-panel-title {
+  color: #9A7348;
+}
+
+[data-theme="precision-light"] .nav-panel-header:hover .nav-panel-title {
+  color: #9A7348;
+}
+
+[data-theme="precision-light"] .nav-panel-header:hover .nav-panel-chevron {
+  color: #9A7348;
+}
+
+/* ============================================
+   PRECISION THEME ANIMATIONS & MICRO-INTERACTIONS
+   ============================================ */
+
+/* Keyframe Animations */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+@keyframes spin-ease {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-ease {
+  animation: spin-ease 1.5s ease-in-out infinite;
+}
+
+/* Animation Utilities */
+.animate-slide-in-up {
+  animation: slideInUp 0.4s ease-out;
+}
+
+.animate-slide-in-down {
+  animation: slideInDown 0.4s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(212, 165, 116, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 1000px 100%;
+}
+
+/* Animation Delay Utilities */
+.animate-delay-100 {
+  animation-delay: 100ms;
+}
+
+.animate-delay-200 {
+  animation-delay: 200ms;
+}
+
+.animate-delay-300 {
+  animation-delay: 300ms;
+}
+
+.animate-delay-400 {
+  animation-delay: 400ms;
+}
+
+.animate-delay-500 {
+  animation-delay: 500ms;
+}
+
+/* Hover & Interaction Utilities */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.hover-glow {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 0 1px var(--color-accent-primary),
+    0 0 12px rgba(212, 165, 116, 0.3);
+  border-color: var(--color-accent-primary);
+}
+
+.active-press:active {
+  transform: scale(0.98);
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .hover-lift:hover {
+    transform: none;
+  }
+}
+
+/* ============================================
+   CUSTOM NUMBER INPUT - Hide Native Spinners
+   ============================================ */
+.number-input-hide-spinners {
+  -moz-appearance: textfield;
+}
+
+.number-input-hide-spinners::-webkit-outer-spin-button,
+.number-input-hide-spinners::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

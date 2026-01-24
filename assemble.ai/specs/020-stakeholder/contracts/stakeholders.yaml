@@ -1,0 +1,704 @@
+openapi: 3.0.3
+info:
+  title: Unified Stakeholder API
+  description: API for managing project stakeholders across 4 groups (Client, Authority, Consultant, Contractor)
+  version: 1.0.0
+
+servers:
+  - url: /api/projects/{projectId}
+    description: Project-scoped API
+
+paths:
+  /stakeholders:
+    get:
+      summary: List all stakeholders
+      description: Returns all stakeholders for a project, optionally filtered by group
+      operationId: listStakeholders
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: group
+          in: query
+          description: Filter by stakeholder group
+          schema:
+            $ref: '#/components/schemas/StakeholderGroup'
+        - name: includeDeleted
+          in: query
+          description: Include soft-deleted stakeholders
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StakeholderWithStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Create a stakeholder
+      description: Create a new stakeholder in the specified group
+      operationId: createStakeholder
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStakeholderRequest'
+      responses:
+        '201':
+          description: Stakeholder created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Stakeholder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /stakeholders/{stakeholderId}:
+    get:
+      summary: Get a stakeholder
+      description: Returns a single stakeholder by ID
+      operationId: getStakeholder
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stakeholderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/StakeholderWithStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      summary: Update a stakeholder
+      description: Update stakeholder fields
+      operationId: updateStakeholder
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stakeholderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStakeholderRequest'
+      responses:
+        '200':
+          description: Stakeholder updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Stakeholder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete a stakeholder
+      description: Soft-delete a stakeholder
+      operationId: deleteStakeholder
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stakeholderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Stakeholder deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /stakeholders/{stakeholderId}/tender-status:
+    patch:
+      summary: Update tender status
+      description: Update tender process status for Consultant/Contractor stakeholders
+      operationId: updateTenderStatus
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stakeholderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTenderStatusRequest'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/TenderStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /stakeholders/{stakeholderId}/submission-status:
+    patch:
+      summary: Update submission status
+      description: Update submission status for Authority stakeholders
+      operationId: updateSubmissionStatus
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stakeholderId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSubmissionStatusRequest'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SubmissionStatusRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /stakeholders/generate:
+    post:
+      summary: Generate stakeholders
+      description: AI-powered stakeholder generation based on project profile
+      operationId: generateStakeholders
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateStakeholdersRequest'
+      responses:
+        '200':
+          description: Stakeholders generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateStakeholdersResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /stakeholders/migrate:
+    post:
+      summary: Migrate from legacy tables
+      description: One-time migration from consultantDisciplines/contractorTrades/stakeholders
+      operationId: migrateStakeholders
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Migration complete
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      migratedCount:
+                        type: integer
+                      groups:
+                        type: object
+                        additionalProperties:
+                          type: integer
+        '400':
+          description: Already migrated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stakeholders/reorder:
+    patch:
+      summary: Reorder stakeholders
+      description: Update sort order for stakeholders within a group
+      operationId: reorderStakeholders
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - group
+                - order
+              properties:
+                group:
+                  $ref: '#/components/schemas/StakeholderGroup'
+                order:
+                  type: array
+                  items:
+                    type: string
+                  description: Ordered list of stakeholder IDs
+      responses:
+        '200':
+          description: Order updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+components:
+  schemas:
+    StakeholderGroup:
+      type: string
+      enum: [client, authority, consultant, contractor]
+
+    TenderStatusType:
+      type: string
+      enum: [brief, tender, rec, award]
+
+    SubmissionStatus:
+      type: string
+      enum: [pending, submitted, approved, rejected, withdrawn]
+
+    Stakeholder:
+      type: object
+      required:
+        - id
+        - projectId
+        - stakeholderGroup
+        - name
+      properties:
+        id:
+          type: string
+        projectId:
+          type: string
+        companyId:
+          type: string
+          nullable: true
+        stakeholderGroup:
+          $ref: '#/components/schemas/StakeholderGroup'
+        name:
+          type: string
+        role:
+          type: string
+          nullable: true
+        organization:
+          type: string
+          nullable: true
+        contactName:
+          type: string
+          nullable: true
+        contactEmail:
+          type: string
+          format: email
+          nullable: true
+        contactPhone:
+          type: string
+          nullable: true
+        disciplineOrTrade:
+          type: string
+          nullable: true
+        isEnabled:
+          type: boolean
+          default: true
+        briefServices:
+          type: string
+          nullable: true
+        briefFee:
+          type: string
+          nullable: true
+        briefProgram:
+          type: string
+          nullable: true
+        scopeWorks:
+          type: string
+          nullable: true
+        scopePrice:
+          type: string
+          nullable: true
+        scopeProgram:
+          type: string
+          nullable: true
+        submissionRef:
+          type: string
+          nullable: true
+        submissionType:
+          type: string
+          nullable: true
+        sortOrder:
+          type: integer
+          default: 0
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TenderStatus:
+      type: object
+      required:
+        - id
+        - stakeholderId
+        - statusType
+      properties:
+        id:
+          type: string
+        stakeholderId:
+          type: string
+        statusType:
+          $ref: '#/components/schemas/TenderStatusType'
+        isActive:
+          type: boolean
+          default: false
+        isComplete:
+          type: boolean
+          default: false
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    SubmissionStatusRecord:
+      type: object
+      required:
+        - id
+        - stakeholderId
+        - status
+      properties:
+        id:
+          type: string
+        stakeholderId:
+          type: string
+        status:
+          $ref: '#/components/schemas/SubmissionStatus'
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        submissionRef:
+          type: string
+          nullable: true
+        responseDue:
+          type: string
+          format: date
+          nullable: true
+        responseReceivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        responseNotes:
+          type: string
+          nullable: true
+        conditions:
+          type: array
+          items:
+            type: string
+          nullable: true
+        conditionsCleared:
+          type: boolean
+          default: false
+
+    StakeholderWithStatus:
+      allOf:
+        - $ref: '#/components/schemas/Stakeholder'
+        - type: object
+          properties:
+            tenderStatuses:
+              type: array
+              items:
+                $ref: '#/components/schemas/TenderStatus'
+              description: Present for consultant/contractor groups
+            submissionStatus:
+              $ref: '#/components/schemas/SubmissionStatusRecord'
+              nullable: true
+              description: Present for authority group
+
+    CreateStakeholderRequest:
+      type: object
+      required:
+        - stakeholderGroup
+        - name
+      properties:
+        stakeholderGroup:
+          $ref: '#/components/schemas/StakeholderGroup'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        role:
+          type: string
+        organization:
+          type: string
+        contactName:
+          type: string
+        contactEmail:
+          type: string
+          format: email
+        contactPhone:
+          type: string
+        disciplineOrTrade:
+          type: string
+        isEnabled:
+          type: boolean
+          default: true
+        notes:
+          type: string
+
+    UpdateStakeholderRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        role:
+          type: string
+        organization:
+          type: string
+        contactName:
+          type: string
+        contactEmail:
+          type: string
+          format: email
+        contactPhone:
+          type: string
+        isEnabled:
+          type: boolean
+        briefServices:
+          type: string
+        briefFee:
+          type: string
+        briefProgram:
+          type: string
+        scopeWorks:
+          type: string
+        scopePrice:
+          type: string
+        scopeProgram:
+          type: string
+        notes:
+          type: string
+
+    UpdateTenderStatusRequest:
+      type: object
+      required:
+        - statusType
+      properties:
+        statusType:
+          $ref: '#/components/schemas/TenderStatusType'
+        isActive:
+          type: boolean
+        isComplete:
+          type: boolean
+
+    UpdateSubmissionStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/SubmissionStatus'
+        submissionRef:
+          type: string
+        responseDue:
+          type: string
+          format: date
+        responseNotes:
+          type: string
+        conditions:
+          type: array
+          items:
+            type: string
+        conditionsCleared:
+          type: boolean
+
+    GenerateStakeholdersRequest:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/StakeholderGroup'
+          description: Which groups to generate (default all)
+        includeAuthorities:
+          type: boolean
+          default: true
+        includeContractors:
+          type: boolean
+          default: true
+
+    GenerateStakeholdersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            generated:
+              type: array
+              items:
+                type: object
+                properties:
+                  stakeholderGroup:
+                    $ref: '#/components/schemas/StakeholderGroup'
+                  name:
+                    type: string
+                  role:
+                    type: string
+                  disciplineOrTrade:
+                    type: string
+                  reason:
+                    type: string
+            profileContext:
+              type: object
+              properties:
+                buildingClass:
+                  type: string
+                projectType:
+                  type: string
+                subclass:
+                  type: array
+                  items:
+                    type: string
+                complexityScore:
+                  type: number
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

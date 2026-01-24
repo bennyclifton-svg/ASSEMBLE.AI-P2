@@ -19,10 +19,10 @@ import {
     AlertCircle,
     Eye,
     RefreshCw,
-    Sparkles,
     Download,
     Database,
 } from 'lucide-react';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { useToast } from '@/lib/hooks/use-toast';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
@@ -49,7 +49,7 @@ const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 function StatusBadge({ status }: { status: Report['status'] }) {
     const config = {
-        draft: { icon: FileText, color: 'text-[#858585]', bg: 'bg-[#3e3e42]', label: 'Draft' },
+        draft: { icon: FileText, color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-border)]', label: 'Draft' },
         toc_pending: { icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10', label: 'In Progress' },
         generating: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-500/10', label: 'Generating', spin: true },
         complete: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-500/10', label: 'Complete' },
@@ -316,25 +316,25 @@ export function ReportsSection({
     const reports = data?.reports || [];
 
     return (
-        <div className="bg-[#252526] rounded-lg border border-[#3e3e42]">
+        <div className="bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
             {/* Section Header */}
             <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-2">
-                    <span className="font-semibold text-[#cccccc]">Create Report</span>
+                    <span className="font-semibold text-[var(--color-text-primary)]">Create Report</span>
                     {reports.length > 0 && (
-                        <span className="text-xs text-[#858585]">({reports.length})</span>
+                        <span className="text-xs text-[var(--color-text-muted)]">({reports.length})</span>
                     )}
                 </div>
                 <div className="flex items-center gap-2">
                     <button
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[#4fc3f7] hover:text-[#81d4fa] hover:bg-[#4fc3f7]/10 rounded font-medium"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[var(--color-accent-teal)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-accent-teal-tint)] rounded font-medium transition-colors"
                         onClick={() => handleStartCreating('rft')}
                     >
                         <Plus className="w-3 h-3" />
                         RFT
                     </button>
                     <button
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[#4fc3f7] hover:text-[#81d4fa] hover:bg-[#4fc3f7]/10 rounded font-medium"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[var(--color-accent-teal)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-accent-teal-tint)] rounded font-medium transition-colors"
                         onClick={() => handleStartCreating('trr')}
                     >
                         <Plus className="w-3 h-3" />
@@ -344,10 +344,10 @@ export function ReportsSection({
             </div>
 
             {/* Section Content */}
-            <div className="border-t border-[#3e3e42]">
+            <div className="border-t border-[var(--color-border)]">
                 {/* Reports List */}
                 {isLoading ? (
-                        <div className="p-4 text-center text-[#858585]">
+                        <div className="p-4 text-center text-[var(--color-text-muted)]">
                             <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                             Loading reports...
                         </div>
@@ -356,22 +356,22 @@ export function ReportsSection({
                             Failed to load reports
                         </div>
                     ) : reports.length === 0 && !creatingReportType ? (
-                        <div className="p-4 text-center text-[#858585] text-sm">
+                        <div className="p-4 text-center text-[var(--color-text-muted)] text-sm">
                             No reports yet. Click + RFT or + TRR to create one.
                         </div>
                     ) : (
-                        <div className="divide-y divide-[#3e3e42]">
+                        <div className="divide-y divide-[var(--color-border)]">
                             {reports.map(report => (
                                 <div key={report.id}>
-                                    <div className="flex items-center justify-between p-3 hover:bg-[#2a2d2e]">
+                                    <div className="flex items-center justify-between p-3 hover:bg-[var(--color-bg-tertiary)]">
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            <FileText className="w-4 h-4 text-[#858585] flex-shrink-0" />
+                                            <FileText className="w-4 h-4 text-[var(--color-text-muted)] flex-shrink-0" />
                                             <div className="min-w-0 flex-1">
                                                 {editingTitleId === report.id ? (
                                                     <input
                                                         type="text"
-                                                        className="w-full text-sm text-[#cccccc] bg-transparent border-none outline-none p-0 m-0 focus:ring-0"
-                                                        style={{ caretColor: '#0e639c' }}
+                                                        className="w-full text-sm text-[var(--color-text-primary)] bg-transparent border-none outline-none p-0 m-0 focus:ring-0"
+                                                        style={{ caretColor: 'var(--color-accent-green)' }}
                                                         value={editingTitleValue}
                                                         onChange={e => setEditingTitleValue(e.target.value)}
                                                         onKeyDown={e => handleTitleKeyDown(e, report.id)}
@@ -380,7 +380,7 @@ export function ReportsSection({
                                                     />
                                                 ) : (
                                                     <p
-                                                        className="text-sm text-[#cccccc] truncate cursor-text hover:text-white"
+                                                        className="text-sm text-[var(--color-text-primary)] truncate cursor-text hover:text-white"
                                                         onClick={() => handleTitleEdit(report.id, report.title)}
                                                         title="Click to edit"
                                                     >
@@ -395,7 +395,7 @@ export function ReportsSection({
                                             {report.status === 'complete' && viewingReportId === report.id && (
                                                 <>
                                                     <button
-                                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[#cccccc] bg-[#3e3e42] rounded hover:bg-[#4e4e52] disabled:opacity-50"
+                                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[var(--color-text-primary)] bg-[var(--color-border)] rounded hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50 transition-colors"
                                                         onClick={() => handleReportRefresh(report.id)}
                                                         disabled={refreshingReportId === report.id}
                                                         title="Refresh"
@@ -409,13 +409,13 @@ export function ReportsSection({
                                                         onClick={() => handleGenerateLong(report.id)}
                                                         title="Long RFT"
                                                     >
-                                                        <Sparkles className="w-3 h-3" />
+                                                        <DiamondIcon className="w-3 h-3" />
                                                         Long RFT
                                                     </button>
 
                                                     <div className="relative">
                                                         <button
-                                                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[#cccccc] bg-[#3e3e42] rounded hover:bg-[#4e4e52]"
+                                                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[var(--color-text-primary)] bg-[var(--color-border)] rounded hover:bg-[var(--color-bg-tertiary)] transition-colors"
                                                             onClick={() => setShowExportMenu(showExportMenu === report.id ? null : report.id)}
                                                             title="Export"
                                                         >
@@ -424,16 +424,16 @@ export function ReportsSection({
                                                             <ChevronDown className="w-3 h-3" />
                                                         </button>
                                                         {showExportMenu === report.id && (
-                                                            <div className="absolute right-0 top-full mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg z-10">
+                                                            <div className="absolute right-0 top-full mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg z-10">
                                                                 <button
-                                                                    className="w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42] flex items-center gap-2"
+                                                                    className="w-full px-3 py-1.5 text-xs text-left text-[var(--color-text-primary)] hover:bg-[var(--color-border)] flex items-center gap-2"
                                                                     onClick={() => handleExport(report.id, 'docx')}
                                                                 >
                                                                     <DocxIcon size={16} />
                                                                     Export as DOCX
                                                                 </button>
                                                                 <button
-                                                                    className="w-full px-3 py-1.5 text-xs text-left text-[#cccccc] hover:bg-[#3e3e42] flex items-center gap-2"
+                                                                    className="w-full px-3 py-1.5 text-xs text-left text-[var(--color-text-primary)] hover:bg-[var(--color-border)] flex items-center gap-2"
                                                                     onClick={() => handleExport(report.id, 'pdf')}
                                                                 >
                                                                     <PdfIcon size={16} />
@@ -460,12 +460,12 @@ export function ReportsSection({
                                                     </button>
 
                                                     {/* T099l: Content Length Selector for Long RFT */}
-                                                    <div className="flex items-center gap-1 px-1 py-0.5 bg-[#2a2d2e] rounded border border-[#3e3e42]">
+                                                    <div className="flex items-center gap-1 px-1 py-0.5 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)]">
                                                         <button
                                                             className={`px-2 py-0.5 text-xs rounded transition-colors ${
                                                                 selectedContentLength === 'concise'
-                                                                    ? 'bg-[#c9860d] text-white'
-                                                                    : 'text-[#858585] hover:text-[#cccccc]'
+                                                                    ? 'bg-[var(--color-accent-yellow)] text-white'
+                                                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                                                             }`}
                                                             onClick={() => setSelectedContentLength('concise')}
                                                             title="Concise (~500-800 words/section)"
@@ -475,8 +475,8 @@ export function ReportsSection({
                                                         <button
                                                             className={`px-2 py-0.5 text-xs rounded transition-colors ${
                                                                 selectedContentLength === 'lengthy'
-                                                                    ? 'bg-[#c9860d] text-white'
-                                                                    : 'text-[#858585] hover:text-[#cccccc]'
+                                                                    ? 'bg-[var(--color-accent-yellow)] text-white'
+                                                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                                                             }`}
                                                             onClick={() => setSelectedContentLength('lengthy')}
                                                             title="Lengthy (~1500-2500 words/section)"
@@ -487,12 +487,12 @@ export function ReportsSection({
 
                                                     <button
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs text-white rounded hover:brightness-110 disabled:opacity-50"
-                                                        style={{ backgroundColor: '#c9860d' }}
+                                                        style={{ backgroundColor: 'var(--color-accent-yellow)' }}
                                                         onClick={() => handleStartWithMode('ai_assisted')}
                                                         disabled={startingGeneration}
                                                         title={`Generate Long RFT (AI Assisted - ${selectedContentLength === 'lengthy' ? 'Lengthy' : 'Concise'})`}
                                                     >
-                                                        <Sparkles className="w-3 h-3" />
+                                                        <DiamondIcon className="w-3 h-3" />
                                                         {startingGeneration && selectedGenerationMode === 'ai_assisted' ? 'Starting...' : 'Long RFT'}
                                                     </button>
                                                 </>
@@ -502,7 +502,7 @@ export function ReportsSection({
                                             <StatusBadge status={report.status} />
 
                                             <button
-                                                className={`p-1.5 rounded hover:bg-[#3e3e42] ${viewingReportId === report.id ? 'bg-[#0e639c] text-white' : 'text-[#858585]'}`}
+                                                className={`p-1.5 rounded hover:bg-[var(--color-border)] ${viewingReportId === report.id ? 'bg-[var(--color-accent-green)] text-white' : 'text-[var(--color-text-muted)]'}`}
                                                 onClick={() => handleViewReport(report.id)}
                                                 title={viewingReportId === report.id ? 'Hide' : 'View'}
                                             >
@@ -510,7 +510,7 @@ export function ReportsSection({
                                             </button>
 
                                             <button
-                                                className="p-1.5 text-[#858585] rounded hover:bg-[#3e3e42] hover:text-red-500 disabled:opacity-50"
+                                                className="p-1.5 text-[var(--color-text-muted)] rounded hover:bg-[var(--color-border)] hover:text-red-500 disabled:opacity-50"
                                                 onClick={() => handleDelete(report.id)}
                                                 disabled={deletingId === report.id}
                                                 title="Delete"
@@ -528,12 +528,12 @@ export function ReportsSection({
 
                             {/* Inline Report Creation */}
                             {creatingReportType && (
-                                <div className="flex items-center justify-between p-3 bg-[#1e1e1e]">
+                                <div className="flex items-center justify-between p-3 bg-[var(--color-bg-primary)]">
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <FileText className="w-4 h-4 text-[#858585] flex-shrink-0" />
+                                        <FileText className="w-4 h-4 text-[var(--color-text-muted)] flex-shrink-0" />
                                         <input
                                             type="text"
-                                            className="flex-1 text-sm text-[#cccccc] bg-[#3c3c3c] border border-[#0e639c] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[#0e639c]"
+                                            className="flex-1 text-sm text-[var(--color-text-primary)] bg-[var(--color-bg-tertiary)] border border-[var(--color-accent-green)] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-green)]"
                                             value={newReportTitle}
                                             onChange={e => setNewReportTitle(e.target.value)}
                                             onKeyDown={handleCreateKeyDown}
@@ -544,14 +544,14 @@ export function ReportsSection({
                                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                         <StatusBadge status="toc_pending" />
                                         <button
-                                            className="p-1.5 text-[#858585] rounded hover:bg-[#3e3e42]"
+                                            className="p-1.5 text-[var(--color-text-muted)] rounded hover:bg-[var(--color-border)]"
                                             onClick={() => handleCreateReport()}
                                             title="View"
                                         >
                                             <Eye className="w-4 h-4" />
                                         </button>
                                         <button
-                                            className="p-1.5 text-[#858585] rounded hover:bg-[#3e3e42] hover:text-red-500"
+                                            className="p-1.5 text-[var(--color-text-muted)] rounded hover:bg-[var(--color-border)] hover:text-red-500"
                                             onClick={() => {
                                                 setCreatingReportType(null);
                                                 setNewReportTitle('');
@@ -566,7 +566,7 @@ export function ReportsSection({
 
                             {/* Inline Report View - positioned at bottom of all reports */}
                             {viewingReportId && (
-                                <div className="border-t border-[#3e3e42] bg-[#1e1e1e] p-4">
+                                <div className="border-t border-[var(--color-border)] bg-[var(--color-bg-primary)] p-4">
                                     <ReportGenerator
                                         key={viewingReportId}
                                         ref={generatorRef}

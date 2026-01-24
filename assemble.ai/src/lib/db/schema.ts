@@ -54,10 +54,9 @@ export const versions = sqliteTable('versions', {
 // Supports both subcategory-based (legacy) and discipline/trade-based transmittals
 export const transmittals = sqliteTable('transmittals', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id), // Required for discipline-based transmittals
+    projectId: text('project_id').references(() => projects.id), // Required for stakeholder-based transmittals
     subcategoryId: text('subcategory_id').references(() => subcategories.id), // Optional - for legacy subcategory-based transmittals
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id), // Optional - for discipline-based transmittals
-    tradeId: text('trade_id').references(() => contractorTrades.id), // Optional - for trade-based transmittals
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id), // Optional - for stakeholder-based transmittals
     name: text('name').notNull(),
     status: text('status', { enum: ['DRAFT', 'ISSUED'] }).default('DRAFT'),
     issuedAt: text('issued_at'),
@@ -90,6 +89,14 @@ export const projects = sqliteTable('projects', {
     revision: text('revision').default('REV A'),
     currencyCode: text('currency_code').default('AUD'),
     showGst: integer('show_gst', { mode: 'boolean' }).default(false),
+    // Project Initiator (Feature 018) - 14 project types
+    projectType: text('project_type', {
+        enum: [
+            'due-diligence', 'feasibility', 'house', 'apartments', 'apartments-btr',
+            'student-housing', 'townhouses', 'retirement-living', 'office', 'retail',
+            'industrial', 'fitout', 'refurbishment', 'remediation'
+        ]
+    }),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
@@ -109,7 +116,7 @@ export const projectDetails = sqliteTable('project_details', {
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
-// Project Objectives (4 fields)
+// Project Objectives (5 fields)
 export const projectObjectives = sqliteTable('project_objectives', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
@@ -117,6 +124,7 @@ export const projectObjectives = sqliteTable('project_objectives', {
     quality: text('quality'),
     budget: text('budget'),
     program: text('program'),
+    questionAnswers: text('question_answers'), // JSON string of questionnaire answers for recall
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -376,8 +384,7 @@ export const companies = sqliteTable('companies', {
 export const costLines = sqliteTable('cost_lines', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     section: text('section', { enum: ['FEES', 'CONSULTANTS', 'CONSTRUCTION', 'CONTINGENCY'] }).notNull(),
     costCode: text('cost_code'),
     activity: text('activity').notNull(),
@@ -484,13 +491,9 @@ export const costLinesRelations = relations(costLines, ({ one, many }) => ({
         fields: [costLines.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [costLines.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [costLines.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [costLines.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     allocations: many(costLineAllocations),
     variations: many(variations),
@@ -692,12 +695,11 @@ export const libraryDocumentsRelations = relations(libraryDocuments, ({ one }) =
 // ADDENDUM SCHEMA (Feature 004 - Phase 15)
 // ============================================================================
 
-// Addenda (Addendum reports per discipline/trade)
+// Addenda (Addendum reports per stakeholder)
 export const addenda = sqliteTable('addenda', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     addendumNumber: integer('addendum_number').notNull(),
     content: text('content'),
     addendumDate: text('addendum_date'), // Date field for TRR report
@@ -723,13 +725,9 @@ export const addendaRelations = relations(addenda, ({ one, many }) => ({
         fields: [addenda.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [addenda.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [addenda.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [addenda.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     transmittals: many(addendumTransmittals),
 }));
@@ -749,12 +747,11 @@ export const addendumTransmittalsRelations = relations(addendumTransmittals, ({ 
 // RFT NEW SCHEMA (Feature 004 - Procurement - RFT NEW)
 // ============================================================================
 
-// RFT NEW reports (one per discipline/trade, comprehensive RFT documents)
+// RFT NEW reports (one per stakeholder, comprehensive RFT documents)
 export const rftNew = sqliteTable('rft_new', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     rftDate: text('rft_date'), // Date field for TRR report
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
@@ -777,13 +774,9 @@ export const rftNewRelations = relations(rftNew, ({ one, many }) => ({
         fields: [rftNew.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [rftNew.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [rftNew.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [rftNew.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     transmittals: many(rftNewTransmittals),
 }));
@@ -803,12 +796,11 @@ export const rftNewTransmittalsRelations = relations(rftNewTransmittals, ({ one 
 // EVALUATION SCHEMA (Feature 011 - Evaluation Report)
 // ============================================================================
 
-// Evaluations (one per discipline/trade per project)
+// Evaluations (one per stakeholder per project)
 export const evaluations = sqliteTable('evaluations', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
@@ -871,13 +863,9 @@ export const evaluationsRelations = relations(evaluations, ({ one, many }) => ({
         fields: [evaluations.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [evaluations.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [evaluations.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [evaluations.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     rows: many(evaluationRows),
     submissions: many(tenderSubmissions),
@@ -986,12 +974,11 @@ export const evaluationNonPriceCellsRelations = relations(evaluationNonPriceCell
 // TRR SCHEMA (Feature 012 - Tender Recommendation Report)
 // ============================================================================
 
-// TRR (Tender Recommendation Report) - one per discipline/trade per project
+// TRR (Tender Recommendation Report) - one per stakeholder per project
 export const trr = sqliteTable('trr', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     executiveSummary: text('executive_summary'),
     clarifications: text('clarifications'),
     recommendation: text('recommendation'),
@@ -1017,13 +1004,9 @@ export const trrRelations = relations(trr, ({ one, many }) => ({
         fields: [trr.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [trr.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [trr.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [trr.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     transmittals: many(trrTransmittals),
 }));
@@ -1119,6 +1102,474 @@ export const programMilestonesRelations = relations(programMilestones, ({ one })
     activity: one(programActivities, {
         fields: [programMilestones.activityId],
         references: [programActivities.id],
+    }),
+}));
+
+// ============================================================================
+// PROFILER MODULE SCHEMA (Feature 019 - Replaces Project Initiator)
+// ============================================================================
+
+// Project Profiles (Class/Type/Subclass/Scale/Complexity taxonomy)
+export const projectProfiles = sqliteTable('project_profiles', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    buildingClass: text('building_class', {
+        enum: ['residential', 'commercial', 'industrial', 'institution', 'mixed', 'infrastructure', 'agricultural', 'defense_secure']
+    }).notNull(),
+    projectType: text('project_type_v2', {
+        enum: ['refurb', 'extend', 'new', 'remediation', 'advisory']
+    }).notNull(),
+    subclass: text('subclass').notNull(), // JSON array for multi-select (Mixed class)
+    subclassOther: text('subclass_other'), // JSON array of free-text entries
+    scaleData: text('scale_data').notNull(), // JSON: { levels: 5, gfa_sqm: 12000 }
+    complexity: text('complexity').notNull(), // JSON: { quality: "premium", site: "heritage" }
+    workScope: text('work_scope'), // JSON array of selected work scope items (for refurb/remediation/extend)
+    complexityScore: integer('complexity_score'), // Calculated 1-10 score
+    // Multi-Region Support (Feature 022 - Phase 11)
+    region: text('region', {
+        enum: ['AU', 'NZ', 'UK', 'US']
+    }).default('AU'), // Default to Australia
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Profiler Objectives (new 2-category structure: Functional Quality + Planning Compliance)
+export const profilerObjectives = sqliteTable('profiler_objectives', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    functionalQuality: text('functional_quality').notNull(), // JSON: { content, source, originalAi, editHistory }
+    planningCompliance: text('planning_compliance').notNull(), // JSON: { content, source, originalAi, editHistory }
+    profileContext: text('profile_context'), // JSON snapshot of profile at generation time
+    generatedAt: text('generated_at'),
+    polishedAt: text('polished_at'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Profile Patterns (AI learning - aggregate, anonymous)
+export const profilePatterns = sqliteTable('profile_patterns', {
+    id: text('id').primaryKey(),
+    buildingClass: text('building_class').notNull(),
+    projectType: text('project_type').notNull(),
+    patternType: text('pattern_type', {
+        enum: ['subclass_other', 'objective_theme', 'polish_edit']
+    }).notNull(),
+    patternValue: text('pattern_value').notNull(),
+    occurrenceCount: integer('occurrence_count').default(1),
+    lastSeen: text('last_seen').default(sql`CURRENT_TIMESTAMP`),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
+// PROFILER MODULE RELATIONS
+// ============================================================================
+
+export const projectProfilesRelations = relations(projectProfiles, ({ one }) => ({
+    project: one(projects, {
+        fields: [projectProfiles.projectId],
+        references: [projects.id],
+    }),
+}));
+
+export const profilerObjectivesRelations = relations(profilerObjectives, ({ one }) => ({
+    project: one(projects, {
+        fields: [profilerObjectives.projectId],
+        references: [projects.id],
+    }),
+}));
+
+// ============================================================================
+// UNIFIED STAKEHOLDER SCHEMA (Feature 020 - Replaces Consultant/Contractor Lists)
+// ============================================================================
+
+// Stakeholder Group Enum
+export const stakeholderGroupEnum = ['client', 'authority', 'consultant', 'contractor'] as const;
+export type StakeholderGroup = typeof stakeholderGroupEnum[number];
+
+// Tender Status Type Enum
+export const tenderStatusTypeEnum = ['brief', 'tender', 'rec', 'award'] as const;
+export type TenderStatusType = typeof tenderStatusTypeEnum[number];
+
+// Submission Status Enum
+export const submissionStatusEnum = ['pending', 'submitted', 'approved', 'rejected', 'withdrawn'] as const;
+export type SubmissionStatus = typeof submissionStatusEnum[number];
+
+// Project Stakeholders (Unified table replacing consultantDisciplines, contractorTrades, stakeholders)
+export const projectStakeholders = sqliteTable('project_stakeholders', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    companyId: text('company_id').references(() => companies.id, { onDelete: 'set null' }),
+
+    // Classification
+    stakeholderGroup: text('stakeholder_group').notNull().$type<StakeholderGroup>(),
+
+    // Core Fields
+    name: text('name').notNull(),
+    role: text('role'),
+    organization: text('organization'),
+
+    // Contact Info
+    contactName: text('contact_name'),
+    contactEmail: text('contact_email'),
+    contactPhone: text('contact_phone'),
+
+    // Consultant/Contractor specific
+    disciplineOrTrade: text('discipline_or_trade'),
+    isEnabled: integer('is_enabled', { mode: 'boolean' }).default(true),
+    briefServices: text('brief_services'),
+    briefFee: text('brief_fee'),
+    briefProgram: text('brief_program'),
+    scopeWorks: text('scope_works'),
+    scopePrice: text('scope_price'),
+    scopeProgram: text('scope_program'),
+
+    // Authority specific
+    submissionRef: text('submission_ref'),
+    submissionType: text('submission_type'),
+
+    // Metadata
+    sortOrder: integer('sort_order').default(0),
+    notes: text('notes'),
+    isAiGenerated: integer('is_ai_generated', { mode: 'boolean' }).default(false),
+
+    // Timestamps
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+    deletedAt: text('deleted_at'),
+});
+
+// Stakeholder Tender Statuses (For Consultant/Contractor groups)
+export const stakeholderTenderStatuses = sqliteTable('stakeholder_tender_statuses', {
+    id: text('id').primaryKey(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'cascade' }).notNull(),
+
+    statusType: text('status_type').notNull().$type<TenderStatusType>(),
+    isActive: integer('is_active', { mode: 'boolean' }).default(false),
+    isComplete: integer('is_complete', { mode: 'boolean' }).default(false),
+    completedAt: text('completed_at'),
+
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Stakeholder Submission Statuses (For Authority group)
+export const stakeholderSubmissionStatuses = sqliteTable('stakeholder_submission_statuses', {
+    id: text('id').primaryKey(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'cascade' }).notNull(),
+
+    status: text('status').notNull().$type<SubmissionStatus>().default('pending'),
+
+    submittedAt: text('submitted_at'),
+    submissionRef: text('submission_ref'),
+    responseDue: text('response_due'),
+
+    responseReceivedAt: text('response_received_at'),
+    responseNotes: text('response_notes'),
+
+    conditions: text('conditions'), // JSON array
+    conditionsCleared: integer('conditions_cleared', { mode: 'boolean' }).default(false),
+
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
+// UNIFIED STAKEHOLDER RELATIONS
+// ============================================================================
+
+export const projectStakeholdersRelations = relations(projectStakeholders, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [projectStakeholders.projectId],
+        references: [projects.id],
+    }),
+    company: one(companies, {
+        fields: [projectStakeholders.companyId],
+        references: [companies.id],
+    }),
+    tenderStatuses: many(stakeholderTenderStatuses),
+    submissionStatuses: many(stakeholderSubmissionStatuses),
+}));
+
+export const stakeholderTenderStatusesRelations = relations(stakeholderTenderStatuses, ({ one }) => ({
+    stakeholder: one(projectStakeholders, {
+        fields: [stakeholderTenderStatuses.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const stakeholderSubmissionStatusesRelations = relations(stakeholderSubmissionStatuses, ({ one }) => ({
+    stakeholder: one(projectStakeholders, {
+        fields: [stakeholderSubmissionStatuses.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+// ============================================================================
+// NOTES, MEETINGS & REPORTS SCHEMA (Feature 021)
+// ============================================================================
+
+// ============================================================================
+// NOTES SCHEMA
+// ============================================================================
+
+export const notes = sqliteTable('notes', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    title: text('title').notNull().default('New Note'),
+    content: text('content'),
+    isStarred: integer('is_starred', { mode: 'boolean' }).default(false),
+    reportingPeriodStart: text('reporting_period_start'),
+    reportingPeriodEnd: text('reporting_period_end'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+    deletedAt: text('deleted_at'),
+});
+
+export const noteTransmittals = sqliteTable('note_transmittals', {
+    id: text('id').primaryKey(),
+    noteId: text('note_id').references(() => notes.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Notes Relations
+export const notesRelations = relations(notes, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [notes.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [notes.organizationId],
+        references: [organizations.id],
+    }),
+    transmittals: many(noteTransmittals),
+}));
+
+export const noteTransmittalsRelations = relations(noteTransmittals, ({ one }) => ({
+    note: one(notes, {
+        fields: [noteTransmittals.noteId],
+        references: [notes.id],
+    }),
+    document: one(documents, {
+        fields: [noteTransmittals.documentId],
+        references: [documents.id],
+    }),
+}));
+
+// ============================================================================
+// MEETINGS SCHEMA
+// ============================================================================
+
+export const meetingAgendaTypeEnum = ['standard', 'detailed', 'custom'] as const;
+export type MeetingAgendaType = typeof meetingAgendaTypeEnum[number];
+
+export const meetings = sqliteTable('meetings', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    title: text('title').notNull().default('New Meeting'),
+    meetingDate: text('meeting_date'),
+    agendaType: text('agenda_type').$type<MeetingAgendaType>().default('standard'),
+    reportingPeriodStart: text('reporting_period_start'),
+    reportingPeriodEnd: text('reporting_period_end'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+    deletedAt: text('deleted_at'),
+});
+
+export const meetingSections = sqliteTable('meeting_sections', {
+    id: text('id').primaryKey(),
+    meetingId: text('meeting_id').references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
+    sectionKey: text('section_key').notNull(),
+    sectionLabel: text('section_label').notNull(),
+    content: text('content'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    parentSectionId: text('parent_section_id').references(() => meetingSections.id, { onDelete: 'cascade' }),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const meetingAttendees = sqliteTable('meeting_attendees', {
+    id: text('id').primaryKey(),
+    meetingId: text('meeting_id').references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    adhocName: text('adhoc_name'),
+    adhocFirm: text('adhoc_firm'),
+    adhocGroup: text('adhoc_group'),
+    adhocSubGroup: text('adhoc_sub_group'),
+    isAttending: integer('is_attending', { mode: 'boolean' }).default(true),
+    isDistribution: integer('is_distribution', { mode: 'boolean' }).default(true),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const meetingTransmittals = sqliteTable('meeting_transmittals', {
+    id: text('id').primaryKey(),
+    meetingId: text('meeting_id').references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Meetings Relations
+export const meetingsRelations = relations(meetings, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [meetings.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [meetings.organizationId],
+        references: [organizations.id],
+    }),
+    sections: many(meetingSections),
+    attendees: many(meetingAttendees),
+    transmittals: many(meetingTransmittals),
+}));
+
+export const meetingSectionsRelations = relations(meetingSections, ({ one, many }) => ({
+    meeting: one(meetings, {
+        fields: [meetingSections.meetingId],
+        references: [meetings.id],
+    }),
+    parentSection: one(meetingSections, {
+        fields: [meetingSections.parentSectionId],
+        references: [meetingSections.id],
+        relationName: 'parentChild',
+    }),
+    childSections: many(meetingSections, { relationName: 'parentChild' }),
+    stakeholder: one(projectStakeholders, {
+        fields: [meetingSections.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const meetingAttendeesRelations = relations(meetingAttendees, ({ one }) => ({
+    meeting: one(meetings, {
+        fields: [meetingAttendees.meetingId],
+        references: [meetings.id],
+    }),
+    stakeholder: one(projectStakeholders, {
+        fields: [meetingAttendees.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const meetingTransmittalsRelations = relations(meetingTransmittals, ({ one }) => ({
+    meeting: one(meetings, {
+        fields: [meetingTransmittals.meetingId],
+        references: [meetings.id],
+    }),
+    document: one(documents, {
+        fields: [meetingTransmittals.documentId],
+        references: [documents.id],
+    }),
+}));
+
+// ============================================================================
+// REPORTS SCHEMA
+// ============================================================================
+
+export const reportContentsTypeEnum = ['standard', 'detailed', 'custom'] as const;
+export type ReportContentsType = typeof reportContentsTypeEnum[number];
+
+export const reports = sqliteTable('reports', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    title: text('title').notNull().default('New Report'),
+    reportDate: text('report_date'),
+    preparedFor: text('prepared_for'),
+    preparedBy: text('prepared_by'),
+    contentsType: text('contents_type').$type<ReportContentsType>().default('standard'),
+    reportingPeriodStart: text('reporting_period_start'),
+    reportingPeriodEnd: text('reporting_period_end'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+    deletedAt: text('deleted_at'),
+});
+
+export const reportSections = sqliteTable('report_sections', {
+    id: text('id').primaryKey(),
+    reportId: text('report_id').references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+    sectionKey: text('section_key').notNull(),
+    sectionLabel: text('section_label').notNull(),
+    content: text('content'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    parentSectionId: text('parent_section_id').references(() => reportSections.id, { onDelete: 'cascade' }),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const reportAttendees = sqliteTable('report_attendees', {
+    id: text('id').primaryKey(),
+    reportId: text('report_id').references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    adhocName: text('adhoc_name'),
+    adhocFirm: text('adhoc_firm'),
+    adhocGroup: text('adhoc_group'),
+    isDistribution: integer('is_distribution', { mode: 'boolean' }).default(true),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const reportTransmittals = sqliteTable('report_transmittals', {
+    id: text('id').primaryKey(),
+    reportId: text('report_id').references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Reports Relations
+export const reportsRelations = relations(reports, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [reports.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [reports.organizationId],
+        references: [organizations.id],
+    }),
+    sections: many(reportSections),
+    attendees: many(reportAttendees),
+    transmittals: many(reportTransmittals),
+}));
+
+export const reportSectionsRelations = relations(reportSections, ({ one, many }) => ({
+    report: one(reports, {
+        fields: [reportSections.reportId],
+        references: [reports.id],
+    }),
+    parentSection: one(reportSections, {
+        fields: [reportSections.parentSectionId],
+        references: [reportSections.id],
+        relationName: 'parentChild',
+    }),
+    childSections: many(reportSections, { relationName: 'parentChild' }),
+    stakeholder: one(projectStakeholders, {
+        fields: [reportSections.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const reportAttendeesRelations = relations(reportAttendees, ({ one }) => ({
+    report: one(reports, {
+        fields: [reportAttendees.reportId],
+        references: [reports.id],
+    }),
+    stakeholder: one(projectStakeholders, {
+        fields: [reportAttendees.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const reportTransmittalsRelations = relations(reportTransmittals, ({ one }) => ({
+    report: one(reports, {
+        fields: [reportTransmittals.reportId],
+        references: [reports.id],
+    }),
+    document: one(documents, {
+        fields: [reportTransmittals.documentId],
+        references: [documents.id],
     }),
 }));
 

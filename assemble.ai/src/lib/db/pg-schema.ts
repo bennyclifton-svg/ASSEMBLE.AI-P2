@@ -3,7 +3,7 @@
  * Converted from SQLite schema with subscription support
  */
 
-import { pgTable, text, integer, boolean, timestamp, serial, varchar, unique, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, bigint, boolean, timestamp, serial, varchar, unique, index } from 'drizzle-orm/pg-core';
 import { sql, relations } from 'drizzle-orm';
 
 // ============================================================================
@@ -58,8 +58,7 @@ export const transmittals = pgTable('transmittals', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id),
     subcategoryId: text('subcategory_id').references(() => subcategories.id),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     name: text('name').notNull(),
     status: text('status').default('DRAFT'),
     issuedAt: timestamp('issued_at'),
@@ -88,6 +87,14 @@ export const projects = pgTable('projects', {
     revision: text('revision').default('REV A'),
     currencyCode: text('currency_code').default('AUD'),
     showGst: boolean('show_gst').default(false),
+    // Project Initiator (Feature 018) - 14 project types
+    projectType: text('project_type', {
+        enum: [
+            'due-diligence', 'feasibility', 'house', 'apartments', 'apartments-btr',
+            'student-housing', 'townhouses', 'retirement-living', 'office', 'retail',
+            'industrial', 'fitout', 'refurbishment', 'remediation'
+        ]
+    }),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -113,6 +120,7 @@ export const projectObjectives = pgTable('project_objectives', {
     quality: text('quality'),
     budget: text('budget'),
     program: text('program'),
+    questionAnswers: text('question_answers'), // JSON string of questionnaire answers for recall
     updatedAt: timestamp('updated_at').defaultNow(),
 });
 
@@ -300,14 +308,14 @@ export const companies = pgTable('companies', {
 export const costLines = pgTable('cost_lines', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     section: text('section').notNull(),
     costCode: text('cost_code'),
     activity: text('activity').notNull(),
     reference: text('reference'),
-    budgetCents: integer('budget_cents').default(0),
-    approvedContractCents: integer('approved_contract_cents').default(0),
+    budgetCents: bigint('budget_cents', { mode: 'number' }).default(0),
+    approvedContractCents: bigint('approved_contract_cents', { mode: 'number' }).default(0),
+    masterStage: text('master_stage'),  // NEW: Links to one of 5 master stages (initiation, schematic_design, design_development, procurement, delivery)
     sortOrder: integer('sort_order').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
@@ -318,7 +326,7 @@ export const costLineAllocations = pgTable('cost_line_allocations', {
     id: text('id').primaryKey(),
     costLineId: text('cost_line_id').references(() => costLines.id).notNull(),
     fiscalYear: integer('fiscal_year').notNull(),
-    amountCents: integer('amount_cents').default(0),
+    amountCents: bigint('amount_cents', { mode: 'number' }).default(0),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -331,8 +339,8 @@ export const variations = pgTable('variations', {
     category: text('category').notNull(),
     description: text('description').notNull(),
     status: text('status').default('Forecast'),
-    amountForecastCents: integer('amount_forecast_cents').default(0),
-    amountApprovedCents: integer('amount_approved_cents').default(0),
+    amountForecastCents: bigint('amount_forecast_cents', { mode: 'number' }).default(0),
+    amountApprovedCents: bigint('amount_approved_cents', { mode: 'number' }).default(0),
     dateSubmitted: text('date_submitted'),
     dateApproved: text('date_approved'),
     requestedBy: text('requested_by'),
@@ -353,8 +361,8 @@ export const invoices = pgTable('invoices', {
     poNumber: text('po_number'),
     invoiceNumber: text('invoice_number').notNull(),
     description: text('description'),
-    amountCents: integer('amount_cents').notNull(),
-    gstCents: integer('gst_cents').default(0),
+    amountCents: bigint('amount_cents', { mode: 'number' }).notNull(),
+    gstCents: bigint('gst_cents', { mode: 'number' }).default(0),
     periodYear: integer('period_year').notNull(),
     periodMonth: integer('period_month').notNull(),
     paidStatus: text('paid_status').default('unpaid'),
@@ -490,8 +498,7 @@ export const libraryDocuments = pgTable('library_documents', {
 export const addenda = pgTable('addenda', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     addendumNumber: integer('addendum_number').notNull(),
     content: text('content'),
     addendumDate: text('addendum_date'),
@@ -514,8 +521,7 @@ export const addendumTransmittals = pgTable('addendum_transmittals', {
 export const rftNew = pgTable('rft_new', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     rftDate: text('rft_date'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
@@ -535,8 +541,7 @@ export const rftNewTransmittals = pgTable('rft_new_transmittals', {
 export const evaluations = pgTable('evaluations', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -623,8 +628,7 @@ export const evaluationNonPriceCells = pgTable('evaluation_non_price_cells', {
 export const trr = pgTable('trr', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id),
-    tradeId: text('trade_id').references(() => contractorTrades.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     executiveSummary: text('executive_summary'),
     clarifications: text('clarifications'),
     recommendation: text('recommendation'),
@@ -652,6 +656,7 @@ export const programActivities = pgTable('program_activities', {
     startDate: text('start_date'),
     endDate: text('end_date'),
     collapsed: boolean('collapsed').default(false),
+    masterStage: text('master_stage'),  // NEW: Links to one of 5 master stages (initiation, schematic_design, design_development, procurement, delivery)
     color: text('color'),
     sortOrder: integer('sort_order').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
@@ -737,13 +742,9 @@ export const costLinesRelations = relations(costLines, ({ one, many }) => ({
         fields: [costLines.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [costLines.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [costLines.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [costLines.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     allocations: many(costLineAllocations),
     variations: many(variations),
@@ -867,13 +868,9 @@ export const addendaRelations = relations(addenda, ({ one, many }) => ({
         fields: [addenda.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [addenda.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [addenda.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [addenda.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     transmittals: many(addendumTransmittals),
 }));
@@ -894,13 +891,9 @@ export const rftNewRelations = relations(rftNew, ({ one, many }) => ({
         fields: [rftNew.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [rftNew.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [rftNew.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [rftNew.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     transmittals: many(rftNewTransmittals),
 }));
@@ -921,13 +914,9 @@ export const evaluationsRelations = relations(evaluations, ({ one, many }) => ({
         fields: [evaluations.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [evaluations.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [evaluations.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [evaluations.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     rows: many(evaluationRows),
     submissions: many(tenderSubmissions),
@@ -991,13 +980,9 @@ export const trrRelations = relations(trr, ({ one, many }) => ({
         fields: [trr.projectId],
         references: [projects.id],
     }),
-    discipline: one(consultantDisciplines, {
-        fields: [trr.disciplineId],
-        references: [consultantDisciplines.id],
-    }),
-    trade: one(contractorTrades, {
-        fields: [trr.tradeId],
-        references: [contractorTrades.id],
+    stakeholder: one(projectStakeholders, {
+        fields: [trr.stakeholderId],
+        references: [projectStakeholders.id],
     }),
     transmittals: many(trrTransmittals),
 }));
@@ -1050,5 +1035,449 @@ export const programMilestonesRelations = relations(programMilestones, ({ one })
     activity: one(programActivities, {
         fields: [programMilestones.activityId],
         references: [programActivities.id],
+    }),
+}));
+
+// ============================================================================
+// PROFILER MODULE SCHEMA (Feature 019 - Replaces Project Initiator)
+// ============================================================================
+
+// Project Profiles (Class/Type/Subclass/Scale/Complexity taxonomy)
+export const projectProfiles = pgTable('project_profiles', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    buildingClass: text('building_class').notNull(),
+    projectType: text('project_type_v2').notNull(),
+    subclass: text('subclass').notNull(), // JSON array for multi-select (Mixed class)
+    subclassOther: text('subclass_other'), // JSON array of free-text entries
+    scaleData: text('scale_data').notNull(), // JSON: { levels: 5, gfa_sqm: 12000 }
+    complexity: text('complexity').notNull(), // JSON: { quality: "premium", site: "heritage" }
+    workScope: text('work_scope'), // JSON array of selected work scope items (for refurb/remediation/extend)
+    complexityScore: integer('complexity_score'), // Calculated 1-10 score
+    // Multi-Region Support (Feature 022 - Phase 11)
+    region: text('region').default('AU'), // Default to Australia; valid: AU, NZ, UK, US
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    unique('project_profiles_project_id_unique').on(table.projectId),
+    index('idx_profiles_class_type').on(table.buildingClass, table.projectType),
+    index('idx_profiles_region').on(table.region),
+]);
+
+// Profiler Objectives (new 2-category structure: Functional Quality + Planning Compliance)
+export const profilerObjectives = pgTable('profiler_objectives', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    functionalQuality: text('functional_quality').notNull(), // JSON: { content, source, originalAi, editHistory }
+    planningCompliance: text('planning_compliance').notNull(), // JSON: { content, source, originalAi, editHistory }
+    profileContext: text('profile_context'), // JSON snapshot of profile at generation time
+    generatedAt: timestamp('generated_at'),
+    polishedAt: timestamp('polished_at'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    unique('profiler_objectives_project_id_unique').on(table.projectId),
+]);
+
+// Profile Patterns (AI learning - aggregate, anonymous)
+export const profilePatterns = pgTable('profile_patterns', {
+    id: text('id').primaryKey(),
+    buildingClass: text('building_class').notNull(),
+    projectType: text('project_type').notNull(),
+    patternType: text('pattern_type').notNull(),
+    patternValue: text('pattern_value').notNull(),
+    occurrenceCount: integer('occurrence_count').default(1),
+    lastSeen: timestamp('last_seen').defaultNow(),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    unique('idx_patterns_unique').on(table.buildingClass, table.projectType, table.patternType, table.patternValue),
+]);
+
+// ============================================================================
+// PROFILER MODULE RELATIONS
+// ============================================================================
+
+export const projectProfilesRelations = relations(projectProfiles, ({ one }) => ({
+    project: one(projects, {
+        fields: [projectProfiles.projectId],
+        references: [projects.id],
+    }),
+}));
+
+export const profilerObjectivesRelations = relations(profilerObjectives, ({ one }) => ({
+    project: one(projects, {
+        fields: [profilerObjectives.projectId],
+        references: [projects.id],
+    }),
+}));
+
+// ============================================================================
+// UNIFIED STAKEHOLDER SCHEMA (Feature 020 - Replaces Consultant/Contractor Lists)
+// ============================================================================
+
+// Project Stakeholders (Unified table replacing consultantDisciplines, contractorTrades, stakeholders)
+export const projectStakeholders = pgTable('project_stakeholders', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    companyId: text('company_id').references(() => companies.id, { onDelete: 'set null' }),
+
+    // Classification
+    stakeholderGroup: text('stakeholder_group').notNull(), // 'client' | 'authority' | 'consultant' | 'contractor'
+
+    // Core Fields
+    name: text('name').notNull(),
+    role: text('role'),
+    organization: text('organization'),
+
+    // Contact Info
+    contactName: text('contact_name'),
+    contactEmail: text('contact_email'),
+    contactPhone: text('contact_phone'),
+
+    // Consultant/Contractor specific
+    disciplineOrTrade: text('discipline_or_trade'),
+    isEnabled: boolean('is_enabled').default(true),
+    briefServices: text('brief_services'),
+    briefFee: text('brief_fee'),
+    briefProgram: text('brief_program'),
+    scopeWorks: text('scope_works'),
+    scopePrice: text('scope_price'),
+    scopeProgram: text('scope_program'),
+
+    // Authority specific
+    submissionRef: text('submission_ref'),
+    submissionType: text('submission_type'),
+
+    // Metadata
+    sortOrder: integer('sort_order').default(0),
+    notes: text('notes'),
+    isAiGenerated: boolean('is_ai_generated').default(false),
+
+    // Timestamps
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    deletedAt: timestamp('deleted_at'),
+}, (table) => [
+    index('idx_stakeholders_project').on(table.projectId),
+    index('idx_stakeholders_group').on(table.projectId, table.stakeholderGroup),
+    index('idx_stakeholders_company').on(table.companyId),
+]);
+
+// Stakeholder Tender Statuses (For Consultant/Contractor groups)
+export const stakeholderTenderStatuses = pgTable('stakeholder_tender_statuses', {
+    id: text('id').primaryKey(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'cascade' }).notNull(),
+
+    statusType: text('status_type').notNull(), // 'brief' | 'tender' | 'rec' | 'award'
+    isActive: boolean('is_active').default(false),
+    isComplete: boolean('is_complete').default(false),
+    completedAt: timestamp('completed_at'),
+
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_tender_statuses_stakeholder').on(table.stakeholderId),
+    unique('stakeholder_tender_status_unique').on(table.stakeholderId, table.statusType),
+]);
+
+// Stakeholder Submission Statuses (For Authority group)
+export const stakeholderSubmissionStatuses = pgTable('stakeholder_submission_statuses', {
+    id: text('id').primaryKey(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'cascade' }).notNull(),
+
+    status: text('status').notNull().default('pending'), // 'pending' | 'submitted' | 'approved' | 'rejected' | 'withdrawn'
+
+    submittedAt: timestamp('submitted_at'),
+    submissionRef: text('submission_ref'),
+    responseDue: timestamp('response_due'),
+
+    responseReceivedAt: timestamp('response_received_at'),
+    responseNotes: text('response_notes'),
+
+    conditions: text('conditions'), // JSON array
+    conditionsCleared: boolean('conditions_cleared').default(false),
+
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    unique('stakeholder_submission_status_unique').on(table.stakeholderId),
+    index('idx_submission_statuses_status').on(table.status),
+]);
+
+// ============================================================================
+// UNIFIED STAKEHOLDER RELATIONS
+// ============================================================================
+
+export const projectStakeholdersRelations = relations(projectStakeholders, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [projectStakeholders.projectId],
+        references: [projects.id],
+    }),
+    company: one(companies, {
+        fields: [projectStakeholders.companyId],
+        references: [companies.id],
+    }),
+    tenderStatuses: many(stakeholderTenderStatuses),
+    submissionStatuses: many(stakeholderSubmissionStatuses),
+}));
+
+export const stakeholderTenderStatusesRelations = relations(stakeholderTenderStatuses, ({ one }) => ({
+    stakeholder: one(projectStakeholders, {
+        fields: [stakeholderTenderStatuses.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const stakeholderSubmissionStatusesRelations = relations(stakeholderSubmissionStatuses, ({ one }) => ({
+    stakeholder: one(projectStakeholders, {
+        fields: [stakeholderSubmissionStatuses.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+// ============================================================================
+// NOTES SCHEMA
+// ============================================================================
+
+export const notes = pgTable('notes', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    title: text('title').notNull().default('New Note'),
+    content: text('content'),
+    isStarred: boolean('is_starred').default(false),
+    reportingPeriodStart: text('reporting_period_start'),
+    reportingPeriodEnd: text('reporting_period_end'),
+    createdAt: text('created_at'),
+    updatedAt: text('updated_at'),
+    deletedAt: text('deleted_at'),
+});
+
+export const noteTransmittals = pgTable('note_transmittals', {
+    id: text('id').primaryKey(),
+    noteId: text('note_id').references(() => notes.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at'),
+});
+
+// Notes Relations
+export const notesRelations = relations(notes, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [notes.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [notes.organizationId],
+        references: [organizations.id],
+    }),
+    transmittals: many(noteTransmittals),
+}));
+
+export const noteTransmittalsRelations = relations(noteTransmittals, ({ one }) => ({
+    note: one(notes, {
+        fields: [noteTransmittals.noteId],
+        references: [notes.id],
+    }),
+    document: one(documents, {
+        fields: [noteTransmittals.documentId],
+        references: [documents.id],
+    }),
+}));
+
+// ============================================================================
+// MEETINGS SCHEMA
+// ============================================================================
+
+export const meetings = pgTable('meetings', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    title: text('title').notNull().default('New Meeting'),
+    meetingDate: text('meeting_date'),
+    agendaType: text('agenda_type').default('standard'),
+    reportingPeriodStart: text('reporting_period_start'),
+    reportingPeriodEnd: text('reporting_period_end'),
+    createdAt: text('created_at'),
+    updatedAt: text('updated_at'),
+    deletedAt: text('deleted_at'),
+});
+
+export const meetingSections = pgTable('meeting_sections', {
+    id: text('id').primaryKey(),
+    meetingId: text('meeting_id').references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
+    sectionKey: text('section_key').notNull(),
+    sectionLabel: text('section_label').notNull(),
+    content: text('content'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    parentSectionId: text('parent_section_id'),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    createdAt: text('created_at'),
+    updatedAt: text('updated_at'),
+});
+
+export const meetingAttendees = pgTable('meeting_attendees', {
+    id: text('id').primaryKey(),
+    meetingId: text('meeting_id').references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    adhocName: text('adhoc_name'),
+    adhocFirm: text('adhoc_firm'),
+    adhocGroup: text('adhoc_group'),
+    adhocSubGroup: text('adhoc_sub_group'),
+    isAttending: boolean('is_attending').default(true),
+    isDistribution: boolean('is_distribution').default(true),
+    createdAt: text('created_at'),
+});
+
+export const meetingTransmittals = pgTable('meeting_transmittals', {
+    id: text('id').primaryKey(),
+    meetingId: text('meeting_id').references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at'),
+});
+
+// Meetings Relations
+export const meetingsRelations = relations(meetings, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [meetings.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [meetings.organizationId],
+        references: [organizations.id],
+    }),
+    sections: many(meetingSections),
+    attendees: many(meetingAttendees),
+    transmittals: many(meetingTransmittals),
+}));
+
+export const meetingSectionsRelations = relations(meetingSections, ({ one, many }) => ({
+    meeting: one(meetings, {
+        fields: [meetingSections.meetingId],
+        references: [meetings.id],
+    }),
+    stakeholder: one(projectStakeholders, {
+        fields: [meetingSections.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const meetingAttendeesRelations = relations(meetingAttendees, ({ one }) => ({
+    meeting: one(meetings, {
+        fields: [meetingAttendees.meetingId],
+        references: [meetings.id],
+    }),
+    stakeholder: one(projectStakeholders, {
+        fields: [meetingAttendees.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const meetingTransmittalsRelations = relations(meetingTransmittals, ({ one }) => ({
+    meeting: one(meetings, {
+        fields: [meetingTransmittals.meetingId],
+        references: [meetings.id],
+    }),
+    document: one(documents, {
+        fields: [meetingTransmittals.documentId],
+        references: [documents.id],
+    }),
+}));
+
+// ============================================================================
+// REPORTS SCHEMA
+// ============================================================================
+
+export const reports = pgTable('reports', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    title: text('title').notNull().default('New Report'),
+    reportDate: text('report_date'),
+    preparedFor: text('prepared_for'),
+    preparedBy: text('prepared_by'),
+    contentsType: text('contents_type').default('standard'),
+    reportingPeriodStart: text('reporting_period_start'),
+    reportingPeriodEnd: text('reporting_period_end'),
+    createdAt: text('created_at'),
+    updatedAt: text('updated_at'),
+    deletedAt: text('deleted_at'),
+});
+
+export const reportSections = pgTable('report_sections', {
+    id: text('id').primaryKey(),
+    reportId: text('report_id').references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+    sectionKey: text('section_key').notNull(),
+    sectionLabel: text('section_label').notNull(),
+    content: text('content'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    parentSectionId: text('parent_section_id'),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    createdAt: text('created_at'),
+    updatedAt: text('updated_at'),
+});
+
+export const reportAttendees = pgTable('report_attendees', {
+    id: text('id').primaryKey(),
+    reportId: text('report_id').references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    adhocName: text('adhoc_name'),
+    adhocFirm: text('adhoc_firm'),
+    adhocGroup: text('adhoc_group'),
+    isDistribution: boolean('is_distribution').default(true),
+    createdAt: text('created_at'),
+});
+
+export const reportTransmittals = pgTable('report_transmittals', {
+    id: text('id').primaryKey(),
+    reportId: text('report_id').references(() => reports.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at'),
+});
+
+// Reports Relations
+export const reportsRelations = relations(reports, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [reports.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [reports.organizationId],
+        references: [organizations.id],
+    }),
+    sections: many(reportSections),
+    attendees: many(reportAttendees),
+    transmittals: many(reportTransmittals),
+}));
+
+export const reportSectionsRelations = relations(reportSections, ({ one }) => ({
+    report: one(reports, {
+        fields: [reportSections.reportId],
+        references: [reports.id],
+    }),
+    stakeholder: one(projectStakeholders, {
+        fields: [reportSections.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const reportAttendeesRelations = relations(reportAttendees, ({ one }) => ({
+    report: one(reports, {
+        fields: [reportAttendees.reportId],
+        references: [reports.id],
+    }),
+    stakeholder: one(projectStakeholders, {
+        fields: [reportAttendees.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+}));
+
+export const reportTransmittalsRelations = relations(reportTransmittals, ({ one }) => ({
+    report: one(reports, {
+        fields: [reportTransmittals.reportId],
+        references: [reports.id],
+    }),
+    document: one(documents, {
+        fields: [reportTransmittals.documentId],
+        references: [documents.id],
     }),
 }));

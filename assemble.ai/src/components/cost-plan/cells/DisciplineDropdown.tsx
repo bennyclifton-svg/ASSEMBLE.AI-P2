@@ -107,7 +107,7 @@ export function DisciplineDropdown({
   // If not a section that supports disciplines/trades, show static text
   if (!showDropdown) {
     return (
-      <div className={`text-[#6e6e6e] text-xs ${className}`}>
+      <div className={`text-[var(--color-text-muted)] text-xs ${className}`}>
         {displayValue || '-'}
       </div>
     );
@@ -120,20 +120,20 @@ export function DisciplineDropdown({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`
           w-full flex items-center px-1.5 py-0.5
-          bg-transparent hover:bg-[#3c3c3c] rounded text-xs
+          bg-transparent hover:bg-[var(--color-bg-tertiary)] rounded text-xs
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-          ${isOpen ? 'bg-[#3c3c3c]' : ''}
+          ${isOpen ? 'bg-[var(--color-bg-tertiary)]' : ''}
           transition-colors
         `}
       >
-        <span className={`truncate ${selectedItem ? 'text-[#cccccc]' : 'text-[#6e6e6e]'}`}>
+        <span className={`truncate ${selectedItem ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
           {selectedItem?.name || displayValue || placeholder || defaultPlaceholder}
         </span>
       </div>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full min-w-[180px] mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg">
+        <div className="absolute z-50 w-full min-w-[180px] mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg">
           {/* Item list */}
           <div className="max-h-48 overflow-auto">
             {items.length > 0 ? (
@@ -144,22 +144,22 @@ export function DisciplineDropdown({
                       onClick={() => handleSelect(item.id)}
                       className={`
                         w-full flex items-center gap-2 px-2 py-1.5 text-left text-xs
-                        hover:bg-[#37373d] transition-colors
-                        ${item.id === value ? 'bg-[#094771]' : ''}
+                        hover:bg-[var(--color-bg-tertiary)] transition-colors
+                        ${item.id === value ? 'bg-[var(--color-accent-teal)]/20' : ''}
                       `}
                     >
-                      <span className={`flex-1 truncate ${item.id === value ? 'text-white' : 'text-[#cccccc]'}`}>
+                      <span className={`flex-1 truncate ${item.id === value ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-primary)]'}`}>
                         {item.name}
                       </span>
                       {item.id === value && (
-                        <Check className="w-3 h-3 text-[#4fc3f7] flex-shrink-0" />
+                        <Check className="w-3 h-3 text-[var(--color-accent-teal)] flex-shrink-0" />
                       )}
                     </button>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="px-2 py-3 text-center text-xs text-[#858585]">
+              <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
                 {`No active ${isConsultants ? 'disciplines' : 'trades'} available`}
               </div>
             )}

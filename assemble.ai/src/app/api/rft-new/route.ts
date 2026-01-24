@@ -3,39 +3,33 @@ import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
 import { rftNew, rftNewTransmittals } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 /**
- * GET /api/rft-new?projectId=X&disciplineId=Y or tradeId=Z
+ * GET /api/rft-new?projectId=X&stakeholderId=Y
  *
- * Get-or-create pattern: Returns the RFT NEW for the given project+discipline/trade.
+ * Get-or-create pattern: Returns the RFT NEW for the given project+stakeholder.
  * If it doesn't exist, creates one automatically.
  */
 export async function GET(request: NextRequest) {
     return handleApiError(async () => {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
-        const disciplineId = searchParams.get('disciplineId');
-        const tradeId = searchParams.get('tradeId');
+        const stakeholderId = searchParams.get('stakeholderId');
 
         if (!projectId) {
             return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
         }
 
-        if (!disciplineId && !tradeId) {
-            return NextResponse.json({ error: 'disciplineId or tradeId is required' }, { status: 400 });
+        if (!stakeholderId) {
+            return NextResponse.json({ error: 'stakeholderId is required' }, { status: 400 });
         }
 
         // Build query conditions
-        const conditions = [eq(rftNew.projectId, projectId)];
-
-        if (disciplineId) {
-            conditions.push(eq(rftNew.disciplineId, disciplineId));
-            conditions.push(isNull(rftNew.tradeId));
-        } else if (tradeId) {
-            conditions.push(eq(rftNew.tradeId, tradeId));
-            conditions.push(isNull(rftNew.disciplineId));
-        }
+        const conditions = [
+            eq(rftNew.projectId, projectId),
+            eq(rftNew.stakeholderId, stakeholderId),
+        ];
 
         // Try to find existing RFT NEW
         let [existing] = await db
@@ -51,8 +45,7 @@ export async function GET(request: NextRequest) {
             await db.insert(rftNew).values({
                 id,
                 projectId,
-                disciplineId: disciplineId || null,
-                tradeId: tradeId || null,
+                stakeholderId,
                 rftDate: defaultRftDate,
             });
 

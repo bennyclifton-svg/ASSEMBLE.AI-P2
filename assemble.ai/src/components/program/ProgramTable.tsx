@@ -1,9 +1,28 @@
 'use client';
 
 import React, { useMemo, useRef, useState, useCallback, useEffect } from 'react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+    DragStartEvent,
+    DragOverlay,
+} from '@dnd-kit/core';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { ProgramRow } from './ProgramRow';
 import { DependencyArrows } from './DependencyArrows';
-import { useCreateDependency, useDeleteDependency, useDeleteActivity } from '@/lib/hooks/use-program';
+import { DateColumnsRow } from './DateColumnsRow';
+import { useCreateDependency, useDeleteDependency, useDeleteActivity, useReorderActivities } from '@/lib/hooks/use-program';
 import { useRefetch } from './ProgramPanel';
 import type { ProgramActivity, ProgramDependency, ProgramMilestone, ZoomLevel } from '@/types/program';
 
@@ -120,11 +139,23 @@ export function ProgramTable({
     const timelineAreaRef = useRef<HTMLDivElement>(null);
     const [linkingState, setLinkingState] = useState<LinkingState | null>(null);
     const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+    const [activeId, setActiveId] = useState<string | null>(null);
 
     const createDependency = useCreateDependency(projectId);
     const deleteDependency = useDeleteDependency(projectId);
     const deleteActivity = useDeleteActivity(projectId);
+    const reorderActivities = useReorderActivities(projectId);
     const refetch = useRefetch();
+
+    // DnD sensors for reordering
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 5 }, // Prevent accidental drags
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     // Handle deleting a dependency
     const handleDeleteDependency = useCallback((dependencyId: string) => {
@@ -149,6 +180,35 @@ export function ProgramTable({
         [activities]
     );
 
+    // Handle drag start
+    const handleDragStart = useCallback((event: DragStartEvent) => {
+        setActiveId(event.active.id as string);
+    }, []);
+
+    // Handle drag end for reordering activities
+    const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+        setActiveId(null);
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = visibleActivities.findIndex(a => a.id === active.id);
+        const newIndex = visibleActivities.findIndex(a => a.id === over.id);
+
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const reordered = arrayMove(visibleActivities, oldIndex, newIndex);
+        const updates = reordered.map((activity, index) => ({
+            id: activity.id,
+            parentId: activity.parentId,
+            sortOrder: index,
+        }));
+
+        await reorderActivities.mutate({ activities: updates }, refetch);
+    }, [visibleActivities, reorderActivities, refetch]);
+
+    // Get the currently dragged activity
+    const activeActivity = activeId ? visibleActivities.find(a => a.id === activeId) : null;
+
     // Today's position
     const today = new Date();
     const todayIndex = columns.findIndex((col) => {
@@ -164,6 +224,8 @@ export function ProgramTable({
 
     const columnWidth = zoomLevel === 'week' ? 40 : 80;
     const activityColumnWidth = 200;
+    const startDateColumnWidth = 70;
+    const endDateColumnWidth = 70;
     const rowHeight = 32;
 
     // Handle starting a link drag from a bar
@@ -306,24 +368,40 @@ export function ProgramTable({
     return (
         <div className="flex h-full flex-col">
             {/* Header */}
-            <div className="flex border-b border-[#3e3e42] bg-[#252526]">
+            <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
                 {/* Activity column header */}
                 <div
-                    className="shrink-0 border-r border-[#3e3e42] px-3 py-2 text-xs font-medium text-gray-400"
+                    className="shrink-0 border-r border-[var(--color-border)] px-3 py-2 text-xs font-medium text-[var(--color-text-muted)]"
                     style={{ width: activityColumnWidth }}
                 >
                     Activity
+                </div>
+
+                {/* Start date column header */}
+                <div
+                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-2 text-xs font-medium text-[var(--color-text-muted)] text-center"
+                    style={{ width: startDateColumnWidth }}
+                >
+                    Start
+                </div>
+
+                {/* End date column header */}
+                <div
+                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-2 text-xs font-medium text-[var(--color-text-muted)] text-center"
+                    style={{ width: endDateColumnWidth }}
+                >
+                    End
                 </div>
 
                 {/* Timeline header */}
                 <div className="flex-1 overflow-hidden" ref={scrollContainerRef}>
                     <div className="flex flex-col" style={{ minWidth: columns.length * columnWidth }}>
                         {/* Month row */}
-                        <div className="flex border-b border-[#3e3e42]">
+                        <div className="flex border-b border-[var(--color-border)]">
                             {monthGroups.map((group, i) => (
                                 <div
                                     key={i}
-                                    className="shrink-0 border-r border-[#3e3e42] px-2 py-1 text-center text-xs font-medium text-gray-300"
+                                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-1 text-center text-xs font-medium text-[var(--color-text-secondary)]"
                                     style={{ width: columnWidth * group.span }}
                                 >
                                     {group.month}
@@ -337,8 +415,8 @@ export function ProgramTable({
                                 {columns.map((col, i) => (
                                     <div
                                         key={i}
-                                        className={`shrink-0 border-r border-[#3e3e42] px-1 py-1 text-center text-xs text-gray-500 ${
-                                            i === todayIndex ? 'bg-[#0e639c]/20' : ''
+                                        className={`shrink-0 border-r border-[var(--color-border)] px-1 py-1 text-center text-xs text-[var(--color-text-muted)] ${
+                                            i === todayIndex ? 'bg-[var(--color-accent-teal)]/20' : ''
                                         }`}
                                         style={{ width: columnWidth }}
                                     >
@@ -352,35 +430,60 @@ export function ProgramTable({
             </div>
 
             {/* Body */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Activity column (sticky) */}
-                <div
-                    className="shrink-0 overflow-y-auto border-r border-[#3e3e42] bg-[#1e1e1e]"
-                    style={{ width: activityColumnWidth }}
-                >
-                    {visibleActivities.map((activity) => (
-                        <ProgramRow
-                            key={activity.id}
-                            projectId={projectId}
-                            activity={activity}
-                            depth={activity.sortOrder} // We stored depth in sortOrder temporarily
-                            hasChildren={
-                                allActivities.some((a) => a.parentId === activity.id)
-                            }
-                            columns={columns}
-                            columnWidth={columnWidth}
-                            zoomLevel={zoomLevel}
-                            milestones={milestones.filter((m) => m.activityId === activity.id)}
-                            isNameColumn={true}
-                            allActivities={allActivities}
-                        />
-                    ))}
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                modifiers={[restrictToVerticalAxis]}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+            >
+                <SortableContext items={visibleActivities.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                    <div className="flex flex-1 overflow-hidden">
+                        {/* Activity column (sticky) */}
+                        <div
+                            className="shrink-0 overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-bg-primary)]"
+                            style={{ width: activityColumnWidth }}
+                        >
+                            {visibleActivities.map((activity) => (
+                                <ProgramRow
+                                    key={activity.id}
+                                    projectId={projectId}
+                                    activity={activity}
+                                    depth={activity.sortOrder} // We stored depth in sortOrder temporarily
+                                    hasChildren={
+                                        allActivities.some((a) => a.parentId === activity.id)
+                                    }
+                                    columns={columns}
+                                    columnWidth={columnWidth}
+                                    zoomLevel={zoomLevel}
+                                    milestones={milestones.filter((m) => m.activityId === activity.id)}
+                                    isNameColumn={true}
+                                    allActivities={allActivities}
+                                />
+                            ))}
 
                     {visibleActivities.length === 0 && (
-                        <div className="px-3 py-8 text-center text-xs text-gray-500">
+                        <div className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
                             No activities yet. Click "Add Activity" or insert a template to get started.
                         </div>
                     )}
+                </div>
+
+                {/* Date columns (sticky with activity column) */}
+                <div
+                    className="shrink-0 overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-bg-primary)]"
+                    style={{ width: startDateColumnWidth + endDateColumnWidth }}
+                >
+                    {visibleActivities.map((activity) => (
+                        <DateColumnsRow
+                            key={activity.id}
+                            projectId={projectId}
+                            activity={activity}
+                            rowHeight={rowHeight}
+                            startDateWidth={startDateColumnWidth}
+                            endDateWidth={endDateColumnWidth}
+                        />
+                    ))}
                 </div>
 
                 {/* Timeline area (scrollable) */}
@@ -388,7 +491,7 @@ export function ProgramTable({
                     {/* Today marker */}
                     {todayIndex >= 0 && (
                         <div
-                            className="absolute top-0 bottom-0 w-0.5 bg-red-500/50 z-10"
+                            className="absolute top-0 bottom-0 w-0.5 bg-[var(--color-accent-coral)]/50 z-10"
                             style={{ left: todayIndex * columnWidth + columnWidth / 2 }}
                         />
                     )}
@@ -441,7 +544,7 @@ export function ProgramTable({
                                         y1={line.fromY}
                                         x2={line.toX}
                                         y2={line.toY}
-                                        stroke="#0e639c"
+                                        stroke="var(--color-accent-teal)"
                                         strokeWidth="2"
                                         strokeDasharray="4,4"
                                     />
@@ -449,14 +552,30 @@ export function ProgramTable({
                                         cx={line.fromX}
                                         cy={line.fromY}
                                         r="4"
-                                        fill="#0e639c"
+                                        fill="var(--color-accent-teal)"
                                     />
                                 </svg>
                             );
                         })()}
                     </div>
                 </div>
-            </div>
+                    </div>
+                </SortableContext>
+
+                {/* Drag overlay for visual feedback */}
+                <DragOverlay>
+                    {activeActivity ? (
+                        <div
+                            className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-accent-teal)] rounded shadow-lg px-2 py-1 opacity-90"
+                            style={{ width: activityColumnWidth }}
+                        >
+                            <span className="text-xs text-[var(--color-text-primary)] truncate">
+                                {activeActivity.name}
+                            </span>
+                        </div>
+                    ) : null}
+                </DragOverlay>
+            </DndContext>
         </div>
     );
 }

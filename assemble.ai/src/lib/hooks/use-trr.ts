@@ -2,8 +2,8 @@
  * Hook for Managing TRR (Tender Recommendation Report)
  * Feature 012 - TRR Report
  *
- * Automatically gets or creates the TRR for a given project+discipline/trade.
- * There is only one TRR per discipline/trade.
+ * Automatically gets or creates the TRR for a given project+stakeholder.
+ * There is only one TRR per stakeholder.
  */
 
 'use client';
@@ -14,8 +14,7 @@ import { TRR, TRRUpdateData } from '@/types/trr';
 
 interface UseTRROptions {
     projectId: string;
-    disciplineId?: string | null;
-    tradeId?: string | null;
+    stakeholderId?: string | null;
 }
 
 interface TRRWithCount extends TRR {
@@ -39,24 +38,21 @@ const fetcher = async (url: string): Promise<TRRWithCount> => {
 };
 
 /**
- * Hook for getting/creating the TRR report for a discipline/trade
+ * Hook for getting/creating the TRR report for a stakeholder
  *
  * @param options.projectId - The project ID
- * @param options.disciplineId - Optional discipline ID (for consultant TRR)
- * @param options.tradeId - Optional trade ID (for contractor TRR)
+ * @param options.stakeholderId - The stakeholder ID
  */
 export function useTRR({
     projectId,
-    disciplineId,
-    tradeId,
+    stakeholderId,
 }: UseTRROptions): UseTRRReturn {
     // Build the query URL for fetching/creating TRR
     const queryParams = new URLSearchParams();
     queryParams.set('projectId', projectId);
-    if (disciplineId) queryParams.set('disciplineId', disciplineId);
-    if (tradeId) queryParams.set('tradeId', tradeId);
+    if (stakeholderId) queryParams.set('stakeholderId', stakeholderId);
 
-    const shouldFetch = projectId && (disciplineId || tradeId);
+    const shouldFetch = projectId && stakeholderId;
     const swrKey = shouldFetch ? `/api/trr?${queryParams.toString()}` : null;
 
     const { data, error, isLoading, mutate: localMutate } = useSWR<TRRWithCount>(

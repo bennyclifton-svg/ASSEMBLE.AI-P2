@@ -92,10 +92,10 @@ export function FirmCardCompact({
     <div
       className={`
         flex flex-col px-3 py-2 rounded-lg cursor-pointer
-        bg-[#1e1e1e] border transition-colors duration-150
-        ${isDragOver ? 'border-[#0e639c] border-dashed border-2' : 'border-[#3e3e42]'}
-        ${isHovered && !isDragOver ? 'border-[#0e639c]' : ''}
-        ${firm.awarded ? 'border-l-[3px] border-l-[#22c55e]' : ''}
+        bg-[var(--color-bg-secondary)] border transition-colors duration-150
+        ${isDragOver ? 'border-[var(--color-accent-teal)] border-dashed border-2' : 'border-[var(--color-border)]'}
+        ${isHovered && !isDragOver ? 'border-[var(--color-accent-teal)]' : ''}
+        ${firm.awarded ? 'border-l-[3px] border-l-[var(--color-accent-green)]' : ''}
         w-[220px] flex-shrink-0 group
       `}
       onMouseEnter={() => setIsHovered(true)}
@@ -119,13 +119,13 @@ export function FirmCardCompact({
           disabled={isSaving}
           placeholder="Enter company name"
           className={`
-            w-full h-7 px-2 py-1 rounded text-[#cccccc] text-sm
+            w-full h-7 px-2 py-1 rounded text-[var(--color-text-primary)] text-sm
             bg-transparent border border-transparent
             transition-colors duration-150
-            focus:outline-none focus:bg-[#3c3c3c] focus:border-[#0e639c] focus:text-[#cccccc]
-            hover:border-[#3e3e42]
+            focus:outline-none focus:bg-[var(--color-bg-tertiary)] focus:border-[var(--color-accent-teal)] focus:text-[var(--color-text-primary)]
+            hover:border-[var(--color-border)]
             disabled:opacity-50
-            selection:bg-[#264f78] selection:text-[#cccccc]
+            selection:bg-[var(--color-accent-teal-tint)] selection:text-[var(--color-text-primary)]
           `}
         />
       </div>
@@ -137,7 +137,7 @@ export function FirmCardCompact({
           onClick={handleStarClick}
           className={`
             p-0.5 rounded transition-colors
-            ${firm.shortlisted ? 'text-[#D4A574]' : 'text-[#858585] hover:text-[#cccccc]'}
+            ${firm.shortlisted ? 'text-[var(--color-accent-yellow)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
           `}
           title={firm.shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
         >
@@ -147,7 +147,7 @@ export function FirmCardCompact({
         {/* Folder upload */}
         <button
           onClick={handleUploadClick}
-          className="p-0.5 rounded text-[#858585] hover:text-[#cccccc] transition-colors"
+          className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           title="Upload file to extract data"
         >
           <Upload className="w-3.5 h-3.5" />
@@ -156,7 +156,7 @@ export function FirmCardCompact({
         {/* Delete button */}
         <button
           onClick={handleDeleteClick}
-          className="p-0.5 rounded text-[#858585] hover:text-red-400 transition-colors"
+          className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-colors"
           title="Delete firm"
         >
           <Trash className="w-3.5 h-3.5" />
@@ -168,7 +168,7 @@ export function FirmCardCompact({
             e.stopPropagation();
             onToggleExpand();
           }}
-          className="p-0.5 rounded text-[#858585] hover:text-[#cccccc] transition-colors"
+          className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
           title="Expand"
         >
           <svg
@@ -183,8 +183,8 @@ export function FirmCardCompact({
 
       {/* Drag overlay */}
       {isDragOver && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#0e639c]/20 rounded-lg pointer-events-none">
-          <span className="text-[#cccccc] text-xs font-medium">Drop to extract</span>
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-accent-teal)]/20 rounded-lg pointer-events-none">
+          <span className="text-[var(--color-text-primary)] text-xs font-medium">Drop to extract</span>
         </div>
       )}
     </div>

@@ -1,0 +1,256 @@
+openapi: 3.0.3
+info:
+  title: Profiler - Profile API
+  description: API for managing project profiles (Class/Type/Subclass/Scale/Complexity)
+  version: 1.0.0
+
+servers:
+  - url: /api/planning
+    description: Planning API base path
+
+paths:
+  /{projectId}/profile:
+    post:
+      operationId: saveProfile
+      summary: Save or update project profile
+      description: |
+        Creates or updates the project profile with building class, project type,
+        subclass, scale data, and complexity selections.
+
+        Performance requirement: <500ms response time (API-002)
+      tags:
+        - Profile
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The project ID
+          example: proj_xyz789
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileInput'
+            examples:
+              agedCare:
+                summary: Aged Care Profile
+                value:
+                  buildingClass: residential
+                  projectType: new
+                  subclass:
+                    - aged_care_9c
+                  subclassOther: null
+                  scaleData:
+                    beds: 120
+                    dementia_beds: 30
+                    gfa_sqm: 8400
+                    gfa_per_bed: 70
+                    households: 8
+                    beds_per_household: 15
+                  complexity:
+                    care_level: mixed
+                    accommodation_model: household
+                    dementia_design: secure_wing
+              mixedUse:
+                summary: Mixed Use Profile
+                value:
+                  buildingClass: mixed
+                  projectType: new
+                  subclass:
+                    - residential
+                    - retail
+                    - hotel
+                  subclassOther: null
+                  scaleData:
+                    total_storeys: 45
+                    total_gfa_sqm: 65000
+                    residential_units: 280
+                    retail_gla_sqm: 3500
+                    hotel_rooms: 180
+                  complexity:
+                    integration: fully_integrated
+                    transfers: multiple
+                    services: shared_plant
+                    ownership: strata
+      responses:
+        '200':
+          description: Profile saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      operationId: getProfile
+      summary: Get project profile
+      description: Retrieves the current profile for a project
+      tags:
+        - Profile
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The project ID
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '404':
+          description: Profile not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ProfileInput:
+      type: object
+      required:
+        - buildingClass
+        - projectType
+        - subclass
+        - scaleData
+        - complexity
+      properties:
+        buildingClass:
+          type: string
+          enum:
+            - residential
+            - commercial
+            - industrial
+            - institution
+            - mixed
+            - infrastructure
+          description: Primary building classification
+        projectType:
+          type: string
+          enum:
+            - refurb
+            - extend
+            - new
+            - remediation
+            - advisory
+          description: Type of project work
+        subclass:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 4
+          description: |
+            Subclass selections. Single item for most classes,
+            multiple items allowed for Mixed class only.
+        subclassOther:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: Free-text entries when "Other" is selected
+        scaleData:
+          type: object
+          additionalProperties:
+            type: number
+          description: |
+            Scale metrics (varies by subclass).
+            Keys and valid ranges defined in profile-templates.json.
+          example:
+            beds: 120
+            gfa_sqm: 8400
+        complexity:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Multi-dimensional complexity selections.
+            Dimensions and options defined in profile-templates.json.
+          example:
+            care_level: mixed
+            accommodation_model: household
+
+    ProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            profileId:
+              type: string
+              example: prof_abc123xyz
+            projectId:
+              type: string
+              example: proj_xyz789
+            buildingClass:
+              type: string
+              example: residential
+            projectType:
+              type: string
+              example: new
+            subclass:
+              type: array
+              items:
+                type: string
+              example:
+                - aged_care_9c
+            scaleData:
+              type: object
+              additionalProperties:
+                type: number
+            complexity:
+              type: object
+              additionalProperties:
+                type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: At least one subclass is required
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string

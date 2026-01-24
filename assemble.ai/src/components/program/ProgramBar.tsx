@@ -164,27 +164,11 @@ export function ProgramBar({
             const newStartDate = getDateFromPosition(newLeft);
             const newEndDate = getDateFromPosition(newLeft + origWidth);
 
-            // Check if shift is held for fine adjustment (day level)
-            const snapToWeek = !upEvent.shiftKey && zoomLevel === 'week';
-
-            let finalStartDate = newStartDate;
-            let finalEndDate = newEndDate;
-
-            if (snapToWeek) {
-                // Snap to week boundaries
-                const day = finalStartDate.getDay();
-                const diff = day === 0 ? -6 : 1 - day;
-                finalStartDate = new Date(finalStartDate);
-                finalStartDate.setDate(finalStartDate.getDate() + diff);
-
-                const duration = newEndDate.getTime() - newStartDate.getTime();
-                finalEndDate = new Date(finalStartDate.getTime() + duration);
-            }
-
+            // Free-form dragging - no snap-to-week constraint
             updateActivity.mutate({
                 id: activity.id,
-                startDate: formatDate(finalStartDate),
-                endDate: formatDate(finalEndDate),
+                startDate: formatDate(newStartDate),
+                endDate: formatDate(newEndDate),
             }, refetch);
 
             setIsDragging(false);
@@ -239,19 +223,10 @@ export function ProgramBar({
             const newLeft = Math.max(0, Math.min(origLeft + delta, origLeft + origWidth - 16));
             const newStartDate = getDateFromPosition(newLeft);
 
-            const snapToWeek = !upEvent.shiftKey && zoomLevel === 'week';
-            let finalStartDate = newStartDate;
-
-            if (snapToWeek) {
-                const day = finalStartDate.getDay();
-                const diff = day === 0 ? -6 : 1 - day;
-                finalStartDate = new Date(finalStartDate);
-                finalStartDate.setDate(finalStartDate.getDate() + diff);
-            }
-
+            // Free-form dragging - no snap-to-week constraint
             updateActivity.mutate({
                 id: activity.id,
-                startDate: formatDate(finalStartDate),
+                startDate: formatDate(newStartDate),
             }, refetch);
 
             setIsResizingLeft(false);
@@ -303,20 +278,10 @@ export function ProgramBar({
             const newWidth = Math.max(16, origWidth + delta);
             const newEndDate = getDateFromPosition(origLeft + newWidth);
 
-            const snapToWeek = !upEvent.shiftKey && zoomLevel === 'week';
-            let finalEndDate = newEndDate;
-
-            if (snapToWeek) {
-                // Snap to end of week (Sunday)
-                const day = finalEndDate.getDay();
-                const diff = day === 0 ? 0 : 7 - day;
-                finalEndDate = new Date(finalEndDate);
-                finalEndDate.setDate(finalEndDate.getDate() + diff);
-            }
-
+            // Free-form dragging - no snap-to-week constraint
             updateActivity.mutate({
                 id: activity.id,
-                endDate: formatDate(finalEndDate),
+                endDate: formatDate(newEndDate),
             }, refetch);
 
             setIsResizingRight(false);
@@ -338,25 +303,27 @@ export function ProgramBar({
             ref={barRef}
             className={`absolute ${
                 isDragging || isResizingLeft || isResizingRight
-                    ? 'opacity-80 ring-2 ring-white/30'
+                    ? 'opacity-80 ring-2 ring-[var(--color-text-primary)]/30'
                     : isSelected
-                    ? 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-[#1e1e1e]'
+                    ? 'ring-2 ring-[var(--color-accent-teal)] ring-offset-1 ring-offset-[var(--color-bg-primary)]'
                     : 'hover:brightness-110'
+            } ${
+                isSelected
+                    ? 'bg-[var(--color-accent-teal)]/35 border border-[var(--color-accent-teal)]/70'
+                    : 'bg-[var(--color-accent-teal)]/20 border border-[var(--color-accent-teal)]/40'
             }`}
             style={{
                 left,
                 top: topOffset,
                 width,
                 height: barHeight,
-                backgroundColor: isSelected ? 'rgba(86, 182, 194, 0.35)' : 'rgba(86, 182, 194, 0.2)',
-                border: isSelected ? '1px solid rgba(86, 182, 194, 0.7)' : '1px solid rgba(86, 182, 194, 0.4)',
                 cursor: 'move',
             }}
             onMouseDown={handleMouseDown}
         >
             {/* Left resize handle - wider hit area */}
             <div
-                className="absolute top-0 bottom-0 hover:bg-white/30 z-10"
+                className="absolute top-0 bottom-0 hover:bg-[var(--color-text-primary)]/30 z-10"
                 style={{
                     left: -2,
                     width: 8,
@@ -367,7 +334,7 @@ export function ProgramBar({
 
             {/* Right resize handle - wider hit area */}
             <div
-                className="absolute top-0 bottom-0 hover:bg-white/30 z-10"
+                className="absolute top-0 bottom-0 hover:bg-[var(--color-text-primary)]/30 z-10"
                 style={{
                     right: -2,
                     width: 8,
@@ -378,21 +345,21 @@ export function ProgramBar({
 
             {/* Link connector - left (for SS dependencies) */}
             <div
-                className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/50 opacity-0 hover:opacity-100 hover:bg-white cursor-crosshair z-20"
+                className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-text-primary)]/50 opacity-0 hover:opacity-100 hover:bg-[var(--color-text-primary)] cursor-crosshair z-20"
                 title="Drag to create Start-to-Start dependency"
                 onMouseDown={handleLinkDragStart('start')}
             />
 
             {/* Link connector - right (for FS dependencies) */}
             <div
-                className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white/50 opacity-0 hover:opacity-100 hover:bg-white cursor-crosshair z-20"
+                className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-text-primary)]/50 opacity-0 hover:opacity-100 hover:bg-[var(--color-text-primary)] cursor-crosshair z-20"
                 title="Drag to create Finish-to-Start dependency"
                 onMouseDown={handleLinkDragStart('end')}
             />
 
             {/* Activity name (only show if bar is wide enough) */}
             {width > 60 && (
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] text-[#56b6c2] font-medium truncate px-3 pointer-events-none">
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] text-[var(--color-accent-teal)] font-medium truncate px-3 pointer-events-none">
                     {activity.name}
                 </span>
             )}

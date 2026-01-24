@@ -28,20 +28,20 @@ export default function CostPlanLoading() {
       <div className="flex-1 overflow-hidden p-4">
         {/* Header row */}
         <div className="flex gap-1 mb-1">
-          <div className="h-8 w-6 bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-16 bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-20 bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 flex-1 bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-[72px] bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-[72px] bg-[#B85C5C] rounded-sm animate-pulse" />
+          <div className="h-8 w-6 bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-16 bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-20 bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 flex-1 bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-[72px] bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-[72px] bg-[#D4A574] rounded-sm animate-pulse" />
           <div className="h-8 w-[60px] bg-[#D4A574] rounded-sm animate-pulse" />
           <div className="h-8 w-[60px] bg-[#D4A574] rounded-sm animate-pulse" />
-          <div className="h-8 w-[72px] bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-[72px] bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-[72px] bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-[60px] bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-[72px] bg-[#B85C5C] rounded-sm animate-pulse" />
-          <div className="h-8 w-7 bg-[#B85C5C] rounded-sm animate-pulse" />
+          <div className="h-8 w-[72px] bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-[72px] bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-[72px] bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-[60px] bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-[72px] bg-[#D4A574] rounded-sm animate-pulse" />
+          <div className="h-8 w-7 bg-[#D4A574] rounded-sm animate-pulse" />
         </div>
 
         {/* Section rows - FEES */}

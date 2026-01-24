@@ -7,6 +7,7 @@
 
 import { useState, useCallback } from 'react';
 import { useAddenda, type Addendum } from '@/lib/hooks/use-addenda';
+import { useAddendumSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { useAddendumTransmittal } from '@/lib/hooks/use-addendum-transmittal';
 import { AddendumTabs } from './AddendumTabs';
 import { AddendumContent } from './AddendumContent';
@@ -15,15 +16,15 @@ import { FileText, Save, RotateCcw, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
-// Highlight blue color for icons and buttons
-const HIGHLIGHT_BLUE = '#4fc1ff';
+// Procurement section accent color (copper from design system)
+const SECTION_ACCENT = 'var(--primitive-copper-darker)'; // Warm bronze for icons
+const SECTION_TINT = 'var(--color-accent-copper-tint)';
+const SECTION_TEXT = 'var(--primitive-copper-darker)'; // Bronze text on copper-tint bg
 
 interface AddendumSectionProps {
     projectId: string;
-    disciplineId?: string;
-    disciplineName?: string;
-    tradeId?: string;
-    tradeName?: string;
+    stakeholderId?: string;
+    stakeholderName?: string;
     selectedDocumentIds?: string[];
     onLoadTransmittal?: (documentIds: string[]) => void;
     onSaveTransmittal?: () => string[];
@@ -31,37 +32,22 @@ interface AddendumSectionProps {
 
 export function AddendumSection({
     projectId,
-    disciplineId,
-    tradeId,
-    disciplineName,
-    tradeName,
+    stakeholderId,
+    stakeholderName,
     selectedDocumentIds = [],
     onLoadTransmittal,
     onSaveTransmittal,
 }: AddendumSectionProps) {
-    const [activeAddendumId, setActiveAddendumId] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
 
-    // Handle tab selection - also expands if collapsed
-    const handleSelectAddendum = (id: string) => {
-        setActiveAddendumId(id);
-        if (!isExpanded) {
-            setIsExpanded(true);
-        }
-    };
-
-    // Handle create addendum - also expands if collapsed
-    const handleCreateAddendumWithExpand = async () => {
-        const newAddendum = await createAddendum();
-        if (newAddendum) {
-            setActiveAddendumId(newAddendum.id);
-            if (!isExpanded) {
-                setIsExpanded(true);
-            }
-        }
-    };
+    // Use context for expanded state persistence across tab navigation
+    const {
+        isExpanded,
+        activeAddendumId,
+        setExpanded: setIsExpanded,
+        setActiveAddendumId,
+    } = useAddendumSectionUI(stakeholderId);
 
     const {
         addenda,
@@ -72,9 +58,27 @@ export function AddendumSection({
         deleteAddendum,
     } = useAddenda({
         projectId,
-        disciplineId,
-        tradeId,
+        stakeholderId,
     });
+
+    // Handle tab selection - also expands if collapsed
+    const handleSelectAddendum = (id: string) => {
+        setActiveAddendumId(id);
+        if (!isExpanded) {
+            setIsExpanded(true);
+        }
+    };
+
+    // Handle create addendum - also expands if collapsed
+    const handleCreateAddendumWithExpand = useCallback(async () => {
+        const newAddendum = await createAddendum();
+        if (newAddendum) {
+            setActiveAddendumId(newAddendum.id);
+            if (!isExpanded) {
+                setIsExpanded(true);
+            }
+        }
+    }, [createAddendum, setActiveAddendumId, isExpanded, setIsExpanded]);
 
     const {
         transmittal,
@@ -134,7 +138,7 @@ export function AddendumSection({
 
             const blob = await response.blob();
             const contentDisposition = response.headers.get('Content-Disposition');
-            const contextName = disciplineName || tradeName || 'Addendum';
+            const contextName = stakeholderName || 'Addendum';
             let filename = `${contextName}_Addendum_Transmittal.zip`;
             if (contentDisposition) {
                 const match = contentDisposition.match(/filename="(.+)"/);
@@ -154,7 +158,7 @@ export function AddendumSection({
         } finally {
             setIsDownloading(false);
         }
-    }, [activeAddendumId, disciplineName, tradeName]);
+    }, [activeAddendumId, stakeholderName]);
 
     const handleExport = useCallback(async (format: 'pdf' | 'docx') => {
         if (!activeAddendumId) return;
@@ -195,12 +199,12 @@ export function AddendumSection({
         }
     }, [activeAddendumId]);
 
-    const contextName = disciplineName || tradeName || 'Unknown';
+    const contextName = stakeholderName || 'Unknown';
 
     // Solid triangle icons - matching Firm Cards style
     const TriangleRight = () => (
         <svg
-            className="w-3.5 h-3.5 text-[#858585]"
+            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
             viewBox="0 0 12 12"
             fill="currentColor"
         >
@@ -210,7 +214,7 @@ export function AddendumSection({
 
     const TriangleDown = () => (
         <svg
-            className="w-3.5 h-3.5 text-[#858585]"
+            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
             viewBox="0 0 12 12"
             fill="currentColor"
         >
@@ -219,15 +223,15 @@ export function AddendumSection({
     );
 
     return (
-        <div className="mt-6 border border-[#3e3e42] rounded-lg overflow-hidden">
+        <div className="mt-6 border border-[var(--color-border)] rounded-lg overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42]">
+            <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
-                    <FileText className="w-4 h-4" style={{ color: HIGHLIGHT_BLUE }} />
-                    <span className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                    <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
+                    <span className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         Addendum
                     </span>
                     {isExpanded ? <TriangleDown /> : <TriangleRight />}
@@ -238,10 +242,10 @@ export function AddendumSection({
                         size="sm"
                         onClick={handleSaveTransmittal}
                         disabled={!activeAddendumId || selectedDocumentIds.length === 0}
-                        className="h-7 px-2 text-xs"
+                        className="h-7 px-2 text-xs font-medium"
                         style={{
-                            backgroundColor: `rgba(79, 193, 255, 0.2)`,
-                            color: HIGHLIGHT_BLUE,
+                            backgroundColor: SECTION_TINT,
+                            color: SECTION_TEXT,
                         }}
                     >
                         <Save className="w-3 h-3 mr-1" />
@@ -252,10 +256,10 @@ export function AddendumSection({
                         size="sm"
                         onClick={handleLoadTransmittal}
                         disabled={!activeAddendumId || !hasTransmittal}
-                        className="h-7 px-2 text-xs"
+                        className="h-7 px-2 text-xs font-medium"
                         style={{
-                            backgroundColor: `rgba(79, 193, 255, 0.2)`,
-                            color: HIGHLIGHT_BLUE,
+                            backgroundColor: SECTION_TINT,
+                            color: SECTION_TEXT,
                         }}
                     >
                         <RotateCcw className="w-3 h-3 mr-1" />
@@ -266,10 +270,10 @@ export function AddendumSection({
                         size="sm"
                         onClick={handleDownloadTransmittal}
                         disabled={!activeAddendumId || !hasTransmittal || isDownloading}
-                        className="h-7 px-2 text-xs"
+                        className="h-7 px-2 text-xs font-medium"
                         style={{
-                            backgroundColor: `rgba(79, 193, 255, 0.2)`,
-                            color: HIGHLIGHT_BLUE,
+                            backgroundColor: SECTION_TINT,
+                            color: SECTION_TEXT,
                         }}
                     >
                         <Download className="w-3 h-3 mr-1" />
@@ -279,9 +283,9 @@ export function AddendumSection({
             </div>
 
             {/* Tabs - always visible */}
-            <div className="bg-[#252526]">
+            <div className="bg-[var(--color-bg-secondary)]">
                 {/* Tabs and Actions Row */}
-                <div className="flex items-center justify-between px-4 pt-2 border-b border-[#3e3e42]">
+                <div className="flex items-center justify-between px-4 pt-2 border-b border-[var(--color-border)]">
                     <AddendumTabs
                         addenda={addenda}
                         activeAddendumId={activeAddendumId}
@@ -296,7 +300,7 @@ export function AddendumSection({
                             size="sm"
                             onClick={() => handleExport('pdf')}
                             disabled={!activeAddendumId || isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export PDF"
                         >
                             <PdfIcon size={22} />
@@ -306,7 +310,7 @@ export function AddendumSection({
                             size="sm"
                             onClick={() => handleExport('docx')}
                             disabled={!activeAddendumId || isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export Word"
                         >
                             <DocxIcon size={22} />
@@ -317,7 +321,7 @@ export function AddendumSection({
                 {/* Content Area - only shown when expanded */}
                 {isExpanded && (
                     activeAddendum ? (
-                        <div className="p-4 bg-[#1e1e1e]">
+                        <div className="p-4 bg-[var(--color-bg-primary)]">
                             <AddendumContent
                                 projectId={projectId}
                                 addendum={activeAddendum}
@@ -331,7 +335,7 @@ export function AddendumSection({
                             />
                         </div>
                     ) : (
-                        <div className="p-8 text-center text-[#858585] bg-[#1e1e1e]">
+                        <div className="p-8 text-center text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
                             {isLoading ? (
                                 <p>Loading addenda...</p>
                             ) : (

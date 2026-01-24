@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     try {
         const disciplines = await db.query.consultantDisciplines.findMany({
             where: eq(consultantDisciplines.projectId, projectId),
-            orderBy: asc(consultantDisciplines.order),
+            orderBy: asc(consultantDisciplines.disciplineName),
             with: {
                 statuses: true
             }

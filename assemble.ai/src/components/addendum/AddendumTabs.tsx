@@ -62,7 +62,7 @@ export function AddendumTabs({
 
     return (
         <>
-            <div className="flex items-center border-b border-[#3e3e42]">
+            <div className="flex items-center border-b border-[var(--color-border)]">
                 {addenda.map((addendum) => {
                     const label = String(addendum.addendumNumber).padStart(2, '0');
                     const isActive = addendum.id === activeAddendumId;
@@ -75,8 +75,8 @@ export function AddendumTabs({
                             className={cn(
                                 'relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer',
                                 isActive
-                                    ? 'text-[#cccccc] border-b-[3px] border-[#0e639c] -mb-px'
-                                    : 'text-[#858585] hover:text-[#cccccc]'
+                                    ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
+                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                             )}
                             onClick={() => onSelectAddendum(addendum.id)}
                         >
@@ -97,10 +97,10 @@ export function AddendumTabs({
                                 <button
                                     onClick={(e) => handleDeleteClick(e, addendum.id)}
                                     className={cn(
-                                        'ml-1 p-0.5 rounded hover:bg-[#3e3e42] transition-all',
+                                        'ml-1 p-0.5 rounded hover:bg-[var(--color-border)] transition-all',
                                         isActive
-                                            ? 'opacity-100 text-[#858585] hover:text-[#cccccc]'
-                                            : 'opacity-0 group-hover:opacity-100 text-[#858585] hover:text-[#cccccc]'
+                                            ? 'opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                            : 'opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                                     )}
                                     title={`Delete Addendum ${label}`}
                                 >
@@ -115,7 +115,7 @@ export function AddendumTabs({
                 <button
                     onClick={onCreateAddendum}
                     disabled={isLoading}
-                    className="flex items-center justify-center px-3 py-1.5 text-sm text-[#858585] hover:text-[#cccccc] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Create new addendum"
                 >
                     {isLoading ? (
@@ -128,19 +128,19 @@ export function AddendumTabs({
 
             {/* Delete Confirmation Dialog */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent className="bg-[#252526] border-[#3e3e42]">
+                <AlertDialogContent className="bg-[#252526] border-[var(--color-border)]">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2 text-[#cccccc]">
+                        <AlertDialogTitle className="flex items-center gap-2 text-[var(--color-text-primary)]">
                             <AlertTriangle className="w-5 h-5 text-yellow-500" />
                             Delete Addendum {pendingLabel}?
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="text-[#858585]">
+                        <AlertDialogDescription className="text-[var(--color-text-muted)]">
                             This will permanently delete the addendum and all its associated transmittal documents.
                             This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="bg-[#3e3e42] text-[#cccccc] hover:bg-[#4e4e52] border-[#3e3e42]">
+                        <AlertDialogCancel className="bg-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[#4e4e52] border-[var(--color-border)]">
                             Cancel
                         </AlertDialogCancel>
                         <AlertDialogAction

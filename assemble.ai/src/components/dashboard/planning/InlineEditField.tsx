@@ -30,30 +30,26 @@ export function InlineEditField({
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Auto-resize textarea to fit content
+    // Auto-resize textarea to fit content - stable approach without height reset
     const autoResize = () => {
         const textarea = textareaRef.current;
         if (!textarea) return;
 
-        // Store scroll position
-        const scrollTop = window.scrollY;
-
-        // Reset to minimum to get accurate scrollHeight
-        textarea.style.height = '0px';
-
-        // Calculate heights
+        // Calculate minimum height based on minRows
         const computed = window.getComputedStyle(textarea);
         const paddingTop = parseFloat(computed.paddingTop);
         const paddingBottom = parseFloat(computed.paddingBottom);
         const lineHeight = parseFloat(computed.lineHeight) || 20;
         const minHeight = (lineHeight * minRows) + paddingTop + paddingBottom;
 
-        // Set to the larger of scrollHeight or minHeight
-        const newHeight = Math.max(textarea.scrollHeight, minHeight);
-        textarea.style.height = `${newHeight}px`;
+        // Use scrollHeight directly - only grow, never shrink below min
+        const currentHeight = parseFloat(textarea.style.height) || minHeight;
+        const contentHeight = textarea.scrollHeight;
 
-        // Restore scroll position
-        window.scrollTo(0, scrollTop);
+        // Only update if content needs more space or we need to shrink to minHeight
+        if (contentHeight > currentHeight || currentHeight > Math.max(contentHeight, minHeight)) {
+            textarea.style.height = `${Math.max(contentHeight, minHeight)}px`;
+        }
     };
 
     // Only sync with prop value when not focused and not saving
@@ -151,47 +147,49 @@ export function InlineEditField({
         setEditValue(e.target.value);
     };
 
-    // Base styles - transparent by default, shows border on focus
-    const baseStyles = `
-        w-full px-2 py-1 rounded text-sm text-[#cccccc] leading-normal
-        bg-transparent border border-transparent
-        transition-colors duration-150
-        focus:outline-none focus:bg-[#252526] focus:border-[#0e639c] focus:ring-1 focus:ring-[#0e639c]
-        hover:border-[#3e3e42]
-        disabled:opacity-50
-        resize-none overflow-hidden
-    `;
-
-    const focusedBorderClass = isFocused ? 'border-[#0e639c] bg-[#252526]' : '';
+    // Static styling - no visual changes on focus/hover to prevent jumping
+    const borderLeftColor = 'var(--color-border)';
+    const bgColor = 'var(--color-bg-secondary)';
 
     return (
-        <div className="relative">
-            {label && <label className="block text-xs font-medium text-[#858585] mb-0.5">{label}</label>}
-            <div className="relative">
-                <textarea
-                    ref={textareaRef}
-                    value={editValue}
-                    onChange={handleChange}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={handleBlur}
-                    onKeyDown={handleKeyDown}
-                    className={`${baseStyles} ${focusedBorderClass}`}
-                    placeholder={placeholder || 'Click to edit'}
-                    disabled={isSaving}
-                    rows={1}
-                />
-                {/* Save indicator */}
-                {isSaving && (
-                    <div className="absolute right-2 top-2 pointer-events-none">
-                        <div className="w-4 h-4 border-2 border-[#0e639c] border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                )}
-                {showSuccess && !isSaving && (
-                    <span className="absolute right-2 top-2 text-green-500 text-sm pointer-events-none">✓</span>
-                )}
+        <div className="space-y-2">
+            {label && (
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+                    {label}
+                </h3>
+            )}
+            <div className="overflow-hidden">
+                <div className="relative">
+                    <textarea
+                        ref={textareaRef}
+                        value={editValue}
+                        onChange={handleChange}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={handleBlur}
+                        onKeyDown={handleKeyDown}
+                        className="w-full border-0 outline-none focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 text-[var(--color-text-primary)] resize-y min-h-[140px] p-4 cursor-text disabled:opacity-70"
+                        style={{
+                            borderLeft: `2px solid ${borderLeftColor}`,
+                            backgroundColor: bgColor,
+                            fieldSizing: 'content',
+                        } as React.CSSProperties}
+                        placeholder={placeholder || 'Enter text...'}
+                        disabled={isSaving}
+                        rows={1}
+                    />
+                    {/* Save indicator */}
+                    {isSaving && (
+                        <div className="absolute right-3 top-3 pointer-events-none">
+                            <div className="w-4 h-4 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    )}
+                    {showSuccess && !isSaving && (
+                        <span className="absolute right-3 top-3 text-[var(--color-success)] text-sm pointer-events-none">✓</span>
+                    )}
+                </div>
             </div>
             {error && (
-                <div className="text-red-500 text-sm mt-1">{error}</div>
+                <div className="text-[var(--color-error)] text-sm">{error}</div>
             )}
         </div>
     );

@@ -3,31 +3,23 @@ import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
 import { transmittals, subcategories, documents, transmittalItems, versions, fileAssets } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, desc, inArray, and, isNull } from 'drizzle-orm';
+import { eq, desc, inArray, and } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
     return handleApiError(async () => {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
-        const disciplineId = searchParams.get('disciplineId');
-        const tradeId = searchParams.get('tradeId');
+        const stakeholderId = searchParams.get('stakeholderId');
 
-        // If filtering by discipline/trade, return single transmittal with items
-        if (projectId && (disciplineId || tradeId)) {
-            const conditions = [eq(transmittals.projectId, projectId)];
-
-            if (disciplineId) {
-                conditions.push(eq(transmittals.disciplineId, disciplineId));
-                conditions.push(isNull(transmittals.tradeId));
-            } else if (tradeId) {
-                conditions.push(eq(transmittals.tradeId, tradeId));
-                conditions.push(isNull(transmittals.disciplineId));
-            }
-
+        // If filtering by stakeholder, return single transmittal with items
+        if (projectId && stakeholderId) {
             const [transmittal] = await db
                 .select()
                 .from(transmittals)
-                .where(and(...conditions))
+                .where(and(
+                    eq(transmittals.projectId, projectId),
+                    eq(transmittals.stakeholderId, stakeholderId)
+                ))
                 .limit(1);
 
             if (!transmittal) {
@@ -61,8 +53,7 @@ export async function GET(request: NextRequest) {
             issuedAt: transmittals.issuedAt,
             createdAt: transmittals.createdAt,
             projectId: transmittals.projectId,
-            disciplineId: transmittals.disciplineId,
-            tradeId: transmittals.tradeId,
+            stakeholderId: transmittals.stakeholderId,
             subcategoryName: subcategories.name,
         })
             .from(transmittals)
@@ -76,16 +67,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     return handleApiError(async () => {
         const body = await request.json();
-        const { name, subcategoryId, documentIds, projectId, disciplineId, tradeId } = body;
+        const { name, subcategoryId, documentIds, projectId, stakeholderId } = body;
 
-        // Determine if this is a discipline-based or subcategory-based transmittal
-        const isDisciplineBased = projectId && (disciplineId || tradeId);
+        // Determine if this is a stakeholder-based or subcategory-based transmittal
+        const isStakeholderBased = projectId && stakeholderId;
 
-        if (!isDisciplineBased && (!name || !subcategoryId)) {
+        if (!isStakeholderBased && (!name || !subcategoryId)) {
             return NextResponse.json({ error: 'Name and Subcategory are required' }, { status: 400 });
         }
 
-        if (isDisciplineBased && !name) {
+        if (isStakeholderBased && !name) {
             return NextResponse.json({ error: 'Name is required' }, { status: 400 });
         }
 
@@ -96,22 +87,15 @@ export async function POST(request: NextRequest) {
         let transmittalId: string;
         let isNew = true;
 
-        // For discipline-based transmittals, check if one already exists (upsert)
-        if (isDisciplineBased) {
-            const conditions = [eq(transmittals.projectId, projectId)];
-
-            if (disciplineId) {
-                conditions.push(eq(transmittals.disciplineId, disciplineId));
-                conditions.push(isNull(transmittals.tradeId));
-            } else {
-                conditions.push(eq(transmittals.tradeId, tradeId));
-                conditions.push(isNull(transmittals.disciplineId));
-            }
-
+        // For stakeholder-based transmittals, check if one already exists (upsert)
+        if (isStakeholderBased) {
             const [existing] = await db
                 .select({ id: transmittals.id })
                 .from(transmittals)
-                .where(and(...conditions))
+                .where(and(
+                    eq(transmittals.projectId, projectId),
+                    eq(transmittals.stakeholderId, stakeholderId)
+                ))
                 .limit(1);
 
             if (existing) {
@@ -127,14 +111,13 @@ export async function POST(request: NextRequest) {
                 // Clear old items
                 await db.delete(transmittalItems).where(eq(transmittalItems.transmittalId, transmittalId));
             } else {
-                // Create new discipline-based transmittal
+                // Create new stakeholder-based transmittal
                 transmittalId = uuidv4();
                 await db.insert(transmittals).values({
                     id: transmittalId,
                     name,
                     projectId,
-                    disciplineId: disciplineId || null,
-                    tradeId: tradeId || null,
+                    stakeholderId,
                     subcategoryId: null,
                     status: 'DRAFT',
                 });

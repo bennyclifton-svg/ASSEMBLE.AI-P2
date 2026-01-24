@@ -369,7 +369,7 @@ export function ConsultantGallery({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-sm text-[#858585]">Loading consultants...</p>
+        <p className="text-sm text-[var(--color-text-muted)]">Loading consultants...</p>
       </div>
     );
   }
@@ -378,15 +378,15 @@ export function ConsultantGallery({
     <div className="space-y-6">
       {/* Firms Section */}
       <div>
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Firms</h3>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Firms</h3>
         <div className="relative">
           {/* Extraction Progress Overlay */}
           {isExtracting && (
-            <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
-              <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-6 flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0e639c]"></div>
-                <p className="text-[#cccccc] font-semibold">Extracting consultant data...</p>
-                <p className="text-xs text-[#858585]">This may take a few moments</p>
+            <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 rounded-lg flex items-center justify-center">
+              <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
+                <p className="text-[var(--color-text-primary)] font-semibold">Extracting consultant data...</p>
+                <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
               </div>
             </div>
           )}
@@ -454,8 +454,8 @@ export function ConsultantGallery({
       {disciplineId && (
         <RFTNewSection
           projectId={projectId}
-          disciplineId={disciplineId}
-          disciplineName={discipline}
+          stakeholderId={disciplineId}
+          stakeholderName={discipline}
           selectedDocumentIds={selectedDocumentIds}
           onLoadTransmittal={onSetSelectedDocumentIds}
           onSaveTransmittal={() => selectedDocumentIds}
@@ -466,8 +466,8 @@ export function ConsultantGallery({
       {disciplineId && (
         <AddendumSection
           projectId={projectId}
-          disciplineId={disciplineId}
-          disciplineName={discipline}
+          stakeholderId={disciplineId}
+          stakeholderName={discipline}
           selectedDocumentIds={selectedDocumentIds}
           onLoadTransmittal={onSetSelectedDocumentIds}
           onSaveTransmittal={() => selectedDocumentIds}
@@ -478,8 +478,8 @@ export function ConsultantGallery({
       {disciplineId && (
         <EvaluationSection
           projectId={projectId}
-          disciplineId={disciplineId}
-          disciplineName={discipline}
+          stakeholderId={disciplineId}
+          stakeholderName={discipline}
         />
       )}
 
@@ -487,8 +487,8 @@ export function ConsultantGallery({
       {disciplineId && (
         <TRRSection
           projectId={projectId}
-          disciplineId={disciplineId}
-          disciplineName={discipline}
+          stakeholderId={disciplineId}
+          stakeholderName={discipline}
           selectedDocumentIds={selectedDocumentIds}
           onLoadTransmittal={onSetSelectedDocumentIds}
           onSaveTransmittal={() => selectedDocumentIds}
@@ -497,20 +497,20 @@ export function ConsultantGallery({
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
-        <AlertDialogContent className="bg-[#1e1e1e] border-[#3e3e42]">
+        <AlertDialogContent className="bg-[var(--color-bg-primary)] border-[var(--color-border)]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#cccccc]">Delete Consultant</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#858585]">
+            <AlertDialogTitle className="text-[var(--color-text-primary)]">Delete Consultant</AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--color-text-muted)]">
               Are you sure you want to delete {deleteDialog.name}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#3e3e42] text-[#cccccc] border-[#3e3e42] hover:bg-[#505050]">
+            <AlertDialogCancel className="bg-[var(--color-border)] text-[var(--color-text-primary)] border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => handleDelete(deleteDialog.id)}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-[var(--color-accent-coral)] hover:bg-[var(--primitive-coral-dark)] text-white transition-colors"
             >
               Delete
             </AlertDialogAction>

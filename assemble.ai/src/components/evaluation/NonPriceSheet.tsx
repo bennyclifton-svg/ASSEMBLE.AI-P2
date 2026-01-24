@@ -96,7 +96,7 @@ export function NonPriceSheet({
     const sortedCriteria = [...criteria].sort((a, b) => a.orderIndex - b.orderIndex);
 
     return (
-        <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg overflow-hidden">
+        <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg overflow-hidden">
             {/* Table */}
             <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
@@ -109,9 +109,9 @@ export function NonPriceSheet({
 
                     {/* Header row with firm names and drop zones (FR-002, T035) */}
                     <thead>
-                        <tr className="bg-[#252526] border-b border-[#3e3e42]">
+                        <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]">
                             <th
-                                className="px-3 text-left text-xs font-medium text-[#858585] border-r border-[#3e3e42]"
+                                className="px-3 text-left text-xs font-medium text-[var(--color-text-muted)] border-r border-[var(--color-border)]"
                                 style={{ height: cellHeight }}
                             >
                                 Criteria
@@ -129,11 +129,11 @@ export function NonPriceSheet({
                                 ) : (
                                     <th
                                         key={firm.id}
-                                        className="p-0 border-r border-[#3e3e42]"
+                                        className="p-0 border-r border-[var(--color-border)]"
                                         style={{ height: cellHeight }}
                                     >
                                         <div
-                                            className="px-3 text-right text-xs font-medium text-[#858585] flex items-center justify-end"
+                                            className="px-3 text-right text-xs font-medium text-[var(--color-text-muted)] flex items-center justify-end"
                                             style={{ height: cellHeight }}
                                         >
                                             <span className="truncate">{firm.companyName}</span>
@@ -150,17 +150,17 @@ export function NonPriceSheet({
                             const definition = getCriteriaDefinition(criterion.criteriaKey);
 
                             return (
-                                <tr key={criterion.id} className="border-b border-[#3e3e42] last:border-b-0">
+                                <tr key={criterion.id} className="border-b border-[var(--color-border)] last:border-b-0">
                                     {/* Criteria label column (FR-003) */}
                                     <td
-                                        className="px-3 py-2 border-r border-[#3e3e42] align-top bg-[#252526]"
+                                        className="px-3 py-2 border-r border-[var(--color-border)] align-top bg-[var(--color-bg-secondary)]"
                                         title={definition?.description}
                                     >
-                                        <div className="text-xs font-medium text-[#cccccc]">
+                                        <div className="text-xs font-medium text-[var(--color-text-primary)]">
                                             {criterion.criteriaLabel}
                                         </div>
                                         {definition?.description && (
-                                            <div className="text-[10px] text-[#858585] mt-0.5">
+                                            <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
                                                 {definition.description}
                                             </div>
                                         )}
@@ -196,12 +196,12 @@ export function NonPriceSheet({
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 px-3 py-2 border-t border-[#3e3e42] bg-[#252526]">
-                <div className="flex items-center gap-1 text-[10px] text-[#858585]">
-                    <span className="text-[#4fc1ff]">&#10024;</span>
+            <div className="flex items-center gap-4 px-3 py-2 border-t border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
+                    <span className="text-[var(--color-accent-copper)]">&#10024;</span>
                     <span>AI-extracted</span>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-[#858585]">
+                <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
                     <span className="text-yellow-500">&#9888;</span>
                     <span>Low confidence (manual review suggested)</span>
                 </div>

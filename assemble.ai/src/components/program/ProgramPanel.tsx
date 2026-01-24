@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, createContext, useContext } from 'react';
+import React, { useState, useMemo, createContext, useContext, useEffect } from 'react';
 import { useProgram, buildActivityTree } from '@/lib/hooks/use-program';
 import { ProgramToolbar } from './ProgramToolbar';
 import { ProgramTable } from './ProgramTable';
@@ -10,13 +10,28 @@ import type { ZoomLevel } from '@/types/program';
 const RefetchContext = createContext<() => void>(() => {});
 export const useRefetch = () => useContext(RefetchContext);
 
+const ZOOM_STORAGE_KEY = 'program-zoom-level';
+
 interface ProgramPanelProps {
     projectId: string;
 }
 
 export function ProgramPanel({ projectId }: ProgramPanelProps) {
     const { data, isLoading, error, refetch } = useProgram(projectId);
-    const [zoomLevel, setZoomLevel] = useState<ZoomLevel>('week');
+    const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem(ZOOM_STORAGE_KEY);
+            if (stored === 'week' || stored === 'month') {
+                return stored;
+            }
+        }
+        return 'week';
+    });
+
+    // Persist zoom level to localStorage
+    useEffect(() => {
+        localStorage.setItem(ZOOM_STORAGE_KEY, zoomLevel);
+    }, [zoomLevel]);
 
     // Build hierarchical tree from flat activities
     const activityTree = useMemo(() => {
@@ -68,23 +83,23 @@ export function ProgramPanel({ projectId }: ProgramPanelProps) {
 
     if (isLoading) {
         return (
-            <div className="flex h-full items-center justify-center bg-[#1e1e1e]">
-                <div className="text-sm text-gray-400">Loading program...</div>
+            <div className="flex h-full items-center justify-center bg-[var(--color-bg-primary)]">
+                <div className="text-sm text-[var(--color-text-muted)]">Loading program...</div>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="flex h-full items-center justify-center bg-[#1e1e1e]">
-                <div className="text-sm text-red-400">Failed to load program</div>
+            <div className="flex h-full items-center justify-center bg-[var(--color-bg-primary)]">
+                <div className="text-sm text-[var(--color-accent-coral)]">Failed to load program</div>
             </div>
         );
     }
 
     return (
         <RefetchContext.Provider value={refetch}>
-            <div className="flex h-full flex-col bg-[#1e1e1e]">
+            <div className="flex h-full flex-col bg-[var(--color-bg-primary)]">
                 <ProgramToolbar
                     projectId={projectId}
                     zoomLevel={zoomLevel}

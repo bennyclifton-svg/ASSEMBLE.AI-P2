@@ -45,8 +45,8 @@ export async function GET(
                 collapsed: a.collapsed ?? false,
                 color: a.color,
                 sortOrder: a.sortOrder,
-                createdAt: a.createdAt ?? new Date().toISOString(),
-                updatedAt: a.updatedAt ?? new Date().toISOString(),
+                createdAt: a.createdAt instanceof Date ? a.createdAt.toISOString() : (a.createdAt || new Date().toISOString()),
+                updatedAt: a.updatedAt instanceof Date ? a.updatedAt.toISOString() : (a.updatedAt || new Date().toISOString()),
             })),
             dependencies: dependencies.map((d) => ({
                 id: d.id,
@@ -54,7 +54,7 @@ export async function GET(
                 fromActivityId: d.fromActivityId,
                 toActivityId: d.toActivityId,
                 type: d.type as 'FS' | 'SS' | 'FF',
-                createdAt: d.createdAt ?? new Date().toISOString(),
+                createdAt: d.createdAt instanceof Date ? d.createdAt.toISOString() : (d.createdAt || new Date().toISOString()),
             })),
             milestones: milestones.map((m) => ({
                 id: m.id,
@@ -62,7 +62,7 @@ export async function GET(
                 name: m.name,
                 date: m.date,
                 sortOrder: m.sortOrder,
-                createdAt: m.createdAt ?? new Date().toISOString(),
+                createdAt: m.createdAt instanceof Date ? m.createdAt.toISOString() : (m.createdAt || new Date().toISOString()),
             })),
         };
 

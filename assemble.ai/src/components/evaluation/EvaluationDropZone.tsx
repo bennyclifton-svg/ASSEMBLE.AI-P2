@@ -113,8 +113,8 @@ export function EvaluationDropZone({
 
             {/* T038: Drop zone visual overlay */}
             {isDragOver && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#4fc1ff]/20 border-2 border-dashed border-[#4fc1ff] rounded">
-                    <div className="flex flex-col items-center text-[#4fc1ff]">
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-accent-copper)]/20 border-2 border-dashed border-[var(--color-accent-copper)] rounded">
+                    <div className="flex flex-col items-center text-[var(--color-accent-copper)]">
                         <Upload className="w-6 h-6 mb-1" />
                         <span className="text-xs font-medium">Drop PDF</span>
                     </div>
@@ -123,8 +123,8 @@ export function EvaluationDropZone({
 
             {/* Processing overlay */}
             {isProcessing && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#1e1e1e]/90 rounded">
-                    <div className="flex flex-col items-center text-[#4fc1ff]">
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--color-bg-primary)]/90 rounded">
+                    <div className="flex flex-col items-center text-[var(--color-accent-copper)]">
                         <Loader2 className="w-5 h-5 animate-spin mb-1" />
                         <span className="text-xs">Parsing...</span>
                     </div>
@@ -227,7 +227,7 @@ export function ColumnDropZone({
         <div
             ref={dropZoneRef}
             className={`relative transition-all duration-150 h-full w-full ${
-                isDragOver ? 'ring-2 ring-[#4fc1ff] ring-inset bg-[#4fc1ff]/20' : ''
+                isDragOver ? 'ring-2 ring-[var(--color-accent-copper)] ring-inset bg-[var(--color-accent-copper)]/20' : ''
             } ${isProcessing ? 'opacity-50' : ''}`}
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -238,15 +238,15 @@ export function ColumnDropZone({
 
             {/* Drag over indicator */}
             {isDragOver && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-[#4fc1ff]/30">
-                    <Upload className="w-4 h-4 text-[#4fc1ff]" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-[var(--color-accent-copper)]/30">
+                    <Upload className="w-4 h-4 text-[var(--color-accent-copper)]" />
                 </div>
             )}
 
             {/* Processing indicator */}
             {isProcessing && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#252526]/80 pointer-events-none">
-                    <Loader2 className="w-4 h-4 text-[#4fc1ff] animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-secondary)]/80 pointer-events-none">
+                    <Loader2 className="w-4 h-4 text-[var(--color-accent-copper)] animate-spin" />
                 </div>
             )}
 
@@ -346,8 +346,8 @@ export function ThDropZone({
 
     return (
         <th
-            className={`p-0 border-r border-[#3e3e42] relative transition-all duration-150 ${
-                isDragOver ? 'bg-[#4fc1ff]/20' : ''
+            className={`p-0 border-r border-[var(--color-border)] relative transition-all duration-150 ${
+                isDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
             }`}
             style={{ height }}
             onDragEnter={handleDragEnter}
@@ -356,7 +356,7 @@ export function ThDropZone({
             onDrop={handleDrop}
         >
             <div
-                className={`px-3 text-right text-xs font-medium text-[#858585] cursor-pointer hover:bg-[#2a2d2e] transition-colors flex items-center justify-end gap-1.5 ${
+                className={`px-3 text-right text-xs font-medium text-[var(--color-text-muted)] cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors flex items-center justify-end gap-1.5 ${
                     isProcessing ? 'opacity-50' : ''
                 }`}
                 style={{ height, minWidth: '100px' }}
@@ -364,20 +364,20 @@ export function ThDropZone({
             >
                 <span className="truncate">{firmName}</span>
                 {/* Permanent drop icon */}
-                <Upload className="w-3 h-3 text-[#4fc1ff] flex-shrink-0 opacity-60" />
+                <Upload className="w-3 h-3 text-[var(--color-accent-copper)] flex-shrink-0 opacity-60" />
             </div>
 
             {/* Drag over indicator */}
             {isDragOver && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-[#4fc1ff]/30 border-2 border-dashed border-[#4fc1ff]">
-                    <Upload className="w-4 h-4 text-[#4fc1ff]" />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-[var(--color-accent-copper)]/30 border-2 border-dashed border-[var(--color-accent-copper)]">
+                    <Upload className="w-4 h-4 text-[var(--color-accent-copper)]" />
                 </div>
             )}
 
             {/* Processing indicator */}
             {isProcessing && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#252526]/80 pointer-events-none">
-                    <Loader2 className="w-4 h-4 text-[#4fc1ff] animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-secondary)]/80 pointer-events-none">
+                    <Loader2 className="w-4 h-4 text-[var(--color-accent-copper)] animate-spin" />
                 </div>
             )}
 

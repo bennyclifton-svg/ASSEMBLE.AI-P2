@@ -16,8 +16,7 @@ import type {
 
 interface UseNonPriceEvaluationOptions {
     projectId: string;
-    disciplineId?: string;
-    tradeId?: string;
+    stakeholderId?: string;
 }
 
 // Parse result for UI feedback
@@ -37,6 +36,7 @@ interface UseNonPriceEvaluationReturn {
     isSaving: boolean;
     isParsing: boolean;
     parsingFirmId: string | null;
+    firmType: 'consultant' | 'contractor';
 
     // Actions
     refresh: () => Promise<void>;
@@ -57,8 +57,7 @@ interface UseNonPriceEvaluationReturn {
 
 export function useNonPriceEvaluation({
     projectId,
-    disciplineId,
-    tradeId,
+    stakeholderId,
 }: UseNonPriceEvaluationOptions): UseNonPriceEvaluationReturn {
     const [data, setData] = useState<NonPriceEvaluationData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -67,8 +66,12 @@ export function useNonPriceEvaluation({
     const [isParsing, setIsParsing] = useState(false);
     const [parsingFirmId, setParsingFirmId] = useState<string | null>(null);
 
-    const contextType = disciplineId ? 'discipline' : 'trade';
-    const contextId = disciplineId || tradeId;
+    // Use stakeholder context - firmType determined from data
+    const contextType = 'stakeholder';
+    const contextId = stakeholderId;
+
+    // Determine firm type from loaded data (first firm's type)
+    const firmType: 'consultant' | 'contractor' = data?.firms?.[0]?.firmType || 'consultant';
 
     // Fetch non-price evaluation data
     const fetchData = useCallback(async () => {
@@ -300,6 +303,7 @@ export function useNonPriceEvaluation({
         isSaving,
         isParsing,
         parsingFirmId,
+        firmType,
         refresh: fetchData,
         updateCell,
         parseTender,

@@ -75,10 +75,10 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
         <div
             ref={setNodeRef}
             style={style}
-            className={`group flex items-center gap-2 h-9 px-2 hover:bg-[#2a2d2e] transition-colors ${isDragging ? 'bg-[#37373d]' : ''}`}
+            className={`group flex items-center gap-2 h-9 px-2 hover:bg-[var(--color-bg-tertiary)] transition-colors ${isDragging ? 'bg-[#37373d]' : ''}`}
         >
             <button
-                className="cursor-grab active:cursor-grabbing text-[#4a4a4a] hover:text-[#858585] transition-colors flex-shrink-0"
+                className="cursor-grab active:cursor-grabbing text-[#4a4a4a] hover:text-[var(--color-text-muted)] transition-colors flex-shrink-0"
                 {...attributes}
                 {...listeners}
                 disabled={disabled}
@@ -89,8 +89,8 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
             <button
                 className={`flex-shrink-0 transition-colors ${
                     isSubsection
-                        ? 'text-[#4fc1ff]'
-                        : 'text-[#858585] hover:text-[#cccccc]'
+                        ? 'text-[var(--color-accent-teal)]'
+                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                 }`}
                 onClick={() => onUpdate(section.id, { level: isSubsection ? 1 : 2 })}
                 disabled={disabled}
@@ -101,7 +101,7 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
 
             <input
                 type="text"
-                className={`flex-1 min-w-0 px-2 py-1 bg-transparent text-[#cccccc] placeholder-[#858585] border-0 focus:outline-none focus:bg-[#1e1e1e] rounded transition-colors ${isSubsection ? 'ml-4' : ''}`}
+                className={`flex-1 min-w-0 px-2 py-1 bg-transparent text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] border-0 focus:outline-none focus:bg-[var(--color-bg-primary)] rounded transition-colors ${isSubsection ? 'ml-4' : ''}`}
                 value={section.title}
                 onChange={e => onUpdate(section.id, { title: e.target.value })}
                 placeholder="Section title"
@@ -109,14 +109,14 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
             />
 
             <button
-                className="flex-shrink-0 text-[#4a4a4a] hover:text-[#858585] transition-colors"
+                className="flex-shrink-0 text-[#4a4a4a] hover:text-[var(--color-text-muted)] transition-colors"
                 title="Link section"
             >
                 <Link2 className="w-3.5 h-3.5" />
             </button>
 
             <button
-                className="flex-shrink-0 text-[#4a4a4a] hover:text-[#f14c4c] transition-colors"
+                className="flex-shrink-0 text-[#4a4a4a] hover:text-[var(--color-accent-coral)] transition-colors"
                 onClick={() => onDelete(section.id)}
                 disabled={disabled}
                 title="Delete section"
@@ -210,7 +210,7 @@ export const TocEditor = forwardRef<TocEditorHandle, TocEditorProps>(function To
                     {lockOwner ? `${lockOwner} is currently editing this report.` : 'Another user is editing this report.'}
                 </p>
                 <button
-                    className="mt-2 px-4 py-2 border border-[#3e3e42] rounded bg-[#2d2d30] text-[#cccccc] hover:bg-[#3e3e42] transition-colors"
+                    className="mt-2 px-4 py-2 border border-[var(--color-border)] rounded bg-[#2d2d30] text-[var(--color-text-primary)] hover:bg-[var(--color-border)] transition-colors"
                     onClick={onCancel}
                 >
                     Go Back
@@ -221,7 +221,7 @@ export const TocEditor = forwardRef<TocEditorHandle, TocEditorProps>(function To
 
     return (
         <div className="space-y-2">
-            <div className="border border-[#3e3e42] rounded-md bg-[#1e1e1e] overflow-hidden">
+            <div className="border border-[var(--color-border)] rounded-md bg-[var(--color-bg-primary)] overflow-hidden">
                 <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -245,7 +245,7 @@ export const TocEditor = forwardRef<TocEditorHandle, TocEditorProps>(function To
                 </DndContext>
 
                 <button
-                    className="flex items-center gap-2 w-full px-3 h-9 text-[#858585] text-sm hover:text-[#cccccc] hover:bg-[#2a2d2e] border-t border-[#2d2d30] transition-colors"
+                    className="flex items-center gap-2 w-full px-3 h-9 text-[var(--color-text-muted)] text-sm hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] border-t border-[#2d2d30] transition-colors"
                     onClick={handleAddSection}
                 >
                     <Plus className="w-3.5 h-3.5" />

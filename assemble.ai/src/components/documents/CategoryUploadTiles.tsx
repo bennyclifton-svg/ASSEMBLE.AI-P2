@@ -93,7 +93,7 @@ export function CategoryUploadTiles({
 
                 return (
                     <div key={`${category.id}-subs`} className="space-y-2">
-                        <div className="text-xs text-[#858585] font-medium pl-1">
+                        <div className="text-xs text-[var(--color-text-muted)] font-medium pl-1">
                             {category.name} Subcategories
                         </div>
                         <div className="flex flex-wrap gap-2">

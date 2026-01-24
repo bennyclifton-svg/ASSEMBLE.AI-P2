@@ -21,12 +21,25 @@ export interface GenerationSource {
 }
 
 /**
+ * Metadata about what sources were used for generation
+ */
+export interface GenerationMetadata {
+  usedRAG: boolean;
+  usedProjectContext: boolean;
+  usedProfiler: boolean;
+  usedObjectives: boolean;
+  ragDocumentCount: number;
+  ragChunkCount: number;
+}
+
+/**
  * Response from the generate-field API
  */
 export interface GenerateFieldResponse {
   content: string;
   sources: GenerationSource[];
   inputInterpretation: InputInterpretation;
+  metadata: GenerationMetadata;
 }
 
 /**
@@ -35,7 +48,10 @@ export interface GenerateFieldResponse {
 export interface UseFieldGenerationOptions {
   fieldType: FieldType;
   projectId: string;
+  stakeholderId?: string;
+  /** @deprecated Use stakeholderId instead */
   disciplineId?: string;
+  /** @deprecated Use stakeholderId instead */
   tradeId?: string;
   additionalContext?: {
     firmName?: string;
@@ -122,6 +138,7 @@ export function useFieldGeneration(
             projectId: options.projectId,
             fieldType: options.fieldType,
             userInput: userInput.trim(),
+            stakeholderId: options.stakeholderId,
             disciplineId: options.disciplineId,
             tradeId: options.tradeId,
             additionalContext: options.additionalContext,

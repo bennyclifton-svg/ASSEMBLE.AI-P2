@@ -17,8 +17,7 @@ import { InlineRatingButtons } from '@/components/evaluation/RatingBadge';
 
 interface TRREvaluationNonPriceProps {
     projectId: string;
-    disciplineId?: string | null;
-    tradeId?: string | null;
+    stakeholderId?: string | null;
 }
 
 interface NonPriceData {
@@ -29,8 +28,7 @@ interface NonPriceData {
 
 export function TRREvaluationNonPrice({
     projectId,
-    disciplineId,
-    tradeId,
+    stakeholderId,
 }: TRREvaluationNonPriceProps) {
     const [data, setData] = useState<NonPriceData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -39,8 +37,8 @@ export function TRREvaluationNonPrice({
         const fetchNonPriceData = async () => {
             setIsLoading(true);
             try {
-                const contextType = disciplineId ? 'discipline' : 'trade';
-                const contextId = disciplineId || tradeId;
+                const contextType = 'stakeholder';
+                const contextId = stakeholderId;
 
                 if (!contextId) {
                     setIsLoading(false);
@@ -68,10 +66,10 @@ export function TRREvaluationNonPrice({
             }
         };
 
-        if (projectId && (disciplineId || tradeId)) {
+        if (projectId && stakeholderId) {
             fetchNonPriceData();
         }
-    }, [projectId, disciplineId, tradeId]);
+    }, [projectId, stakeholderId]);
 
     const getCellForFirm = (criteriaId: string, firmId: string): EvaluationNonPriceCell | undefined => {
         return data?.cells.find(c => c.criteriaId === criteriaId && c.firmId === firmId);
@@ -89,26 +87,26 @@ export function TRREvaluationNonPrice({
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                 Evaluation Non-Price
             </h3>
-            <div className="border border-[#3e3e42] rounded overflow-hidden">
+            <div className="border border-[var(--color-border)] rounded overflow-hidden">
                 {isLoading ? (
-                    <div className="px-4 py-3 text-[#858585] text-sm">
+                    <div className="px-4 py-3 text-[var(--color-text-muted)] text-sm">
                         Loading non-price evaluation data...
                     </div>
                 ) : hasData && hasAnyEvaluation ? (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-[#2d2d30]">
-                                <tr className="border-b border-[#3e3e42]">
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium min-w-[140px]">
+                            <thead className="bg-[var(--color-accent-copper-tint)]">
+                                <tr className="border-b border-[var(--color-border)]">
+                                    <th className="px-4 py-2.5 text-left text-[var(--primitive-copper-darker)] font-medium min-w-[140px]">
                                         Criteria
                                     </th>
                                     {data?.firms.map((firm) => (
                                         <th
                                             key={firm.id}
-                                            className="px-4 py-2.5 text-left text-[#858585] font-medium min-w-[180px]"
+                                            className="px-4 py-2.5 text-left text-[var(--primitive-copper-darker)] font-medium min-w-[180px]"
                                         >
                                             {firm.companyName}
                                         </th>
@@ -117,8 +115,8 @@ export function TRREvaluationNonPrice({
                             </thead>
                             <tbody>
                                 {sortedCriteria.map((criteria) => (
-                                    <tr key={criteria.id} className="border-b border-[#3e3e42] last:border-0">
-                                        <td className="px-4 py-2.5 text-[#cccccc] font-medium align-top">
+                                    <tr key={criteria.id} className="border-b border-[var(--color-border)] last:border-0">
+                                        <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-medium align-top">
                                             {criteria.criteriaLabel}
                                         </td>
                                         {data?.firms.map((firm) => {
@@ -134,7 +132,7 @@ export function TRREvaluationNonPrice({
                                                     <div className="flex flex-col min-h-[40px]">
                                                         {/* Content - top */}
                                                         {content && (
-                                                            <p className="text-[#858585] text-xs flex-1 mb-1">
+                                                            <p className="text-[var(--color-text-muted)] text-xs flex-1 mb-1">
                                                                 {content}
                                                             </p>
                                                         )}
@@ -156,7 +154,7 @@ export function TRREvaluationNonPrice({
                         </table>
                     </div>
                 ) : (
-                    <div className="px-4 py-3 text-[#858585] text-sm">
+                    <div className="px-4 py-3 text-[var(--color-text-muted)] text-sm">
                         No non-price evaluation completed
                     </div>
                 )}

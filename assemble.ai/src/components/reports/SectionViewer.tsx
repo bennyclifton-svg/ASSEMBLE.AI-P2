@@ -82,7 +82,7 @@ function SectionCard({
                                 {/* Render as HTML if content contains HTML tags, otherwise as text */}
                                 {content.includes('<') ? (
                                     <div
-                                        className="[&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[#3e3e42] [&_th]:px-3 [&_th]:py-2 [&_th]:bg-[#2d2d30] [&_th]:text-[#858585] [&_th]:font-medium [&_th]:text-left [&_td]:border [&_td]:border-[#3e3e42] [&_td]:px-3 [&_td]:py-2"
+                                        className="[&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[var(--color-border)] [&_th]:px-3 [&_th]:py-2 [&_th]:bg-[#2d2d30] [&_th]:text-[var(--color-text-muted)] [&_th]:font-medium [&_th]:text-left [&_td]:border [&_td]:border-[var(--color-border)] [&_td]:px-3 [&_td]:py-2"
                                         dangerouslySetInnerHTML={{ __html: content }}
                                     />
                                 ) : (

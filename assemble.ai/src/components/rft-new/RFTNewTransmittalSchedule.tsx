@@ -17,14 +17,14 @@ interface RFTNewTransmittalScheduleProps {
  * Get category color by ID - falls back to constants if not in database
  */
 function getCategoryColor(categoryId: string | null): string {
-    if (!categoryId) return '#858585';
+    if (!categoryId) return 'var(--color-text-muted)';
 
     // Try to get from constants first (for color)
     const category = getCategoryById(categoryId);
     if (category) return category.color;
 
     // Default gray
-    return '#858585';
+    return 'var(--color-text-muted)';
 }
 
 export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalScheduleProps) {
@@ -33,9 +33,9 @@ export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalSchedul
     });
 
     return (
-        <div className="border border-[#3e3e42] rounded overflow-hidden">
+        <div className="border border-[var(--color-border)] rounded overflow-hidden">
             {isLoading ? (
-                <div className="flex items-center justify-center py-8 text-[#858585]">
+                <div className="flex items-center justify-center py-8 text-[var(--color-text-muted)]">
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Loading transmittal...
                 </div>
@@ -50,7 +50,7 @@ export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalSchedul
             ) : (
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="bg-[#2d2d30] text-[#858585]">
+                        <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
                             <th className="text-left px-4 py-2.5 font-medium w-10">#</th>
                             <th className="text-left px-4 py-2.5 font-medium">Document</th>
                             <th className="text-center px-4 py-2.5 font-medium w-16">Rev</th>
@@ -65,15 +65,15 @@ export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalSchedul
                             return (
                                 <tr
                                     key={doc.id}
-                                    className="border-t border-[#3e3e42] hover:bg-[#2d2d30]/50"
+                                    className="border-t border-[var(--color-border)] hover:bg-[#2d2d30]/50"
                                 >
                                     <td className="px-4 py-2.5 text-[#6e6e6e]">
                                         {index + 1}
                                     </td>
-                                    <td className="px-4 py-2.5 text-[#cccccc] truncate max-w-[300px]">
+                                    <td className="px-4 py-2.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
                                         {doc.fileName}
                                     </td>
-                                    <td className="px-4 py-2.5 text-center text-[#cccccc]">
+                                    <td className="px-4 py-2.5 text-center text-[var(--color-text-primary)]">
                                         {String(doc.versionNumber).padStart(2, '0')}
                                     </td>
                                     <td className="px-4 py-2.5">

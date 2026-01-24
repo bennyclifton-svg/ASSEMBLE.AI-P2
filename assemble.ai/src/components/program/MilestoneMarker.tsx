@@ -11,7 +11,6 @@ interface MilestoneMarkerProps {
     columns: Array<{ date: Date; label: string }>;
     columnWidth: number;
     rowHeight: number;
-    color: string;
 }
 
 // Calculate position based on date within timeline
@@ -46,7 +45,6 @@ export function MilestoneMarker({
     columns,
     columnWidth,
     rowHeight,
-    color,
 }: MilestoneMarkerProps) {
     const [showTooltip, setShowTooltip] = useState(false);
     const markerRef = useRef<HTMLDivElement>(null);
@@ -83,18 +81,13 @@ export function MilestoneMarker({
         >
             {/* Diamond shape */}
             <div
-                className="absolute inset-0 transform rotate-45 border-2"
-                style={{
-                    backgroundColor: color,
-                    borderColor: '#fff',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                }}
+                className="absolute inset-0 transform rotate-45 border-2 bg-[var(--color-accent-teal)] border-[var(--color-text-primary)] shadow-md"
             />
 
             {/* Tooltip */}
             {showTooltip && (
                 <div
-                    className="absolute z-20 px-2 py-1 text-xs text-white bg-[#1e1e1e] border border-[#3e3e42] rounded shadow-lg whitespace-nowrap"
+                    className="absolute z-20 px-2 py-1 text-xs text-[var(--color-text-primary)] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg whitespace-nowrap"
                     style={{
                         bottom: markerSize + 4,
                         left: '50%',
@@ -102,7 +95,7 @@ export function MilestoneMarker({
                     }}
                 >
                     <div className="font-medium">{milestone.name}</div>
-                    <div className="text-gray-400">
+                    <div className="text-[var(--color-text-muted)]">
                         {date.toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',

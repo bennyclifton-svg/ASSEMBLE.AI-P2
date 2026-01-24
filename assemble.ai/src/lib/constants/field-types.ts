@@ -190,14 +190,31 @@ export function isInstructionInput(input: string): boolean {
  * Get the appropriate prompt template based on input mode and field type
  * @param fieldType - The type of field being generated
  * @param mode - The detected input interpretation mode
+ * @param hasRAG - Whether RAG documents are available (optional, defaults to true)
  * @returns The prompt template string
  */
-export function getPromptTemplate(fieldType: FieldType, mode: InputInterpretation): string {
+export function getPromptTemplate(fieldType: FieldType, mode: InputInterpretation, hasRAG: boolean = true): string {
   const metadata = FIELD_METADATA[fieldType];
+  const isDisciplineField = fieldType.startsWith('brief.') || fieldType.startsWith('scope.');
+
+  // Add discipline-specific instruction for brief/scope fields
+  const disciplineInstruction = isDisciplineField
+    ? `\n\nCRITICAL: This content must be SPECIFIC to the {contextName} discipline/trade. Do NOT generate generic project information - focus ONLY on services, deliverables, and requirements that are directly relevant to {contextName}.`
+    : '';
+
+  // RAG section - either includes retrieved documents or explains they're not available
+  const ragSection = hasRAG
+    ? `## Retrieved Documents (Knowledge Source)
+{ragChunks}`
+    : `## Note
+No Knowledge Source documents are available for this project. Generate content based on the project context above and professional best practices for the {contextName} discipline/trade.`;
+
+  // Source reference for generation instructions
+  const sourceRef = hasRAG ? 'the project context and retrieved documents' : 'the project context and professional best practices';
 
   switch (mode) {
     case 'instruction':
-      return `Follow these instructions to generate ${metadata.contextLabel}:
+      return `Follow these instructions to generate ${metadata.contextLabel} for {contextName}:
 
 {userInput}
 
@@ -206,13 +223,12 @@ Use the following context to inform your response:
 ## Project Context
 {projectContext}
 
-## Retrieved Documents (Knowledge Source)
-{ragChunks}
+${ragSection}
 
-Generate professional content that addresses the user's instructions while incorporating relevant information from the provided context.`;
+Generate professional content that addresses the user's instructions while incorporating relevant information from the provided context.${disciplineInstruction}`;
 
     case 'enhance':
-      return `Enhance and expand the following ${metadata.contextLabel} content professionally:
+      return `Enhance and expand the following ${metadata.contextLabel} content for {contextName} professionally:
 
 ## Existing Content
 {userInput}
@@ -220,24 +236,22 @@ Generate professional content that addresses the user's instructions while incor
 ## Project Context
 {projectContext}
 
-## Retrieved Documents (Knowledge Source)
-{ragChunks}
+${ragSection}
 
-Improve and expand the existing content while maintaining its intent. Make it more detailed, professional, and comprehensive using the provided context. Keep the original structure and key points.`;
+Improve and expand the existing content while maintaining its intent. Make it more detailed, professional, and comprehensive using the provided context. Keep the original structure and key points.${disciplineInstruction}`;
 
     case 'generate':
-      return `Generate professional ${metadata.contextLabel} content for this project.
+      return `Generate professional ${metadata.contextLabel} content for {contextName} on this project.
 
 ## Project Context
 {projectContext}
 
-## Retrieved Documents (Knowledge Source)
-{ragChunks}
+${ragSection}
 
-Create comprehensive, professional content appropriate for a tender document. Be specific and detailed based on the project context and retrieved documents.`;
+Create comprehensive, professional content appropriate for a tender document. Be specific and detailed based on ${sourceRef}.${disciplineInstruction}`;
 
     case 'focused':
-      return `Generate ${metadata.contextLabel} content focusing on the specified topic:
+      return `Generate ${metadata.contextLabel} content for {contextName} focusing on the specified topic:
 
 ## Focus Area
 {userInput}
@@ -245,10 +259,9 @@ Create comprehensive, professional content appropriate for a tender document. Be
 ## Project Context
 {projectContext}
 
-## Retrieved Documents (Knowledge Source)
-{ragChunks}
+${ragSection}
 
-Create professional content that specifically addresses the requested focus area while using the provided context. Prioritize information related to the focus topic.`;
+Create professional content that specifically addresses the requested focus area while using the provided context. Prioritize information related to the focus topic.${disciplineInstruction}`;
   }
 }
 

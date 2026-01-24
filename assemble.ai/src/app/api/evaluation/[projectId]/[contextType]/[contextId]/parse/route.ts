@@ -15,8 +15,7 @@ import {
     versions,
     fileAssets,
     categories,
-    consultantDisciplines,
-    contractorTrades,
+    projectStakeholders,
     tenderSubmissions,
 } from '@/lib/db';
 import { eq, and, asc, desc } from 'drizzle-orm';
@@ -42,15 +41,16 @@ export async function POST(
     try {
         const { projectId, contextType, contextId } = await params;
 
-        // Validate context type
-        if (contextType !== 'discipline' && contextType !== 'trade') {
+        // Validate context type - now supports 'stakeholder' for unified model
+        if (contextType !== 'stakeholder' && contextType !== 'discipline' && contextType !== 'trade') {
             return NextResponse.json(
-                { error: 'Invalid context type. Must be "discipline" or "trade".' },
+                { error: 'Invalid context type. Must be "stakeholder".' },
                 { status: 400 }
             );
         }
 
-        const isDiscipline = contextType === 'discipline';
+        // For backwards compatibility, treat all context types as stakeholder
+        const _contextType = contextType; // Keep for reference
 
         // T045: Handle file upload
         const formData = await request.formData();
@@ -82,17 +82,12 @@ export async function POST(
 
         console.log(`[parse-route] Parsing tender for firm ${firmId}: ${file.name}`);
 
-        // Get evaluation and rows
+        // Get evaluation using stakeholderId
         const evaluation = await db.query.evaluations.findFirst({
-            where: isDiscipline
-                ? and(
-                    eq(evaluations.projectId, projectId),
-                    eq(evaluations.disciplineId, contextId)
-                )
-                : and(
-                    eq(evaluations.projectId, projectId),
-                    eq(evaluations.tradeId, contextId)
-                ),
+            where: and(
+                eq(evaluations.projectId, projectId),
+                eq(evaluations.stakeholderId, contextId)
+            ),
         });
 
         if (!evaluation) {
@@ -145,8 +140,9 @@ export async function POST(
             );
         }
 
-        // T046: Upload PDF to document repository (Consultant/Discipline or Contractor/Trade category)
+        // T046: Upload PDF to document repository (Stakeholder category)
         let uploadedFileAssetId: string | null = null;
+        let stakeholder: { id: string; name: string; stakeholderGroup: string | null } | undefined;
         try {
             const { path: storagePath, hash, size } = await storage.save(file, buffer);
 
@@ -163,28 +159,18 @@ export async function POST(
                 ocrStatus: 'COMPLETED', // Already parsed
             });
 
-            // Determine category and subcategory
-            const categoryId = isDiscipline ? 'consultants' : 'contractors';
+            // Get stakeholder to determine category
+            stakeholder = await db.query.projectStakeholders.findFirst({
+                where: eq(projectStakeholders.id, contextId),
+            });
+            const isConsultant = stakeholder?.stakeholderGroup === 'consultant';
+            const categoryId = isConsultant ? 'consultants' : 'contractors';
             const subcategoryId = contextId;
-
-            // Get subcategory name for the document
-            let subcategoryName: string | null = null;
-            if (isDiscipline) {
-                const discipline = await db.query.consultantDisciplines.findFirst({
-                    where: eq(consultantDisciplines.id, contextId),
-                });
-                subcategoryName = discipline?.disciplineName || null;
-            } else {
-                const trade = await db.query.contractorTrades.findFirst({
-                    where: eq(contractorTrades.id, contextId),
-                });
-                subcategoryName = trade?.tradeName || null;
-            }
 
             // Ensure category exists (upsert)
             await db.insert(categories).values({
                 id: categoryId,
-                name: isDiscipline ? 'Consultants' : 'Contractors',
+                name: isConsultant ? 'Consultants' : 'Contractors',
                 isSystem: true,
             }).onConflictDoNothing();
 
@@ -218,7 +204,13 @@ export async function POST(
             // Continue even if upload fails - the parsing result is more important
         }
 
-        const firmType = isDiscipline ? 'consultant' : 'contractor';
+        // Determine firm type based on stakeholder group (fetch if not already fetched)
+        if (!stakeholder) {
+            stakeholder = await db.query.projectStakeholders.findFirst({
+                where: eq(projectStakeholders.id, contextId),
+            });
+        }
+        const firmType = stakeholder?.stakeholderGroup === 'consultant' ? 'consultant' : 'contractor';
 
         // T080: Create tender_submission record for audit trail
         // Store both included items and filtered items for transparency

@@ -139,9 +139,9 @@ export function TreeView({ data, selectedIds, onSelect, onDrop }: TreeViewProps)
             onDragEnd={handleDragEnd}
         >
             <SortableContext items={allNodeIds} strategy={verticalListSortingStrategy}>
-                <div className="bg-[#1e1e1e] text-[#cccccc] min-h-[400px] rounded-md overflow-auto">
+                <div className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] min-h-[400px] rounded-md overflow-auto">
                     {data.length === 0 ? (
-                        <div className="flex items-center justify-center p-12 text-sm text-[#858585]">
+                        <div className="flex items-center justify-center p-12 text-sm text-[var(--color-text-muted)]">
                             No documents yet. Upload files to get started.
                         </div>
                     ) : (
@@ -163,7 +163,7 @@ export function TreeView({ data, selectedIds, onSelect, onDrop }: TreeViewProps)
             {/* Optional: DragOverlay for better visual feedback while dragging */}
             <DragOverlay>
                 {activeId ? (
-                    <div className="bg-[#37373d] text-[#cccccc] px-3 py-2 rounded shadow-lg text-sm">
+                    <div className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] px-3 py-2 rounded shadow-lg text-sm border border-[var(--color-border)]">
                         {selectedIds.size > 1 && selectedIds.has(activeId) ? (
                             `Moving ${selectedIds.size} files...`
                         ) : (

@@ -100,36 +100,80 @@ export async function extractInvoiceFromPdf(
 ): Promise<ExtractionResult> {
   console.log(`[invoice-extract] Starting extraction for: ${filename}`);
 
-  // Step 1: Parse the PDF
-  let parsedDoc: ParsedDocument;
+  // Step 1: Try to parse the PDF with text extraction first
+  let parsedDoc: ParsedDocument | null = null;
+  let useNativePdf = false;
+
   try {
     parsedDoc = await parseDocument(fileBuffer, filename);
     console.log(`[invoice-extract] Parsed with ${parsedDoc.metadata.parser}, ${parsedDoc.content.length} chars`);
+
+    // If no content was extracted, fall back to native PDF
+    if (!parsedDoc.content || parsedDoc.content.trim().length === 0) {
+      console.log('[invoice-extract] No text extracted, falling back to native PDF support');
+      useNativePdf = true;
+    }
   } catch (parseError) {
-    console.error('[invoice-extract] Parse failed:', parseError);
-    return {
-      success: false,
-      invoice: null,
-      error: `Failed to parse document: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
-      parserUsed: 'text',
-    };
+    console.warn('[invoice-extract] Parse failed, falling back to native PDF support:', parseError);
+    useNativePdf = true;
   }
 
   // Step 2: Extract data with Claude
   try {
-    console.log('[invoice-extract] Calling Claude Haiku for extraction...');
-
     const anthropic = getAnthropicClient();
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 1000,
-      messages: [
-        {
-          role: 'user',
-          content: EXTRACTION_PROMPT + parsedDoc.content,
-        },
-      ],
-    });
+    let response;
+    let parserUsed: ParsedDocument['metadata']['parser'] = parsedDoc?.metadata.parser || 'text';
+
+    if (useNativePdf) {
+      // Use Claude's native PDF document support with Sonnet (better PDF support)
+      console.log('[invoice-extract] Using Claude native PDF support for extraction...');
+      parserUsed = 'text'; // We'll mark it as text since Claude handles it directly
+
+      const base64Pdf = fileBuffer.toString('base64');
+      try {
+        response = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1000,
+          betas: ['pdfs-2024-09-25'],
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'document',
+                  source: {
+                    type: 'base64',
+                    media_type: 'application/pdf',
+                    data: base64Pdf,
+                  },
+                },
+                {
+                  type: 'text',
+                  text: EXTRACTION_PROMPT,
+                },
+              ],
+            },
+          ],
+        });
+      } catch (pdfApiError: any) {
+        console.error('[invoice-extract] Native PDF API error:', pdfApiError?.message || pdfApiError);
+        // If document type fails, try vision with PDF as base64 (some APIs support this)
+        throw new Error(`PDF processing failed: ${pdfApiError?.message || 'Unable to process this PDF format'}`);
+      }
+    } else {
+      // Use pre-extracted text content
+      console.log('[invoice-extract] Calling Claude Haiku for extraction...');
+      response = await anthropic.messages.create({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 1000,
+        messages: [
+          {
+            role: 'user',
+            content: EXTRACTION_PROMPT + parsedDoc!.content,
+          },
+        ],
+      });
+    }
 
     // Extract text content from response
     const textContent = response.content.find((c) => c.type === 'text');
@@ -169,7 +213,7 @@ export async function extractInvoiceFromPdf(
         overall: 0.8,
         fields: {},
       },
-      rawText: parsedDoc.content.substring(0, 2000), // Keep first 2000 chars for debugging
+      rawText: parsedDoc?.content?.substring(0, 2000) || '[PDF processed via native document support]',
     };
 
     console.log(`[invoice-extract] Successfully extracted: ${invoice.invoiceNumber}`);
@@ -177,7 +221,7 @@ export async function extractInvoiceFromPdf(
     return {
       success: true,
       invoice,
-      parserUsed: parsedDoc.metadata.parser,
+      parserUsed,
     };
   } catch (extractError) {
     console.error('[invoice-extract] Extraction failed:', extractError);
@@ -185,7 +229,7 @@ export async function extractInvoiceFromPdf(
       success: false,
       invoice: null,
       error: `Failed to extract data: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`,
-      parserUsed: parsedDoc.metadata.parser,
+      parserUsed: parsedDoc?.metadata.parser || 'text',
     };
   }
 }

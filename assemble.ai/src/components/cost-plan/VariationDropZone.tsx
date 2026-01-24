@@ -8,7 +8,8 @@
  */
 
 import { useState, useRef, useCallback, type ReactNode, type DragEvent } from 'react';
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { toast } from '@/lib/hooks/use-toast';
 
 // ============================================================================
@@ -256,21 +257,21 @@ export function VariationDropZone({ projectId, children, onUploadComplete }: Var
         <div
           className={`absolute inset-0 z-50 flex items-center justify-center transition-all duration-200 ${
             status === 'dragging'
-              ? 'bg-[#D4A574]/20 border-2 border-dashed border-[#D4A574]'
+              ? 'bg-[var(--primitive-copper)]/20 border-2 border-dashed border-[var(--primitive-copper)]'
               : 'bg-black/70'
           }`}
           onClick={status === 'dragging' ? undefined : handleClick}
         >
-          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-[#252526] border border-[#3e3e42] shadow-xl max-w-md">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-xl max-w-md">
             {/* Dragging state */}
             {status === 'dragging' && (
               <>
-                <div className="w-16 h-16 rounded-full bg-[#D4A574]/20 flex items-center justify-center">
-                  <Upload className="w-8 h-8 text-[#D4A574]" />
+                <div className="w-16 h-16 rounded-full bg-[var(--primitive-copper)]/20 flex items-center justify-center">
+                  <Upload className="w-8 h-8 text-[var(--primitive-copper)]" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-[#cccccc]">Drop Variation PDF</p>
-                  <p className="text-sm text-[#858585] mt-1">AI will extract variation details automatically</p>
+                  <p className="text-lg font-medium text-[var(--color-text-primary)]">Drop Variation PDF</p>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1">AI will extract variation details automatically</p>
                 </div>
               </>
             )}
@@ -278,15 +279,15 @@ export function VariationDropZone({ projectId, children, onUploadComplete }: Var
             {/* Uploading/Extracting state */}
             {(status === 'uploading' || status === 'extracting') && (
               <>
-                <div className="w-16 h-16 rounded-full bg-[#D4A574]/20 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-[#D4A574] animate-spin" />
+                <div className="w-16 h-16 rounded-full bg-[var(--primitive-copper)]/20 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-[var(--primitive-copper)] animate-spin" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-[#cccccc] flex items-center gap-2 justify-center">
-                    <Sparkles className="w-5 h-5 text-[#D4A574]" />
+                  <p className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2 justify-center">
+                    <DiamondIcon className="w-5 h-5 text-[var(--primitive-copper)]" />
                     {status === 'uploading' ? 'Uploading...' : 'Extracting with AI...'}
                   </p>
-                  <p className="text-sm text-[#858585] mt-1">{uploadProgress}</p>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1">{uploadProgress}</p>
                 </div>
               </>
             )}
@@ -299,24 +300,24 @@ export function VariationDropZone({ projectId, children, onUploadComplete }: Var
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-medium text-green-400">Variation Created</p>
-                  <div className="mt-3 p-3 bg-[#1e1e1e] rounded border border-[#3e3e42] text-left">
+                  <div className="mt-3 p-3 bg-[var(--color-bg-primary)] rounded border border-[var(--color-border)] text-left">
                     <div className="flex items-center gap-2 mb-2">
-                      <FileText className="w-4 h-4 text-[#D4A574]" />
-                      <span className="font-mono text-[#D4A574]">{lastResult.variation.variationNumber}</span>
+                      <FileText className="w-4 h-4 text-[var(--primitive-copper)]" />
+                      <span className="font-mono text-[var(--primitive-copper)]">{lastResult.variation.variationNumber}</span>
                     </div>
-                    <div className="text-sm text-[#cccccc] truncate max-w-[280px]" title={lastResult.variation.description}>
+                    <div className="text-sm text-[var(--color-text-primary)] truncate max-w-[280px]" title={lastResult.variation.description}>
                       {lastResult.variation.description}
                     </div>
-                    <div className="text-sm text-[#cccccc] mt-1">
+                    <div className="text-sm text-[var(--color-text-primary)] mt-1">
                       Forecast: {formatCurrency(lastResult.variation.amountForecastCents)}
                     </div>
                     {lastResult.extraction?.costLineMatchDetails && (
-                      <div className="text-xs text-[#858585] mt-1">
+                      <div className="text-xs text-[var(--color-text-muted)] mt-1">
                         Matched: {lastResult.extraction.costLineMatchDetails.activity}
                       </div>
                     )}
                     {lastResult.extraction?.confidence.overall && (
-                      <div className="text-xs text-[#6e6e6e] mt-1">
+                      <div className="text-xs text-[var(--color-text-muted)] mt-1">
                         Confidence: {Math.round(lastResult.extraction.confidence.overall * 100)}%
                       </div>
                     )}
@@ -333,8 +334,8 @@ export function VariationDropZone({ projectId, children, onUploadComplete }: Var
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-medium text-red-400">Extraction Failed</p>
-                  <p className="text-sm text-[#858585] mt-1">{uploadProgress}</p>
-                  <p className="text-xs text-[#6e6e6e] mt-2">Click to try again</p>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1">{uploadProgress}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-2">Click to try again</p>
                 </div>
               </>
             )}

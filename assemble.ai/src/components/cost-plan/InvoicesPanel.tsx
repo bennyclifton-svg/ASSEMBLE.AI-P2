@@ -11,23 +11,23 @@ import { InvoiceDropZone } from './InvoiceDropZone';
 // App color palette - consistent with global styles
 const COLORS = {
     bg: {
-        primary: '#1e1e1e',
-        secondary: '#252526',
-        tertiary: '#2d2d30',
-        hover: '#37373d',
+        primary: 'var(--color-bg-primary)',
+        secondary: 'var(--color-bg-secondary)',
+        tertiary: 'var(--color-bg-tertiary)',
+        hover: 'var(--color-bg-tertiary)',
     },
     text: {
-        primary: '#cccccc',
-        secondary: '#858585',
-        muted: '#6e6e6e',
+        primary: 'var(--color-text-primary)',
+        secondary: 'var(--color-text-muted)',
+        muted: 'var(--color-text-muted)',
     },
     border: {
-        primary: '#3e3e42',
-        secondary: '#555555',
+        primary: 'var(--color-border)',
+        secondary: 'var(--color-border)',
     },
     accent: {
-        blue: '#0e639c',
-        invoice: '#6B9BD1',
+        blue: 'var(--color-accent-green)',
+        invoice: 'var(--primitive-copper)',  // copper - unified accent
     },
     status: {
         unpaid: { bg: 'bg-yellow-900/40', text: 'text-yellow-400', border: 'border-yellow-600' },
@@ -122,10 +122,10 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
 
     if (error) {
         return (
-            <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
+            <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
                 <div className="text-center">
-                    <p className="text-[#f87171] mb-2">Failed to load invoices</p>
-                    <button onClick={() => refetch()} className="text-sm text-[#0e639c] hover:text-[#1177bb]">
+                    <p className="text-[var(--color-accent-coral)] mb-2">Failed to load invoices</p>
+                    <button onClick={() => refetch()} className="text-sm text-[var(--color-accent-teal)] hover:opacity-80">
                         Retry
                     </button>
                 </div>
@@ -135,10 +135,10 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
 
     return (
         <InvoiceDropZone projectId={projectId} onUploadComplete={() => refetch()}>
-        <div className="h-full flex flex-col bg-[#1e1e1e] text-xs">
+        <div className="h-full flex flex-col bg-[var(--color-bg-primary)] text-xs">
             {/* Toolbar */}
-            <div className="flex items-center justify-end px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
-                <span className="text-[10px] text-[#6e6e6e] flex items-center gap-1">
+            <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
                     <Upload className="h-3 w-3" />
                     Drop Invoice
                 </span>
@@ -147,10 +147,10 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
             {/* Table */}
             <div className="flex-1 overflow-auto">
                 <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
-                    <thead className="sticky top-0 z-10" style={{ backgroundColor: COLORS.accent.invoice }}>
+                    <thead className="sticky top-0 z-10 bg-[var(--color-accent-copper-tint)]">
                         <tr>
                             <th
-                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[100px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('invoiceNumber')}
                             >
                                 <div className="flex items-center gap-1">
@@ -161,7 +161,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('description')}
                             >
                                 <div className="flex items-center gap-1">
@@ -172,7 +172,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[160px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[160px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('costLine')}
                             >
                                 <div className="flex items-center gap-1">
@@ -183,7 +183,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[80px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[80px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('period')}
                             >
                                 <div className="flex items-center gap-1">
@@ -194,7 +194,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[90px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('invoiceDate')}
                             >
                                 <div className="flex items-center gap-1">
@@ -205,7 +205,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#5080a0] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[100px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-right text-[var(--color-accent-copper)] font-medium w-[100px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('amountCents')}
                             >
                                 <div className="flex items-center justify-end gap-1">
@@ -216,7 +216,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#5080a0] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[80px] cursor-pointer hover:bg-[#5a8ab5] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[80px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('paidStatus')}
                             >
                                 <div className="flex items-center gap-1">
@@ -226,11 +226,11 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                                     )}
                                 </div>
                             </th>
-                            <th className="border border-[#5080a0] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[40px]">
+                            <th className="border border-[var(--color-accent-copper)] px-2 py-2 text-center text-[var(--color-accent-copper)] font-medium w-[40px]">
                                 <button
                                     onClick={() => setShowAddRow(true)}
                                     disabled={showAddRow}
-                                    className="p-0.5 text-[#1e1e1e] hover:text-[#0e639c] transition-colors disabled:opacity-50"
+                                    className="p-0.5 text-[var(--color-accent-copper)] hover:text-[var(--color-accent-teal)] transition-colors disabled:opacity-50"
                                     title="Add Invoice"
                                 >
                                     <Plus className="h-4 w-4" />
@@ -241,11 +241,11 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">Loading invoices...</td>
+                                <td colSpan={8} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">Loading invoices...</td>
                             </tr>
                         ) : sortedInvoices.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">
+                                <td colSpan={8} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
                                     No invoices yet. Click the + icon to add one.
                                 </td>
                             </tr>
@@ -271,16 +271,16 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                         )}
                     </tbody>
                     {sortedInvoices.length > 0 && (
-                        <tfoot className="bg-[#2d2d30] font-semibold">
+                        <tfoot className="bg-[var(--color-bg-tertiary)] font-semibold">
                             <tr>
-                                <td colSpan={5} className="border border-[#3e3e42] px-2 py-1.5 text-right text-[#858585]">
+                                <td colSpan={5} className="border border-[var(--color-border)] px-2 py-1.5 text-right text-[var(--color-text-muted)]">
                                     Total:
                                 </td>
-                                <td className="border border-[#3e3e42] px-2 py-1.5 text-right font-mono text-[#cccccc]">
+                                <td className="border border-[var(--color-border)] px-2 py-1.5 text-right font-mono text-[var(--color-text-primary)]">
                                     {formatCurrency(sortedInvoices.reduce((sum, inv) => sum + inv.amountCents, 0))}
                                 </td>
-                                <td className="border border-[#3e3e42] px-2 py-1.5"></td>
-                                <td className="border border-[#3e3e42] px-2 py-1.5"></td>
+                                <td className="border border-[var(--color-border)] px-2 py-1.5"></td>
+                                <td className="border border-[var(--color-border)] px-2 py-1.5"></td>
                             </tr>
                         </tfoot>
                     )}
@@ -327,7 +327,7 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
     // Determine if status is paid (treat partial as unpaid for display purposes)
     const isPaid = invoice.paidStatus === 'paid';
 
-    const inputClass = "w-full p-0 bg-transparent border-none rounded text-[11px] text-[#cccccc] focus:outline-none";
+    const inputClass = "w-full h-full px-2 py-1 -mx-2 -my-1 bg-transparent border border-[var(--color-border)]/60 text-[11px] text-[var(--color-text-primary)] focus:outline-none";
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
     const periodDate = new Date(invoice.periodYear, invoice.periodMonth - 1);
@@ -405,9 +405,9 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
     };
 
     return (
-        <tr className="group bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42] transition-colors">
+        <tr className="group bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] transition-colors">
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 font-mono font-medium text-[#6B9BD1] cursor-pointer w-[100px]"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 font-mono font-medium text-[var(--color-accent-teal)] cursor-pointer w-[100px]"
                 onClick={() => handleStartEdit('invoiceNumber', invoice.invoiceNumber)}
             >
                 {editingField === 'invoiceNumber' ? (
@@ -421,11 +421,11 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                         className={inputClass}
                     />
                 ) : (
-                    <span className="hover:text-white">{invoice.invoiceNumber}</span>
+                    <span>{invoice.invoiceNumber}</span>
                 )}
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 max-w-[200px] cursor-pointer"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 max-w-[200px] cursor-pointer"
                 title={invoice.description || ''}
                 onClick={() => handleStartEdit('description', invoice.description || '')}
             >
@@ -440,31 +440,31 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                         className={inputClass}
                     />
                 ) : (
-                    <span className="truncate block text-[#cccccc] hover:text-white">
+                    <span className="truncate block text-[var(--color-text-primary)]">
                         {invoice.description || '-'}
                     </span>
                 )}
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[160px]">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[160px]">
                 <select
                     value={invoice.costLineId || ''}
                     onChange={(e) => handleCostLineChange(e.target.value)}
-                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
                     title={invoice.costLine?.activity || ''}
                     style={{ colorScheme: 'dark' }}
                 >
-                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
+                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
                     {sortedCostLines.map((line) => {
-                        const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
+                        const stakeholderName = line.stakeholder?.name || '';
                         const label = line.costCode
-                            ? disciplineOrTrade
-                                ? `${line.costCode} - ${disciplineOrTrade} - ${line.activity}`
+                            ? stakeholderName
+                                ? `${line.costCode} - ${stakeholderName} - ${line.activity}`
                                 : `${line.costCode} - ${line.activity}`
-                            : disciplineOrTrade
-                                ? `${disciplineOrTrade} - ${line.activity}`
+                            : stakeholderName
+                                ? `${stakeholderName} - ${line.activity}`
                                 : line.activity;
                         return (
-                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
+                            <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                                 {label}
                             </option>
                         );
@@ -472,7 +472,7 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                 </select>
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-[#858585] cursor-pointer w-[80px]"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 text-[var(--color-text-muted)] cursor-pointer w-[80px]"
                 onClick={() => handleStartEdit('period', `${invoice.periodYear}-${String(invoice.periodMonth).padStart(2, '0')}`)}
             >
                 {editingField === 'period' ? (
@@ -486,11 +486,11 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                         className={`${inputClass} text-[10px]`}
                     />
                 ) : (
-                    <span className="hover:text-white">{periodLabel}</span>
+                    <span>{periodLabel}</span>
                 )}
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-[#858585] cursor-pointer w-[90px]"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 text-[var(--color-text-muted)] cursor-pointer w-[90px]"
                 onClick={() => handleStartEdit('invoiceDate', invoice.invoiceDate)}
             >
                 {editingField === 'invoiceDate' ? (
@@ -504,11 +504,11 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                         className={`${inputClass} text-[10px]`}
                     />
                 ) : (
-                    <span className="hover:text-white">{new Date(invoice.invoiceDate).toLocaleDateString()}</span>
+                    <span>{new Date(invoice.invoiceDate).toLocaleDateString()}</span>
                 )}
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-right cursor-pointer w-[100px]"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 text-right cursor-pointer w-[100px]"
                 onClick={() => handleStartEdit('amount', (invoice.amountCents / 100).toString())}
             >
                 {editingField === 'amount' ? (
@@ -522,12 +522,12 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                         className={numberInputClass}
                     />
                 ) : (
-                    <span className="font-mono text-[#cccccc] hover:text-white">
+                    <span className="font-mono text-[var(--color-text-primary)]">
                         {formatCurrency(invoice.amountCents)}
                     </span>
                 )}
             </td>
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 w-[80px]">
+            <td className="border-x border-[var(--color-border)] px-2 py-1.5 w-[80px]">
                 <button
                     onClick={() => onUpdate(invoice.id, { paidStatus: isPaid ? 'unpaid' : 'paid' })}
                     className={`px-2 py-0.5 rounded text-[10px] border cursor-pointer transition-colors ${
@@ -539,10 +539,10 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                     {isPaid ? 'Paid' : 'Unpaid'}
                 </button>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 text-center w-[40px]">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 text-center w-[40px]">
                 <button
                     onClick={onDelete}
-                    className="p-0.5 text-[#858585] hover:text-[#f87171] hover:bg-[#4e4e52] rounded transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] hover:bg-[var(--color-bg-tertiary)] rounded transition-colors opacity-0 group-hover:opacity-100"
                     title="Delete invoice"
                 >
                     <Trash className="h-3 w-3" />
@@ -610,12 +610,12 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
         }
     };
 
-    const inputClass = "w-full px-1.5 py-1 bg-transparent border-none text-[11px] text-[#cccccc] placeholder-[#6e6e6e] focus:outline-none";
+    const inputClass = "w-full h-full px-2 py-1 -mx-1 -my-0.5 bg-transparent border border-[var(--color-border)]/60 text-[11px] text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none";
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
     return (
-        <tr className="bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42]" onKeyDown={handleKeyDown}>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+        <tr className="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]" onKeyDown={handleKeyDown}>
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <input
                     ref={invoiceNumberRef}
                     type="text"
@@ -625,7 +625,7 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     className={inputClass}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <input
                     type="text"
                     value={formData.description}
@@ -634,33 +634,33 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     className={inputClass}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <select
                     value={formData.costLineId}
                     onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
-                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
+                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
                     title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
                     style={{ colorScheme: 'dark' }}
                 >
-                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
+                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
                     {sortedCostLines.map((line) => {
-                        const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
+                        const stakeholderName = line.stakeholder?.name || '';
                         const label = line.costCode
-                            ? disciplineOrTrade
-                                ? `${line.costCode} - ${disciplineOrTrade} - ${line.activity}`
+                            ? stakeholderName
+                                ? `${line.costCode} - ${stakeholderName} - ${line.activity}`
                                 : `${line.costCode} - ${line.activity}`
-                            : disciplineOrTrade
-                                ? `${disciplineOrTrade} - ${line.activity}`
+                            : stakeholderName
+                                ? `${stakeholderName} - ${line.activity}`
                                 : line.activity;
                         return (
-                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
+                            <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                                 {label}
                             </option>
                         );
                     })}
                 </select>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <input
                     type="month"
                     value={`${formData.periodYear}-${String(formData.periodMonth).padStart(2, '0')}`}
@@ -671,7 +671,7 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     className={`${inputClass} text-[10px]`}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <input
                     type="date"
                     value={formData.invoiceDate}
@@ -679,7 +679,7 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     className={`${inputClass} text-[10px]`}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <input
                     type="number"
                     value={formData.amountCents / 100 || ''}
@@ -688,7 +688,7 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     className={numberInputClass}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <div className="flex items-center gap-1">
                     <button
                         type="button"
@@ -719,7 +719,7 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     </button>
                 </div>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[40px]"></td>
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[40px]"></td>
         </tr>
     );
 }
@@ -733,24 +733,38 @@ interface DeleteConfirmDialogProps {
 }
 
 function DeleteConfirmDialog({ itemName, itemType, onClose, onConfirm, isSubmitting }: DeleteConfirmDialogProps) {
+    // Handle Enter key to confirm delete
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && !isSubmitting) {
+                e.preventDefault();
+                onConfirm();
+            } else if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onConfirm, onClose, isSubmitting]);
+
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-            <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-sm border border-[#3e3e42]">
-                <div className="px-4 py-3 border-b border-[#3e3e42]">
-                    <h2 className="text-sm font-semibold text-[#cccccc]">Delete {itemType}</h2>
+            <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-sm border border-[var(--color-border)]">
+                <div className="px-4 py-3 border-b border-[var(--color-border)]">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Delete {itemType}</h2>
                 </div>
                 <div className="p-4 space-y-4">
-                    <p className="text-sm text-[#cccccc]">
+                    <p className="text-sm text-[var(--color-text-primary)]">
                         Are you sure you want to delete <strong>&quot;{itemName}&quot;</strong>?
                     </p>
-                    <p className="text-xs text-[#858585]">
+                    <p className="text-xs text-[var(--color-text-muted)]">
                         This action cannot be undone.
                     </p>
                     <div className="flex justify-end gap-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-xs text-[#858585] hover:text-[#cccccc] transition-colors"
+                            className="px-4 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                         >
                             Cancel
                         </button>
@@ -758,7 +772,7 @@ function DeleteConfirmDialog({ itemName, itemType, onClose, onConfirm, isSubmitt
                             type="button"
                             onClick={onConfirm}
                             disabled={isSubmitting}
-                            className="px-4 py-2 text-xs bg-[#f87171] text-white rounded hover:bg-[#ef4444] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-4 py-2 text-xs bg-[var(--color-accent-coral)] text-white rounded hover:bg-[var(--color-accent-coral)]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             {isSubmitting ? 'Deleting...' : 'Delete'}
                         </button>

@@ -12,8 +12,7 @@ import {
     evaluationNonPriceCells,
     consultants,
     contractors,
-    consultantDisciplines,
-    contractorTrades,
+    projectStakeholders,
 } from '@/lib/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -36,27 +35,23 @@ export async function GET(
     try {
         const { projectId, contextType, contextId } = await params;
 
-        // Validate context type
-        if (contextType !== 'discipline' && contextType !== 'trade') {
+        // Validate context type - now supports 'stakeholder' for unified model
+        if (contextType !== 'stakeholder' && contextType !== 'discipline' && contextType !== 'trade') {
             return NextResponse.json(
-                { error: 'Invalid context type. Must be "discipline" or "trade".' },
+                { error: 'Invalid context type. Must be "stakeholder".' },
                 { status: 400 }
             );
         }
 
-        const isDiscipline = contextType === 'discipline';
+        // For backwards compatibility, treat all context types as stakeholder
+        const _contextType = contextType; // Keep for reference
 
-        // Find or create evaluation
+        // Find or create evaluation using stakeholderId
         let evaluation = await db.query.evaluations.findFirst({
-            where: isDiscipline
-                ? and(
-                    eq(evaluations.projectId, projectId),
-                    eq(evaluations.disciplineId, contextId)
-                )
-                : and(
-                    eq(evaluations.projectId, projectId),
-                    eq(evaluations.tradeId, contextId)
-                ),
+            where: and(
+                eq(evaluations.projectId, projectId),
+                eq(evaluations.stakeholderId, contextId)
+            ),
         });
 
         // If no evaluation exists, create one
@@ -66,8 +61,7 @@ export async function GET(
             await db.insert(evaluations).values({
                 id: evalId,
                 projectId,
-                disciplineId: isDiscipline ? contextId : null,
-                tradeId: isDiscipline ? null : contextId,
+                stakeholderId: contextId,
             });
 
             evaluation = await db.query.evaluations.findFirst({
@@ -144,23 +138,23 @@ export async function GET(
             }
         }
 
-        // Fetch shortlisted firms
+        // Fetch shortlisted firms based on stakeholder
         let firms: Array<{ id: string; companyName: string; shortlisted: boolean; awarded: boolean }> = [];
 
-        if (isDiscipline) {
-            const discipline = await db.query.consultantDisciplines.findFirst({
-                where: eq(consultantDisciplines.id, contextId),
-            });
+        const stakeholder = await db.query.projectStakeholders.findFirst({
+            where: eq(projectStakeholders.id, contextId),
+        });
 
-            if (discipline) {
-                const disciplineConsultants = await db.query.consultants.findMany({
+        if (stakeholder) {
+            if (stakeholder.stakeholderGroup === 'consultant') {
+                const stakeholderConsultants = await db.query.consultants.findMany({
                     where: and(
                         eq(consultants.projectId, projectId),
-                        eq(consultants.discipline, discipline.disciplineName)
+                        eq(consultants.discipline, stakeholder.name)
                     ),
                 });
 
-                firms = disciplineConsultants
+                firms = stakeholderConsultants
                     .filter(c => c.shortlisted)
                     .map(c => ({
                         id: c.id,
@@ -168,21 +162,15 @@ export async function GET(
                         shortlisted: c.shortlisted ?? false,
                         awarded: c.awarded ?? false,
                     }));
-            }
-        } else {
-            const trade = await db.query.contractorTrades.findFirst({
-                where: eq(contractorTrades.id, contextId),
-            });
-
-            if (trade) {
-                const tradeContractors = await db.query.contractors.findMany({
+            } else {
+                const stakeholderContractors = await db.query.contractors.findMany({
                     where: and(
                         eq(contractors.projectId, projectId),
-                        eq(contractors.trade, trade.tradeName)
+                        eq(contractors.trade, stakeholder.name)
                     ),
                 });
 
-                firms = tradeContractors
+                firms = stakeholderContractors
                     .filter(c => c.shortlisted)
                     .map(c => ({
                         id: c.id,

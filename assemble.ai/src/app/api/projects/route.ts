@@ -45,20 +45,35 @@ export async function GET() {
 
 export async function POST(request: Request) {
     try {
+        console.log('POST /api/projects - Starting...');
+
         // Get authenticated user
         const authResult = await getCurrentUser();
+        console.log('Auth result:', {
+            hasUser: !!authResult.user,
+            userId: authResult.user?.id,
+            organizationId: authResult.user?.organizationId,
+            error: authResult.error
+        });
+
         if (!authResult.user) {
-            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+            console.log('No authenticated user, returning error:', authResult.error);
+            return NextResponse.json({
+                error: authResult.error?.message || 'Authentication required',
+                code: authResult.error?.code || 'UNAUTHORIZED'
+            }, { status: authResult.status });
         }
 
         if (!authResult.user.organizationId) {
+            console.log('User has no organization');
             return NextResponse.json(
-                { error: 'User has no organization' },
+                { error: 'User has no organization', code: 'NO_ORGANIZATION' },
                 { status: 400 }
             );
         }
 
         const { name, code, status = 'active' } = await request.json();
+        console.log('Request data:', { name, code, status });
 
         if (!name || name.trim() === '') {
             return NextResponse.json(
@@ -70,17 +85,31 @@ export async function POST(request: Request) {
         const organizationId = authResult.user.organizationId;
 
         // Get organization default settings
+        console.log('Fetching organization:', organizationId);
         const [org] = await db
             .select()
             .from(organizations)
             .where(eq(organizations.id, organizationId))
             .limit(1);
-        const defaultSettings = org ? JSON.parse(org.defaultSettings || '{}') : {};
+        console.log('Organization found:', !!org);
+
+        let defaultSettings = {};
+        if (org && org.defaultSettings) {
+            try {
+                defaultSettings = JSON.parse(org.defaultSettings);
+                console.log('Parsed default settings:', defaultSettings);
+            } catch (e) {
+                console.error('Failed to parse defaultSettings:', e);
+                defaultSettings = {};
+            }
+        }
 
         // Use transaction to ensure atomic initialization (FR-055)
+        console.log('Starting transaction...');
         const result = await db.transaction(async (tx) => {
             // 1. Create project with organizationId
             const projectId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            console.log('Generated project ID:', projectId);
             const newProject = {
                 id: projectId,
                 name: name.trim(),
@@ -90,9 +119,12 @@ export async function POST(request: Request) {
                 createdAt: new Date(),
                 updatedAt: new Date(),
             };
+            console.log('Inserting project...');
             await tx.insert(projects).values(newProject);
+            console.log('Project inserted successfully');
 
             // 2. Initialize consultant disciplines (37) with org defaults (FR-051, FR-056)
+            console.log('Creating consultant disciplines...');
             const enabledDisciplines: string[] = defaultSettings.enabledDisciplines || [];
             const disciplineRecords = CONSULTANT_DISCIPLINES.map((d) => ({
                 id: crypto.randomUUID(),
@@ -102,6 +134,7 @@ export async function POST(request: Request) {
                 order: d.order,
             }));
             const createdDisciplines = await tx.insert(consultantDisciplines).values(disciplineRecords).returning();
+            console.log(`Created ${createdDisciplines.length} disciplines`);
 
             // 3. Create status records for each discipline (144 total) (FR-058)
             const disciplineStatusRecords = createdDisciplines.flatMap((d) =>
@@ -167,19 +200,27 @@ export async function POST(request: Request) {
             });
 
             // 9. Initialize default cost lines (FR-009 - Default Financial Data)
-            // Creates 20 pre-populated cost line entries across 4 sections
+            // Creates pre-populated cost line entries across 4 sections (if any default lines exist)
+            console.log('Creating cost lines...');
             const costLineRecords = DEFAULT_COST_LINES.map((template) => ({
                 id: crypto.randomUUID(),
                 projectId,
+                disciplineId: null, // Not linked to specific discipline at initialization
+                tradeId: null, // Not linked to specific trade at initialization
                 section: template.section,
                 costCode: template.costCode,
-                activity: template.description, // PG schema uses 'activity' column
+                activity: template.description,
                 reference: null,
                 budgetCents: template.budgetCents,
                 approvedContractCents: 0,
                 sortOrder: template.sortOrder,
+                // Note: masterStage column exists in schema but not in actual DB yet
             }));
-            await tx.insert(costLines).values(costLineRecords);
+            // Only insert if there are cost lines to insert
+            if (costLineRecords.length > 0) {
+                await tx.insert(costLines).values(costLineRecords);
+            }
+            console.log(`Created ${costLineRecords.length} cost lines`);
 
             // 10. Add sample variation (FR-009 - Demonstrates linking workflow)
             // Linked to 2.02 Architect
@@ -240,11 +281,22 @@ export async function POST(request: Request) {
             };
         });
 
+        console.log('Project created successfully:', result.id);
         return NextResponse.json(result, { status: 201 });
     } catch (error) {
-        console.error('Error creating project:', error);
+        console.error('=== ERROR CREATING PROJECT ===');
+        console.error('Error type:', error?.constructor?.name);
+        console.error('Error message:', error instanceof Error ? error.message : String(error));
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+        console.error('Full error object:', error);
+        console.error('==============================');
+
         return NextResponse.json(
-            { error: 'Failed to create project' },
+            {
+                error: 'Failed to create project',
+                details: error instanceof Error ? error.message : String(error),
+                errorType: error?.constructor?.name || 'Unknown'
+            },
             { status: 500 }
         );
     }

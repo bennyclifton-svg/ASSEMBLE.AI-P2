@@ -81,9 +81,9 @@ export function TreeNode({
                     'flex items-center gap-1 px-2 py-1 select-none transition-colors',
                     !isFolder && 'cursor-move',
                     isFolder && 'cursor-pointer',
-                    'hover:bg-[#2a2d2e]',
-                    isSelected && 'bg-[#37373d]',
-                    isOver && isFolder && 'bg-[#094771] border-l-2 border-blue-500',
+                    'hover:bg-[var(--color-bg-tertiary)]',
+                    isSelected && 'bg-[var(--color-bg-tertiary)]',
+                    isOver && isFolder && 'bg-[var(--color-accent-teal)]/20 border-l-2 border-[var(--color-accent-teal)]',
                     isDragging && 'opacity-50'
                 )}
                 onClick={handleRowClick}
@@ -95,16 +95,16 @@ export function TreeNode({
                 {/* Expand / collapse button for folders */}
                 {isFolder && (
                     <button
-                        className="flex-shrink-0 w-4 h-4 flex items-center justify-center hover:bg-[#3e3e42] rounded"
+                        className="flex-shrink-0 w-4 h-4 flex items-center justify-center hover:bg-[var(--color-border)] rounded"
                         onClick={(e) => {
                             e.stopPropagation();
                             onToggle(node.id);
                         }}
                     >
                         {isExpanded ? (
-                            <ChevronDown className="w-3 h-3 text-[#c5c5c5]" />
+                            <ChevronDown className="w-3 h-3 text-[var(--color-text-muted)]" />
                         ) : (
-                            <ChevronRight className="w-3 h-3 text-[#c5c5c5]" />
+                            <ChevronRight className="w-3 h-3 text-[var(--color-text-muted)]" />
                         )}
                     </button>
                 )}
@@ -114,21 +114,21 @@ export function TreeNode({
                 <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
                     {isFolder ? (
                         isExpanded ? (
-                            <FolderOpen className="w-4 h-4 text-[#dcb67a]" />
+                            <FolderOpen className="w-4 h-4 text-[var(--color-accent-yellow)]" />
                         ) : (
-                            <Folder className="w-4 h-4 text-[#dcb67a]" />
+                            <Folder className="w-4 h-4 text-[var(--color-accent-yellow)]" />
                         )
                     ) : (
-                        <FileText className="w-4 h-4 text-[#519aba]" />
+                        <FileText className="w-4 h-4 text-[var(--color-accent-teal)]" />
                     )}
                 </div>
 
                 {/* Label */}
-                <span className="flex-1 text-sm text-[#cccccc] truncate">{node.label}</span>
+                <span className="flex-1 text-sm text-[var(--color-text-primary)] truncate">{node.label}</span>
 
                 {/* Metadata for files */}
                 {!isFolder && node.metadata && (
-                    <div className="flex items-center gap-3 text-xs text-[#858585]">
+                    <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
                         {node.metadata.version && <span>v{node.metadata.version}</span>}
                         {node.metadata.size && (
                             <span className="w-16 text-right">{formatSize(node.metadata.size)}</span>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { costLines, consultantDisciplines } from '@/lib/db';
+import { costLines, projectStakeholders } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 import type { UpdateCostLineInput } from '@/types/cost-plan';
 
@@ -33,17 +33,17 @@ export async function GET(
             );
         }
 
-        // Fetch discipline if present
-        let discipline = null;
-        if (costLine.disciplineId) {
-            const [disc] = await db
+        // Fetch stakeholder if present
+        let stakeholder = null;
+        if (costLine.stakeholderId) {
+            const [sh] = await db
                 .select()
-                .from(consultantDisciplines)
-                .where(eq(consultantDisciplines.id, costLine.disciplineId));
-            discipline = disc || null;
+                .from(projectStakeholders)
+                .where(eq(projectStakeholders.id, costLine.stakeholderId));
+            stakeholder = sh || null;
         }
 
-        return NextResponse.json({ ...costLine, discipline });
+        return NextResponse.json({ ...costLine, stakeholder });
     } catch (error) {
         console.error('Error fetching cost line:', error);
         return NextResponse.json(
@@ -91,8 +91,7 @@ export async function PATCH(
             updatedAt: now,
         };
 
-        if (body.disciplineId !== undefined) updateData.disciplineId = body.disciplineId;
-        if (body.tradeId !== undefined) updateData.tradeId = body.tradeId;
+        if (body.stakeholderId !== undefined) updateData.stakeholderId = body.stakeholderId;
         if (body.section !== undefined) updateData.section = body.section;
         if (body.costCode !== undefined) updateData.costCode = body.costCode;
         if (body.activity !== undefined) updateData.activity = body.activity;

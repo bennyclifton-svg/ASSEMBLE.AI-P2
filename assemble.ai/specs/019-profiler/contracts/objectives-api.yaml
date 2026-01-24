@@ -1,0 +1,368 @@
+openapi: 3.0.3
+info:
+  title: Profiler - Objectives API
+  description: API for generating, saving, and polishing project objectives
+  version: 1.0.0
+
+servers:
+  - url: /api/planning
+    description: Planning API base path
+
+paths:
+  /{projectId}/objectives/generate:
+    post:
+      operationId: generateObjectives
+      summary: Generate AI objectives from profile
+      description: |
+        Uses template substitution to generate objectives based on the
+        project profile (Class/Type/Subclass/Scale/Complexity).
+
+        Performance requirement: <3 seconds (GEN-003)
+      tags:
+        - Objectives
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The project ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - profileId
+              properties:
+                profileId:
+                  type: string
+                  description: The profile ID to generate from
+                  example: prof_abc123xyz
+      responses:
+        '200':
+          description: Objectives generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateResponse'
+        '400':
+          description: Profile not found or incomplete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Generation timeout (>3 seconds)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{projectId}/objectives:
+    patch:
+      operationId: saveObjectives
+      summary: Save user-edited objectives
+      description: |
+        Saves user edits to objectives. Tracks edit history for AI learning.
+        Can be used for both manual entry and editing AI-generated content.
+      tags:
+        - Objectives
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The project ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectivesInput'
+            examples:
+              manualEntry:
+                summary: Manual objectives entry
+                value:
+                  functionalQuality:
+                    content: "Deliver a 120-bed aged care facility..."
+                    source: manual
+                  planningCompliance:
+                    content: "Achieve DA approval within 16 weeks..."
+                    source: manual
+              editedAi:
+                summary: Edited AI-generated objectives
+                value:
+                  functionalQuality:
+                    content: "Deliver a 120-bed aged care facility with household model..."
+                    source: ai_generated
+                    originalAi: "Deliver a residential aged care facility..."
+                    editHistory:
+                      - "Added household model specification"
+                  planningCompliance:
+                    content: "Achieve DA approval within 16 weeks..."
+                    source: ai_generated
+      responses:
+        '200':
+          description: Objectives saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectivesResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      operationId: getObjectives
+      summary: Get project objectives
+      description: Retrieves the current objectives for a project
+      tags:
+        - Objectives
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The project ID
+      responses:
+        '200':
+          description: Objectives retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObjectivesResponse'
+        '404':
+          description: Objectives not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{projectId}/objectives/polish:
+    post:
+      operationId: polishObjectives
+      summary: AI-polish existing objectives
+      description: |
+        Sends current objectives to AI for refinement, incorporating
+        profile context and edit history.
+
+        Performance requirement: <5 seconds (POLISH-004)
+      tags:
+        - Objectives
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The project ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolishInput'
+      responses:
+        '200':
+          description: Objectives polished successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolishResponse'
+        '400':
+          description: No content to polish
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '504':
+          description: Polish timeout (>5 seconds)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ObjectiveContent:
+      type: object
+      required:
+        - content
+        - source
+      properties:
+        content:
+          type: string
+          minLength: 10
+          description: The objective text content
+        source:
+          type: string
+          enum:
+            - manual
+            - ai_generated
+            - ai_polished
+          description: How the content was created
+        originalAi:
+          type: string
+          nullable: true
+          description: Original AI-generated text (for comparison)
+        editHistory:
+          type: array
+          items:
+            type: string
+          nullable: true
+          description: List of edit descriptions for AI learning
+
+    ObjectivesInput:
+      type: object
+      properties:
+        functionalQuality:
+          $ref: '#/components/schemas/ObjectiveContent'
+        planningCompliance:
+          $ref: '#/components/schemas/ObjectiveContent'
+
+    GenerateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            functionalQuality:
+              type: string
+              description: Generated functional quality objectives
+              example: "Deliver a 120-bed residential aged care facility..."
+            planningCompliance:
+              type: string
+              description: Generated planning and compliance objectives
+              example: "Achieve Development Approval under standard DA pathway..."
+            generatedAt:
+              type: string
+              format: date-time
+              example: "2026-01-21T10:31:00Z"
+
+    PolishInput:
+      type: object
+      required:
+        - functionalQualityUser
+        - planningComplianceUser
+      properties:
+        functionalQualityUser:
+          type: string
+          description: User's current functional quality text
+          example: "Deliver a 120-bed aged care facility with emphasis on dementia design..."
+        planningComplianceUser:
+          type: string
+          description: User's current planning compliance text
+          example: "Achieve DA approval within 16 weeks..."
+
+    PolishResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            functionalQualityPolished:
+              type: string
+              description: AI-polished functional quality objectives
+            planningCompliancePolished:
+              type: string
+              description: AI-polished planning compliance objectives
+            polishedAt:
+              type: string
+              format: date-time
+              example: "2026-01-21T10:35:00Z"
+
+    ObjectivesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            objectivesId:
+              type: string
+              example: obj_def456uvw
+            projectId:
+              type: string
+              example: proj_xyz789
+            functionalQuality:
+              $ref: '#/components/schemas/ObjectiveContent'
+            planningCompliance:
+              $ref: '#/components/schemas/ObjectiveContent'
+            profileContext:
+              type: object
+              description: Snapshot of profile at generation time
+              properties:
+                buildingClass:
+                  type: string
+                projectType:
+                  type: string
+                subclass:
+                  type: array
+                  items:
+                    type: string
+                scale:
+                  type: object
+                  additionalProperties:
+                    type: number
+                complexity:
+                  type: object
+                  additionalProperties:
+                    type: string
+            generatedAt:
+              type: string
+              format: date-time
+              nullable: true
+            polishedAt:
+              type: string
+              format: date-time
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - NOT_FOUND
+                - TIMEOUT
+                - GENERATION_FAILED
+            message:
+              type: string
+              example: Profile not found
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string

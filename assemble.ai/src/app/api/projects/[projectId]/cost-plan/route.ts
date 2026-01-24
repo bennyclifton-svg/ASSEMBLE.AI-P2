@@ -6,10 +6,9 @@ import {
     costLineAllocations,
     variations,
     invoices,
-    consultantDisciplines,
-    contractorTrades,
+    projectStakeholders,
 } from '@/lib/db';
-import { eq, isNull, and } from 'drizzle-orm';
+import { eq, isNull, and, asc } from 'drizzle-orm';
 import {
     calculateCostLineFields,
     calculateCostPlanTotals,
@@ -69,7 +68,7 @@ export async function GET(
                     isNull(costLines.deletedAt)
                 )
             )
-            .orderBy(costLines.section, costLines.sortOrder);
+            .orderBy(asc(costLines.section), asc(costLines.sortOrder));
 
         // Fetch all allocations for these cost lines
         const costLineIds = projectCostLines.map((cl) => cl.id);
@@ -116,37 +115,19 @@ export async function GET(
                 )
             );
 
-        // Fetch disciplines for cost lines
-        const disciplineIds: string[] = projectCostLines
-            .filter(cl => cl.disciplineId)
-            .map(cl => cl.disciplineId as string)
+        // Fetch stakeholders for cost lines
+        const stakeholderIds: string[] = projectCostLines
+            .filter(cl => cl.stakeholderId)
+            .map(cl => cl.stakeholderId as string)
             .filter((v, i, a) => a.indexOf(v) === i);
-        const disciplinesMap = new Map<string, typeof consultantDisciplines.$inferSelect>();
-        for (let i = 0; i < disciplineIds.length; i++) {
-            const disciplineId: string = disciplineIds[i];
-            const [discipline] = await db
+        const stakeholdersMap = new Map<string, typeof projectStakeholders.$inferSelect>();
+        for (const stakeholderId of stakeholderIds) {
+            const [stakeholder] = await db
                 .select()
-                .from(consultantDisciplines)
-                .where(eq(consultantDisciplines.id, disciplineId));
-            if (discipline) {
-                disciplinesMap.set(disciplineId, discipline);
-            }
-        }
-
-        // Fetch trades for cost lines
-        const tradeIds: string[] = projectCostLines
-            .filter(cl => cl.tradeId)
-            .map(cl => cl.tradeId as string)
-            .filter((v, i, a) => a.indexOf(v) === i);
-        const tradesMap = new Map<string, typeof contractorTrades.$inferSelect>();
-        for (let i = 0; i < tradeIds.length; i++) {
-            const tradeId: string = tradeIds[i];
-            const [trade] = await db
-                .select()
-                .from(contractorTrades)
-                .where(eq(contractorTrades.id, tradeId));
-            if (trade) {
-                tradesMap.set(tradeId, trade);
+                .from(projectStakeholders)
+                .where(eq(projectStakeholders.id, stakeholderId));
+            if (stakeholder) {
+                stakeholdersMap.set(stakeholderId, stakeholder);
             }
         }
 
@@ -163,8 +144,7 @@ export async function GET(
 
             return {
                 ...cl,
-                discipline: cl.disciplineId ? disciplinesMap.get(cl.disciplineId) || null : null,
-                trade: cl.tradeId ? tradesMap.get(cl.tradeId) || null : null,
+                stakeholder: cl.stakeholderId ? stakeholdersMap.get(cl.stakeholderId) || null : null,
                 allocations: clAllocations,
                 calculated,
             };

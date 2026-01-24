@@ -29,8 +29,7 @@ export async function GET(
             .select({
                 id: addenda.id,
                 addendumNumber: addenda.addendumNumber,
-                disciplineId: addenda.disciplineId,
-                tradeId: addenda.tradeId,
+                stakeholderId: addenda.stakeholderId,
             })
             .from(addenda)
             .where(eq(addenda.id, id))

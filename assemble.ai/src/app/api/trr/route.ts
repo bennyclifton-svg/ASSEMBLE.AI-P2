@@ -2,8 +2,8 @@
  * TRR (Tender Recommendation Report) API Route
  * Feature 012 - TRR Report
  *
- * GET /api/trr?projectId=X&disciplineId=Y or tradeId=Z
- * Get-or-create pattern: Returns the TRR for the given project+discipline/trade.
+ * GET /api/trr?projectId=X&stakeholderId=Y
+ * Get-or-create pattern: Returns the TRR for the given project+stakeholder.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -11,33 +11,27 @@ import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
 import { trr, trrTransmittals } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 export async function GET(request: NextRequest) {
     return handleApiError(async () => {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
-        const disciplineId = searchParams.get('disciplineId');
-        const tradeId = searchParams.get('tradeId');
+        const stakeholderId = searchParams.get('stakeholderId');
 
         if (!projectId) {
             return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
         }
 
-        if (!disciplineId && !tradeId) {
-            return NextResponse.json({ error: 'disciplineId or tradeId is required' }, { status: 400 });
+        if (!stakeholderId) {
+            return NextResponse.json({ error: 'stakeholderId is required' }, { status: 400 });
         }
 
         // Build query conditions
-        const conditions = [eq(trr.projectId, projectId)];
-
-        if (disciplineId) {
-            conditions.push(eq(trr.disciplineId, disciplineId));
-            conditions.push(isNull(trr.tradeId));
-        } else if (tradeId) {
-            conditions.push(eq(trr.tradeId, tradeId));
-            conditions.push(isNull(trr.disciplineId));
-        }
+        const conditions = [
+            eq(trr.projectId, projectId),
+            eq(trr.stakeholderId, stakeholderId),
+        ];
 
         // Try to find existing TRR
         let [existing] = await db
@@ -54,8 +48,7 @@ export async function GET(request: NextRequest) {
             await db.insert(trr).values({
                 id,
                 projectId,
-                disciplineId: disciplineId || null,
-                tradeId: tradeId || null,
+                stakeholderId,
                 reportDate: today,
             });
 

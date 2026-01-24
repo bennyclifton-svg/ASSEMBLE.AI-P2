@@ -307,3 +307,403 @@ export async function exportToPDF(
   // Return as ArrayBuffer for Node.js compatibility
   return doc.output('arraybuffer');
 }
+
+// ============================================================================
+// MEETING EXPORT (Feature 021 - Notes, Meetings & Reports)
+// ============================================================================
+
+interface MeetingExportData {
+  id: string;
+  title: string;
+  meetingDate: string | null;
+  agendaType: string;
+  sections: Array<{
+    id: string;
+    sectionLabel: string;
+    content: string | null;
+    childSections?: Array<{
+      sectionLabel: string;
+      content: string | null;
+    }>;
+  }>;
+  attendees: Array<{
+    adhocName: string | null;
+    adhocFirm: string | null;
+    isAttending: boolean;
+    isDistribution: boolean;
+    stakeholder?: {
+      name: string;
+      organization: string | null;
+    } | null;
+  }>;
+  project?: {
+    name: string;
+    address?: string | null;
+  } | null;
+}
+
+/**
+ * Export meeting to PDF
+ * Returns ArrayBuffer for Node.js compatibility
+ */
+export async function exportMeetingToPDF(
+  meeting: MeetingExportData
+): Promise<ArrayBuffer> {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  let yPosition = 20;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const contentWidth = pageWidth - 2 * margin;
+
+  // Helper to check for page break
+  const checkPageBreak = (requiredSpace: number = 40) => {
+    if (yPosition > pageHeight - requiredSpace) {
+      doc.addPage();
+      yPosition = 20;
+    }
+  };
+
+  // Meeting Title (H1)
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkenColor(HEADING_COLORS.H1));
+  const titleLines = doc.splitTextToSize(meeting.title, contentWidth);
+  doc.text(titleLines, margin, yPosition);
+  yPosition += titleLines.length * 10 + 8;
+
+  // Meeting Info Table
+  const infoRows: string[][] = [];
+  if (meeting.project?.name) {
+    infoRows.push(['Project', meeting.project.name]);
+  }
+  if (meeting.project?.address) {
+    infoRows.push(['Address', meeting.project.address]);
+  }
+  if (meeting.meetingDate) {
+    const formattedDate = new Date(meeting.meetingDate).toLocaleDateString('en-AU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    infoRows.push(['Date', formattedDate]);
+  }
+  infoRows.push(['Agenda Type', meeting.agendaType.charAt(0).toUpperCase() + meeting.agendaType.slice(1)]);
+
+  if (infoRows.length > 0) {
+    autoTable(doc, {
+      startY: yPosition,
+      body: infoRows,
+      theme: 'grid',
+      bodyStyles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 35, fontStyle: 'bold', fillColor: [245, 245, 245] },
+      },
+      margin: { left: margin, right: margin },
+      tableWidth: contentWidth,
+    });
+    yPosition = (doc as any).lastAutoTable?.finalY + 10 ?? yPosition + 30;
+  }
+
+  // Attendees Section
+  const attendeesWithData = meeting.attendees.filter(a => a.stakeholder?.name || a.adhocName);
+  if (attendeesWithData.length > 0) {
+    checkPageBreak(50);
+
+    // Attendees heading
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(darkenColor(HEADING_COLORS.H2));
+    doc.text('Attendees', margin, yPosition);
+    yPosition += 8;
+
+    // Attendees table
+    const attendeeRows = attendeesWithData.map(a => [
+      a.stakeholder?.name || a.adhocName || '',
+      a.stakeholder?.organization || a.adhocFirm || '',
+      a.isAttending ? 'Yes' : 'No',
+      a.isDistribution ? 'Yes' : 'No',
+    ]);
+
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['Name', 'Organization', 'Attending', 'Distribution']],
+      body: attendeeRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [245, 245, 245],
+        textColor: [0, 0, 0],
+        fontSize: 10,
+        fontStyle: 'bold',
+      },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        2: { cellWidth: 25, halign: 'center' },
+        3: { cellWidth: 25, halign: 'center' },
+      },
+      margin: { left: margin, right: margin },
+      tableWidth: contentWidth,
+    });
+    yPosition = (doc as any).lastAutoTable?.finalY + 10 ?? yPosition + 30;
+  }
+
+  // Agenda Sections
+  if (meeting.sections.length > 0) {
+    checkPageBreak(50);
+
+    // Agenda heading
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(darkenColor(HEADING_COLORS.H2));
+    doc.text('Agenda', margin, yPosition);
+    yPosition += 10;
+
+    for (const section of meeting.sections) {
+      checkPageBreak(40);
+
+      // Section label (H3)
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(darkenColor(HEADING_COLORS.H3));
+      const sectionLabelLines = doc.splitTextToSize(section.sectionLabel, contentWidth);
+      doc.text(sectionLabelLines, margin, yPosition);
+      yPosition += sectionLabelLines.length * 6 + 4;
+
+      // Section content
+      if (section.content) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor('#000000');
+
+        const contentLines = doc.splitTextToSize(section.content, contentWidth);
+        for (const line of contentLines) {
+          checkPageBreak(20);
+          doc.text(line, margin, yPosition);
+          yPosition += 5;
+        }
+        yPosition += 3;
+      }
+
+      // Child sections (for detailed agenda)
+      if (section.childSections && section.childSections.length > 0) {
+        for (const child of section.childSections) {
+          checkPageBreak(30);
+
+          // Child section label
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor('#444444');
+          doc.text(`  ${child.sectionLabel}`, margin, yPosition);
+          yPosition += 6;
+
+          // Child section content
+          if (child.content) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor('#000000');
+            const childContentLines = doc.splitTextToSize(child.content, contentWidth - 10);
+            for (const line of childContentLines) {
+              checkPageBreak(20);
+              doc.text(line, margin + 5, yPosition);
+              yPosition += 5;
+            }
+            yPosition += 2;
+          }
+        }
+      }
+
+      yPosition += 5;
+    }
+  }
+
+  return doc.output('arraybuffer');
+}
+
+// ============================================================================
+// PROJECT REPORT EXPORT (Feature 021 - Notes, Meetings & Reports)
+// ============================================================================
+
+interface ProjectReportExportData {
+  id: string;
+  title: string;
+  reportDate: string | null;
+  preparedFor: string | null;
+  preparedBy: string | null;
+  reportingPeriodStart: string | null;
+  reportingPeriodEnd: string | null;
+  contentsType: string;
+  sections: Array<{
+    id: string;
+    sectionLabel: string;
+    content: string | null;
+    childSections?: Array<{
+      sectionLabel: string;
+      content: string | null;
+    }>;
+  }>;
+  project?: {
+    name: string;
+    address?: string | null;
+  } | null;
+}
+
+/**
+ * Export project report to PDF
+ * Returns ArrayBuffer for Node.js compatibility
+ */
+export async function exportProjectReportToPDF(
+  report: ProjectReportExportData
+): Promise<ArrayBuffer> {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  let yPosition = 20;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 20;
+  const contentWidth = pageWidth - 2 * margin;
+
+  // Helper to check for page break
+  const checkPageBreak = (requiredSpace: number = 40) => {
+    if (yPosition > pageHeight - requiredSpace) {
+      doc.addPage();
+      yPosition = 20;
+    }
+  };
+
+  // Report Title (H1)
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(darkenColor(HEADING_COLORS.H1));
+  const titleLines = doc.splitTextToSize(report.title, contentWidth);
+  doc.text(titleLines, margin, yPosition);
+  yPosition += titleLines.length * 10 + 8;
+
+  // Report Info Table
+  const infoRows: string[][] = [];
+  if (report.project?.name) {
+    infoRows.push(['Project', report.project.name]);
+  }
+  if (report.project?.address) {
+    infoRows.push(['Address', report.project.address]);
+  }
+  if (report.preparedFor) {
+    infoRows.push(['Prepared For', report.preparedFor]);
+  }
+  if (report.preparedBy) {
+    infoRows.push(['Prepared By', report.preparedBy]);
+  }
+  if (report.reportDate) {
+    const formattedDate = new Date(report.reportDate).toLocaleDateString('en-AU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    infoRows.push(['Report Date', formattedDate]);
+  }
+  if (report.reportingPeriodStart || report.reportingPeriodEnd) {
+    const startDate = report.reportingPeriodStart
+      ? new Date(report.reportingPeriodStart).toLocaleDateString('en-AU')
+      : '';
+    const endDate = report.reportingPeriodEnd
+      ? new Date(report.reportingPeriodEnd).toLocaleDateString('en-AU')
+      : '';
+    infoRows.push(['Reporting Period', `${startDate} - ${endDate}`]);
+  }
+
+  if (infoRows.length > 0) {
+    autoTable(doc, {
+      startY: yPosition,
+      body: infoRows,
+      theme: 'grid',
+      bodyStyles: { fontSize: 10 },
+      columnStyles: {
+        0: { cellWidth: 40, fontStyle: 'bold', fillColor: [245, 245, 245] },
+      },
+      margin: { left: margin, right: margin },
+      tableWidth: contentWidth,
+    });
+    yPosition = (doc as any).lastAutoTable?.finalY + 10 ?? yPosition + 30;
+  }
+
+  // Report Contents
+  if (report.sections.length > 0) {
+    checkPageBreak(50);
+
+    // Contents heading
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(darkenColor(HEADING_COLORS.H2));
+    doc.text('Contents', margin, yPosition);
+    yPosition += 10;
+
+    for (const section of report.sections) {
+      checkPageBreak(40);
+
+      // Section label (H3)
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(darkenColor(HEADING_COLORS.H3));
+      const sectionLabelLines = doc.splitTextToSize(section.sectionLabel, contentWidth);
+      doc.text(sectionLabelLines, margin, yPosition);
+      yPosition += sectionLabelLines.length * 6 + 4;
+
+      // Section content
+      if (section.content) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor('#000000');
+
+        const contentLines = doc.splitTextToSize(section.content, contentWidth);
+        for (const line of contentLines) {
+          checkPageBreak(20);
+          doc.text(line, margin, yPosition);
+          yPosition += 5;
+        }
+        yPosition += 3;
+      }
+
+      // Child sections (for detailed contents)
+      if (section.childSections && section.childSections.length > 0) {
+        for (const child of section.childSections) {
+          checkPageBreak(30);
+
+          // Child section label
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor('#444444');
+          doc.text(`  ${child.sectionLabel}`, margin, yPosition);
+          yPosition += 6;
+
+          // Child section content
+          if (child.content) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor('#000000');
+            const childContentLines = doc.splitTextToSize(child.content, contentWidth - 10);
+            for (const line of childContentLines) {
+              checkPageBreak(20);
+              doc.text(line, margin + 5, yPosition);
+              yPosition += 5;
+            }
+            yPosition += 2;
+          }
+        }
+      }
+
+      yPosition += 5;
+    }
+  }
+
+  return doc.output('arraybuffer');
+}

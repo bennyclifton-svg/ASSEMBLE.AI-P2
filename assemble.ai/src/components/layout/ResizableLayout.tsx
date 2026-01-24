@@ -4,6 +4,8 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ProjectSwitcher } from '@/components/dashboard/ProjectSwitcher';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { Logo } from '@/components/brand/Logo';
 
 interface Project {
   id: string;
@@ -30,22 +32,23 @@ export function ResizableLayout({
     refreshTrigger
 }: ResizableLayoutProps) {
     return (
-        <PanelGroup direction="horizontal" className="h-full w-full">
-            <Panel defaultSize={25} minSize={15} className="bg-[#1e1e1e]">
-                <div className="h-full flex flex-col">
+        <div className="h-full w-full relative">
+            <PanelGroup direction="horizontal" className="h-full w-full relative">
+                <Panel defaultSize={17} minSize={12} className="border-r border-[var(--color-border-accent)]">
+                <div className="h-full flex flex-col animate-slide-in-up">
                     {/* Left Panel Header */}
-                    <header className="flex items-center justify-between px-6 py-3 border-b border-[#3e3e42] bg-[#252526] flex-shrink-0 min-h-[57px]">
-                        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                            <div className="w-8 h-8 rounded-full bg-[#0e639c] flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">A</span>
-                            </div>
-                            <h1 className="text-lg font-semibold text-[#cccccc]">assemble.ai</h1>
+                    <header className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex-shrink-0 min-h-[57px]">
+                        <Link href="/" className="hover:opacity-80 transition-opacity">
+                            <Logo size="md" />
                         </Link>
-                        <ProjectSwitcher
-                            selectedProject={selectedProject}
-                            onSelectProject={onSelectProject}
-                            refreshTrigger={refreshTrigger}
-                        />
+                        <div className="flex items-center gap-2">
+                            <ThemeToggle />
+                            <ProjectSwitcher
+                                selectedProject={selectedProject}
+                                onSelectProject={onSelectProject}
+                                refreshTrigger={refreshTrigger}
+                            />
+                        </div>
                     </header>
                     {/* Left Panel Content */}
                     <div className="flex-1 overflow-hidden">
@@ -53,24 +56,20 @@ export function ResizableLayout({
                     </div>
                 </div>
             </Panel>
-            <PanelResizeHandle className="w-1 bg-[#3e3e42] hover:bg-[#0e639c] transition-colors cursor-col-resize h-full" />
-            <Panel defaultSize={50} minSize={20} className="bg-[#252526]">
-                <div className="h-full flex flex-col">
-                    {/* Center Panel Header */}
-                    <header className="flex items-center justify-between px-6 py-3 border-b border-[#3e3e42] bg-[#252526] flex-shrink-0 min-h-[57px]">
-                        {/* Empty header for consistent height */}
-                    </header>
+            <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize h-full" />
+            <Panel defaultSize={58} minSize={20}>
+                <div className="h-full flex flex-col animate-slide-in-up animate-delay-100">
                     {/* Center Panel Content */}
-                    <div className="flex-1 overflow-hidden">
+                    <div className="flex-1 min-h-0 overflow-hidden">
                         {centerContent}
                     </div>
                 </div>
             </Panel>
-            <PanelResizeHandle className="w-1 bg-[#3e3e42] hover:bg-[#0e639c] transition-colors cursor-col-resize h-full" />
-            <Panel defaultSize={25} minSize={15} className="bg-[#1e1e1e]">
-                <div className="h-full flex flex-col">
+            <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize h-full" />
+            <Panel defaultSize={25} minSize={15} className="border-l border-[var(--color-border-accent)]">
+                <div className="h-full flex flex-col animate-slide-in-up animate-delay-200">
                     {/* Right Panel Header */}
-                    <header className="flex items-center justify-between px-6 py-3 border-b border-[#3e3e42] bg-[#252526] flex-shrink-0 min-h-[57px]">
+                    <header className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex-shrink-0 min-h-[57px]">
                         {/* Empty header for consistent height */}
                     </header>
                     {/* Right Panel Content */}
@@ -80,5 +79,6 @@ export function ResizableLayout({
                 </div>
             </Panel>
         </PanelGroup>
+        </div>
     );
 }

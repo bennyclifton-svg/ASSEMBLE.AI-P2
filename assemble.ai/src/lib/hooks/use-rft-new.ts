@@ -1,8 +1,8 @@
 /**
  * Hook for Managing RFT NEW Report
  *
- * Automatically gets or creates the RFT NEW for a given project+discipline/trade.
- * There is only one RFT NEW per discipline/trade.
+ * Automatically gets or creates the RFT NEW for a given project+stakeholder.
+ * There is only one RFT NEW per stakeholder.
  */
 
 'use client';
@@ -13,8 +13,7 @@ import { useCallback } from 'react';
 export interface RftNew {
     id: string;
     projectId: string;
-    disciplineId: string | null;
-    tradeId: string | null;
+    stakeholderId: string | null;
     rftDate: string | null;
     transmittalCount: number;
     createdAt: string;
@@ -23,8 +22,7 @@ export interface RftNew {
 
 interface UseRftNewOptions {
     projectId: string;
-    disciplineId?: string | null;
-    tradeId?: string | null;
+    stakeholderId?: string | null;
 }
 
 interface UseRftNewReturn {
@@ -44,24 +42,21 @@ const fetcher = async (url: string): Promise<RftNew> => {
 };
 
 /**
- * Hook for getting/creating the RFT NEW report for a discipline/trade
+ * Hook for getting/creating the RFT NEW report for a stakeholder
  *
  * @param options.projectId - The project ID
- * @param options.disciplineId - Optional discipline ID (for consultant RFT NEW)
- * @param options.tradeId - Optional trade ID (for contractor RFT NEW)
+ * @param options.stakeholderId - The stakeholder ID
  */
 export function useRftNew({
     projectId,
-    disciplineId,
-    tradeId,
+    stakeholderId,
 }: UseRftNewOptions): UseRftNewReturn {
     // Build the query URL for fetching/creating RFT NEW
     const queryParams = new URLSearchParams();
     queryParams.set('projectId', projectId);
-    if (disciplineId) queryParams.set('disciplineId', disciplineId);
-    if (tradeId) queryParams.set('tradeId', tradeId);
+    if (stakeholderId) queryParams.set('stakeholderId', stakeholderId);
 
-    const shouldFetch = projectId && (disciplineId || tradeId);
+    const shouldFetch = projectId && stakeholderId;
     const swrKey = shouldFetch ? `/api/rft-new?${queryParams.toString()}` : null;
 
     const { data, error, isLoading, mutate: localMutate } = useSWR<RftNew>(

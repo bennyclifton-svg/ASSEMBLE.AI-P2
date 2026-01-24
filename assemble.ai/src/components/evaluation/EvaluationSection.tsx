@@ -7,37 +7,38 @@
 'use client';
 
 import { useState } from 'react';
+import { useEvaluationSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon, XlsxIcon } from '@/components/ui/file-type-icons';
 import { EvaluationPriceTab } from './EvaluationPriceTab';
 import { EvaluationNonPriceTab } from './EvaluationNonPriceTab';
 
-// Highlight blue color for icons and buttons (matching RFT/Addendum)
-const HIGHLIGHT_BLUE = '#4fc1ff';
+// Procurement section accent color (copper from design system)
+const SECTION_ACCENT = 'var(--primitive-copper-darker)'; // Warm bronze for icons
+const SECTION_TINT = 'var(--color-accent-copper-tint)';
+const SECTION_TEXT = 'var(--primitive-copper-darker)'; // Bronze text on copper-tint bg
 
 interface EvaluationSectionProps {
     projectId: string;
-    disciplineId?: string;
-    disciplineName?: string;
-    tradeId?: string;
-    tradeName?: string;
+    stakeholderId?: string;
+    stakeholderName?: string;
 }
 
 export function EvaluationSection({
     projectId,
-    disciplineId,
-    tradeId,
-    disciplineName,
-    tradeName,
+    stakeholderId,
+    stakeholderName,
 }: EvaluationSectionProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [activeTab, setActiveTab] = useState<'price' | 'non-price'>('price');
     const [isExporting, setIsExporting] = useState(false);
 
-    const contextType = disciplineId ? 'discipline' : 'trade';
-    const contextId = disciplineId || tradeId;
-    const contextName = disciplineName || tradeName || 'Unknown';
+    // Use context for expanded state persistence across tab navigation
+    const { isExpanded, activeTab, setExpanded: setIsExpanded, setActiveTab } = useEvaluationSectionUI(stakeholderId);
+
+    // Use stakeholder context - type kept for URL compatibility
+    const contextType = 'stakeholder';
+    const contextId = stakeholderId;
+    const contextName = stakeholderName || 'Unknown';
 
     // Handle tab click - expand if collapsed
     const handleTabClick = (tab: 'price' | 'non-price') => {
@@ -89,7 +90,7 @@ export function EvaluationSection({
     // Solid triangle icons - matching Firm Cards style
     const TriangleRight = () => (
         <svg
-            className="w-3.5 h-3.5 text-[#858585]"
+            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
             viewBox="0 0 12 12"
             fill="currentColor"
         >
@@ -99,7 +100,7 @@ export function EvaluationSection({
 
     const TriangleDown = () => (
         <svg
-            className="w-3.5 h-3.5 text-[#858585]"
+            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
             viewBox="0 0 12 12"
             fill="currentColor"
         >
@@ -108,15 +109,15 @@ export function EvaluationSection({
     );
 
     return (
-        <div className="mt-6 border border-[#3e3e42] rounded-lg overflow-hidden">
+        <div className="mt-6 border border-[var(--color-border)] rounded-lg overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42]">
+            <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
-                    <FileText className="w-4 h-4" style={{ color: HIGHLIGHT_BLUE }} />
-                    <span className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                    <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
+                    <span className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         Evaluation
                     </span>
                     {isExpanded ? <TriangleDown /> : <TriangleRight />}
@@ -124,15 +125,15 @@ export function EvaluationSection({
             </div>
 
             {/* Tabs - always visible */}
-            <div className="bg-[#252526]">
+            <div className="bg-[var(--color-bg-secondary)]">
                 {/* Tabs and Actions Row */}
-                <div className="flex items-center justify-between px-4 pt-2 border-b border-[#3e3e42]">
+                <div className="flex items-center justify-between px-4 pt-2 border-b border-[var(--color-border)]">
                     {/* Tab Buttons - underline style matching RFT/Addendum */}
                     <div className="flex items-center">
                         <div
                             className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'price'
-                                ? 'text-[#cccccc] border-b-[3px] border-[#0e639c] -mb-px'
-                                : 'text-[#858585] hover:text-[#cccccc]'
+                                ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                                 }`}
                             onClick={() => handleTabClick('price')}
                         >
@@ -140,8 +141,8 @@ export function EvaluationSection({
                         </div>
                         <div
                             className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'non-price'
-                                ? 'text-[#cccccc] border-b-[3px] border-[#0e639c] -mb-px'
-                                : 'text-[#858585] hover:text-[#cccccc]'
+                                ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                                 }`}
                             onClick={() => handleTabClick('non-price')}
                         >
@@ -156,7 +157,7 @@ export function EvaluationSection({
                             size="sm"
                             onClick={() => handleExport('pdf')}
                             disabled={isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export PDF"
                         >
                             {isExporting ? (
@@ -170,7 +171,7 @@ export function EvaluationSection({
                             size="sm"
                             onClick={() => handleExport('docx')}
                             disabled={isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export Word"
                         >
                             <DocxIcon size={22} />
@@ -180,7 +181,7 @@ export function EvaluationSection({
                             size="sm"
                             onClick={() => handleExport('xlsx')}
                             disabled={isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export Excel"
                         >
                             <XlsxIcon size={22} />
@@ -190,22 +191,18 @@ export function EvaluationSection({
 
                 {/* Content Area - only shown when expanded */}
                 {isExpanded && (
-                    <div className="p-4 bg-[#1e1e1e]">
+                    <div className="p-4 bg-[var(--color-bg-primary)]">
                         {activeTab === 'price' ? (
                             <EvaluationPriceTab
                                 projectId={projectId}
-                                disciplineId={disciplineId}
-                                tradeId={tradeId}
-                                disciplineName={disciplineName}
-                                tradeName={tradeName}
+                                stakeholderId={stakeholderId}
+                                stakeholderName={stakeholderName}
                             />
                         ) : (
                             <EvaluationNonPriceTab
                                 projectId={projectId}
-                                disciplineId={disciplineId}
-                                tradeId={tradeId}
-                                disciplineName={disciplineName}
-                                tradeName={tradeName}
+                                stakeholderId={stakeholderId}
+                                stakeholderName={stakeholderName}
                             />
                         )}
                     </div>

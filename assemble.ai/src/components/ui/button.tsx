@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-    "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+    "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active-press",
     {
         variants: {
             variant: {
@@ -17,6 +17,13 @@ const buttonVariants = cva(
                     "bg-secondary text-secondary-foreground hover:bg-secondary/80",
                 ghost: "hover:bg-accent hover:text-accent-foreground",
                 link: "text-primary underline-offset-4 hover:underline",
+                // Copper variants for Precision themes
+                copper:
+                    "bg-gradient-to-br from-[var(--color-accent-primary)] to-[var(--color-accent-primary-hover)] text-[var(--color-bg-primary)] hover:brightness-110 font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all",
+                "copper-ghost":
+                    "bg-transparent text-[var(--color-text-primary)] border border-[var(--color-border-strong)] hover:bg-[var(--color-accent-primary-tint)] hover:border-[var(--color-accent-primary)]",
+                "copper-outline":
+                    "bg-transparent text-[var(--color-accent-primary)] border border-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-tint)]",
             },
             size: {
                 default: "h-10 px-4 py-2",

@@ -104,34 +104,34 @@ export function AddendumContent({
     return (
         <div className="space-y-4">
             {/* Project Info Table */}
-            <div className="border border-[#3e3e42] rounded overflow-hidden">
+            <div className="border border-[var(--color-border)] rounded overflow-hidden">
                 <table className="w-full text-sm">
                     <tbody>
-                        <tr className="border-b border-[#3e3e42]">
-                            <td className="w-36 px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                        <tr className="border-b border-[var(--color-border)]">
+                            <td className="w-36 px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--primitive-copper-darker)] font-medium">
                                 Project Name
                             </td>
-                            <td className="px-4 py-2.5 text-[#cccccc]" colSpan={2}>
+                            <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
                                 {projectDetails?.projectName || 'Loading...'}
                             </td>
                         </tr>
-                        <tr className="border-b border-[#3e3e42]">
-                            <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                        <tr className="border-b border-[var(--color-border)]">
+                            <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--primitive-copper-darker)] font-medium">
                                 Address
                             </td>
-                            <td className="px-4 py-2.5 text-[#cccccc]" colSpan={2}>
+                            <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
                                 {projectDetails?.address || '-'}
                             </td>
                         </tr>
                         <tr>
-                            <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                            <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--primitive-copper-darker)] font-medium">
                                 Document
                             </td>
-                            <td className="px-4 py-2.5 text-[#cccccc] font-semibold">
+                            <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
                                 {addendumLabel}
                             </td>
                             <td
-                                className="w-36 px-4 py-2.5 text-[#cccccc] border-l border-[#3e3e42] cursor-pointer hover:bg-[#2a2a2a] transition-colors relative"
+                                className="w-36 px-4 py-2.5 text-[var(--primitive-copper-darker)] font-medium border-l border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative"
                                 onClick={handleDateClick}
                             >
                                 <span className="select-none">{formatDisplayDate(addendumDate)}</span>
@@ -152,12 +152,12 @@ export function AddendumContent({
             {/* Content Editor */}
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         Addendum Details
                     </h3>
                     <div className="flex items-center gap-2">
                         {isSaving && (
-                            <span className="text-xs text-[#4fc1ff]">Saving...</span>
+                            <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
                         )}
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
@@ -170,19 +170,19 @@ export function AddendumContent({
                                     Delete
                                 </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-[#252526] border-[#3e3e42]">
+                            <AlertDialogContent className="bg-[var(--color-bg-secondary)] border-[var(--color-border)]">
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle className="flex items-center gap-2 text-[#cccccc]">
+                                    <AlertDialogTitle className="flex items-center gap-2 text-[var(--color-text-primary)]">
                                         <AlertTriangle className="w-5 h-5 text-yellow-500" />
                                         Delete {addendumLabel}?
                                     </AlertDialogTitle>
-                                    <AlertDialogDescription className="text-[#858585]">
+                                    <AlertDialogDescription className="text-[var(--color-text-muted)]">
                                         This will permanently delete the addendum and all its associated transmittal documents.
                                         This action cannot be undone.
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel className="bg-[#3e3e42] text-[#cccccc] hover:bg-[#4e4e52] border-[#3e3e42]">
+                                    <AlertDialogCancel className="bg-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] border-[var(--color-border)]">
                                         Cancel
                                     </AlertDialogCancel>
                                     <AlertDialogAction
@@ -196,17 +196,17 @@ export function AddendumContent({
                         </AlertDialog>
                     </div>
                 </div>
-                <div className="border border-[#3e3e42] rounded overflow-hidden">
+                <div className="border border-[var(--color-border)] rounded overflow-hidden">
                     <Textarea
                         value={content}
                         onChange={handleContentChange}
                         onBlur={handleBlur}
                         placeholder="Enter addendum details, changes, clarifications..."
-                        className="w-full bg-[#1a1a1a] border-0 text-[#cccccc] placeholder:text-[#6e6e6e] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none"
+                        className="w-full bg-[var(--color-bg-secondary)] border-0 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-y min-h-[100px] p-4 border-l-2 border-l-[var(--color-accent-copper)]/30 hover:border-l-[var(--color-accent-copper)] hover:bg-[var(--color-bg-primary)] transition-colors cursor-text focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none"
                         style={{ fieldSizing: 'content' } as React.CSSProperties}
                     />
                 </div>
-                <p className="text-xs text-[#6e6e6e]">
+                <p className="text-xs text-[var(--color-text-muted)]">
                     Content auto-saves when you click outside the text area
                 </p>
             </div>

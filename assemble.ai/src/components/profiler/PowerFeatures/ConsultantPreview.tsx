@@ -1,0 +1,297 @@
+'use client';
+
+import { useMemo } from 'react';
+import { Users, Check, Plus } from 'lucide-react';
+import profileTemplates from '@/lib/data/profile-templates.json';
+import type { BuildingClass, ProjectType, WorkScopeItem, WorkScopeCategory } from '@/types/profiler';
+
+interface ConsultantPreviewProps {
+  buildingClass: BuildingClass | null;
+  projectType: ProjectType | null;
+  subclass: string[];
+  scaleData: Record<string, number>;
+  complexity: Record<string, string>;
+  workScope?: string[];
+}
+
+interface DisciplineSuggestion {
+  name: string;
+  required: boolean;
+  reason: string;
+}
+
+// Base disciplines required for most projects
+const BASE_DISCIPLINES = [
+  'Architect',
+  'Structural Engineer',
+  'Civil Engineer',
+  'Services Engineer (Mechanical)',
+  'Services Engineer (Electrical)',
+  'Services Engineer (Hydraulic)',
+];
+
+// Discipline requirements by building class
+const CLASS_DISCIPLINES: Record<string, string[]> = {
+  residential: ['Landscape Architect', 'Acoustic Consultant'],
+  commercial: ['Facade Engineer', 'Acoustic Consultant', 'ESD Consultant'],
+  industrial: ['Fire Engineer', 'ESD Consultant'],
+  institution: ['Acoustic Consultant', 'Security Consultant'],
+  mixed: ['Facade Engineer', 'Traffic Engineer', 'Acoustic Consultant'],
+  infrastructure: ['Geotechnical Engineer', 'Environmental Consultant', 'Traffic Engineer'],
+  defense_secure: ['Security Consultant', 'SCIF Specialist', 'Fire Engineer'],
+  agricultural: ['Agricultural Engineer', 'Environmental Consultant', 'Civil Engineer'],
+};
+
+// Subclass-specific disciplines
+const SUBCLASS_DISCIPLINES: Record<string, DisciplineSuggestion[]> = {
+  aged_care_9c: [
+    { name: 'Fire Engineer', required: true, reason: 'Class 9c fire safety compliance' },
+    { name: 'Accessibility Consultant', required: true, reason: 'Aged care accessibility requirements' },
+    { name: 'Kitchen Consultant', required: false, reason: 'Commercial kitchen design' },
+  ],
+  healthcare_hospital: [
+    { name: 'Medical Planner', required: true, reason: 'Healthcare facility planning' },
+    { name: 'Fire Engineer', required: true, reason: 'Class 9a fire safety compliance' },
+    { name: 'Acoustic Consultant', required: true, reason: 'Healthcare acoustic requirements' },
+    { name: 'Infection Control Consultant', required: false, reason: 'Enhanced infection control' },
+  ],
+  data_centre: [
+    { name: 'Data Centre Specialist', required: true, reason: 'IT infrastructure coordination' },
+    { name: 'Fire Engineer', required: true, reason: 'Critical infrastructure fire protection' },
+    { name: 'Security Consultant', required: true, reason: 'Physical security requirements' },
+  ],
+  hotel: [
+    { name: 'Interior Designer', required: true, reason: 'Guest room and F&B design' },
+    { name: 'Kitchen Consultant', required: true, reason: 'Commercial kitchen design' },
+    { name: 'Acoustic Consultant', required: true, reason: 'Noise transmission control' },
+    { name: 'Lighting Designer', required: false, reason: 'Feature lighting design' },
+  ],
+  retail_shopping: [
+    { name: 'Traffic Engineer', required: true, reason: 'Car park and access design' },
+    { name: 'Retail Planner', required: false, reason: 'Tenancy mix optimization' },
+  ],
+  education_school: [
+    { name: 'Acoustic Consultant', required: true, reason: 'Learning space acoustics' },
+    { name: 'Security Consultant', required: true, reason: 'School security requirements' },
+    { name: 'Landscape Architect', required: true, reason: 'Play areas and outdoor learning' },
+  ],
+  education_tertiary: [
+    { name: 'Laboratory Planner', required: false, reason: 'Specialized lab design' },
+    { name: 'AV Consultant', required: true, reason: 'Lecture theatre and hybrid learning' },
+  ],
+  life_sciences: [
+    { name: 'Lab Planner', required: true, reason: 'Life sciences facility planning' },
+    { name: 'PC Consultant', required: true, reason: 'Physical containment compliance' },
+    { name: 'Fire Engineer', required: true, reason: 'Laboratory fire safety' },
+    { name: 'HVAC Specialist', required: true, reason: 'Specialized ventilation systems' },
+  ],
+  cleanroom: [
+    { name: 'Cleanroom Specialist', required: true, reason: 'ISO cleanroom design compliance' },
+    { name: 'HVAC', required: true, reason: 'Clean air handling systems' },
+    { name: 'Fire Engineer', required: true, reason: 'Cleanroom fire protection' },
+    { name: 'ESD Consultant', required: true, reason: 'Electrostatic discharge control' },
+  ],
+  data_centre_hyperscale: [
+    { name: 'Critical Systems Engineer', required: true, reason: 'Mission-critical infrastructure' },
+    { name: 'Electrical Engineer', required: true, reason: 'High-capacity power distribution' },
+    { name: 'Fire Engineer', required: true, reason: 'Data centre fire suppression' },
+  ],
+  marina: [
+    { name: 'Coastal Engineer', required: true, reason: 'Coastal and marine structures' },
+    { name: 'Marine Surveyor', required: true, reason: 'Bathymetric and marine surveys' },
+    { name: 'Environmental Consultant', required: true, reason: 'Marine environmental assessments' },
+  ],
+  airport_terminal: [
+    { name: 'Aviation Planner', required: true, reason: 'Airport planning and operations' },
+    { name: 'Security Consultant', required: true, reason: 'Aviation security requirements' },
+    { name: 'Wayfinding', required: true, reason: 'Passenger wayfinding systems' },
+  ],
+  winery_brewery: [
+    { name: 'Process Engineer', required: true, reason: 'Winemaking/brewing process design' },
+    { name: 'Food Safety Consultant', required: true, reason: 'Food production compliance' },
+  ],
+};
+
+// Complexity-triggered disciplines
+const COMPLEXITY_DISCIPLINES: Record<string, DisciplineSuggestion> = {
+  heritage: { name: 'Heritage Consultant', required: true, reason: 'Heritage overlay requirements' },
+  listed: { name: 'Heritage Architect', required: true, reason: 'Heritage listed building conservation' },
+  bushfire: { name: 'Bushfire Consultant (BPAD)', required: true, reason: 'BAL assessment and compliance' },
+  flood: { name: 'Flood Engineer', required: true, reason: 'Flood planning and management' },
+  state_significant: { name: 'Planning Consultant', required: true, reason: 'SSD approval pathway' },
+  complex_da: { name: 'Town Planner', required: true, reason: 'Complex DA submission' },
+  triple_cert: { name: 'ESD Consultant', required: true, reason: 'Triple certification requirements' },
+  net_zero: { name: 'Net Zero Consultant', required: true, reason: 'Net zero carbon pathway' },
+  tier_3: { name: 'Commissioning Agent', required: true, reason: 'Tier III commissioning' },
+  tier_4: { name: 'Commissioning Agent', required: true, reason: 'Tier IV commissioning requirements' },
+};
+
+// Scale-triggered disciplines
+const SCALE_THRESHOLDS: Record<string, { threshold: number; discipline: DisciplineSuggestion }> = {
+  storeys: {
+    threshold: 15,
+    discipline: { name: 'Wind Engineer', required: false, reason: 'High-rise wind assessment' },
+  },
+  total_storeys: {
+    threshold: 15,
+    discipline: { name: 'Wind Engineer', required: false, reason: 'High-rise wind assessment' },
+  },
+  car_parks: {
+    threshold: 100,
+    discipline: { name: 'Traffic Engineer', required: true, reason: 'Traffic impact assessment' },
+  },
+  gfa_sqm: {
+    threshold: 10000,
+    discipline: { name: 'Quantity Surveyor', required: true, reason: 'Cost planning for large project' },
+  },
+};
+
+// Helper to find work scope item by value
+function findWorkScopeItem(scopeValue: string, projectType: ProjectType | null): WorkScopeItem | null {
+  if (!projectType) return null;
+  const workScopeOptions = (profileTemplates as any).workScopeOptions;
+  const typeConfig = workScopeOptions?.[projectType];
+  if (!typeConfig) return null;
+
+  for (const category of Object.values(typeConfig) as WorkScopeCategory[]) {
+    const item = category.items.find((i: WorkScopeItem) => i.value === scopeValue);
+    if (item) return item;
+  }
+  return null;
+}
+
+export function ConsultantPreview({
+  buildingClass,
+  projectType,
+  subclass,
+  scaleData,
+  complexity,
+  workScope = [],
+}: ConsultantPreviewProps) {
+  const suggestions = useMemo<DisciplineSuggestion[]>(() => {
+    if (!buildingClass || subclass.length === 0) return [];
+
+    const disciplineMap = new Map<string, DisciplineSuggestion>();
+
+    // Add base disciplines
+    BASE_DISCIPLINES.forEach((name) => {
+      disciplineMap.set(name, { name, required: true, reason: 'Core project discipline' });
+    });
+
+    // Add class-specific disciplines
+    const classDisciplines = CLASS_DISCIPLINES[buildingClass] || [];
+    classDisciplines.forEach((name) => {
+      if (!disciplineMap.has(name)) {
+        disciplineMap.set(name, { name, required: false, reason: `${buildingClass} project typical` });
+      }
+    });
+
+    // Add subclass-specific disciplines
+    subclass.forEach((sub) => {
+      const subDisciplines = SUBCLASS_DISCIPLINES[sub] || [];
+      subDisciplines.forEach((discipline) => {
+        if (!disciplineMap.has(discipline.name) || discipline.required) {
+          disciplineMap.set(discipline.name, discipline);
+        }
+      });
+    });
+
+    // Add complexity-triggered disciplines
+    Object.entries(complexity).forEach(([_, value]) => {
+      const complexityDiscipline = COMPLEXITY_DISCIPLINES[value];
+      if (complexityDiscipline && !disciplineMap.has(complexityDiscipline.name)) {
+        disciplineMap.set(complexityDiscipline.name, complexityDiscipline);
+      }
+    });
+
+    // Add scale-triggered disciplines
+    Object.entries(scaleData).forEach(([key, value]) => {
+      const threshold = SCALE_THRESHOLDS[key];
+      if (threshold && value >= threshold.threshold) {
+        if (!disciplineMap.has(threshold.discipline.name)) {
+          disciplineMap.set(threshold.discipline.name, threshold.discipline);
+        }
+      }
+    });
+
+    // Add work scope-triggered disciplines
+    workScope.forEach((scopeValue) => {
+      const scopeItem = findWorkScopeItem(scopeValue, projectType);
+      if (scopeItem?.consultants) {
+        scopeItem.consultants.forEach((consultant) => {
+          if (!disciplineMap.has(consultant)) {
+            disciplineMap.set(consultant, {
+              name: consultant,
+              required: true,
+              reason: `Required for ${scopeItem.label}`,
+            });
+          }
+        });
+      }
+    });
+
+    // Sort: required first, then alphabetically
+    return Array.from(disciplineMap.values()).sort((a, b) => {
+      if (a.required !== b.required) return a.required ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [buildingClass, projectType, subclass, scaleData, complexity, workScope]);
+
+  if (suggestions.length === 0) return null;
+
+  const requiredCount = suggestions.filter((s) => s.required).length;
+  const suggestedCount = suggestions.filter((s) => !s.required).length;
+
+  return (
+    <div className="mt-4 p-4 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-[var(--color-accent-purple)]" />
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">
+            Consultant Disciplines
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-[var(--color-text-muted)]">
+            {requiredCount} required
+          </span>
+          {suggestedCount > 0 && (
+            <span className="text-[var(--color-text-muted)]">
+              + {suggestedCount} suggested
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        {suggestions.slice(0, 10).map((discipline) => (
+          <div
+            key={discipline.name}
+            className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors group"
+            title={discipline.reason}
+          >
+            <div className="flex items-center gap-2">
+              {discipline.required ? (
+                <Check className="w-3.5 h-3.5 text-[var(--color-accent-teal)]" />
+              ) : (
+                <Plus className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
+              )}
+              <span className={`text-sm ${discipline.required ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}>
+                {discipline.name}
+              </span>
+            </div>
+            <span className="text-xs text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity truncate max-w-[150px]">
+              {discipline.reason}
+            </span>
+          </div>
+        ))}
+
+        {suggestions.length > 10 && (
+          <div className="text-xs text-[var(--color-text-muted)] pt-1 text-center">
+            + {suggestions.length - 10} more disciplines
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

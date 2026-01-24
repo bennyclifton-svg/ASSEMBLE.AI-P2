@@ -17,8 +17,8 @@ export function ContractorListSection({ projectId }: ContractorListSectionProps)
 
   if (isLoading) {
     return (
-      <div className="bg-[#252526] rounded-lg p-4 border border-[#3e3e42]">
-        <h3 className="text-sm font-semibold text-[#cccccc] mb-3">Contractor List</h3>
+      <div className="bg-[var(--color-bg-primary)] rounded-lg p-4 border border-[var(--color-border)]">
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Contractor List</h3>
         <div className="-mx-4">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-8 w-full" />)}
         </div>
@@ -27,8 +27,8 @@ export function ContractorListSection({ projectId }: ContractorListSectionProps)
   }
 
   return (
-    <div className="bg-[#252526] rounded-lg p-4 border border-[#3e3e42]">
-      <h3 className="text-sm font-semibold text-[#cccccc] mb-3">Contractor List</h3>
+    <div className="bg-[var(--color-bg-primary)] rounded-lg p-4 border border-[var(--color-border)]">
+      <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Contractor List</h3>
       <div className="-mx-4 max-h-[400px] overflow-y-auto">
         {trades.map((trade, index) => {
           const isLast = index === trades.length - 1;
@@ -47,8 +47,8 @@ export function ContractorListSection({ projectId }: ContractorListSectionProps)
               key={trade.id}
               className={cn(
                 'flex items-center justify-between px-4 py-1.5 transition-all duration-150',
-                isHovered ? 'bg-[#2a2d2e]' : 'bg-transparent',
-                !isLast && 'border-b border-[#3e3e42]'
+                isHovered ? 'bg-[var(--color-bg-tertiary)]' : 'bg-transparent',
+                !isLast && 'border-b border-[var(--color-border)]'
               )}
               onMouseEnter={() => setHoveredId(trade.id)}
               onMouseLeave={() => setHoveredId(null)}
@@ -61,7 +61,7 @@ export function ContractorListSection({ projectId }: ContractorListSectionProps)
                 />
                 <span className={cn(
                   "text-sm leading-tight truncate",
-                  trade.isEnabled ? "text-[#cccccc]" : "text-[#858585]"
+                  trade.isEnabled ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"
                 )}>
                   {trade.tradeName}
                 </span>

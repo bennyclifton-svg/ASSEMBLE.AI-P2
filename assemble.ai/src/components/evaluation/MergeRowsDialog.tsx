@@ -97,9 +97,9 @@ export function MergeRowsDialog({
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
-            <DialogContent className="sm:max-w-lg bg-[#1e1e1e] border-[#3e3e42]">
+            <DialogContent className="sm:max-w-lg bg-[var(--color-bg-primary)] border-[var(--color-border)]">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2 text-[#cccccc]">
+                    <DialogTitle className="flex items-center gap-2 text-[var(--color-text-primary)]">
                         <Merge className="w-4 h-4" />
                         Merge {selectedRows.length} Rows
                     </DialogTitle>
@@ -108,12 +108,12 @@ export function MergeRowsDialog({
                 <div className="space-y-4 py-4">
                     {/* Selected rows preview */}
                     <div className="space-y-2">
-                        <Label className="text-sm text-[#858585]">Selected Rows</Label>
+                        <Label className="text-sm text-[var(--color-text-muted)]">Selected Rows</Label>
                         <div className="max-h-32 overflow-y-auto space-y-1">
                             {selectedRows.map((row, index) => (
                                 <div
                                     key={row.id}
-                                    className="text-xs text-[#cccccc] bg-[#252526] px-2 py-1 rounded"
+                                    className="text-xs text-[var(--color-text-primary)] bg-[var(--color-bg-secondary)] px-2 py-1 rounded"
                                 >
                                     {index + 1}. {row.description || '(no description)'}
                                 </div>
@@ -123,14 +123,14 @@ export function MergeRowsDialog({
 
                     {/* Merged amounts per firm */}
                     <div className="space-y-2">
-                        <Label className="text-sm text-[#858585]">Merged Amounts</Label>
+                        <Label className="text-sm text-[var(--color-text-muted)]">Merged Amounts</Label>
                         <div className="grid grid-cols-2 gap-2">
                             {firms.filter(f => f.shortlisted).map(firm => (
                                 <div
                                     key={firm.id}
-                                    className="flex justify-between text-xs bg-[#252526] px-2 py-1 rounded"
+                                    className="flex justify-between text-xs bg-[var(--color-bg-secondary)] px-2 py-1 rounded"
                                 >
-                                    <span className="text-[#858585] truncate">{firm.companyName}</span>
+                                    <span className="text-[var(--color-text-muted)] truncate">{firm.companyName}</span>
                                     <span className="text-[#4ec9b0] font-medium">
                                         {formatCurrency(firmTotals.get(firm.id) || 0)}
                                     </span>
@@ -141,7 +141,7 @@ export function MergeRowsDialog({
 
                     {/* New description input */}
                     <div className="space-y-2">
-                        <Label htmlFor="description" className="text-sm text-[#858585]">
+                        <Label htmlFor="description" className="text-sm text-[var(--color-text-muted)]">
                             Merged Row Description
                         </Label>
                         <Input
@@ -149,7 +149,7 @@ export function MergeRowsDialog({
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Enter description for merged row"
-                            className="bg-[#252526] border-[#3e3e42] text-[#cccccc]"
+                            className="bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-primary)]"
                             autoFocus
                         />
                     </div>
@@ -160,14 +160,14 @@ export function MergeRowsDialog({
                         variant="ghost"
                         onClick={() => handleOpenChange(false)}
                         disabled={isMerging}
-                        className="text-[#858585] hover:text-[#cccccc]"
+                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                     >
                         Cancel
                     </Button>
                     <Button
                         onClick={handleConfirm}
                         disabled={isMerging || !description.trim()}
-                        className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+                        className="bg-[var(--color-accent-green)] hover:bg-[#1177bb] text-white"
                     >
                         {isMerging ? (
                             <>

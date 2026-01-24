@@ -16,7 +16,7 @@ interface UserData {
 }
 
 const STORAGE_KEY = 'landing-panel-sizes';
-const DEFAULT_SIZES = [20, 55, 25];
+const DEFAULT_SIZES = [13, 62, 25];
 
 export function LandingLayout() {
   const router = useRouter();
@@ -174,7 +174,7 @@ export function LandingLayout() {
         onLayout={handlePanelResize}
       >
         {/* Left Panel - Project Register */}
-        <Panel defaultSize={panelSizes[0]} minSize={15}>
+        <Panel defaultSize={panelSizes[0]} minSize={10}>
           <ProjectRegister onSelectProject={handleSelectProject} />
         </Panel>
 

@@ -36,34 +36,34 @@ export function TRRHeaderTable({
     };
 
     return (
-        <div className="border border-[#3e3e42] rounded overflow-hidden">
+        <div className="border border-[var(--color-border)] rounded overflow-hidden">
             <table className="w-full text-sm">
                 <tbody>
-                    <tr className="border-b border-[#3e3e42]">
-                        <td className="w-36 px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                    <tr className="border-b border-[var(--color-border)]">
+                        <td className="w-36 px-4 py-2.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] font-medium">
                             Project Name
                         </td>
-                        <td className="px-4 py-2.5 text-[#cccccc]" colSpan={2}>
+                        <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
                             {projectName}
                         </td>
                     </tr>
-                    <tr className="border-b border-[#3e3e42]">
-                        <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                    <tr className="border-b border-[var(--color-border)]">
+                        <td className="px-4 py-2.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] font-medium">
                             Address
                         </td>
-                        <td className="px-4 py-2.5 text-[#cccccc]" colSpan={2}>
+                        <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
                             {address || '-'}
                         </td>
                     </tr>
                     <tr>
-                        <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                        <td className="px-4 py-2.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] font-medium">
                             Document
                         </td>
-                        <td className="px-4 py-2.5 text-[#cccccc] font-semibold">
+                        <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
                             {documentTitle}
                         </td>
                         <td
-                            className="w-36 px-4 py-2.5 text-[#cccccc] border-l border-[#3e3e42] cursor-pointer hover:bg-[#2a2a2a] transition-colors relative"
+                            className="w-36 px-4 py-2.5 text-[var(--color-text-primary)] border-l border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors relative"
                             onClick={handleDateClick}
                         >
                             <span className="select-none">{formatDisplayDate(reportDate)}</span>

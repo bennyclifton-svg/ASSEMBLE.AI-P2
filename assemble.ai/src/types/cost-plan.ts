@@ -3,6 +3,9 @@
  * Feature 006 - Cost Planning Module
  */
 
+import type { MasterStageId } from '@/lib/types/project-initiator';
+import type { Stakeholder } from '@/types/stakeholder';
+
 // ============================================================================
 // SECTION TYPES
 // ============================================================================
@@ -10,7 +13,7 @@
 export type CostLineSection = 'FEES' | 'CONSULTANTS' | 'CONSTRUCTION' | 'CONTINGENCY';
 
 export const SECTION_NAMES: Record<CostLineSection, string> = {
-  FEES: 'Fees and Charges',
+  FEES: 'Authorities',
   CONSULTANTS: 'Consultants',
   CONSTRUCTION: 'Construction',
   CONTINGENCY: 'Contingency',
@@ -19,9 +22,13 @@ export const SECTION_NAMES: Record<CostLineSection, string> = {
 export const SECTION_ORDER: CostLineSection[] = ['FEES', 'CONSULTANTS', 'CONSTRUCTION', 'CONTINGENCY'];
 
 // ============================================================================
-// DISCIPLINE TYPES
+// STAKEHOLDER TYPES (for cost plan context)
 // ============================================================================
 
+// Re-export Stakeholder for convenience
+export type { Stakeholder };
+
+// Legacy type aliases for backward compatibility during migration
 export interface Discipline {
   id: string;
   projectId: string;
@@ -80,23 +87,29 @@ export interface UpdateCompanyInput {
 export interface CostLine {
   id: string;
   projectId: string;
-  disciplineId?: string | null;
-  tradeId?: string | null;
+  stakeholderId?: string | null;
   section: CostLineSection;
   costCode?: string | null;
   activity: string;
   reference?: string | null;
   budgetCents: number;
   approvedContractCents: number;
+  masterStage?: MasterStageId | null;  // Links to one of 5 master stages
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string | null;
 }
 
+export interface CostLineWithStakeholder extends CostLine {
+  stakeholder?: Stakeholder | null;
+}
+
+// Legacy alias for backward compatibility during migration
 export interface CostLineWithDiscipline extends CostLine {
   discipline?: Discipline | null;
   trade?: Trade | null;
+  stakeholder?: Stakeholder | null;
 }
 
 export interface CostLineAllocation {
@@ -109,7 +122,7 @@ export interface CostLineAllocation {
 }
 
 // Cost line with all calculated fields
-export interface CostLineWithCalculations extends CostLineWithDiscipline {
+export interface CostLineWithCalculations extends CostLineWithStakeholder {
   allocations: CostLineAllocation[];
   calculated: {
     forecastVariationsCents: number;
@@ -122,28 +135,49 @@ export interface CostLineWithCalculations extends CostLineWithDiscipline {
   };
 }
 
+// Grouped line for roll-up view (aggregates lines by stakeholder)
+export interface GroupedLineTotals {
+  budget: number;
+  approvedContract: number;
+  forecastVars: number;
+  approvedVars: number;
+  finalForecast: number;
+  variance: number;
+  claimed: number;
+  currentMonth: number;
+  etc: number;
+}
+
+export interface GroupedLine {
+  groupKey: string;           // "CONSULTANTS:stakeholderId" or "CONSTRUCTION:stakeholderId"
+  groupName: string;          // Stakeholder name or "Unassigned"
+  groupId: string | null;     // stakeholderId
+  lines: CostLineWithCalculations[];
+  totals: GroupedLineTotals;
+}
+
 export interface CreateCostLineInput {
   projectId: string;
-  disciplineId?: string;
-  tradeId?: string;
+  stakeholderId?: string;
   section: CostLineSection;
   costCode?: string;
   activity: string;
   reference?: string;
   budgetCents?: number;
   approvedContractCents?: number;
+  masterStage?: MasterStageId;
   sortOrder: number;
 }
 
 export interface UpdateCostLineInput {
-  disciplineId?: string | null;
-  tradeId?: string | null;
+  stakeholderId?: string | null;
   section?: CostLineSection;
   costCode?: string | null;
   activity?: string;
   reference?: string | null;
   budgetCents?: number;
   approvedContractCents?: number;
+  masterStage?: MasterStageId | null;
   sortOrder?: number;
 }
 

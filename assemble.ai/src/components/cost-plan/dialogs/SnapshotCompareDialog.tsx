@@ -99,8 +99,8 @@ const STATUS_STYLES = {
   },
   unchanged: {
     bg: '',
-    text: 'text-[#858585]',
-    badge: 'bg-[#3e3e42] text-[#858585]',
+    text: 'text-[var(--color-text-muted)]',
+    badge: 'bg-[var(--color-border)] text-[var(--color-text-muted)]',
     label: 'No Change',
   },
 };
@@ -214,15 +214,15 @@ export function SnapshotCompareDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-[#3e3e42] flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <Camera className="w-5 h-5" />
               Compare: {snapshotName}
             </h2>
-            <p className="text-sm text-[#858585]">
+            <p className="text-sm text-[var(--color-text-muted)]">
               Snapshot from {formatDate(snapshotDate)} vs Current
             </p>
           </div>
@@ -230,7 +230,7 @@ export function SnapshotCompareDialog({
             {onExport && (
               <button
                 onClick={onExport}
-                className="px-3 py-1.5 text-sm text-[#cccccc] hover:text-white hover:bg-[#37373d] rounded transition-colors flex items-center gap-2"
+                className="px-3 py-1.5 text-sm text-[var(--color-text-primary)] hover:text-white hover:bg-[var(--color-bg-tertiary)] rounded transition-colors flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
                 Export
@@ -238,7 +238,7 @@ export function SnapshotCompareDialog({
             )}
             <button
               onClick={onClose}
-              className="p-1 text-[#858585] hover:text-white rounded transition-colors"
+              className="p-1 text-[var(--color-text-muted)] hover:text-white rounded transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -246,7 +246,7 @@ export function SnapshotCompareDialog({
         </div>
 
         {/* Summary Bar */}
-        <div className="px-4 py-3 border-b border-[#3e3e42] bg-[#1e1e1e] flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)] flex items-center justify-between shrink-0">
           {/* Change counts */}
           <div className="flex items-center gap-4">
             {changeCounts.added > 0 && (
@@ -265,18 +265,18 @@ export function SnapshotCompareDialog({
               </span>
             )}
             {changeCounts.added === 0 && changeCounts.removed === 0 && changeCounts.changed === 0 && (
-              <span className="text-sm text-[#858585]">No changes detected</span>
+              <span className="text-sm text-[var(--color-text-muted)]">No changes detected</span>
             )}
           </div>
 
           {/* View mode toggle */}
-          <div className="flex items-center gap-1 bg-[#252526] rounded p-1">
+          <div className="flex items-center gap-1 bg-[var(--color-bg-secondary)] rounded p-1">
             <button
               onClick={() => setViewMode('all')}
               className={`px-3 py-1 text-sm rounded transition-colors ${
                 viewMode === 'all'
-                  ? 'bg-[#37373d] text-white'
-                  : 'text-[#858585] hover:text-white'
+                  ? 'bg-[var(--color-bg-tertiary)] text-white'
+                  : 'text-[var(--color-text-muted)] hover:text-white'
               }`}
             >
               All Lines
@@ -285,8 +285,8 @@ export function SnapshotCompareDialog({
               onClick={() => setViewMode('changes')}
               className={`px-3 py-1 text-sm rounded transition-colors ${
                 viewMode === 'changes'
-                  ? 'bg-[#37373d] text-white'
-                  : 'text-[#858585] hover:text-white'
+                  ? 'bg-[var(--color-bg-tertiary)] text-white'
+                  : 'text-[var(--color-text-muted)] hover:text-white'
               }`}
             >
               Changes Only
@@ -297,8 +297,8 @@ export function SnapshotCompareDialog({
         {/* Comparison Table */}
         <div className="flex-1 overflow-auto min-h-0">
           {/* Table Header */}
-          <div className="sticky top-0 bg-[#1e1e1e] border-b border-[#3e3e42] z-10">
-            <div className="grid grid-cols-[300px_1fr_1fr_1fr_100px] gap-2 px-4 py-2 text-xs text-[#858585] font-medium uppercase tracking-wider">
+          <div className="sticky top-0 bg-[var(--color-bg-primary)] border-b border-[var(--color-border)] z-10">
+            <div className="grid grid-cols-[300px_1fr_1fr_1fr_100px] gap-2 px-4 py-2 text-xs text-[var(--color-text-muted)] font-medium uppercase tracking-wider">
               <div>Description</div>
               <div className="text-right">
                 <div>Budget</div>
@@ -330,7 +330,7 @@ export function SnapshotCompareDialog({
 
           {/* Sections */}
           {filteredSections.length === 0 ? (
-            <div className="text-center py-12 text-[#858585]">
+            <div className="text-center py-12 text-[var(--color-text-muted)]">
               No changes to display
             </div>
           ) : (
@@ -342,24 +342,24 @@ export function SnapshotCompareDialog({
                   {/* Section Header */}
                   <button
                     onClick={() => toggleSection(section.section)}
-                    className="w-full grid grid-cols-[300px_1fr_1fr_1fr_100px] gap-2 px-4 py-2 bg-[#2a2d2e] hover:bg-[#37373d] transition-colors text-left"
+                    className="w-full grid grid-cols-[300px_1fr_1fr_1fr_100px] gap-2 px-4 py-2 bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-tertiary)] transition-colors text-left"
                   >
                     <div className="flex items-center gap-2">
                       {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-[#858585]" />
+                        <ChevronDown className="w-4 h-4 text-[var(--color-text-muted)]" />
                       ) : (
-                        <ChevronRight className="w-4 h-4 text-[#858585]" />
+                        <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" />
                       )}
-                      <span className="text-[#cccccc] font-medium">
+                      <span className="text-[var(--color-text-primary)] font-medium">
                         {section.sectionName}
                       </span>
-                      <span className="text-xs text-[#6e6e6e]">
+                      <span className="text-xs text-[var(--color-text-muted)]">
                         ({section.lines.length} line{section.lines.length !== 1 ? 's' : ''})
                       </span>
                     </div>
-                    <div className="text-right text-[#cccccc]">
+                    <div className="text-right text-[var(--color-text-primary)]">
                       <ValueCell value={section.snapshotTotalCents} />
-                      <span className="text-[#6e6e6e] mx-2">→</span>
+                      <span className="text-[var(--color-text-muted)] mx-2">→</span>
                       <ValueCell value={section.currentTotalCents} />
                     </div>
                     <div />
@@ -374,7 +374,7 @@ export function SnapshotCompareDialog({
 
                   {/* Section Lines */}
                   {isExpanded && (
-                    <div className="divide-y divide-[#3e3e42]">
+                    <div className="divide-y divide-[var(--color-border)]">
                       {section.lines.map((line) => {
                         const style = STATUS_STYLES[line.status];
 
@@ -387,15 +387,15 @@ export function SnapshotCompareDialog({
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
                                 {line.costCode && (
-                                  <span className="text-xs text-[#6e6e6e] font-mono">
+                                  <span className="text-xs text-[var(--color-text-muted)] font-mono">
                                     {line.costCode}
                                   </span>
                                 )}
                                 <span
                                   className={`truncate ${
                                     line.status === 'removed'
-                                      ? 'line-through text-[#6e6e6e]'
-                                      : 'text-[#cccccc]'
+                                      ? 'line-through text-[var(--color-text-muted)]'
+                                      : 'text-[var(--color-text-primary)]'
                                   }`}
                                 >
                                   {line.activity}
@@ -409,7 +409,7 @@ export function SnapshotCompareDialog({
                                 value={line.snapshotBudgetCents}
                                 strikethrough={line.status === 'removed'}
                               />
-                              <span className="text-[#6e6e6e] mx-2">→</span>
+                              <span className="text-[var(--color-text-muted)] mx-2">→</span>
                               <ValueCell
                                 value={line.currentBudgetCents}
                                 strikethrough={line.status === 'removed'}
@@ -422,7 +422,7 @@ export function SnapshotCompareDialog({
                                 value={line.snapshotContractCents}
                                 strikethrough={line.status === 'removed'}
                               />
-                              <span className="text-[#6e6e6e] mx-2">→</span>
+                              <span className="text-[var(--color-text-muted)] mx-2">→</span>
                               <ValueCell
                                 value={line.currentContractCents}
                                 strikethrough={line.status === 'removed'}
@@ -435,7 +435,7 @@ export function SnapshotCompareDialog({
                                 value={line.snapshotForecastCents}
                                 strikethrough={line.status === 'removed'}
                               />
-                              <span className="text-[#6e6e6e] mx-2">→</span>
+                              <span className="text-[var(--color-text-muted)] mx-2">→</span>
                               <ValueCell
                                 value={line.currentForecastCents}
                                 strikethrough={line.status === 'removed'}
@@ -460,22 +460,22 @@ export function SnapshotCompareDialog({
         </div>
 
         {/* Footer - Totals */}
-        <div className="px-4 py-3 border-t border-[#3e3e42] bg-[#1e1e1e] shrink-0">
+        <div className="px-4 py-3 border-t border-[var(--color-border)] bg-[var(--color-bg-primary)] shrink-0">
           <div className="grid grid-cols-[300px_1fr_1fr_1fr_100px] gap-2 text-sm">
-            <div className="text-[#cccccc] font-medium">Total</div>
+            <div className="text-[var(--color-text-primary)] font-medium">Total</div>
             <div className="text-right">
-              <span className="text-[#858585]">{formatCurrency(totals.snapshotBudgetCents)}</span>
-              <span className="text-[#6e6e6e] mx-2">→</span>
+              <span className="text-[var(--color-text-muted)]">{formatCurrency(totals.snapshotBudgetCents)}</span>
+              <span className="text-[var(--color-text-muted)] mx-2">→</span>
               <span className="text-white font-medium">{formatCurrency(totals.currentBudgetCents)}</span>
             </div>
             <div className="text-right">
-              <span className="text-[#858585]">{formatCurrency(totals.snapshotContractCents)}</span>
-              <span className="text-[#6e6e6e] mx-2">→</span>
+              <span className="text-[var(--color-text-muted)]">{formatCurrency(totals.snapshotContractCents)}</span>
+              <span className="text-[var(--color-text-muted)] mx-2">→</span>
               <span className="text-white font-medium">{formatCurrency(totals.currentContractCents)}</span>
             </div>
             <div className="text-right">
-              <span className="text-[#858585]">{formatCurrency(totals.snapshotForecastCents)}</span>
-              <span className="text-[#6e6e6e] mx-2">→</span>
+              <span className="text-[var(--color-text-muted)]">{formatCurrency(totals.snapshotForecastCents)}</span>
+              <span className="text-[var(--color-text-muted)] mx-2">→</span>
               <span className="text-white font-medium">{formatCurrency(totals.currentForecastCents)}</span>
             </div>
             <div className="flex justify-center">

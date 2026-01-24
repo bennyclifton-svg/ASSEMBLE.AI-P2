@@ -28,6 +28,7 @@ import {
     tradePriceItems,
     costLines,
 } from '../db/schema';
+import { projectProfiles, profilerObjectives } from '../db/pg-schema';
 import { eq, and, asc, isNull } from 'drizzle-orm';
 import { getCategoryById, getCategoryByName } from '../constants/categories';
 
@@ -130,8 +131,7 @@ export interface TransmittalDocument {
 export interface TransmittalContext {
     id: string;
     name: string;
-    disciplineId?: string;
-    tradeId?: string;
+    stakeholderId?: string;
     status: 'DRAFT' | 'ISSUED';
     documents: TransmittalDocument[];
 }
@@ -210,11 +210,11 @@ export async function fetchPlanningContext(projectId: string): Promise<PlanningC
         .where(eq(stakeholders.projectId, projectId))
         .orderBy(stakeholders.order);
 
-    // Fetch disciplines (ordered)
+    // Fetch disciplines (ordered alphabetically by name)
     const disciplinesData = await db.select()
         .from(consultantDisciplines)
         .where(eq(consultantDisciplines.projectId, projectId))
-        .orderBy(consultantDisciplines.order);
+        .orderBy(asc(consultantDisciplines.disciplineName));
 
     // Fetch trades (ordered)
     const tradesData = await db.select()
@@ -288,20 +288,20 @@ export async function fetchPlanningContext(projectId: string): Promise<PlanningC
 }
 
 /**
- * Fetch transmittal for a specific discipline
+ * Fetch transmittal for a specific stakeholder
  * Returns null if no transmittal exists
  */
-export async function fetchTransmittalForDiscipline(
+export async function fetchTransmittalForStakeholder(
     projectId: string,
-    disciplineId: string
+    stakeholderId: string
 ): Promise<TransmittalContext | null> {
-    console.log('[fetchTransmittalForDiscipline] Looking up transmittal for projectId:', projectId, 'disciplineId:', disciplineId);
+    console.log('[fetchTransmittalForStakeholder] Looking up transmittal for projectId:', projectId, 'stakeholderId:', stakeholderId);
 
-    // Find transmittal for this discipline
+    // Find transmittal for this stakeholder
     const transmittal = await db.query.transmittals.findFirst({
         where: and(
             eq(transmittals.projectId, projectId),
-            eq(transmittals.disciplineId, disciplineId)
+            eq(transmittals.stakeholderId, stakeholderId)
         ),
     });
 
@@ -381,98 +381,15 @@ export async function fetchTransmittalForDiscipline(
     return {
         id: transmittal.id,
         name: transmittal.name,
-        disciplineId: transmittal.disciplineId ?? undefined,
+        stakeholderId: transmittal.stakeholderId ?? undefined,
         status: (transmittal.status ?? 'DRAFT') as 'DRAFT' | 'ISSUED',
         documents: documentsWithDetails,
     };
 }
 
-/**
- * Fetch transmittal for a specific trade
- * Returns null if no transmittal exists
- */
-export async function fetchTransmittalForTrade(
-    projectId: string,
-    tradeId: string
-): Promise<TransmittalContext | null> {
-    // Find transmittal for this trade
-    const transmittal = await db.query.transmittals.findFirst({
-        where: and(
-            eq(transmittals.projectId, projectId),
-            eq(transmittals.tradeId, tradeId)
-        ),
-    });
-
-    if (!transmittal) {
-        return null;
-    }
-
-    // Fetch transmittal items with document and version info
-    const items = await db.select({
-        itemId: transmittalItems.id,
-        versionId: transmittalItems.versionId,
-        documentId: documents.id,
-        versionNumber: versions.versionNumber,
-        fileAssetId: versions.fileAssetId,
-    })
-        .from(transmittalItems)
-        .innerJoin(versions, eq(transmittalItems.versionId, versions.id))
-        .innerJoin(documents, eq(versions.documentId, documents.id))
-        .where(eq(transmittalItems.transmittalId, transmittal.id));
-
-    // Fetch file assets and categories for each item
-    const documentsWithDetails = await Promise.all(
-        items.map(async (item) => {
-            const fileAsset = await db.query.fileAssets.findFirst({
-                where: eq(fileAssets.id, item.fileAssetId),
-            });
-
-            const doc = await db.query.documents.findFirst({
-                where: eq(documents.id, item.documentId),
-            });
-
-            let categoryName = 'Uncategorized';
-            let categoryColor = '#858585'; // Default gray
-            if (doc?.categoryId) {
-                const category = await db.query.categories.findFirst({
-                    where: eq(categories.id, doc.categoryId),
-                });
-                categoryName = category?.name ?? 'Uncategorized';
-                // Try to get color from constants by ID first, then by name
-                const constantCategoryById = getCategoryById(doc.categoryId);
-                const constantCategoryByName = getCategoryByName(categoryName);
-                categoryColor = constantCategoryById?.color ?? constantCategoryByName?.color ?? '#858585';
-            }
-
-            // Fetch subcategory if exists
-            let subcategoryName: string | undefined;
-            if (doc?.subcategoryId) {
-                const subcategory = await db.query.subcategories.findFirst({
-                    where: eq(subcategories.id, doc.subcategoryId),
-                });
-                subcategoryName = subcategory?.name;
-            }
-
-            return {
-                id: item.documentId,
-                name: fileAsset?.originalName ?? 'Unknown',
-                version: `Rev ${item.versionNumber}`,
-                category: categoryName,
-                categoryColor,
-                subcategory: subcategoryName,
-                subcategoryColor: categoryColor, // Uses parent category's color
-            };
-        })
-    );
-
-    return {
-        id: transmittal.id,
-        name: transmittal.name,
-        tradeId: transmittal.tradeId ?? undefined,
-        status: (transmittal.status ?? 'DRAFT') as 'DRAFT' | 'ISSUED',
-        documents: documentsWithDetails,
-    };
-}
+// Legacy alias for backwards compatibility
+export const fetchTransmittalForDiscipline = fetchTransmittalForStakeholder;
+export const fetchTransmittalForTrade = fetchTransmittalForStakeholder;
 
 /**
  * Lookup discipline by name (case-insensitive)
@@ -639,13 +556,13 @@ ${tableRows.join('\n')}
 // ============================================
 
 /**
- * Fetch cost lines for a specific discipline
+ * Fetch cost lines for a specific stakeholder
  */
-export async function fetchCostLinesByDiscipline(disciplineId: string): Promise<CostLineContext[]> {
+export async function fetchCostLinesByStakeholder(stakeholderId: string): Promise<CostLineContext[]> {
     const lines = await db.select()
         .from(costLines)
         .where(and(
-            eq(costLines.disciplineId, disciplineId),
+            eq(costLines.stakeholderId, stakeholderId),
             isNull(costLines.deletedAt)
         ))
         .orderBy(asc(costLines.sortOrder));
@@ -657,6 +574,9 @@ export async function fetchCostLinesByDiscipline(disciplineId: string): Promise<
         section: line.section,
     }));
 }
+
+// Legacy alias for backward compatibility
+export const fetchCostLinesByDiscipline = fetchCostLinesByStakeholder;
 
 /**
  * Format cost lines as markdown table for tender request
@@ -820,4 +740,440 @@ export async function fetchDocumentSetForDiscipline(
         console.error('[planning-context] Error fetching document set for discipline:', error);
         return [];
     }
+}
+
+// ============================================
+// Profiler Integration (Feature: 019-profiler)
+// ============================================
+
+/**
+ * T060: Complexity to Cost Multiplier Integration (INT-001)
+ * Returns cost adjustment multiplier based on complexity score
+ */
+export interface CostMultiplier {
+    multiplier: number;
+    contingencyMin: number;
+    contingencyMax: number;
+    description: string;
+}
+
+export function getComplexityCostMultiplier(complexityScore: number): CostMultiplier {
+    if (complexityScore <= 2) {
+        return {
+            multiplier: 1.0,
+            contingencyMin: 5,
+            contingencyMax: 10,
+            description: 'Standard complexity - base cost applies',
+        };
+    } else if (complexityScore <= 4) {
+        return {
+            multiplier: 1.05,
+            contingencyMin: 8,
+            contingencyMax: 12,
+            description: 'Low complexity - minor cost adjustment',
+        };
+    } else if (complexityScore <= 6) {
+        return {
+            multiplier: 1.12,
+            contingencyMin: 10,
+            contingencyMax: 18,
+            description: 'Moderate complexity - standard contingency',
+        };
+    } else if (complexityScore <= 8) {
+        return {
+            multiplier: 1.20,
+            contingencyMin: 15,
+            contingencyMax: 25,
+            description: 'High complexity - elevated contingency',
+        };
+    } else {
+        return {
+            multiplier: 1.35,
+            contingencyMin: 20,
+            contingencyMax: 35,
+            description: 'Very high complexity - significant contingency required',
+        };
+    }
+}
+
+/**
+ * T061: Class/Type to Programme Template Mapping (INT-002)
+ * Returns programme template ID based on building class and project type
+ */
+export interface ProgrammeTemplate {
+    templateId: string;
+    templateName: string;
+    baseDuration: number; // months
+    phases: string[];
+}
+
+const PROGRAMME_TEMPLATES: Record<string, Record<string, ProgrammeTemplate>> = {
+    residential: {
+        new_build: {
+            templateId: 'prog-res-new',
+            templateName: 'Residential New Build',
+            baseDuration: 18,
+            phases: ['Design Development', 'Documentation', 'Tender', 'Construction', 'Defects'],
+        },
+        refurbishment: {
+            templateId: 'prog-res-refurb',
+            templateName: 'Residential Refurbishment',
+            baseDuration: 12,
+            phases: ['Assessment', 'Design', 'Documentation', 'Construction', 'Defects'],
+        },
+        extension: {
+            templateId: 'prog-res-ext',
+            templateName: 'Residential Extension',
+            baseDuration: 9,
+            phases: ['Design', 'Documentation', 'Construction', 'Defects'],
+        },
+    },
+    commercial: {
+        new_build: {
+            templateId: 'prog-comm-new',
+            templateName: 'Commercial New Build',
+            baseDuration: 24,
+            phases: ['Concept', 'Schematic', 'Design Development', 'Documentation', 'Tender', 'Construction', 'Commissioning', 'Defects'],
+        },
+        fitout: {
+            templateId: 'prog-comm-fitout',
+            templateName: 'Commercial Fitout',
+            baseDuration: 6,
+            phases: ['Design', 'Documentation', 'Construction', 'Defects'],
+        },
+        refurbishment: {
+            templateId: 'prog-comm-refurb',
+            templateName: 'Commercial Refurbishment',
+            baseDuration: 15,
+            phases: ['Assessment', 'Design', 'Documentation', 'Tender', 'Construction', 'Defects'],
+        },
+    },
+    industrial: {
+        new_build: {
+            templateId: 'prog-ind-new',
+            templateName: 'Industrial New Build',
+            baseDuration: 15,
+            phases: ['Design', 'Documentation', 'Tender', 'Construction', 'Commissioning'],
+        },
+        expansion: {
+            templateId: 'prog-ind-exp',
+            templateName: 'Industrial Expansion',
+            baseDuration: 12,
+            phases: ['Assessment', 'Design', 'Documentation', 'Construction', 'Commissioning'],
+        },
+    },
+    institution: {
+        new_build: {
+            templateId: 'prog-inst-new',
+            templateName: 'Institutional New Build',
+            baseDuration: 30,
+            phases: ['Master Planning', 'Concept', 'Schematic', 'Design Development', 'Documentation', 'Tender', 'Construction', 'Commissioning', 'Defects'],
+        },
+        refurbishment: {
+            templateId: 'prog-inst-refurb',
+            templateName: 'Institutional Refurbishment',
+            baseDuration: 18,
+            phases: ['Assessment', 'Design', 'Documentation', 'Tender', 'Construction', 'Commissioning', 'Defects'],
+        },
+    },
+    mixed: {
+        new_build: {
+            templateId: 'prog-mixed-new',
+            templateName: 'Mixed-Use New Build',
+            baseDuration: 30,
+            phases: ['Master Planning', 'Concept', 'Schematic', 'Design Development', 'Documentation', 'Tender', 'Base Build', 'Fitout', 'Commissioning', 'Defects'],
+        },
+    },
+    infrastructure: {
+        new_build: {
+            templateId: 'prog-infra-new',
+            templateName: 'Infrastructure New Build',
+            baseDuration: 36,
+            phases: ['Feasibility', 'Concept', 'Detailed Design', 'Documentation', 'Procurement', 'Construction', 'Commissioning', 'Handover'],
+        },
+        upgrade: {
+            templateId: 'prog-infra-upgrade',
+            templateName: 'Infrastructure Upgrade',
+            baseDuration: 18,
+            phases: ['Assessment', 'Design', 'Documentation', 'Construction', 'Commissioning'],
+        },
+    },
+};
+
+const DEFAULT_PROGRAMME_TEMPLATE: ProgrammeTemplate = {
+    templateId: 'prog-default',
+    templateName: 'Standard Project',
+    baseDuration: 18,
+    phases: ['Design', 'Documentation', 'Tender', 'Construction', 'Defects'],
+};
+
+export function getProgrammeTemplate(
+    buildingClass: string,
+    projectType: string
+): ProgrammeTemplate {
+    const classTemplates = PROGRAMME_TEMPLATES[buildingClass];
+    if (!classTemplates) {
+        return DEFAULT_PROGRAMME_TEMPLATE;
+    }
+
+    return classTemplates[projectType] || classTemplates['new_build'] || DEFAULT_PROGRAMME_TEMPLATE;
+}
+
+/**
+ * T062: Profile to Consultant Discipline Determination (INT-003)
+ * Returns recommended disciplines based on profile data
+ */
+export interface RecommendedDiscipline {
+    name: string;
+    required: boolean;
+    reason: string;
+}
+
+const BASE_DISCIPLINES = [
+    'Architect',
+    'Structural Engineer',
+    'Civil Engineer',
+    'Mechanical Engineer',
+    'Electrical Engineer',
+    'Hydraulic Engineer',
+];
+
+const CLASS_DISCIPLINES: Record<string, string[]> = {
+    residential: ['Landscape Architect', 'Acoustic Consultant'],
+    commercial: ['Facade Engineer', 'Acoustic Consultant', 'ESD Consultant'],
+    industrial: ['Fire Engineer', 'ESD Consultant'],
+    institution: ['Acoustic Consultant', 'Security Consultant'],
+    mixed: ['Facade Engineer', 'Traffic Engineer', 'Acoustic Consultant'],
+    infrastructure: ['Geotechnical Engineer', 'Environmental Consultant', 'Traffic Engineer'],
+};
+
+export function getRecommendedDisciplines(
+    buildingClass: string,
+    projectType: string,
+    subclass: string[],
+    complexity: Record<string, string>
+): RecommendedDiscipline[] {
+    const disciplines: RecommendedDiscipline[] = [];
+
+    // Base disciplines
+    for (const name of BASE_DISCIPLINES) {
+        disciplines.push({ name, required: true, reason: 'Core project discipline' });
+    }
+
+    // Class-specific disciplines
+    const classDisciplines = CLASS_DISCIPLINES[buildingClass] || [];
+    for (const name of classDisciplines) {
+        if (!disciplines.find(d => d.name === name)) {
+            disciplines.push({ name, required: false, reason: `${buildingClass} project typical` });
+        }
+    }
+
+    // Complexity-triggered disciplines
+    if (complexity.heritage === 'listed' || complexity.heritage === 'conservation') {
+        disciplines.push({ name: 'Heritage Consultant', required: true, reason: 'Heritage requirements' });
+    }
+    if (complexity.site_conditions === 'bushfire') {
+        disciplines.push({ name: 'Bushfire Consultant (BPAD)', required: true, reason: 'BAL compliance' });
+    }
+    if (complexity.site_conditions === 'flood') {
+        disciplines.push({ name: 'Flood Engineer', required: true, reason: 'Flood planning requirements' });
+    }
+    if (complexity.approval_pathway === 'state_significant') {
+        disciplines.push({ name: 'Planning Consultant', required: true, reason: 'SSD pathway' });
+    }
+
+    // Subclass-specific
+    if (subclass.includes('aged_care_9c')) {
+        disciplines.push({ name: 'Fire Engineer', required: true, reason: 'Class 9c compliance' });
+        disciplines.push({ name: 'Accessibility Consultant', required: true, reason: 'Aged care accessibility' });
+    }
+    if (subclass.includes('healthcare_hospital')) {
+        disciplines.push({ name: 'Medical Planner', required: true, reason: 'Healthcare planning' });
+        disciplines.push({ name: 'Fire Engineer', required: true, reason: 'Class 9a compliance' });
+    }
+    if (subclass.includes('data_centre')) {
+        disciplines.push({ name: 'Data Centre Specialist', required: true, reason: 'IT infrastructure' });
+        disciplines.push({ name: 'Security Consultant', required: true, reason: 'Physical security' });
+    }
+
+    return disciplines;
+}
+
+/**
+ * T063: Profile Data Export for Reports (INT-004)
+ * Returns formatted profile data for inclusion in reports
+ */
+export interface ProfileExportData {
+    buildingClass: string;
+    buildingClassDisplay: string;
+    projectType: string;
+    projectTypeDisplay: string;
+    subclass: string[];
+    scaleData: Record<string, number>;
+    complexity: Record<string, string>;
+    complexityScore: number;
+    workScope: string[];
+    objectives?: {
+        functionalQuality: string;
+        planningCompliance: string;
+    };
+}
+
+const CLASS_DISPLAY_NAMES: Record<string, string> = {
+    residential: 'Residential',
+    commercial: 'Commercial',
+    industrial: 'Industrial',
+    institution: 'Institutional',
+    mixed: 'Mixed-Use',
+    infrastructure: 'Infrastructure',
+};
+
+const TYPE_DISPLAY_NAMES: Record<string, string> = {
+    new_build: 'New Construction',
+    refurbishment: 'Refurbishment',
+    extension: 'Extension',
+    fitout: 'Fitout',
+    expansion: 'Expansion',
+    upgrade: 'Upgrade',
+};
+
+export async function fetchProfileExportData(projectId: string): Promise<ProfileExportData | null> {
+    try {
+        const [profile] = await db
+            .select()
+            .from(projectProfiles)
+            .where(eq(projectProfiles.projectId, projectId))
+            .limit(1);
+
+        if (!profile) {
+            return null;
+        }
+
+        const [objectives] = await db
+            .select()
+            .from(profilerObjectives)
+            .where(eq(profilerObjectives.projectId, projectId))
+            .limit(1);
+
+        const buildingClass = profile.buildingClass || '';
+        const projectType = profile.projectType || '';
+
+        let parsedObjectives: { functionalQuality: string; planningCompliance: string } | undefined;
+        if (objectives) {
+            const fq = objectives.functionalQuality ? JSON.parse(objectives.functionalQuality) : null;
+            const pc = objectives.planningCompliance ? JSON.parse(objectives.planningCompliance) : null;
+            if (fq?.content || pc?.content) {
+                parsedObjectives = {
+                    functionalQuality: fq?.content || '',
+                    planningCompliance: pc?.content || '',
+                };
+            }
+        }
+
+        return {
+            buildingClass,
+            buildingClassDisplay: CLASS_DISPLAY_NAMES[buildingClass] || buildingClass,
+            projectType,
+            projectTypeDisplay: TYPE_DISPLAY_NAMES[projectType] || projectType,
+            subclass: JSON.parse(profile.subclass || '[]'),
+            scaleData: JSON.parse(profile.scaleData || '{}'),
+            complexity: JSON.parse(profile.complexity || '{}'),
+            complexityScore: profile.complexityScore || 1,
+            workScope: JSON.parse(profile.workScope || '[]'),
+            objectives: parsedObjectives,
+        };
+    } catch (error) {
+        console.error('[planning-context] Failed to fetch profile export data:', error);
+        return null;
+    }
+}
+
+/**
+ * T064: Legacy projectType Fallback (INT-005)
+ * Maps old single projectType to new class/type/subclass structure
+ */
+export interface LegacyMapping {
+    buildingClass: string;
+    projectType: string;
+    subclass: string[];
+}
+
+const LEGACY_PROJECT_TYPE_MAP: Record<string, LegacyMapping> = {
+    // Old residential types
+    'single_dwelling': { buildingClass: 'residential', projectType: 'new_build', subclass: ['house'] },
+    'multi_dwelling': { buildingClass: 'residential', projectType: 'new_build', subclass: ['apartments'] },
+    'apartment_building': { buildingClass: 'residential', projectType: 'new_build', subclass: ['apartments'] },
+    'townhouse': { buildingClass: 'residential', projectType: 'new_build', subclass: ['townhouse'] },
+    'aged_care': { buildingClass: 'residential', projectType: 'new_build', subclass: ['aged_care_9c'] },
+
+    // Old commercial types
+    'office_building': { buildingClass: 'commercial', projectType: 'new_build', subclass: ['office'] },
+    'retail': { buildingClass: 'commercial', projectType: 'new_build', subclass: ['retail_shopping'] },
+    'hotel': { buildingClass: 'commercial', projectType: 'new_build', subclass: ['hotel'] },
+
+    // Old industrial types
+    'warehouse': { buildingClass: 'industrial', projectType: 'new_build', subclass: ['warehouse'] },
+    'factory': { buildingClass: 'industrial', projectType: 'new_build', subclass: ['manufacturing'] },
+    'data_center': { buildingClass: 'industrial', projectType: 'new_build', subclass: ['data_centre'] },
+
+    // Old institutional types
+    'school': { buildingClass: 'institution', projectType: 'new_build', subclass: ['education_school'] },
+    'hospital': { buildingClass: 'institution', projectType: 'new_build', subclass: ['healthcare_hospital'] },
+    'university': { buildingClass: 'institution', projectType: 'new_build', subclass: ['education_tertiary'] },
+
+    // Generic fallbacks
+    'commercial': { buildingClass: 'commercial', projectType: 'new_build', subclass: [] },
+    'residential': { buildingClass: 'residential', projectType: 'new_build', subclass: [] },
+    'industrial': { buildingClass: 'industrial', projectType: 'new_build', subclass: [] },
+    'mixed_use': { buildingClass: 'mixed', projectType: 'new_build', subclass: [] },
+};
+
+export function mapLegacyProjectType(legacyType: string): LegacyMapping {
+    const normalized = legacyType.toLowerCase().replace(/[\s-]+/g, '_');
+    return LEGACY_PROJECT_TYPE_MAP[normalized] || {
+        buildingClass: 'commercial',
+        projectType: 'new_build',
+        subclass: [],
+    };
+}
+
+/**
+ * Format profile data as markdown for reports
+ */
+export function formatProfileForReport(profile: ProfileExportData): string {
+    const sections: string[] = [];
+
+    sections.push(`## Project Profile
+
+| Attribute | Value |
+|-----------|-------|
+| Building Class | ${profile.buildingClassDisplay} |
+| Project Type | ${profile.projectTypeDisplay} |
+| Subclass | ${profile.subclass.join(', ') || 'Not specified'} |
+| Complexity Score | ${profile.complexityScore}/10 |`);
+
+    // Scale data
+    if (Object.keys(profile.scaleData).length > 0) {
+        const scaleRows = Object.entries(profile.scaleData)
+            .map(([key, value]) => `| ${key.replace(/_/g, ' ')} | ${value} |`)
+            .join('\n');
+        sections.push(`### Scale
+| Metric | Value |
+|--------|-------|
+${scaleRows}`);
+    }
+
+    // Objectives
+    if (profile.objectives) {
+        if (profile.objectives.functionalQuality) {
+            sections.push(`### Functional & Quality Objectives
+${profile.objectives.functionalQuality}`);
+        }
+        if (profile.objectives.planningCompliance) {
+            sections.push(`### Planning & Compliance Objectives
+${profile.objectives.planningCompliance}`);
+        }
+    }
+
+    return sections.join('\n\n');
 }

@@ -13,7 +13,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
-import EditableContentArea from './EditableContentArea';
+import VisualEditor from './VisualEditor';
 import RefreshConfirmationModal from './RefreshConfirmationModal';
 
 interface UnifiedReportEditorProps {
@@ -164,15 +164,14 @@ export default function UnifiedReportEditor({
   }, [onRefresh, toast]);
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e1e] text-gray-100">
-      {/* Editable Content Area */}
-      <div className="flex-1 overflow-auto">
-        <EditableContentArea
-          content={content}
-          onChange={handleContentChange}
-          onSave={handleSave}
-        />
-      </div>
+    <div className="flex flex-col h-full bg-[var(--color-bg-primary)] text-gray-100">
+      {/* Visual Editor with Toolbar */}
+      <VisualEditor
+        content={content}
+        onChange={handleContentChange}
+        onSave={handleSave}
+        placeholder="Start editing your report..."
+      />
 
       {/* Refresh Confirmation Modal */}
       <RefreshConfirmationModal

@@ -7,7 +7,7 @@
  */
 
 import { db } from '@/lib/db';
-import { costLines, consultantDisciplines, contractorTrades } from '@/lib/db';
+import { costLines } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 
 // ============================================================================
@@ -135,15 +135,14 @@ export async function matchCostLine(
   const searchText = reference.trim();
   console.log(`[cost-line-matcher] Searching for: "${searchText}" in project ${projectId}`);
 
-  // Fetch all cost lines for this project with their related discipline/trade
+  // Fetch all cost lines for this project with stakeholder info
   const projectCostLines = await db.query.costLines.findMany({
     where: and(
       eq(costLines.projectId, projectId),
       isNull(costLines.deletedAt)
     ),
     with: {
-      discipline: true,
-      trade: true,
+      stakeholder: true,
     },
   });
 
@@ -171,8 +170,8 @@ export async function matchCostLine(
             section: line.section,
             matchScore: score,
             matchType: 'exact',
-            disciplineName: line.discipline?.disciplineName,
-            tradeName: line.trade?.tradeName,
+            disciplineName: line.stakeholder?.name,
+            tradeName: undefined,
           };
         }
       }
@@ -189,43 +188,25 @@ export async function matchCostLine(
         section: line.section,
         matchScore: activityScore,
         matchType: activityScore >= 0.9 ? 'exact' : activityScore >= 0.7 ? 'partial' : 'fuzzy',
-        disciplineName: line.discipline?.disciplineName,
-        tradeName: line.trade?.tradeName,
+        disciplineName: line.stakeholder?.name,
+        tradeName: undefined,
       };
     }
 
-    // Check against discipline name
-    if (line.discipline?.disciplineName) {
-      const disciplineScore = calculateSimilarity(searchText, line.discipline.disciplineName);
-      if (disciplineScore > bestScore && disciplineScore >= 0.7) {
-        bestScore = disciplineScore;
+    // Check against stakeholder name (discipline/trade)
+    if (line.stakeholder?.name) {
+      const stakeholderScore = calculateSimilarity(searchText, line.stakeholder.name);
+      if (stakeholderScore > bestScore && stakeholderScore >= 0.7) {
+        bestScore = stakeholderScore;
         bestMatch = {
           costLineId: line.id,
           costCode: line.costCode,
           activity: line.activity,
           section: line.section,
-          matchScore: disciplineScore,
-          matchType: disciplineScore >= 0.9 ? 'exact' : 'partial',
-          disciplineName: line.discipline.disciplineName,
+          matchScore: stakeholderScore,
+          matchType: stakeholderScore >= 0.9 ? 'exact' : 'partial',
+          disciplineName: line.stakeholder.name,
           tradeName: undefined,
-        };
-      }
-    }
-
-    // Check against trade name
-    if (line.trade?.tradeName) {
-      const tradeScore = calculateSimilarity(searchText, line.trade.tradeName);
-      if (tradeScore > bestScore && tradeScore >= 0.7) {
-        bestScore = tradeScore;
-        bestMatch = {
-          costLineId: line.id,
-          costCode: line.costCode,
-          activity: line.activity,
-          section: line.section,
-          matchScore: tradeScore,
-          matchType: tradeScore >= 0.9 ? 'exact' : 'partial',
-          disciplineName: undefined,
-          tradeName: line.trade.tradeName,
         };
       }
     }
@@ -256,8 +237,7 @@ export async function searchCostLines(
       isNull(costLines.deletedAt)
     ),
     with: {
-      discipline: true,
-      trade: true,
+      stakeholder: true,
     },
   });
 
@@ -266,14 +246,11 @@ export async function searchCostLines(
   for (const line of projectCostLines) {
     const activityScore = calculateSimilarity(searchTerm, line.activity);
     const codeScore = line.costCode ? calculateSimilarity(searchTerm, line.costCode) : 0;
-    const disciplineScore = line.discipline?.disciplineName
-      ? calculateSimilarity(searchTerm, line.discipline.disciplineName)
-      : 0;
-    const tradeScore = line.trade?.tradeName
-      ? calculateSimilarity(searchTerm, line.trade.tradeName)
+    const stakeholderScore = line.stakeholder?.name
+      ? calculateSimilarity(searchTerm, line.stakeholder.name)
       : 0;
 
-    const bestScore = Math.max(activityScore, codeScore, disciplineScore, tradeScore);
+    const bestScore = Math.max(activityScore, codeScore, stakeholderScore);
 
     if (bestScore >= 0.3) {
       matches.push({
@@ -283,8 +260,8 @@ export async function searchCostLines(
         section: line.section,
         matchScore: bestScore,
         matchType: bestScore >= 0.9 ? 'exact' : bestScore >= 0.7 ? 'partial' : 'fuzzy',
-        disciplineName: line.discipline?.disciplineName,
-        tradeName: line.trade?.tradeName,
+        disciplineName: line.stakeholder?.name,
+        tradeName: undefined,
       });
     }
   }

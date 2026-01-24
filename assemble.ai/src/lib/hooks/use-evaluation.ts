@@ -18,8 +18,7 @@ import type {
 
 interface UseEvaluationOptions {
     projectId: string;
-    disciplineId?: string;
-    tradeId?: string;
+    stakeholderId?: string;
 }
 
 // T048-T051: Parse result for UI feedback
@@ -48,6 +47,7 @@ interface UseEvaluationReturn {
     isSaving: boolean;
     isParsing: boolean;
     parsingFirmId: string | null;
+    firmType: 'consultant' | 'contractor';
 
     // Actions
     refresh: () => Promise<void>;
@@ -71,8 +71,7 @@ const DEBOUNCE_DELAY = 500;
 
 export function useEvaluation({
     projectId,
-    disciplineId,
-    tradeId,
+    stakeholderId,
 }: UseEvaluationOptions): UseEvaluationReturn {
     const [data, setData] = useState<EvaluationData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -87,8 +86,12 @@ export function useEvaluation({
     const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const pendingUpdatesRef = useRef<Map<string, UpdateCellRequest>>(new Map());
 
-    const contextType = disciplineId ? 'discipline' : 'trade';
-    const contextId = disciplineId || tradeId;
+    // Use stakeholder context - contextType kept for URL compatibility
+    const contextType = 'stakeholder';
+    const contextId = stakeholderId;
+
+    // Determine firm type from loaded data (first firm's type)
+    const firmType: 'consultant' | 'contractor' = data?.firms?.[0]?.firmType || 'consultant';
 
     // Fetch evaluation data
     const fetchData = useCallback(async () => {
@@ -482,6 +485,7 @@ export function useEvaluation({
         isSaving,
         isParsing,
         parsingFirmId,
+        firmType,
         refresh: fetchData,
         updateCell,
         addRow,

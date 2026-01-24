@@ -22,6 +22,7 @@ export const COLORS = {
     secondary: '#858585',
     muted: '#6e6e6e',
     white: '#ffffff',
+    inverse: '#141618',
   },
   border: {
     primary: '#3e3e42',
@@ -30,11 +31,12 @@ export const COLORS = {
   },
   accent: {
     blue: '#0e639c',
-    costPlan: '#B85C5C',
+    costPlan: '#D4A574',
     variation: '#D4A574',
-    invoice: '#6B9BD1',
+    invoice: '#D4A574',
     green: '#4ade80',
     red: '#f87171',
+    copper: '#D4A574',
   },
 };
 
@@ -149,8 +151,8 @@ export interface CellStyle {
  * Header row style
  */
 export const HEADER_STYLE: CellStyle = {
-  bg: COLORS.accent.costPlan,
-  fc: COLORS.text.white,
+  bg: COLORS.accent.copper,
+  fc: COLORS.text.inverse,
   bl: 1,
   ht: 0, // Center
   fs: 11,

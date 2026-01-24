@@ -87,12 +87,12 @@ function SortableFeeItem({ item, onUpdate, onDelete }: SortableFeeItemProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 py-1.5 px-2 bg-[#2d2d30] rounded border border-[#3e3e42] group hover:border-[#505050]"
+      className="flex items-center gap-2 py-1.5 px-2 bg-[var(--color-bg-tertiary)] rounded border border-[var(--color-border)] group hover:border-[var(--color-border-strong)] transition-colors"
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab text-[#858585] hover:text-[#cccccc] touch-none"
+        className="cursor-grab text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] touch-none"
       >
         <GripVertical className="w-3.5 h-3.5" />
       </button>
@@ -104,13 +104,13 @@ function SortableFeeItem({ item, onUpdate, onDelete }: SortableFeeItemProps) {
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 h-6 text-xs bg-[#3c3c3c] border-[#007acc] text-[#cccccc]"
+            className="flex-1 h-6 text-xs bg-[var(--color-bg-tertiary)] border-[var(--color-accent-green)] text-[var(--color-text-primary)]"
           />
           <Button
             size="sm"
             variant="ghost"
             onClick={handleSave}
-            className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-[#3e3e42]"
+            className="h-6 w-6 p-0 text-green-400 hover:text-green-300 hover:bg-[var(--color-border)]"
           >
             <Check className="w-3.5 h-3.5" />
           </Button>
@@ -118,7 +118,7 @@ function SortableFeeItem({ item, onUpdate, onDelete }: SortableFeeItemProps) {
             size="sm"
             variant="ghost"
             onClick={handleCancel}
-            className="h-6 w-6 p-0 text-[#858585] hover:text-[#cccccc] hover:bg-[#3e3e42]"
+            className="h-6 w-6 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
           >
             <X className="w-3.5 h-3.5" />
           </Button>
@@ -126,7 +126,7 @@ function SortableFeeItem({ item, onUpdate, onDelete }: SortableFeeItemProps) {
       ) : (
         <>
           <span
-            className="flex-1 text-xs text-[#cccccc] cursor-pointer hover:text-white"
+            className="flex-1 text-xs text-[var(--color-text-primary)] cursor-pointer hover:text-white"
             onClick={() => setIsEditing(true)}
           >
             {item.description}
@@ -135,7 +135,7 @@ function SortableFeeItem({ item, onUpdate, onDelete }: SortableFeeItemProps) {
             size="sm"
             variant="ghost"
             onClick={() => onDelete(item.id)}
-            className="h-6 w-6 p-0 text-[#858585] hover:text-red-400 hover:bg-[#3e3e42] opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-6 w-6 p-0 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-border)] opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <Trash2 className="w-3 h-3" />
           </Button>
@@ -194,7 +194,7 @@ export function FeeStructureSection({ disciplineId, disciplineName }: FeeStructu
 
   if (!disciplineId) {
     return (
-      <div className="text-xs text-[#858585] italic">
+      <div className="text-xs text-[var(--color-text-muted)] italic">
         Select a discipline to manage fee structure
       </div>
     );
@@ -203,14 +203,14 @@ export function FeeStructureSection({ disciplineId, disciplineName }: FeeStructu
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-medium text-[#cccccc]">
+        <h4 className="text-xs font-medium text-[var(--color-text-primary)]">
           Fee Structure ({items.length} items)
         </h4>
         <Button
           size="sm"
           variant="ghost"
           onClick={() => setIsAdding(true)}
-          className="h-6 px-2 text-xs text-[#007acc] hover:text-[#3794ff] hover:bg-[#3e3e42]"
+          className="h-6 px-2 text-xs text-[var(--color-accent-green)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] transition-colors"
         >
           <Plus className="w-3 h-3 mr-1" />
           Add Item
@@ -218,7 +218,7 @@ export function FeeStructureSection({ disciplineId, disciplineName }: FeeStructu
       </div>
 
       {isLoading ? (
-        <div className="text-xs text-[#858585]">Loading...</div>
+        <div className="text-xs text-[var(--color-text-muted)]">Loading...</div>
       ) : (
         <DndContext
           sensors={sensors}
@@ -248,14 +248,14 @@ export function FeeStructureSection({ disciplineId, disciplineName }: FeeStructu
             onChange={(e) => setNewItemText(e.target.value)}
             onKeyDown={handleAddKeyDown}
             placeholder="Enter fee item description..."
-            className="flex-1 h-7 text-xs bg-[#3c3c3c] border-[#007acc] text-[#cccccc]"
+            className="flex-1 h-7 text-xs bg-[var(--color-bg-tertiary)] border-[var(--color-accent-green)] text-[var(--color-text-primary)]"
           />
           <Button
             size="sm"
             variant="ghost"
             onClick={handleAddItem}
             disabled={!newItemText.trim()}
-            className="h-7 px-2 text-green-400 hover:text-green-300 hover:bg-[#3e3e42]"
+            className="h-7 px-2 text-green-400 hover:text-green-300 hover:bg-[var(--color-border)]"
           >
             <Check className="w-3.5 h-3.5" />
           </Button>
@@ -266,7 +266,7 @@ export function FeeStructureSection({ disciplineId, disciplineName }: FeeStructu
               setNewItemText('');
               setIsAdding(false);
             }}
-            className="h-7 px-2 text-[#858585] hover:text-[#cccccc] hover:bg-[#3e3e42]"
+            className="h-7 px-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
           >
             <X className="w-3.5 h-3.5" />
           </Button>
@@ -274,7 +274,7 @@ export function FeeStructureSection({ disciplineId, disciplineName }: FeeStructu
       )}
 
       {items.length === 0 && !isAdding && !isLoading && (
-        <div className="text-xs text-[#858585] italic py-2">
+        <div className="text-xs text-[var(--color-text-muted)] italic py-2">
           No fee items defined. Click &quot;Add Item&quot; to create fee structure line items.
         </div>
       )}

@@ -53,6 +53,15 @@ export async function PUT(
         // Validate input
         const validated = projectDetailsSchema.parse(body);
 
+        // Convert empty strings to null for integer fields (PostgreSQL requirement)
+        const sanitized = {
+            ...validated,
+            lotArea: validated.lotArea === '' || validated.lotArea === undefined ? null :
+                     typeof validated.lotArea === 'string' ? parseInt(validated.lotArea, 10) : validated.lotArea,
+            numberOfStories: validated.numberOfStories === '' || validated.numberOfStories === undefined ? null :
+                            typeof validated.numberOfStories === 'string' ? parseInt(validated.numberOfStories, 10) : validated.numberOfStories,
+        };
+
         // Check if details exist
         const [existing] = await db.select().from(projectDetails).where(eq(projectDetails.projectId, projectId));
 
@@ -60,7 +69,7 @@ export async function PUT(
             // Update existing
             await db.update(projectDetails)
                 .set({
-                    ...validated,
+                    ...sanitized,
                     updatedAt: new Date(),
                 })
                 .where(eq(projectDetails.projectId, projectId));
@@ -69,15 +78,15 @@ export async function PUT(
             await db.insert(projectDetails).values({
                 id: crypto.randomUUID(),
                 projectId,
-                ...validated,
+                ...sanitized,
             });
         }
 
         // Also update the main projects table name if projectName changed
-        if (validated.projectName) {
+        if (sanitized.projectName) {
             await db.update(projects)
                 .set({
-                    name: validated.projectName,
+                    name: sanitized.projectName,
                     updatedAt: new Date(),
                 })
                 .where(eq(projects.id, projectId));

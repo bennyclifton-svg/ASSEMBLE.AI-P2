@@ -135,19 +135,19 @@ export function SnapshotDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-[#3e3e42] flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <Camera className="w-5 h-5" />
               Cost Plan Snapshots
             </h2>
-            <p className="text-sm text-[#858585]">{projectName}</p>
+            <p className="text-sm text-[var(--color-text-muted)]">{projectName}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-[#858585] hover:text-white rounded transition-colors"
+            className="p-1 text-[var(--color-text-muted)] hover:text-white rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -155,7 +155,7 @@ export function SnapshotDialog({
 
         {/* Create Form */}
         {showCreateForm && (
-          <div className="px-4 py-4 border-b border-[#3e3e42] bg-[#1e1e1e]">
+          <div className="px-4 py-4 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)]">
             <h3 className="text-sm font-medium text-white mb-3">Create New Snapshot</h3>
 
             <div className="space-y-3">

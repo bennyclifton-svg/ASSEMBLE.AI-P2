@@ -50,14 +50,14 @@ export function AddFirmButton({ onAdd, onFileDrop }: AddFirmButtonProps) {
   // Using h-[53px] for inner content (28 + 4 + 18 = 50px, plus some flex)
   // Border style matches Document upload tile (CategoryTile with isUploadTile)
   const getBorderColor = () => {
-    if (isDragOver || isHovered) return 'border-[#0e639c]';
-    return 'border-[#555555]';
+    if (isDragOver || isHovered) return 'border-[var(--color-accent-teal)]';
+    return 'border-[var(--color-border-strong)]';
   };
 
   const getBackgroundStyle = () => {
-    if (isDragOver) return 'bg-[#0e639c]/10';
-    if (isHovered) return 'bg-[#0e639c]/5';
-    return 'bg-[#252526]';
+    if (isDragOver) return 'bg-[var(--color-accent-teal)]/10';
+    if (isHovered) return 'bg-[var(--color-accent-teal)]/5';
+    return 'bg-[var(--color-bg-secondary)]';
   };
 
   return (
@@ -79,7 +79,7 @@ export function AddFirmButton({ onAdd, onFileDrop }: AddFirmButtonProps) {
       <Plus
         className={`
           w-6 h-6 transition-colors
-          ${isDragOver || isHovered ? 'text-[#0e639c]' : 'text-[#858585]'}
+          ${isDragOver || isHovered ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)]'}
         `}
       />
 

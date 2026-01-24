@@ -7,8 +7,7 @@ import {
     projectDetails,
     projectObjectives,
     programActivities,
-    consultantDisciplines,
-    contractorTrades,
+    projectStakeholders,
     costLines,
     rftNewTransmittals,
     documents,
@@ -84,58 +83,30 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // 4. Fetch Brief Data & Cost Lines
         let briefData = { service: '', deliverables: '', contextName: '' };
         let feeItems: any[] = [];
-        let contextType = 'Unknown';
 
-        if (report.disciplineId) {
-            contextType = 'Discipline';
-            const [discipline] = await db
+        if (report.stakeholderId) {
+            const [stakeholder] = await db
                 .select()
-                .from(consultantDisciplines)
-                .where(eq(consultantDisciplines.id, report.disciplineId))
+                .from(projectStakeholders)
+                .where(eq(projectStakeholders.id, report.stakeholderId))
                 .limit(1);
 
-            if (discipline) {
+            if (stakeholder) {
                 briefData = {
-                    service: discipline.briefServices || '',
-                    deliverables: discipline.briefDeliverables || '',
-                    contextName: discipline.disciplineName,
+                    service: stakeholder.briefServices || '',
+                    deliverables: stakeholder.briefDeliverables || '',
+                    contextName: stakeholder.name,
                 };
             }
 
-            // Fetch Cost Lines for Discipline
+            // Fetch Cost Lines for Stakeholder
             feeItems = await db
                 .select({
                     id: costLines.id,
                     activity: costLines.activity,
                 })
                 .from(costLines)
-                .where(eq(costLines.disciplineId, report.disciplineId))
-                .orderBy(asc(costLines.sortOrder));
-
-        } else if (report.tradeId) {
-            contextType = 'Trade';
-            const [trade] = await db
-                .select()
-                .from(contractorTrades)
-                .where(eq(contractorTrades.id, report.tradeId))
-                .limit(1);
-
-            if (trade) {
-                briefData = {
-                    service: trade.scopeWorks || '',
-                    deliverables: trade.scopeDeliverables || '',
-                    contextName: trade.tradeName,
-                };
-            }
-
-            // Fetch Cost Lines for Trade
-            feeItems = await db
-                .select({
-                    id: costLines.id,
-                    activity: costLines.activity,
-                })
-                .from(costLines)
-                .where(eq(costLines.tradeId, report.tradeId))
+                .where(eq(costLines.stakeholderId, report.stakeholderId))
                 .orderBy(asc(costLines.sortOrder));
         }
 

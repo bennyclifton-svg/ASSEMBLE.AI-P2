@@ -1,0 +1,4555 @@
+{
+  "consultantTemplates": {
+    "version": "3.0",
+    "lastUpdated": "2024-12-20",
+    "description": "Comprehensive consultant services and deliverables template. Services are ongoing activities/work performed. Deliverables are tangible outputs/documents produced.",
+    "standards": {
+      "buildingCode": "NCC 2022",
+      "sustainabilityFrameworks": ["Green Star", "NABERS", "BASIX", "NatHERS", "WELL", "Climate Active"],
+      "bimStandard": "ISO 19650 / NATSPEC BIM"
+    },
+    
+    "standardPhases": {
+      "description": "Standard phase definitions aligned with Australian practice. All disciplines map to these where applicable.",
+      "phases": {
+        "feasibility": {
+          "name": "Feasibility / Pre-Design",
+          "description": "Initial assessment, site analysis, constraints identification",
+          "typicalDuration": "2-6 weeks"
+        },
+        "schematic_design": {
+          "name": "Schematic Design / Concept",
+          "description": "Concept development, preliminary design, initial costings",
+          "typicalDuration": "4-8 weeks"
+        },
+        "design_development": {
+          "name": "Design Development",
+          "description": "Detailed design, coordination, value engineering",
+          "typicalDuration": "6-12 weeks"
+        },
+        "town_planning": {
+          "name": "Town Planning / DA",
+          "description": "Development application preparation and approval",
+          "typicalDuration": "12-26 weeks"
+        },
+        "construction_documentation": {
+          "name": "Construction Documentation",
+          "description": "Detailed documentation for construction",
+          "typicalDuration": "8-16 weeks"
+        },
+        "tender": {
+          "name": "Tender",
+          "description": "Procurement and tender process",
+          "typicalDuration": "4-8 weeks"
+        },
+        "contract_administration": {
+          "name": "Contract Administration / Construction",
+          "description": "Construction phase services and administration",
+          "typicalDuration": "Project dependent"
+        },
+        "completion": {
+          "name": "Post-Construction / Completion",
+          "description": "Practical completion, defects, handover",
+          "typicalDuration": "4-12 weeks"
+        }
+      }
+    },
+
+    "projectTypes": {
+      "due-diligence": {
+        "name": "Due Diligence",
+        "description": "Pre-acquisition assessment of existing asset",
+        "typicalScale": "N/A"
+      },
+      "feasibility": {
+        "name": "Feasibility Study",
+        "description": "Development viability assessment for potential sites",
+        "typicalScale": "N/A"
+      },
+      "house": {
+        "name": "House",
+        "description": "Single detached dwelling",
+        "typicalScale": "small",
+        "typicalGFA": "150-500 m²"
+      },
+      "apartments": {
+        "name": "Apartments",
+        "description": "Multi-unit residential (Class 2)",
+        "typicalScale": "medium-large",
+        "subtypes": ["low-rise", "mid-rise", "high-rise"],
+        "typicalGFA": "1,000-50,000+ m²"
+      },
+      "townhouses": {
+        "name": "Townhouses",
+        "description": "Attached dwellings / terraces",
+        "typicalScale": "small-medium",
+        "typicalGFA": "500-5,000 m²"
+      },
+      "retirement-living": {
+        "name": "Retirement Living",
+        "description": "Independent living units, aged care villages",
+        "typicalScale": "medium-large",
+        "typicalGFA": "2,000-30,000 m²"
+      },
+      "office": {
+        "name": "Office",
+        "description": "Commercial office building (Class 5)",
+        "typicalScale": "medium-large",
+        "subtypes": ["A-grade", "B-grade", "premium"],
+        "typicalGFA": "1,000-100,000+ m²"
+      },
+      "retail": {
+        "name": "Retail",
+        "description": "Shops, shopping centres (Class 6)",
+        "typicalScale": "small-large",
+        "subtypes": ["single-tenancy", "strip-retail", "shopping-centre"],
+        "typicalGFA": "100-100,000+ m²"
+      },
+      "industrial": {
+        "name": "Industrial",
+        "description": "Warehouse, manufacturing, logistics (Class 7/8)",
+        "typicalScale": "medium-large",
+        "subtypes": ["warehouse", "cold-storage", "manufacturing", "data-centre"],
+        "typicalGFA": "1,000-100,000+ m²"
+      },
+      "fitout": {
+        "name": "Fitout",
+        "description": "Interior fitout of existing base building",
+        "typicalScale": "small-medium",
+        "subtypes": ["office-fitout", "retail-fitout", "hospitality-fitout"],
+        "typicalGFA": "100-10,000 m²"
+      },
+      "refurbishment": {
+        "name": "Refurbishment",
+        "description": "Upgrade of existing building",
+        "typicalScale": "varies",
+        "subtypes": ["facade-upgrade", "services-upgrade", "full-refurbishment"]
+      },
+      "remediation": {
+        "name": "Remediation",
+        "description": "Contamination remediation, hazmat removal",
+        "typicalScale": "varies"
+      },
+      "mixed-use": {
+        "name": "Mixed Use",
+        "description": "Combined residential, retail, commercial",
+        "typicalScale": "medium-large",
+        "typicalGFA": "5,000-100,000+ m²"
+      }
+    },
+
+    "disciplines": {
+      "architect": {
+        "name": "Architect",
+        "abbrev": "ARC",
+        "category": "design",
+        "applicableProjectTypes": ["all"],
+        "typicalFeeRange": {
+          "percentage": "4-8%",
+          "basis": "construction cost",
+          "notes": "Varies by project complexity and service scope"
+        },
+        "coordinationRequired": ["STR", "MEC", "ELE", "HYD", "LAN", "INT", "BSC"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Site inspection and analysis",
+              "Preliminary massing studies",
+              "Initial client briefing"
+            ],
+            "deliverables": [
+              {
+                "item": "Site analysis report",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Preliminary massing diagrams",
+                "format": "PDF/SketchUp",
+                "mandatory": false
+              }
+            ],
+            "exclusions": ["Detailed design work", "DA documentation"]
+          },
+          "schematic_design": {
+            "services": [
+              "Site analysis and constraints review",
+              "Client briefing and requirements gathering",
+              "Design options development (minimum 2 options)",
+              "Design team coordination",
+              "Council pre-lodgement meetings attendance",
+              "Client presentations and workshops",
+              "Design review sessions",
+              "BIM model establishment (LOD 100-200)"
+            ],
+            "deliverables": [
+              {
+                "item": "Site analysis and constraints diagram",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Concept design options (minimum 2)",
+                "format": "PDF/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Preferred concept drawings",
+                "format": "PDF/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Floor plans (1:200)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Sections (1:200)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Elevations (1:200)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "3D massing model",
+                "format": "Revit/SketchUp/Rhino",
+                "mandatory": true
+              },
+              {
+                "item": "Preliminary area schedule (GFA/NLA)",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Schematic design report",
+                "format": "PDF",
+                "mandatory": true,
+                "contents": ["Design rationale", "Planning compliance summary", "Sustainability approach", "Preliminary materials palette"]
+              },
+              {
+                "item": "BIM model (LOD 200)",
+                "format": "RVT/IFC",
+                "mandatory": false
+              }
+            ],
+            "exclusions": ["Detailed joinery design", "Specification writing"]
+          },
+          "design_development": {
+            "services": [
+              "Design refinement and development",
+              "Consultant coordination meetings (fortnightly minimum)",
+              "Council liaison and negotiations",
+              "Value management workshops",
+              "Design review sessions with client",
+              "Buildability reviews with builder (if appointed)",
+              "BIM model development (LOD 200-300)",
+              "Clash detection coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Developed floor plans (1:100)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Developed sections (1:100)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Developed elevations (1:100)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Reflected ceiling plans",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Door schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Window schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Area schedule (NLA/GFA/efficiency)",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Room data sheets",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Materials and finishes schedule",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Design development report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "BIM model (LOD 300)",
+                "format": "RVT/IFC",
+                "mandatory": false
+              }
+            ],
+            "exclusions": ["Shop drawing preparation"]
+          },
+          "town_planning": {
+            "services": [
+              "DA drawing preparation",
+              "Planning consultant coordination",
+              "Response to council RFIs",
+              "Design amendments for approval"
+            ],
+            "deliverables": [
+              {
+                "item": "DA architectural drawings set",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Shadow diagrams",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "View analysis (if required)",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Design statement / SEPP 65 Design Report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation development and coordination",
+              "Consultant drawing coordination",
+              "Specification writing and coordination",
+              "Drawing reviews and checking",
+              "Pre-tender queries response",
+              "BIM model finalization (LOD 350-400)"
+            ],
+            "deliverables": [
+              {
+                "item": "Construction floor plans (1:50)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Construction sections (1:50)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Construction elevations (1:50)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Architectural details (1:5, 1:10, 1:20)",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Door details and schedule",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Window details and schedule",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Finishes schedule",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Architectural specification (NatSpec format)",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Coordinated drawing set",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "BIM model for construction (LOD 350)",
+                "format": "RVT/IFC",
+                "mandatory": false
+              }
+            ]
+          },
+          "tender": {
+            "services": [
+              "Tender documentation compilation",
+              "Tender queries response",
+              "Tender interviews attendance",
+              "Tender evaluation support"
+            ],
+            "deliverables": [
+              {
+                "item": "Tender drawing set",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Tender addenda (as required)",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Site inspections (fortnightly minimum)",
+              "Site meetings attendance",
+              "RFI response and clarifications",
+              "Variation assessment and recommendation",
+              "Progress claim architectural review",
+              "Shop drawing review",
+              "Sample and mock-up review",
+              "Defects inspections"
+            ],
+            "deliverables": [
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "RFI responses",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Variation assessments",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Shop drawing review comments",
+                "format": "PDF/Marked-up drawings",
+                "mandatory": true
+              },
+              {
+                "item": "Practical completion inspection report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Defects list",
+                "format": "Excel/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final defects inspections",
+              "As-built documentation review",
+              "Handover coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Defects liability certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "As-built drawings (or review of contractor's)",
+                "format": "PDF/DWG",
+                "mandatory": false
+              },
+              {
+                "item": "BIM model as-built (LOD 500)",
+                "format": "RVT/IFC",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "structural": {
+        "name": "Structural Engineer",
+        "abbrev": "STR",
+        "category": "engineering",
+        "applicableProjectTypes": ["all"],
+        "typicalFeeRange": {
+          "percentage": "1.5-3%",
+          "basis": "construction cost"
+        },
+        "coordinationRequired": ["ARC", "GEO", "CIV", "MEC", "ELE", "HYD", "FAC"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Preliminary structural concept review",
+              "Geotechnical report review",
+              "High-level cost input"
+            ],
+            "deliverables": [
+              {
+                "item": "Structural feasibility advice",
+                "format": "Letter/PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Structural system options analysis",
+              "Foundation concept development",
+              "Geotechnical report review and coordination",
+              "Architect coordination for structure zones"
+            ],
+            "deliverables": [
+              {
+                "item": "Structural concept report",
+                "format": "PDF",
+                "mandatory": true,
+                "contents": ["System selection rationale", "Preliminary member sizes", "Foundation concept", "Key assumptions"]
+              },
+              {
+                "item": "Preliminary structural plans",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Structural design criteria document",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed structural analysis",
+              "Foundation design development",
+              "Geotechnical engineer liaison",
+              "Services penetrations coordination",
+              "Design meetings attendance",
+              "BIM model development"
+            ],
+            "deliverables": [
+              {
+                "item": "Structural analysis and calculations",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Foundation design drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Floor framing plans",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Structural sections",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Steel member schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Concrete element schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Design development report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "BIM model (structural)",
+                "format": "RVT/IFC",
+                "mandatory": false
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation coordination",
+              "Services penetration coordination",
+              "Pre-tender queries response",
+              "Specification finalization"
+            ],
+            "deliverables": [
+              {
+                "item": "Structural construction drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Reinforcement details and schedules",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Steel connection details",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Structural specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Shop drawing review requirements",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Shop drawing review",
+              "Site inspections (hold points)",
+              "RFI response",
+              "Variation assessment"
+            ],
+            "deliverables": [
+              {
+                "item": "Shop drawing review reports",
+                "format": "PDF/Marked-up",
+                "mandatory": true
+              },
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "RFI responses",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Hold point release certificates",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final inspections",
+              "Certification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Structural certification (Form 15/16)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "As-built structural drawings",
+                "format": "PDF/DWG",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "civil": {
+        "name": "Civil Engineer",
+        "abbrev": "CIV",
+        "category": "engineering",
+        "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "office", "industrial", "retail", "mixed-use"],
+        "typicalFeeRange": {
+          "percentage": "0.5-1.5%",
+          "basis": "construction cost"
+        },
+        "coordinationRequired": ["ARC", "STR", "HYD", "LAN", "GEO", "TRA"],
+        "notes": "Stormwater scope may overlap with Hydraulic - clarify boundaries at engagement",
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Site constraints review",
+              "Existing services investigation",
+              "Preliminary earthworks assessment"
+            ],
+            "deliverables": [
+              {
+                "item": "Civil feasibility advice",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Site survey review and coordination",
+              "Existing services investigation",
+              "Authority consultation (council, Sydney Water, etc.)",
+              "Stormwater concept development",
+              "WSUD strategy development"
+            ],
+            "deliverables": [
+              {
+                "item": "Existing conditions plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Stormwater concept plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Civil services concept plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Preliminary earthworks assessment",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed stormwater design",
+              "WSUD design development",
+              "Authority applications coordination",
+              "Services coordination",
+              "Earthworks design"
+            ],
+            "deliverables": [
+              {
+                "item": "Stormwater management plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "WSUD design drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Earthworks design drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Pavement design drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Services layout drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "MUSIC model and report",
+                "format": "PDF/MUSIC file",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation finalization",
+              "Authority submission coordination",
+              "Specification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Civil construction drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Stormwater construction details",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Pavement construction details",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Civil specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Authority approval documentation",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Site inspections",
+              "Hold point inspections",
+              "Authority liaison",
+              "RFI response"
+            ],
+            "deliverables": [
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "RFI responses",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final inspections",
+              "As-built coordination",
+              "Authority certification"
+            ],
+            "deliverables": [
+              {
+                "item": "Works-as-executed drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Stormwater certification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Civil certification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Section 73 compliance certificate",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "mechanical": {
+        "name": "Mechanical Engineer",
+        "abbrev": "MEC",
+        "category": "engineering",
+        "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "fitout", "refurbishment", "mixed-use"],
+        "typicalFeeRange": {
+          "percentage": "1-2%",
+          "basis": "construction cost"
+        },
+        "coordinationRequired": ["ARC", "STR", "ELE", "HYD", "FIR", "ESD", "BSC"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "HVAC system options review",
+              "Existing plant assessment (refurbishment)",
+              "High-level cost input"
+            ],
+            "deliverables": [
+              {
+                "item": "Mechanical feasibility advice",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "HVAC system options analysis",
+              "Preliminary load calculations",
+              "Plant space coordination",
+              "Energy efficiency strategy input"
+            ],
+            "deliverables": [
+              {
+                "item": "HVAC system selection report",
+                "format": "PDF",
+                "mandatory": true,
+                "contents": ["System options analysis", "Recommended system", "Preliminary sizing", "Plant space requirements"]
+              },
+              {
+                "item": "Preliminary load calculations",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Plant space requirements schedule",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Schematic mechanical drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed design development",
+              "Equipment selection and sizing",
+              "Controls strategy development",
+              "Services coordination",
+              "Energy modelling input",
+              "BIM model development"
+            ],
+            "deliverables": [
+              {
+                "item": "Detailed load calculations",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Equipment selection schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Ductwork layout drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Pipework layout drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Plant room layout drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Controls strategy document",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "BIM model (mechanical)",
+                "format": "RVT/IFC",
+                "mandatory": false
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation coordination",
+              "Specification preparation",
+              "Services coordination finalization"
+            ],
+            "deliverables": [
+              {
+                "item": "HVAC construction drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Ductwork details and schedules",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Pipework details and schedules",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Equipment schedules",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Controls diagrams and schedules",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Mechanical specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Shop drawing review",
+              "Site inspections",
+              "Commissioning witness",
+              "RFI response"
+            ],
+            "deliverables": [
+              {
+                "item": "Shop drawing review reports",
+                "format": "PDF/Marked-up",
+                "mandatory": true
+              },
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "RFI responses",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Commissioning witness and review",
+              "IEQ verification",
+              "Defects inspection"
+            ],
+            "deliverables": [
+              {
+                "item": "Commissioning witness reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Mechanical certification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "O&M manual review",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "electrical": {
+        "name": "Electrical Engineer",
+        "abbrev": "ELE",
+        "category": "engineering",
+        "applicableProjectTypes": ["all"],
+        "typicalFeeRange": {
+          "percentage": "1-2%",
+          "basis": "construction cost"
+        },
+        "coordinationRequired": ["ARC", "MEC", "HYD", "FIR", "LIG", "SEC", "BSC"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Power supply assessment",
+              "Existing infrastructure review"
+            ],
+            "deliverables": [
+              {
+                "item": "Electrical feasibility advice",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Power supply assessment and application",
+              "Authority consultation (Ausgrid/Endeavour/Essential)",
+              "Preliminary lighting concept",
+              "Essential services review",
+              "Electrical load estimation"
+            ],
+            "deliverables": [
+              {
+                "item": "Power supply assessment report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Preliminary lighting concept",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Essential services schedule",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Electrical load schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Schematic electrical drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed electrical design",
+              "Lighting design development (or coordination with lighting designer)",
+              "Emergency/exit lighting design",
+              "Security/access control coordination",
+              "Communications/data coordination",
+              "Services coordination",
+              "BIM model development"
+            ],
+            "deliverables": [
+              {
+                "item": "Electrical distribution drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Lighting design drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Emergency lighting drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Exit lighting drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Security/access control drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Communications layout drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "BIM model (electrical)",
+                "format": "RVT/IFC",
+                "mandatory": false
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation coordination",
+              "Authority application finalization",
+              "Specification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Electrical construction drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Single line diagrams",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Lighting layouts and schedules",
+                "format": "PDF/DWG/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Power layouts",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Data/communications layouts",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Electrical specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Shop drawing review",
+              "Site inspections",
+              "Commissioning witness",
+              "Authority inspections coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Shop drawing review reports",
+                "format": "PDF/Marked-up",
+                "mandatory": true
+              },
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "RFI responses",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Commissioning witness",
+              "Test certificate review",
+              "Authority certification coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Test certificates review",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Electrical certification (CCEW)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "As-built drawings review",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "hydraulic": {
+        "name": "Hydraulic Engineer",
+        "abbrev": "HYD",
+        "category": "engineering",
+        "applicableProjectTypes": ["house", "apartments", "townhouses", "office", "retail", "industrial", "fitout", "mixed-use"],
+        "typicalFeeRange": {
+          "percentage": "0.5-1.5%",
+          "basis": "construction cost"
+        },
+        "coordinationRequired": ["ARC", "STR", "MEC", "ELE", "FIR", "CIV", "BSC"],
+        "notes": "On-site stormwater detention may overlap with Civil - clarify at engagement",
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "Water supply assessment",
+              "Sewer capacity assessment",
+              "Fire services concept coordination",
+              "Authority consultation (Sydney Water)"
+            ],
+            "deliverables": [
+              {
+                "item": "Sanitary drainage concept plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Water supply concept plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Fire services concept plan (coordination)",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Gas supply assessment",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Section 73 application",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed hydraulic design",
+              "Hot water system design",
+              "Fire services coordination",
+              "Services coordination",
+              "BIM model development"
+            ],
+            "deliverables": [
+              {
+                "item": "Sanitary drainage drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Water supply drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Hot water system drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Stormwater drawings (building)",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Fire services coordination drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Gas reticulation drawings",
+                "format": "PDF/DWG",
+                "mandatory": false
+              },
+              {
+                "item": "BIM model (hydraulic)",
+                "format": "RVT/IFC",
+                "mandatory": false
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation finalization",
+              "Authority submission preparation",
+              "Specification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Hydraulic construction drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Sanitary drainage details",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Water supply details",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Fire services drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Hydraulic specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Shop drawing review",
+              "Site inspections",
+              "Authority inspections coordination",
+              "Testing witness"
+            ],
+            "deliverables": [
+              {
+                "item": "Shop drawing review reports",
+                "format": "PDF/Marked-up",
+                "mandatory": true
+              },
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "RFI responses",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final inspections",
+              "Test certificate review",
+              "Sydney Water certification"
+            ],
+            "deliverables": [
+              {
+                "item": "Test certificates",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Hydraulic certification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Sydney Water compliance certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "As-built drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "fire": {
+        "name": "Fire Engineer",
+        "abbrev": "FIR",
+        "category": "engineering",
+        "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "refurbishment", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$15,000-$100,000+",
+          "notes": "Varies significantly based on complexity and performance solutions required"
+        },
+        "coordinationRequired": ["ARC", "STR", "MEC", "ELE", "HYD", "BCA"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Preliminary BCA review",
+              "Performance solution feasibility",
+              "Early fire strategy input"
+            ],
+            "deliverables": [
+              {
+                "item": "Fire engineering feasibility advice",
+                "format": "PDF/Letter",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "BCA compliance review",
+              "Fire engineering brief development",
+              "Performance solution assessment"
+            ],
+            "deliverables": [
+              {
+                "item": "BCA capability assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Fire engineering brief",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Preliminary fire strategy",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Fire engineering analysis",
+              "Egress modelling (STEPS/Pathfinder)",
+              "CFD modelling (if required)",
+              "Performance solution development",
+              "Peer review coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Fire engineering report",
+                "format": "PDF",
+                "mandatory": true,
+                "contents": ["DTS assessment", "Performance solutions", "Fire safety systems", "Egress analysis"]
+              },
+              {
+                "item": "Performance solution report(s)",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Fire safety schedule (draft)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Egress analysis report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation review",
+              "Fire safety schedule finalization",
+              "Certification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Updated fire engineering report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Fire safety schedule (CC)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Compliance letters (CC)",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Site inspections",
+              "Performance solution compliance monitoring",
+              "Fire system commissioning review"
+            ],
+            "deliverables": [
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Compliance verification letters",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final compliance verification",
+              "Fire safety certificate coordination",
+              "Annual fire safety statement setup"
+            ],
+            "deliverables": [
+              {
+                "item": "Fire engineering certification (OC)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Final fire safety schedule",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Fire safety certificate (Form 1)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Annual fire safety statement template",
+                "format": "PDF/Word",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "facade": {
+        "name": "Façade Engineer",
+        "abbrev": "FAC",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "refurbishment", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$30,000-$150,000+",
+          "notes": "Varies based on façade complexity"
+        },
+        "coordinationRequired": ["ARC", "STR", "MEC", "ESD"],
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "Façade options analysis",
+              "Thermal performance review",
+              "Buildability assessment",
+              "Cost benchmarking"
+            ],
+            "deliverables": [
+              {
+                "item": "Façade concept report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Thermal performance assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Preliminary façade specification",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed façade design",
+              "Thermal modelling",
+              "Structural coordination",
+              "Prototype requirements development"
+            ],
+            "deliverables": [
+              {
+                "item": "Façade design drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Thermal modelling report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Façade system specification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Prototype testing requirements",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation coordination",
+              "Specification finalization"
+            ],
+            "deliverables": [
+              {
+                "item": "Façade construction drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Façade detail drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Façade specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Shop drawing review requirements",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Shop drawing review",
+              "Prototype testing witness",
+              "Site inspections",
+              "Quality assurance review"
+            ],
+            "deliverables": [
+              {
+                "item": "Shop drawing review reports",
+                "format": "PDF/Marked-up",
+                "mandatory": true
+              },
+              {
+                "item": "Prototype test reports review",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final inspections",
+              "Certification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Façade certification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Façade maintenance manual input",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "landscape": {
+        "name": "Landscape Architect",
+        "abbrev": "LAN",
+        "category": "design",
+        "applicableProjectTypes": ["house", "apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "percentage": "0.5-2%",
+          "basis": "landscape construction cost"
+        },
+        "coordinationRequired": ["ARC", "CIV", "HYD", "ELE"],
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "Site analysis",
+              "Landscape concept development",
+              "Client presentations",
+              "Council pre-DA input"
+            ],
+            "deliverables": [
+              {
+                "item": "Landscape concept plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Planting concept",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "External materials palette",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Landscape concept report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "town_planning": {
+            "services": [
+              "DA landscape documentation",
+              "Council liaison",
+              "RFI response"
+            ],
+            "deliverables": [
+              {
+                "item": "DA landscape plan",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Landscape report (DA)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Deep soil / canopy calculations",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed landscape design",
+              "Irrigation design coordination",
+              "External lighting coordination",
+              "Civil coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Detailed landscape plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Planting schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "External lighting layout",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Irrigation concept plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Landscape sections",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation coordination",
+              "Specification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Landscape construction drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Planting details",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Hardscape details",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Irrigation construction drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Landscape specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Site inspections",
+              "Plant quality inspections",
+              "RFI response"
+            ],
+            "deliverables": [
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "RFI responses",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Practical completion inspection",
+              "Defects inspection",
+              "Maintenance period advice"
+            ],
+            "deliverables": [
+              {
+                "item": "Practical completion report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Defects report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Landscape maintenance manual",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "interior_designer": {
+        "name": "Interior Designer",
+        "abbrev": "INT",
+        "category": "design",
+        "applicableProjectTypes": ["apartments", "office", "retail", "fitout", "mixed-use"],
+        "typicalFeeRange": {
+          "percentage": "5-12%",
+          "basis": "fitout construction cost"
+        },
+        "coordinationRequired": ["ARC", "MEC", "ELE", "LIG"],
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "Interior concept development",
+              "Space planning",
+              "Client presentations",
+              "Mood board development"
+            ],
+            "deliverables": [
+              {
+                "item": "Interior concept drawings",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Space plans",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Mood boards",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Materials palette",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Concept renders",
+                "format": "PDF/JPG",
+                "mandatory": false
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed interior design",
+              "FF&E selection",
+              "Joinery design",
+              "Services coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Detailed interior drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Joinery drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "FF&E schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Finishes schedule",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Interior elevations",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation coordination",
+              "Specification preparation",
+              "FF&E procurement coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Interior construction drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Joinery details",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Interior specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "FF&E procurement schedule",
+                "format": "Excel",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Site inspections",
+              "Quality review",
+              "FF&E installation coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Defects list",
+                "format": "Excel/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final inspection",
+              "Styling coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Completion certificate",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "town_planner": {
+        "name": "Town Planner",
+        "abbrev": "PLN",
+        "category": "approval",
+        "applicableProjectTypes": ["feasibility", "house", "apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$10,000-$80,000+",
+          "notes": "Varies by project complexity and approval pathway"
+        },
+        "coordinationRequired": ["ARC", "TRA", "LAN", "ENV", "HER"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Planning controls analysis",
+              "Yield analysis",
+              "Development potential assessment",
+              "Risk identification"
+            ],
+            "deliverables": [
+              {
+                "item": "Planning feasibility report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Yield study",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Planning risk register",
+                "format": "PDF/Excel",
+                "mandatory": false
+              }
+            ]
+          },
+          "town_planning": {
+            "services": [
+              "Pre-DA coordination",
+              "Design Excellence process coordination (if required)",
+              "SEE preparation",
+              "DA submission coordination",
+              "Council liaison",
+              "Public notification management",
+              "RFI coordination",
+              "Planning panel/court representation (if required)"
+            ],
+            "deliverables": [
+              {
+                "item": "Pre-DA submission",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Pre-DA meeting minutes",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Statement of Environmental Effects",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Clause 4.6 variation request (if required)",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "DA submission checklist",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "RFI response document",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Conditions assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Development consent summary",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Condition compliance coordination",
+              "S4.55 modification (if required)"
+            ],
+            "deliverables": [
+              {
+                "item": "Conditions compliance matrix",
+                "format": "Excel",
+                "mandatory": true
+              },
+              {
+                "item": "S4.55 application (if required)",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "quantity_surveyor": {
+        "name": "Quantity Surveyor",
+        "abbrev": "QS",
+        "category": "commercial",
+        "applicableProjectTypes": ["all"],
+        "typicalFeeRange": {
+          "percentage": "0.3-1%",
+          "basis": "construction cost"
+        },
+        "coordinationRequired": ["ARC", "PM", "all consultants"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Preliminary cost assessment",
+              "Benchmark analysis",
+              "Cost risk identification"
+            ],
+            "deliverables": [
+              {
+                "item": "Feasibility cost estimate",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Benchmark comparison",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Cost benchmarking",
+              "Risk assessment",
+              "Budget review",
+              "Options costing"
+            ],
+            "deliverables": [
+              {
+                "item": "Order of cost estimate",
+                "format": "PDF/Excel",
+                "mandatory": true,
+                "contents": ["Elemental breakdown", "Risk allowances", "Escalation", "Professional fees"]
+              },
+              {
+                "item": "Benchmark analysis report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Cost planning report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Risk allowances schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed cost planning",
+              "Value engineering facilitation",
+              "Design review for cost",
+              "Cash flow forecasting"
+            ],
+            "deliverables": [
+              {
+                "item": "Detailed cost plan",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Cost comparison report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Value engineering report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Cash flow forecast",
+                "format": "Excel/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Pre-tender cost review",
+              "Bill of quantities preparation",
+              "Tender process advice"
+            ],
+            "deliverables": [
+              {
+                "item": "Pre-tender estimate",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Bill of quantities",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Tender document schedule",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "tender": {
+            "services": [
+              "Tender evaluation",
+              "Tender interviews support",
+              "Negotiations support",
+              "Subcontractor pricing analysis"
+            ],
+            "deliverables": [
+              {
+                "item": "Tender analysis report",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Tender recommendation report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Contract sum analysis",
+                "format": "PDF/Excel",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Progress claim assessment",
+              "Variation assessment",
+              "Cost monitoring and reporting",
+              "Forecast updates"
+            ],
+            "deliverables": [
+              {
+                "item": "Progress claim assessments",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Variation assessments",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Monthly cost reports",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Cost forecast updates",
+                "format": "PDF/Excel",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final account negotiation",
+              "Final account agreement"
+            ],
+            "deliverables": [
+              {
+                "item": "Final account statement",
+                "format": "PDF/Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Final cost report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "project_manager": {
+        "name": "Project Manager",
+        "abbrev": "PM",
+        "category": "management",
+        "applicableProjectTypes": ["all"],
+        "typicalFeeRange": {
+          "percentage": "2-5%",
+          "basis": "construction cost",
+          "notes": "May also be time-based"
+        },
+        "coordinationRequired": ["all disciplines"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Project establishment",
+              "Stakeholder identification",
+              "Procurement options analysis",
+              "Preliminary risk assessment",
+              "Program development"
+            ],
+            "deliverables": [
+              {
+                "item": "Project charter",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Stakeholder register",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Procurement strategy",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Risk register (preliminary)",
+                "format": "Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Master program",
+                "format": "PDF/MS Project",
+                "mandatory": true
+              },
+              {
+                "item": "Project management plan",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Design team coordination",
+              "Program management",
+              "Budget management",
+              "Risk management",
+              "Stakeholder management",
+              "Meeting facilitation"
+            ],
+            "deliverables": [
+              {
+                "item": "Design management plan",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Program updates",
+                "format": "PDF/MS Project",
+                "mandatory": true
+              },
+              {
+                "item": "Risk register updates",
+                "format": "Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Meeting minutes",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Monthly progress reports",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Design coordination meetings",
+              "Progress monitoring",
+              "Issue resolution",
+              "Stakeholder communication",
+              "Quality oversight",
+              "Value management coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Monthly progress reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Program updates",
+                "format": "PDF/MS Project",
+                "mandatory": true
+              },
+              {
+                "item": "Risk reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Issues log",
+                "format": "Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Meeting minutes",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "tender": {
+            "services": [
+              "Tender process management",
+              "Tender evaluation coordination",
+              "Contract negotiations support",
+              "Builder appointment recommendation"
+            ],
+            "deliverables": [
+              {
+                "item": "Tender process report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Tender recommendation",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Contract summary",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Construction monitoring",
+              "Site meetings chair",
+              "Progress assessment",
+              "Claims administration",
+              "Variation management",
+              "Extension of time assessment"
+            ],
+            "deliverables": [
+              {
+                "item": "Site meeting minutes",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Monthly progress reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Variation register",
+                "format": "Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Extension of time assessments",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Program updates",
+                "format": "PDF/MS Project",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Practical completion coordination",
+              "Defects management",
+              "Final account coordination",
+              "Handover coordination",
+              "Lessons learned workshop"
+            ],
+            "deliverables": [
+              {
+                "item": "Practical completion certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Defects register",
+                "format": "Excel",
+                "mandatory": true
+              },
+              {
+                "item": "Final account summary",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Project close-out report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Lessons learned register",
+                "format": "PDF/Excel",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "building_surveyor": {
+        "name": "Building Surveyor/Certifier",
+        "abbrev": "BCA",
+        "category": "approval",
+        "applicableProjectTypes": ["house", "apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "fitout", "refurbishment", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$5,000-$100,000+",
+          "notes": "Based on project value and complexity"
+        },
+        "coordinationRequired": ["ARC", "FIR", "ACC", "all consultants"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Preliminary BCA assessment",
+              "Classification advice"
+            ],
+            "deliverables": [
+              {
+                "item": "Preliminary BCA advice",
+                "format": "PDF/Letter",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "BCA compliance review",
+              "Design review meetings",
+              "Performance solution review coordination",
+              "Alternative solution assessment"
+            ],
+            "deliverables": [
+              {
+                "item": "BCA capability assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Design review comments",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Compliance schedule (preliminary)",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Ongoing design review",
+              "Performance solution acceptance",
+              "NCC 2022 compliance verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Design review comments",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Performance solution acceptance",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "CC application processing",
+              "Documentation review",
+              "Compliance verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Construction certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Conditions of CC",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Critical stage inspections",
+              "Compliance monitoring",
+              "Staged OC (if applicable)"
+            ],
+            "deliverables": [
+              {
+                "item": "Inspection certificates",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Compliance certificates",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Staged OC (if applicable)",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final inspections",
+              "Documentation review",
+              "OC application processing"
+            ],
+            "deliverables": [
+              {
+                "item": "Final inspection report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Occupation certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Fire safety certificate (Schedule 1)",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "esd_consultant": {
+        "name": "ESD Consultant",
+        "abbrev": "ESD",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "industrial", "mixed-use", "retirement-living"],
+        "typicalFeeRange": {
+          "lumpSum": "$15,000-$100,000+",
+          "notes": "Varies by rating target and project complexity"
+        },
+        "coordinationRequired": ["ARC", "MEC", "ELE", "FAC"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "ESD requirements analysis",
+              "Rating pathway assessment",
+              "Preliminary cost-benefit analysis"
+            ],
+            "deliverables": [
+              {
+                "item": "ESD feasibility advice",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Rating pathway options",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "ESD strategy development",
+              "Preliminary energy modelling",
+              "Green Star pathway development",
+              "BASIX assessment",
+              "Section J assessment (NCC 2022)"
+            ],
+            "deliverables": [
+              {
+                "item": "ESD strategy report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Preliminary energy model",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Green Star pathway report",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "BASIX certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Section J preliminary assessment",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed energy modelling",
+              "NatHERS assessment (residential)",
+              "NABERS commitment coordination",
+              "Green Star credit review",
+              "Daylight modelling"
+            ],
+            "deliverables": [
+              {
+                "item": "Detailed energy model report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "NatHERS certificates",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "NABERS commitment agreement",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Green Star submission documents",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Daylight analysis report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Specification review",
+              "Commissioning requirements development",
+              "Section J compliance finalization"
+            ],
+            "deliverables": [
+              {
+                "item": "ESD specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Commissioning requirements",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Section J compliance report (JV3)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Green Star Design submission",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "ESD compliance monitoring",
+              "Commissioning review",
+              "Material verification"
+            ],
+            "deliverables": [
+              {
+                "item": "ESD compliance reports",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "As-built assessment",
+              "Green Star As-Built coordination",
+              "NABERS rating coordination",
+              "Commissioning verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Green Star As-Built submission",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "NABERS rating certificate",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "ESD compliance certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Section J certificate",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "acoustic": {
+        "name": "Acoustic Consultant",
+        "abbrev": "ACO",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$8,000-$50,000+",
+          "notes": "Varies by project complexity"
+        },
+        "coordinationRequired": ["ARC", "MEC", "ELE"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Site noise assessment",
+              "Preliminary acoustic constraints review"
+            ],
+            "deliverables": [
+              {
+                "item": "Acoustic feasibility advice",
+                "format": "PDF/Letter",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Acoustic assessment",
+              "Noise impact assessment",
+              "Design criteria development"
+            ],
+            "deliverables": [
+              {
+                "item": "Acoustic assessment report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Noise impact assessment (DA)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Acoustic design criteria",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed acoustic design",
+              "Mechanical noise review",
+              "Construction specification input",
+              "Inter-tenancy acoustic design"
+            ],
+            "deliverables": [
+              {
+                "item": "Detailed acoustic report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Construction recommendations",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Mechanical noise control report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Specification review",
+              "Detail review"
+            ],
+            "deliverables": [
+              {
+                "item": "Acoustic specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Testing requirements",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Acoustic testing",
+              "Compliance verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Acoustic test report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Compliance certification",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "traffic": {
+        "name": "Traffic Engineer",
+        "abbrev": "TRA",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$8,000-$40,000+",
+          "notes": "Varies by project complexity"
+        },
+        "coordinationRequired": ["ARC", "PLN", "CIV"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Preliminary traffic review",
+              "Access feasibility"
+            ],
+            "deliverables": [
+              {
+                "item": "Traffic feasibility advice",
+                "format": "PDF/Letter",
+                "mandatory": false
+              }
+            ]
+          },
+          "town_planning": {
+            "services": [
+              "Traffic impact assessment",
+              "Parking analysis",
+              "Loading analysis",
+              "TfNSW consultation (if required)"
+            ],
+            "deliverables": [
+              {
+                "item": "Traffic impact assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Parking assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Loading and servicing report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Green travel plan",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Access design review",
+              "Car park layout review",
+              "Swept path analysis"
+            ],
+            "deliverables": [
+              {
+                "item": "Access design review",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Car park layout review",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Swept path diagrams",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Signage and line marking plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Construction traffic management review"
+            ],
+            "deliverables": [
+              {
+                "item": "CTMP review",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "geotechnical": {
+        "name": "Geotechnical Engineer",
+        "abbrev": "GEO",
+        "category": "specialist",
+        "applicableProjectTypes": ["house", "apartments", "townhouses", "office", "industrial", "remediation", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$10,000-$80,000+",
+          "notes": "Investigation costs additional"
+        },
+        "coordinationRequired": ["STR", "CIV", "ENV"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Desktop study",
+              "Preliminary site assessment"
+            ],
+            "deliverables": [
+              {
+                "item": "Desktop study report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Preliminary geotechnical advice",
+                "format": "PDF/Letter",
+                "mandatory": true
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Site investigation supervision",
+              "Laboratory testing coordination",
+              "Data interpretation",
+              "Foundation recommendations"
+            ],
+            "deliverables": [
+              {
+                "item": "Site investigation report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Geotechnical report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Foundation recommendations",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Foundation design input",
+              "Excavation support design",
+              "Groundwater assessment",
+              "Structural engineer coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Foundation design recommendations",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Excavation support design",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Groundwater management plan",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Geotechnical design report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Excavation inspections",
+              "Foundation inspections",
+              "Ground condition verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final certification"
+            ],
+            "deliverables": [
+              {
+                "item": "Foundation certification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "As-built geotechnical summary",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "environmental": {
+        "name": "Environmental Consultant",
+        "abbrev": "ENV",
+        "category": "specialist",
+        "applicableProjectTypes": ["due-diligence", "feasibility", "industrial", "remediation"],
+        "typicalFeeRange": {
+          "lumpSum": "$5,000-$200,000+",
+          "notes": "Varies significantly - remediation scope dependent"
+        },
+        "coordinationRequired": ["GEO", "PLN"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Desktop assessment",
+              "Preliminary risk screening"
+            ],
+            "deliverables": [
+              {
+                "item": "Environmental desktop report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Site inspection",
+              "Sampling and analysis",
+              "Data evaluation"
+            ],
+            "deliverables": [
+              {
+                "item": "Phase 1 Environmental Site Assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Phase 2 Environmental Site Assessment",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Detailed Site Investigation",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Contamination assessment report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Remediation strategy development",
+              "RAP preparation",
+              "Site Auditor coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Remediation Action Plan",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Site Auditor interim advice",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Remediation oversight",
+              "Validation sampling",
+              "Unexpected finds management"
+            ],
+            "deliverables": [
+              {
+                "item": "Remediation progress reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Unexpected finds protocol",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Validation reporting",
+              "Site Audit coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Validation report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Site Audit Statement",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Long-term Environmental Management Plan",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "heritage": {
+        "name": "Heritage Consultant",
+        "abbrev": "HER",
+        "category": "specialist",
+        "applicableProjectTypes": ["due-diligence", "refurbishment", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$8,000-$60,000+",
+          "notes": "Varies by heritage complexity"
+        },
+        "coordinationRequired": ["ARC", "PLN"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Heritage significance screening",
+              "Constraints identification"
+            ],
+            "deliverables": [
+              {
+                "item": "Heritage screening advice",
+                "format": "PDF/Letter",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Heritage significance assessment",
+              "Heritage impact assessment",
+              "Conservation policy development"
+            ],
+            "deliverables": [
+              {
+                "item": "Heritage assessment report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Heritage impact statement",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Conservation Management Plan",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Heritage interpretation strategy",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "town_planning": {
+            "services": [
+              "Heritage approval preparation",
+              "Heritage Council liaison",
+              "Heritage NSW consultation",
+              "Aboriginal heritage consultation (if required)"
+            ],
+            "deliverables": [
+              {
+                "item": "Heritage approval application",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Heritage Council submission",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Aboriginal Heritage Impact Permit (if required)",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Archival recording (photographic)",
+                "format": "PDF/Images",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Heritage monitoring",
+              "Conservation works oversight",
+              "Unexpected finds management"
+            ],
+            "deliverables": [
+              {
+                "item": "Heritage monitoring reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Conservation works reports",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final archival recording",
+              "Heritage interpretation installation"
+            ],
+            "deliverables": [
+              {
+                "item": "Updated archival recording",
+                "format": "PDF/Images",
+                "mandatory": true
+              },
+              {
+                "item": "Heritage interpretation signage",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "access": {
+        "name": "Access Consultant",
+        "abbrev": "ACC",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "retail", "refurbishment", "mixed-use", "retirement-living"],
+        "typicalFeeRange": {
+          "lumpSum": "$5,000-$25,000+",
+          "notes": "Varies by project complexity"
+        },
+        "coordinationRequired": ["ARC", "INT", "LAN"],
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "DDA compliance review",
+              "Access audit (existing building)",
+              "Design review meetings"
+            ],
+            "deliverables": [
+              {
+                "item": "DDA compliance assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Access audit report (if existing)",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Access recommendations",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed access review",
+              "Wayfinding coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Design review comments",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation review",
+              "Specification review"
+            ],
+            "deliverables": [
+              {
+                "item": "Documentation review report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Access compliance schedule",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Site inspections",
+              "Compliance verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Access compliance certificate",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "surveyor": {
+        "name": "Registered Surveyor",
+        "abbrev": "SUR",
+        "category": "specialist",
+        "applicableProjectTypes": ["all"],
+        "typicalFeeRange": {
+          "lumpSum": "$3,000-$50,000+",
+          "notes": "Varies by survey type and site complexity"
+        },
+        "coordinationRequired": ["ARC", "CIV", "STR"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Title search",
+              "Boundary identification",
+              "Easement identification"
+            ],
+            "deliverables": [
+              {
+                "item": "Title search results",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Survey feasibility advice",
+                "format": "PDF/Letter",
+                "mandatory": false
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "Detail survey coordination",
+              "Level survey",
+              "Feature identification"
+            ],
+            "deliverables": [
+              {
+                "item": "Detail survey",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Contour survey",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Feature survey",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Boundary survey",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Survey report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Set out coordination",
+              "Level verification",
+              "Boundary verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Set out survey",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Level verification certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Boundary certification",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "As-built survey",
+              "Strata plan preparation",
+              "Plan lodgement",
+              "Easement documentation"
+            ],
+            "deliverables": [
+              {
+                "item": "As-built survey",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Strata plan / Stratum plan",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Deposited plan",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Easement survey",
+                "format": "PDF/DWG",
+                "mandatory": false
+              },
+              {
+                "item": "Section 88B instrument",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "building_services_coordinator": {
+        "name": "Building Services Coordinator",
+        "abbrev": "BSC",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$20,000-$100,000+",
+          "notes": "Varies by project complexity"
+        },
+        "coordinationRequired": ["ARC", "MEC", "ELE", "HYD", "FIR"],
+        "phases": {
+          "design_development": {
+            "services": [
+              "Services coordination meetings",
+              "BIM coordination",
+              "Clash detection",
+              "Ceiling space coordination",
+              "Riser coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Services coordination drawings",
+                "format": "PDF/DWG/Revit",
+                "mandatory": true
+              },
+              {
+                "item": "Clash detection reports",
+                "format": "PDF/Navisworks",
+                "mandatory": true
+              },
+              {
+                "item": "Ceiling coordination drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Riser diagrams",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Federated BIM model",
+                "format": "NWD/IFC",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Final coordination review",
+              "Builder coordination",
+              "Shop drawing coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Coordinated services drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Services coordination specification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Final federated model",
+                "format": "NWD/IFC",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Shop drawing coordination review",
+              "On-site coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Coordination review reports",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "bim_coordinator": {
+        "name": "BIM / Digital Engineering Manager",
+        "abbrev": "BIM",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$30,000-$150,000+",
+          "notes": "Varies by project scale and BIM requirements"
+        },
+        "coordinationRequired": ["all disciplines"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "BIM strategy development",
+              "Digital delivery requirements"
+            ],
+            "deliverables": [
+              {
+                "item": "BIM Execution Plan (BEP)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Digital delivery requirements",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "schematic_design": {
+            "services": [
+              "BIM standards establishment",
+              "Model audit",
+              "Consultant BIM coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "BIM standards document",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Model audit reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Federated model (LOD 200)",
+                "format": "NWD/IFC",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Model coordination",
+              "Clash detection management",
+              "4D programming (if required)",
+              "5D costing integration (if required)"
+            ],
+            "deliverables": [
+              {
+                "item": "Model audit reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Clash detection reports",
+                "format": "PDF/BCF",
+                "mandatory": true
+              },
+              {
+                "item": "Federated model (LOD 300)",
+                "format": "NWD/IFC",
+                "mandatory": true
+              },
+              {
+                "item": "4D model (if required)",
+                "format": "Synchro/Navisworks",
+                "mandatory": false
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Final model coordination",
+              "LOD verification",
+              "Model handover preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Construction federated model (LOD 350)",
+                "format": "NWD/IFC",
+                "mandatory": true
+              },
+              {
+                "item": "Model handover documentation",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "As-built model coordination",
+              "Digital twin setup (if required)"
+            ],
+            "deliverables": [
+              {
+                "item": "As-built federated model (LOD 500)",
+                "format": "NWD/IFC",
+                "mandatory": true
+              },
+              {
+                "item": "COBie data export",
+                "format": "Excel/IFC",
+                "mandatory": false
+              },
+              {
+                "item": "Digital twin handover",
+                "format": "Platform dependent",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "lighting_designer": {
+        "name": "Lighting Designer",
+        "abbrev": "LIG",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "retail", "fitout", "mixed-use"],
+        "typicalFeeRange": {
+          "percentage": "0.5-2%",
+          "basis": "electrical construction cost"
+        },
+        "coordinationRequired": ["ARC", "INT", "ELE", "ESD"],
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "Lighting concept development",
+              "Lighting strategy",
+              "Client presentations"
+            ],
+            "deliverables": [
+              {
+                "item": "Lighting concept report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Lighting renders/visualizations",
+                "format": "PDF/JPG",
+                "mandatory": false
+              },
+              {
+                "item": "Preliminary luminaire selection",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed lighting design",
+              "Daylight integration",
+              "Control strategy development",
+              "Energy compliance input"
+            ],
+            "deliverables": [
+              {
+                "item": "Lighting layout drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Lighting calculations (DIALux/AGi32)",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Luminaire schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Control strategy document",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation finalization",
+              "Specification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Lighting construction drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Lighting specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Final luminaire schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Shop drawing review",
+              "Site inspections",
+              "Commissioning/aiming"
+            ],
+            "deliverables": [
+              {
+                "item": "Shop drawing review reports",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Site inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final aiming and commissioning",
+              "Lux level verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Commissioning report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "As-installed luminaire schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "security_consultant": {
+        "name": "Security / ICT Consultant",
+        "abbrev": "SEC",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$10,000-$60,000+",
+          "notes": "Varies by security complexity"
+        },
+        "coordinationRequired": ["ARC", "ELE"],
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "Security risk assessment",
+              "Security strategy development",
+              "ICT requirements analysis"
+            ],
+            "deliverables": [
+              {
+                "item": "Security risk assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Security concept report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "ICT requirements brief",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed security design",
+              "Access control design",
+              "CCTV design",
+              "ICT infrastructure design"
+            ],
+            "deliverables": [
+              {
+                "item": "Security layout drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Access control schedule",
+                "format": "Excel/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "CCTV layout and schedule",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "ICT infrastructure drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation finalization",
+              "Specification preparation"
+            ],
+            "deliverables": [
+              {
+                "item": "Security construction drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Security specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              },
+              {
+                "item": "ICT specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "System commissioning witness",
+              "Training coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Commissioning report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "System user manual",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "waste_consultant": {
+        "name": "Waste Management Consultant",
+        "abbrev": "WST",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$3,000-$15,000+",
+          "notes": "Often combined with other consultancies"
+        },
+        "coordinationRequired": ["ARC", "PLN"],
+        "phases": {
+          "town_planning": {
+            "services": [
+              "Waste generation assessment",
+              "Waste management strategy"
+            ],
+            "deliverables": [
+              {
+                "item": "Waste management plan (DA)",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Bin room design review",
+              "Collection point design",
+              "Compaction requirements"
+            ],
+            "deliverables": [
+              {
+                "item": "Waste management design report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Bin room layout review",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "arborist": {
+        "name": "Arborist",
+        "abbrev": "ARB",
+        "category": "specialist",
+        "applicableProjectTypes": ["house", "apartments", "townhouses", "retirement-living", "office", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$2,000-$15,000+",
+          "notes": "Varies by number of trees"
+        },
+        "coordinationRequired": ["ARC", "LAN", "PLN"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Preliminary tree assessment",
+              "Constraints identification"
+            ],
+            "deliverables": [
+              {
+                "item": "Preliminary tree advice",
+                "format": "PDF/Letter",
+                "mandatory": false
+              }
+            ]
+          },
+          "town_planning": {
+            "services": [
+              "Arboricultural assessment",
+              "Tree protection planning"
+            ],
+            "deliverables": [
+              {
+                "item": "Arboricultural impact assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Tree protection plan",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Tree retention/removal schedule",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Tree protection inspections",
+              "Pruning supervision"
+            ],
+            "deliverables": [
+              {
+                "item": "Tree protection inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "ecologist": {
+        "name": "Ecologist",
+        "abbrev": "ECO",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "industrial", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$5,000-$30,000+",
+          "notes": "Varies by site ecological sensitivity"
+        },
+        "coordinationRequired": ["PLN", "ENV", "LAN"],
+        "phases": {
+          "feasibility": {
+            "services": [
+              "Desktop ecological assessment",
+              "Constraints identification"
+            ],
+            "deliverables": [
+              {
+                "item": "Ecological constraints advice",
+                "format": "PDF/Letter",
+                "mandatory": false
+              }
+            ]
+          },
+          "town_planning": {
+            "services": [
+              "Flora and fauna assessment",
+              "Biodiversity impact assessment"
+            ],
+            "deliverables": [
+              {
+                "item": "Flora and fauna assessment report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Biodiversity Development Assessment Report (BDAR)",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Biodiversity offset strategy",
+                "format": "PDF",
+                "mandatory": false
+              }
+            ]
+          }
+        }
+      },
+
+      "vertical_transport": {
+        "name": "Vertical Transport Consultant",
+        "abbrev": "VT",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "retail", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$8,000-$40,000+",
+          "notes": "Varies by number of lifts"
+        },
+        "coordinationRequired": ["ARC", "STR", "ELE"],
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "Traffic analysis",
+              "Lift system selection",
+              "Lift quantity assessment"
+            ],
+            "deliverables": [
+              {
+                "item": "Vertical transport concept report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Traffic analysis",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Lift specification outline",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed lift design",
+              "Supplier coordination",
+              "Structural coordination"
+            ],
+            "deliverables": [
+              {
+                "item": "Lift layout drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Lift specification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Lift motor room requirements",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "tender": {
+            "services": [
+              "Tender evaluation",
+              "Supplier interviews"
+            ],
+            "deliverables": [
+              {
+                "item": "Lift tender evaluation report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "contract_administration": {
+            "services": [
+              "Installation inspections",
+              "Commissioning witness"
+            ],
+            "deliverables": [
+              {
+                "item": "Inspection reports",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Final commissioning",
+              "Compliance verification"
+            ],
+            "deliverables": [
+              {
+                "item": "Lift commissioning certificate",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Lift compliance certificate",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "wind_consultant": {
+        "name": "Wind Consultant",
+        "abbrev": "WND",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "office", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$15,000-$80,000+",
+          "notes": "Wind tunnel testing additional"
+        },
+        "coordinationRequired": ["ARC", "STR", "LAN"],
+        "phases": {
+          "town_planning": {
+            "services": [
+              "Pedestrian wind assessment",
+              "Desktop wind analysis"
+            ],
+            "deliverables": [
+              {
+                "item": "Desktop wind assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Preliminary mitigation recommendations",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Wind tunnel testing coordination",
+              "CFD modelling",
+              "Mitigation design"
+            ],
+            "deliverables": [
+              {
+                "item": "Wind tunnel test report",
+                "format": "PDF",
+                "mandatory": false
+              },
+              {
+                "item": "Wind environment assessment",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Mitigation strategy report",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      },
+
+      "pool_consultant": {
+        "name": "Pool / Aquatic Consultant",
+        "abbrev": "POL",
+        "category": "specialist",
+        "applicableProjectTypes": ["apartments", "retirement-living", "mixed-use"],
+        "typicalFeeRange": {
+          "lumpSum": "$8,000-$40,000+",
+          "notes": "Varies by pool complexity"
+        },
+        "coordinationRequired": ["ARC", "STR", "HYD", "ELE"],
+        "phases": {
+          "schematic_design": {
+            "services": [
+              "Pool concept development",
+              "Compliance review"
+            ],
+            "deliverables": [
+              {
+                "item": "Pool concept drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Pool systems concept",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "design_development": {
+            "services": [
+              "Detailed pool design",
+              "Filtration system design",
+              "Chemical treatment design"
+            ],
+            "deliverables": [
+              {
+                "item": "Pool design drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Pool systems specification",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Filtration design",
+                "format": "PDF/DWG",
+                "mandatory": true
+              }
+            ]
+          },
+          "construction_documentation": {
+            "services": [
+              "Documentation finalization"
+            ],
+            "deliverables": [
+              {
+                "item": "Pool construction drawings",
+                "format": "PDF/DWG",
+                "mandatory": true
+              },
+              {
+                "item": "Pool specification",
+                "format": "Word/PDF",
+                "mandatory": true
+              }
+            ]
+          },
+          "completion": {
+            "services": [
+              "Commissioning",
+              "Compliance certification"
+            ],
+            "deliverables": [
+              {
+                "item": "Pool commissioning report",
+                "format": "PDF",
+                "mandatory": true
+              },
+              {
+                "item": "Pool compliance certificate",
+                "format": "PDF",
+                "mandatory": true
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

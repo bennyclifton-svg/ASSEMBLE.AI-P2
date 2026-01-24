@@ -6,7 +6,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Sparkles, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { InlineRatingButtons } from './RatingBadge';
 import type { EvaluationNonPriceCell, QualityRating } from '@/types/evaluation';
 import {
@@ -109,7 +110,7 @@ export function NonPriceCell({
     return (
         <div
             className={cn(
-                'flex flex-col h-full min-h-[80px] border-r border-[#3e3e42]',
+                'flex flex-col h-full min-h-[80px] border-r border-[var(--color-border)]',
                 disabled && 'opacity-60'
             )}
         >
@@ -118,9 +119,9 @@ export function NonPriceCell({
                 onClick={handleContentClick}
                 className={cn(
                     'flex-1 p-2 cursor-text transition-colors min-h-[60px]',
-                    'hover:bg-[#2d2d2d]',
-                    isEditing && 'bg-[#2d2d2d]',
-                    !content && !isEditing && 'bg-[#252526]'
+                    'hover:bg-[var(--color-bg-tertiary)]',
+                    isEditing && 'bg-[var(--color-bg-tertiary)]',
+                    !content && !isEditing && 'bg-[var(--color-bg-secondary)]'
                 )}
             >
                 {isEditing ? (
@@ -136,29 +137,29 @@ export function NonPriceCell({
                         placeholder="Enter assessment..."
                         maxLength={200}
                         className={cn(
-                            'w-full min-h-[44px] text-xs text-[#cccccc] leading-relaxed',
+                            'w-full min-h-[44px] text-xs text-[var(--color-text-primary)] leading-relaxed',
                             'bg-transparent resize-none outline-none',
-                            'placeholder:text-[#6e6e6e] placeholder:italic'
+                            'placeholder:text-[var(--color-text-muted)] placeholder:italic'
                         )}
                     />
                 ) : (
-                    <div className="text-xs text-[#cccccc] leading-relaxed min-h-[44px]">
+                    <div className="text-xs text-[var(--color-text-primary)] leading-relaxed min-h-[44px]">
                         {content ? (
                             <>
                                 {content}
                                 {isSavingContent && (
-                                    <span className="text-[#858585] ml-1">saving...</span>
+                                    <span className="text-[var(--color-text-muted)] ml-1">saving...</span>
                                 )}
                             </>
                         ) : (
-                            <span className="text-[#6e6e6e] italic">Click to add...</span>
+                            <span className="text-[var(--color-text-muted)] italic">Click to add...</span>
                         )}
                     </div>
                 )}
             </div>
 
             {/* Bottom row: Rating buttons + AI indicators */}
-            <div className="flex items-center justify-between px-2 py-1.5 bg-[#252526] border-t border-[#3e3e42]">
+            <div className="flex items-center justify-between px-2 py-1.5 bg-[var(--color-bg-secondary)] border-t border-[var(--color-border)]">
                 {/* Rating buttons - always visible */}
                 <InlineRatingButtons
                     value={rating}
@@ -171,7 +172,7 @@ export function NonPriceCell({
                 <div className="flex items-center gap-1">
                     {aiGenerated && !userEdited && (
                         <span title="AI-extracted content">
-                            <Sparkles className="w-3 h-3 text-[#4fc1ff]" />
+                            <DiamondIcon className="w-3 h-3 text-[var(--color-accent-copper)]" />
                         </span>
                     )}
                     {lowConfidence && !userEdited && (

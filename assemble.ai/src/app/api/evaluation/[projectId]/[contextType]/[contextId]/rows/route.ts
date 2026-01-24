@@ -36,19 +36,12 @@ export async function POST(
             );
         }
 
-        const isDiscipline = contextType === 'discipline';
-
-        // Find the evaluation
+        // Find the evaluation using stakeholderId
         const evaluation = await db.query.evaluations.findFirst({
-            where: isDiscipline
-                ? and(
-                    eq(evaluations.projectId, projectId),
-                    eq(evaluations.disciplineId, contextId)
-                )
-                : and(
-                    eq(evaluations.projectId, projectId),
-                    eq(evaluations.tradeId, contextId)
-                ),
+            where: and(
+                eq(evaluations.projectId, projectId),
+                eq(evaluations.stakeholderId, contextId)
+            ),
         });
 
         if (!evaluation) {

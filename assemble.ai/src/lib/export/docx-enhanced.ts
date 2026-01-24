@@ -503,3 +503,530 @@ export async function exportToDOCX(
   const buffer = await Packer.toBuffer(doc);
   return buffer;
 }
+
+// ============================================================================
+// MEETING EXPORT (Feature 021 - Notes, Meetings & Reports)
+// ============================================================================
+
+interface MeetingExportData {
+  id: string;
+  title: string;
+  meetingDate: string | null;
+  agendaType: string;
+  sections: Array<{
+    id: string;
+    sectionLabel: string;
+    content: string | null;
+    childSections?: Array<{
+      sectionLabel: string;
+      content: string | null;
+    }>;
+  }>;
+  attendees: Array<{
+    adhocName: string | null;
+    adhocFirm: string | null;
+    isAttending: boolean;
+    isDistribution: boolean;
+    stakeholder?: {
+      name: string;
+      organization: string | null;
+    } | null;
+  }>;
+  project?: {
+    name: string;
+    address?: string | null;
+  } | null;
+}
+
+/**
+ * Export meeting to DOCX
+ * Returns Buffer for Node.js compatibility
+ */
+export async function exportMeetingToDOCX(
+  meeting: MeetingExportData
+): Promise<Buffer> {
+  const children: (Paragraph | Table)[] = [];
+
+  // Meeting Title
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: meeting.title,
+          bold: true,
+          color: HEADING_COLORS.H1,
+          size: 32, // 16pt
+        }),
+      ],
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 200, after: 200 },
+    })
+  );
+
+  // Meeting Info Table
+  const infoRows: TableRow[] = [];
+
+  if (meeting.project?.name) {
+    infoRows.push(createInfoRow('Project', meeting.project.name));
+  }
+  if (meeting.project?.address) {
+    infoRows.push(createInfoRow('Address', meeting.project.address));
+  }
+  if (meeting.meetingDate) {
+    const formattedDate = new Date(meeting.meetingDate).toLocaleDateString('en-AU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    infoRows.push(createInfoRow('Date', formattedDate));
+  }
+  infoRows.push(createInfoRow('Agenda Type', meeting.agendaType.charAt(0).toUpperCase() + meeting.agendaType.slice(1)));
+
+  if (infoRows.length > 0) {
+    children.push(
+      new Table({
+        rows: infoRows,
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          left: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          right: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+        },
+      })
+    );
+    children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  }
+
+  // Attendees Section
+  const attendeesWithData = meeting.attendees.filter(a => a.stakeholder?.name || a.adhocName);
+  if (attendeesWithData.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Attendees',
+            bold: true,
+            color: HEADING_COLORS.H2,
+            size: 28, // 14pt
+          }),
+        ],
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 300, after: 150 },
+      })
+    );
+
+    // Attendees table
+    const attendeeRows: TableRow[] = [
+      // Header row
+      new TableRow({
+        children: [
+          createHeaderCell('Name'),
+          createHeaderCell('Organization'),
+          createHeaderCell('Attending'),
+          createHeaderCell('Distribution'),
+        ],
+      }),
+      // Data rows
+      ...attendeesWithData.map(a =>
+        new TableRow({
+          children: [
+            createBodyCell(a.stakeholder?.name || a.adhocName || ''),
+            createBodyCell(a.stakeholder?.organization || a.adhocFirm || ''),
+            createBodyCell(a.isAttending ? 'Yes' : 'No', true),
+            createBodyCell(a.isDistribution ? 'Yes' : 'No', true),
+          ],
+        })
+      ),
+    ];
+
+    children.push(
+      new Table({
+        rows: attendeeRows,
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          left: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          right: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+        },
+      })
+    );
+    children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  }
+
+  // Agenda Sections
+  if (meeting.sections.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Agenda',
+            bold: true,
+            color: HEADING_COLORS.H2,
+            size: 28, // 14pt
+          }),
+        ],
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 300, after: 150 },
+      })
+    );
+
+    for (const section of meeting.sections) {
+      // Section label
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: section.sectionLabel,
+              bold: true,
+              color: HEADING_COLORS.H3,
+              size: 24, // 12pt
+            }),
+          ],
+          heading: HeadingLevel.HEADING_3,
+          spacing: { before: 200, after: 100 },
+        })
+      );
+
+      // Section content
+      if (section.content) {
+        const lines = section.content.split('\n').filter(line => line.trim());
+        for (const line of lines) {
+          children.push(
+            new Paragraph({
+              text: line.trim(),
+              spacing: { after: 120 },
+            })
+          );
+        }
+      }
+
+      // Child sections
+      if (section.childSections && section.childSections.length > 0) {
+        for (const child of section.childSections) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `  ${child.sectionLabel}`,
+                  bold: true,
+                  size: 22, // 11pt
+                }),
+              ],
+              spacing: { before: 100, after: 60 },
+            })
+          );
+
+          if (child.content) {
+            const lines = child.content.split('\n').filter(line => line.trim());
+            for (const line of lines) {
+              children.push(
+                new Paragraph({
+                  text: `    ${line.trim()}`,
+                  spacing: { after: 80 },
+                })
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Arial',
+            size: 22, // 11pt
+          },
+        },
+        heading1: { run: { font: 'Arial' } },
+        heading2: { run: { font: 'Arial' } },
+        heading3: { run: { font: 'Arial' } },
+      },
+    },
+    sections: [{ properties: {}, children }],
+  });
+
+  return await Packer.toBuffer(doc);
+}
+
+// ============================================================================
+// PROJECT REPORT EXPORT (Feature 021 - Notes, Meetings & Reports)
+// ============================================================================
+
+interface ProjectReportExportData {
+  id: string;
+  title: string;
+  reportDate: string | null;
+  preparedFor: string | null;
+  preparedBy: string | null;
+  reportingPeriodStart: string | null;
+  reportingPeriodEnd: string | null;
+  contentsType: string;
+  sections: Array<{
+    id: string;
+    sectionLabel: string;
+    content: string | null;
+    childSections?: Array<{
+      sectionLabel: string;
+      content: string | null;
+    }>;
+  }>;
+  project?: {
+    name: string;
+    address?: string | null;
+  } | null;
+}
+
+/**
+ * Export project report to DOCX
+ * Returns Buffer for Node.js compatibility
+ */
+export async function exportProjectReportToDOCX(
+  report: ProjectReportExportData
+): Promise<Buffer> {
+  const children: (Paragraph | Table)[] = [];
+
+  // Report Title
+  children.push(
+    new Paragraph({
+      children: [
+        new TextRun({
+          text: report.title,
+          bold: true,
+          color: HEADING_COLORS.H1,
+          size: 32, // 16pt
+        }),
+      ],
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 200, after: 200 },
+    })
+  );
+
+  // Report Info Table
+  const infoRows: TableRow[] = [];
+
+  if (report.project?.name) {
+    infoRows.push(createInfoRow('Project', report.project.name));
+  }
+  if (report.project?.address) {
+    infoRows.push(createInfoRow('Address', report.project.address));
+  }
+  if (report.preparedFor) {
+    infoRows.push(createInfoRow('Prepared For', report.preparedFor));
+  }
+  if (report.preparedBy) {
+    infoRows.push(createInfoRow('Prepared By', report.preparedBy));
+  }
+  if (report.reportDate) {
+    const formattedDate = new Date(report.reportDate).toLocaleDateString('en-AU', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    infoRows.push(createInfoRow('Report Date', formattedDate));
+  }
+  if (report.reportingPeriodStart || report.reportingPeriodEnd) {
+    const startDate = report.reportingPeriodStart
+      ? new Date(report.reportingPeriodStart).toLocaleDateString('en-AU')
+      : '';
+    const endDate = report.reportingPeriodEnd
+      ? new Date(report.reportingPeriodEnd).toLocaleDateString('en-AU')
+      : '';
+    infoRows.push(createInfoRow('Reporting Period', `${startDate} - ${endDate}`));
+  }
+
+  if (infoRows.length > 0) {
+    children.push(
+      new Table({
+        rows: infoRows,
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          bottom: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          left: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          right: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+          insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+        },
+      })
+    );
+    children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  }
+
+  // Report Contents
+  if (report.sections.length > 0) {
+    children.push(
+      new Paragraph({
+        children: [
+          new TextRun({
+            text: 'Contents',
+            bold: true,
+            color: HEADING_COLORS.H2,
+            size: 28, // 14pt
+          }),
+        ],
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 300, after: 150 },
+      })
+    );
+
+    for (const section of report.sections) {
+      // Section label
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: section.sectionLabel,
+              bold: true,
+              color: HEADING_COLORS.H3,
+              size: 24, // 12pt
+            }),
+          ],
+          heading: HeadingLevel.HEADING_3,
+          spacing: { before: 200, after: 100 },
+        })
+      );
+
+      // Section content
+      if (section.content) {
+        const lines = section.content.split('\n').filter(line => line.trim());
+        for (const line of lines) {
+          children.push(
+            new Paragraph({
+              text: line.trim(),
+              spacing: { after: 120 },
+            })
+          );
+        }
+      }
+
+      // Child sections
+      if (section.childSections && section.childSections.length > 0) {
+        for (const child of section.childSections) {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `  ${child.sectionLabel}`,
+                  bold: true,
+                  size: 22, // 11pt
+                }),
+              ],
+              spacing: { before: 100, after: 60 },
+            })
+          );
+
+          if (child.content) {
+            const lines = child.content.split('\n').filter(line => line.trim());
+            for (const line of lines) {
+              children.push(
+                new Paragraph({
+                  text: `    ${line.trim()}`,
+                  spacing: { after: 80 },
+                })
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Arial',
+            size: 22, // 11pt
+          },
+        },
+        heading1: { run: { font: 'Arial' } },
+        heading2: { run: { font: 'Arial' } },
+        heading3: { run: { font: 'Arial' } },
+      },
+    },
+    sections: [{ properties: {}, children }],
+  });
+
+  return await Packer.toBuffer(doc);
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+function createInfoRow(label: string, value: string): TableRow {
+  return new TableRow({
+    children: [
+      new TableCell({
+        children: [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: label,
+                bold: true,
+              }),
+            ],
+          }),
+        ],
+        width: { size: 25, type: WidthType.PERCENTAGE },
+        shading: {
+          type: ShadingType.SOLID,
+          color: 'F5F5F5',
+          fill: 'F5F5F5',
+        },
+      }),
+      new TableCell({
+        children: [
+          new Paragraph({
+            text: value,
+          }),
+        ],
+        width: { size: 75, type: WidthType.PERCENTAGE },
+      }),
+    ],
+  });
+}
+
+function createHeaderCell(text: string): TableCell {
+  return new TableCell({
+    children: [
+      new Paragraph({
+        children: [
+          new TextRun({
+            text,
+            bold: true,
+          }),
+        ],
+      }),
+    ],
+    shading: {
+      type: ShadingType.SOLID,
+      color: 'F5F5F5',
+      fill: 'F5F5F5',
+    },
+  });
+}
+
+function createBodyCell(text: string, center: boolean = false): TableCell {
+  return new TableCell({
+    children: [
+      new Paragraph({
+        text,
+        alignment: center ? AlignmentType.CENTER : AlignmentType.LEFT,
+      }),
+    ],
+  });
+}

@@ -108,9 +108,9 @@ export function KnowledgeLibrariesSection({
 
     if (isFetching) {
         return (
-            <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
-                <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Knowledge Libraries</h3>
-                <div className="text-[#858585] text-sm">Loading knowledge libraries...</div>
+            <div className="bg-[var(--color-bg-primary)] rounded-lg p-6 border border-[var(--color-border)]">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Knowledge Libraries</h3>
+                <div className="text-[var(--color-text-muted)] text-sm">Loading knowledge libraries...</div>
             </div>
         );
     }
@@ -118,18 +118,18 @@ export function KnowledgeLibrariesSection({
     // Show error state when fetch failed or repos failed to initialize
     if (hasError || (globalRepos.length === 0 && !isFetching && !needsInitialization)) {
         return (
-            <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
-                <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Knowledge Libraries</h3>
+            <div className="bg-[var(--color-bg-primary)] rounded-lg p-6 border border-[var(--color-border)]">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Knowledge Libraries</h3>
                 <div className="flex flex-col items-center justify-center py-6 text-center">
-                    <div className="text-red-400 text-sm font-medium mb-2">
+                    <div className="text-[var(--color-accent-coral)] text-sm font-medium mb-2">
                         Failed to load knowledge libraries
                     </div>
-                    <p className="text-[#858585] text-xs mb-4 max-w-xs">
+                    <p className="text-[var(--color-text-muted)] text-xs mb-4 max-w-xs">
                         {error || 'Database connection unavailable. Please check your configuration.'}
                     </p>
                     <button
                         onClick={handleRetry}
-                        className="px-4 py-2 text-sm bg-[#0e639c] hover:bg-[#1177bb] text-white rounded transition-colors"
+                        className="px-4 py-2 text-sm bg-[var(--color-accent-green)] hover:bg-[var(--primitive-green-dark)] text-white rounded transition-colors"
                     >
                         Retry
                     </button>
@@ -139,9 +139,9 @@ export function KnowledgeLibrariesSection({
     }
 
     return (
-        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
-            <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Knowledge Libraries</h3>
-            <p className="text-[#858585] text-sm mb-4">
+        <div className="bg-[var(--color-bg-primary)] rounded-lg p-6 border border-[var(--color-border)]">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Knowledge Libraries</h3>
+            <p className="text-[var(--color-text-muted)] text-sm mb-4">
                 Curated document collections available across all projects
             </p>
 
@@ -163,9 +163,9 @@ export function KnowledgeLibrariesSection({
                     Array.from({ length: 6 - globalRepos.length }).map((_, i) => (
                         <div
                             key={`placeholder-${i}`}
-                            className="h-24 rounded border border-dashed border-[#3e3e42] bg-[#1e1e1e] flex items-center justify-center"
+                            className="h-24 rounded border border-dashed border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex items-center justify-center"
                         >
-                            <div className="text-[#858585] text-xs">Initializing...</div>
+                            <div className="text-[var(--color-text-muted)] text-xs">Initializing...</div>
                         </div>
                     ))}
             </div>
@@ -185,13 +185,13 @@ function RepoTile({ repo, isDisabled, hasSelection, onSave, onLoad }: RepoTilePr
     const repoLabel = REPO_TYPE_LABELS[repo.repoType as RepoType] || repo.name;
 
     return (
-        <div className="bg-[#1e1e1e] rounded border border-[#3e3e42] p-3 flex flex-col hover:border-[#4e4e52] transition-colors">
+        <div className="bg-[var(--color-bg-secondary)] rounded border border-[var(--color-border)] p-3 flex flex-col hover:border-[var(--color-border-strong)] transition-colors">
             {/* Header with name and count */}
             <div className="flex items-center justify-between mb-2">
-                <span className="text-[#cccccc] text-sm font-medium truncate">
+                <span className="text-[var(--color-text-primary)] text-sm font-medium truncate">
                     {repoLabel}
                 </span>
-                <span className="text-[#858585] text-xs">
+                <span className="text-[var(--color-text-muted)] text-xs">
                     ({repo.memberCount || 0})
                 </span>
             </div>
@@ -202,13 +202,13 @@ function RepoTile({ repo, isDisabled, hasSelection, onSave, onLoad }: RepoTilePr
                     <div
                         className={`w-2 h-2 rounded-full ${
                             repo.syncedCount === repo.memberCount
-                                ? 'bg-green-500'
+                                ? 'bg-[var(--color-accent-green)]'
                                 : repo.syncedCount > 0
-                                ? 'bg-yellow-500'
-                                : 'bg-gray-500'
+                                ? 'bg-[var(--color-accent-yellow)]'
+                                : 'bg-[var(--color-text-muted)]'
                         }`}
                     />
-                    <span className="text-[#858585] text-xs">
+                    <span className="text-[var(--color-text-muted)] text-xs">
                         {repo.syncedCount}/{repo.memberCount} synced
                     </span>
                 </div>
@@ -221,8 +221,8 @@ function RepoTile({ repo, isDisabled, hasSelection, onSave, onLoad }: RepoTilePr
                     disabled={isDisabled || !hasSelection}
                     className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
                         hasSelection
-                            ? 'bg-[#0e639c] hover:bg-[#1177bb] text-white'
-                            : 'bg-[#3e3e42] text-[#858585] cursor-not-allowed'
+                            ? 'bg-[var(--color-accent-green)] hover:bg-[var(--primitive-green-dark)] text-white'
+                            : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] cursor-not-allowed'
                     }`}
                     title={hasSelection ? 'Save selected documents' : 'Select documents first'}
                 >
@@ -233,8 +233,8 @@ function RepoTile({ repo, isDisabled, hasSelection, onSave, onLoad }: RepoTilePr
                     disabled={isDisabled || repo.memberCount === 0}
                     className={`flex-1 px-2 py-1 text-xs rounded transition-colors ${
                         repo.memberCount > 0
-                            ? 'bg-[#3e3e42] hover:bg-[#4e4e52] text-[#cccccc]'
-                            : 'bg-[#2e2e32] text-[#858585] cursor-not-allowed'
+                            ? 'bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] text-[var(--color-text-primary)]'
+                            : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] cursor-not-allowed'
                     }`}
                     title={repo.memberCount > 0 ? 'Load documents to selection' : 'No documents saved'}
                 >

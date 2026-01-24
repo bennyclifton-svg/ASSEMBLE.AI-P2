@@ -11,23 +11,23 @@ import type { CostLineWithCalculations } from '@/types/cost-plan';
 // App color palette - consistent with global styles
 const COLORS = {
     bg: {
-        primary: '#1e1e1e',
-        secondary: '#252526',
-        tertiary: '#2d2d30',
-        hover: '#37373d',
+        primary: 'var(--color-bg-primary)',
+        secondary: 'var(--color-bg-secondary)',
+        tertiary: 'var(--color-bg-tertiary)',
+        hover: 'var(--color-bg-tertiary)',
     },
     text: {
-        primary: '#cccccc',
-        secondary: '#858585',
-        muted: '#6e6e6e',
+        primary: 'var(--color-text-primary)',
+        secondary: 'var(--color-text-muted)',
+        muted: 'var(--color-text-muted)',
     },
     border: {
-        primary: '#3e3e42',
-        secondary: '#555555',
+        primary: 'var(--color-border)',
+        secondary: 'var(--color-border)',
     },
     accent: {
-        blue: '#0e639c',
-        variation: '#D4A574',
+        blue: 'var(--color-accent-green)',
+        variation: 'var(--primitive-copper)',  // copper - unified accent
     },
     status: {
         forecast: { bg: 'bg-yellow-900/40', text: 'text-yellow-400', border: 'border-yellow-600' },
@@ -132,10 +132,10 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
 
     if (error) {
         return (
-            <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
+            <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
                 <div className="text-center">
-                    <p className="text-[#f87171] mb-2">Failed to load variations</p>
-                    <button onClick={() => refetch()} className="text-sm text-[#0e639c] hover:text-[#1177bb]">
+                    <p className="text-[var(--color-accent-coral)] mb-2">Failed to load variations</p>
+                    <button onClick={() => refetch()} className="text-sm text-[var(--color-accent-teal)] hover:opacity-80">
                         Retry
                     </button>
                 </div>
@@ -156,10 +156,10 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
 
     return (
         <VariationDropZone projectId={projectId} onUploadComplete={handleUploadComplete}>
-            <div className="h-full flex flex-col bg-[#1e1e1e] text-xs">
+            <div className="h-full flex flex-col bg-[var(--color-bg-primary)] text-xs">
                 {/* Toolbar */}
-                <div className="flex items-center justify-end px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
-                    <span className="text-[10px] text-[#6e6e6e] flex items-center gap-1">
+                <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                    <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
                         <Upload className="h-3 w-3" />
                         Drop Variation
                     </span>
@@ -168,10 +168,10 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                 {/* Table */}
                 <div className="flex-1 overflow-auto @container">
                     <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
-                        <thead className="sticky top-0 z-10" style={{ backgroundColor: COLORS.accent.variation }}>
+                        <thead className="sticky top-0 z-10 bg-[var(--color-accent-copper-tint)]">
                         <tr>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[70px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[70px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('variationNumber')}
                             >
                                 <div className="flex items-center gap-1">
@@ -180,7 +180,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('description')}
                             >
                                 <div className="flex items-center gap-1">
@@ -189,7 +189,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[180px] cursor-pointer hover:bg-[#c09060] select-none hidden @[800px]:table-cell"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[180px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none hidden @[800px]:table-cell"
                                 onClick={() => handleSort('costLine')}
                             >
                                 <div className="flex items-center gap-1">
@@ -198,7 +198,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px] cursor-pointer hover:bg-[#c09060] select-none hidden @[700px]:table-cell"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[90px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none hidden @[700px]:table-cell"
                                 onClick={() => handleSort('status')}
                             >
                                 <div className="flex items-center gap-1">
@@ -207,7 +207,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[85px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-right text-[var(--color-accent-copper)] font-medium w-[85px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('forecast')}
                             >
                                 <div className="flex items-center justify-end gap-1">
@@ -216,7 +216,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-right text-[#1e1e1e] font-medium w-[85px] cursor-pointer hover:bg-[#c09060] select-none"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-right text-[var(--color-accent-copper)] font-medium w-[85px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
                                 onClick={() => handleSort('approved')}
                             >
                                 <div className="flex items-center justify-end gap-1">
@@ -225,7 +225,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-left text-[#1e1e1e] font-medium w-[90px] cursor-pointer hover:bg-[#c09060] select-none hidden @[600px]:table-cell"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[90px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none hidden @[600px]:table-cell"
                                 onClick={() => handleSort('date')}
                             >
                                 <div className="flex items-center gap-1">
@@ -234,7 +234,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[#a08050] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[50px] cursor-pointer hover:bg-[#c09060] select-none hidden @[500px]:table-cell"
+                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-center text-[var(--color-accent-copper)] font-medium w-[50px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none hidden @[500px]:table-cell"
                                 onClick={() => handleSort('category')}
                             >
                                 <div className="flex items-center justify-center gap-1">
@@ -242,11 +242,11 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                     <SortIndicator column="category" />
                                 </div>
                             </th>
-                            <th className="border border-[#a08050] px-2 py-2 text-center text-[#1e1e1e] font-medium w-[40px]">
+                            <th className="border border-[var(--color-accent-copper)] px-2 py-2 text-center text-[var(--color-accent-copper)] font-medium w-[40px]">
                                 <button
                                     onClick={() => setShowAddRow(true)}
                                     disabled={showAddRow}
-                                    className="p-0.5 text-[#1e1e1e] hover:text-[#0e639c] transition-colors disabled:opacity-50"
+                                    className="p-0.5 text-[var(--color-accent-copper)] hover:text-[var(--color-accent-teal)] transition-colors disabled:opacity-50"
                                     title="Add Variation"
                                 >
                                     <Plus className="h-4 w-4" />
@@ -257,11 +257,11 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">Loading variations...</td>
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">Loading variations...</td>
                             </tr>
                         ) : sortedVariations.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[#858585] bg-[#1e1e1e]">
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
                                     No variations yet. Click the + icon to add one.
                                 </td>
                             </tr>
@@ -324,7 +324,7 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
     const [editValue, setEditValue] = useState<string>('');
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const inputClass = "w-full p-0 bg-transparent border-none rounded text-[11px] text-[#cccccc] focus:outline-none";
+    const inputClass = "w-full h-full px-2 py-1 -mx-2 -my-1 bg-transparent border border-[var(--color-border)]/60 text-[11px] text-[var(--color-text-primary)] focus:outline-none";
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
     // Sort cost lines alphabetically by cost code or description
@@ -410,12 +410,12 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
     };
 
     return (
-        <tr className="group bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42] transition-colors">
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 font-mono font-medium text-[#D4A574] w-[70px]">
+        <tr className="group bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] transition-colors">
+            <td className="border-x border-[var(--color-border)] px-2 py-1.5 font-mono font-medium text-[var(--color-accent-yellow)] w-[70px]">
                 {variation.variationNumber}
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 cursor-pointer"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 cursor-pointer"
                 title={variation.description}
                 onClick={() => handleStartEdit('description', variation.description)}
             >
@@ -430,52 +430,52 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                         className={inputClass}
                     />
                 ) : (
-                    <span className="truncate block text-[#cccccc] hover:text-white">
+                    <span className="truncate block text-[var(--color-text-primary)]">
                         {variation.description}
                     </span>
                 )}
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[180px] hidden @[800px]:table-cell">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[180px] hidden @[800px]:table-cell">
                 <select
                     value={variation.costLineId || ''}
                     onChange={(e) => handleCostLineChange(e.target.value)}
-                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
                     title={variation.costLine?.activity || ''}
                     style={{ colorScheme: 'dark' }}
                 >
-                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
+                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
                     {sortedCostLines.map((line) => {
-                        const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
+                        const stakeholderName = line.stakeholder?.name || '';
                         const label = line.costCode
-                            ? disciplineOrTrade
-                                ? `${line.costCode} - ${disciplineOrTrade} - ${line.activity}`
+                            ? stakeholderName
+                                ? `${line.costCode} - ${stakeholderName} - ${line.activity}`
                                 : `${line.costCode} - ${line.activity}`
-                            : disciplineOrTrade
-                                ? `${disciplineOrTrade} - ${line.activity}`
+                            : stakeholderName
+                                ? `${stakeholderName} - ${line.activity}`
                                 : line.activity;
                         return (
-                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
+                            <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                                 {label}
                             </option>
                         );
                     })}
                 </select>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[90px] hidden @[700px]:table-cell">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[90px] hidden @[700px]:table-cell">
                 <select
                     value={variation.status}
                     onChange={(e) => handleStatusChange(e.target.value as VariationStatus)}
-                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
                     style={{ colorScheme: 'dark' }}
                 >
-                    <option value="Forecast" className="bg-[#2d2d30] text-[#cccccc]">Forecast</option>
-                    <option value="Approved" className="bg-[#2d2d30] text-[#cccccc]">Approved</option>
-                    <option value="Rejected" className="bg-[#2d2d30] text-[#cccccc]">Rejected</option>
-                    <option value="Withdrawn" className="bg-[#2d2d30] text-[#cccccc]">Withdrawn</option>
+                    <option value="Forecast" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">Forecast</option>
+                    <option value="Approved" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">Approved</option>
+                    <option value="Rejected" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">Rejected</option>
+                    <option value="Withdrawn" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">Withdrawn</option>
                 </select>
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-right cursor-pointer w-[85px]"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 text-right cursor-pointer w-[85px]"
                 onClick={() => handleStartEdit('forecast', (variation.amountForecastCents / 100).toString())}
             >
                 {editingField === 'forecast' ? (
@@ -489,13 +489,13 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                         className={numberInputClass}
                     />
                 ) : (
-                    <span className="font-mono text-[#cccccc] hover:text-white">
+                    <span className="font-mono text-[var(--color-text-primary)]">
                         {formatCurrency(variation.amountForecastCents)}
                     </span>
                 )}
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-right cursor-pointer w-[85px]"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 text-right cursor-pointer w-[85px]"
                 onClick={() => handleStartEdit('approved', (variation.amountApprovedCents / 100).toString())}
             >
                 {editingField === 'approved' ? (
@@ -509,13 +509,13 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                         className={numberInputClass}
                     />
                 ) : (
-                    <span className="font-mono text-[#cccccc] hover:text-white">
+                    <span className="font-mono text-[var(--color-text-primary)]">
                         {variation.amountApprovedCents > 0 ? formatCurrency(variation.amountApprovedCents) : '-'}
                     </span>
                 )}
             </td>
             <td
-                className="border-x border-[#3e3e42] px-2 py-1.5 text-[#858585] cursor-pointer w-[90px] hidden @[600px]:table-cell"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 text-[var(--color-text-muted)] cursor-pointer w-[90px] hidden @[600px]:table-cell"
                 onClick={() => handleStartEdit('dateSubmitted', variation.dateSubmitted || '')}
             >
                 {editingField === 'dateSubmitted' ? (
@@ -529,27 +529,27 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                         className={`${inputClass} text-[10px]`}
                     />
                 ) : (
-                    <span className="hover:text-white">
+                    <span>
                         {variation.dateSubmitted ? new Date(variation.dateSubmitted).toLocaleDateString() : '-'}
                     </span>
                 )}
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[50px] hidden @[500px]:table-cell">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[50px] hidden @[500px]:table-cell">
                 <select
                     value={variation.category}
                     onChange={(e) => handleCategoryChange(e.target.value as VariationCategory)}
-                    className="w-full px-0.5 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[10px] text-[#cccccc] focus:outline-none cursor-pointer text-center"
+                    className="w-full px-0.5 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[10px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer text-center"
                     style={{ colorScheme: 'dark' }}
                 >
-                    <option value="Principal" className="bg-[#2d2d30] text-[#cccccc]">PV</option>
-                    <option value="Contractor" className="bg-[#2d2d30] text-[#cccccc]">CV</option>
-                    <option value="Lessor Works" className="bg-[#2d2d30] text-[#cccccc]">LV</option>
+                    <option value="Principal" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">PV</option>
+                    <option value="Contractor" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">CV</option>
+                    <option value="Lessor Works" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">LV</option>
                 </select>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 text-center w-[40px]">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 text-center w-[40px]">
                 <button
                     onClick={onDelete}
-                    className="p-0.5 text-[#858585] hover:text-[#f87171] hover:bg-[#4e4e52] rounded transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] hover:bg-[var(--color-bg-tertiary)] rounded transition-colors opacity-0 group-hover:opacity-100"
                     title="Delete variation"
                 >
                     <Trash className="h-3 w-3" />
@@ -608,15 +608,15 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
         }
     };
 
-    const inputClass = "w-full px-1.5 py-1 bg-transparent border-none text-[11px] text-[#cccccc] placeholder-[#6e6e6e] focus:outline-none";
+    const inputClass = "w-full h-full px-2 py-1 -mx-1 -my-0.5 bg-transparent border border-[var(--color-border)]/60 text-[11px] text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none";
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
     return (
-        <tr className="bg-[#252526] hover:bg-[#2a2d2e] border-b border-[#3e3e42]" onKeyDown={handleKeyDown}>
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 font-mono text-[#6e6e6e] italic">
+        <tr className="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]" onKeyDown={handleKeyDown}>
+            <td className="border-x border-[var(--color-border)] px-2 py-1.5 font-mono text-[var(--color-text-muted)] italic">
                 Auto
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1">
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <input
                     ref={descriptionRef}
                     type="text"
@@ -626,38 +626,38 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                     className={inputClass}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 hidden @[800px]:table-cell">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 hidden @[800px]:table-cell">
                 <select
                     value={formData.costLineId}
                     onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
-                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[11px] text-[#cccccc] focus:outline-none cursor-pointer"
+                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
                     title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
                     style={{ colorScheme: 'dark' }}
                 >
-                    <option value="" className="bg-[#2d2d30] text-[#858585]">None</option>
+                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
                     {sortedCostLines.map((line) => {
-                        const disciplineOrTrade = line.discipline?.disciplineName || line.trade?.tradeName || '';
+                        const stakeholderName = line.stakeholder?.name || '';
                         const label = line.costCode
-                            ? disciplineOrTrade
-                                ? `${line.costCode} - ${disciplineOrTrade} - ${line.activity}`
+                            ? stakeholderName
+                                ? `${line.costCode} - ${stakeholderName} - ${line.activity}`
                                 : `${line.costCode} - ${line.activity}`
-                            : disciplineOrTrade
-                                ? `${disciplineOrTrade} - ${line.activity}`
+                            : stakeholderName
+                                ? `${stakeholderName} - ${line.activity}`
                                 : line.activity;
                         return (
-                            <option key={line.id} value={line.id} title={label} className="bg-[#2d2d30] text-[#cccccc]">
+                            <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                                 {label}
                             </option>
                         );
                     })}
                 </select>
             </td>
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 hidden @[700px]:table-cell">
+            <td className="border-x border-[var(--color-border)] px-2 py-1.5 hidden @[700px]:table-cell">
                 <span className="px-1.5 py-0.5 rounded text-[10px] border bg-yellow-900/40 text-yellow-400 border-yellow-600">
                     Forecast
                 </span>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[85px]">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[85px]">
                 <input
                     type="number"
                     value={formData.amountForecastCents / 100 || ''}
@@ -666,25 +666,25 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                     className={numberInputClass}
                 />
             </td>
-            <td className="border-x border-[#3e3e42] px-2 py-1.5 text-right font-mono text-[#6e6e6e] w-[85px]">
+            <td className="border-x border-[var(--color-border)] px-2 py-1.5 text-right font-mono text-[var(--color-text-muted)] w-[85px]">
                 -
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 hidden @[600px]:table-cell">
-                <span className="text-[#6e6e6e] text-[10px]">-</span>
+            <td className="border-x border-[var(--color-border)] px-1 py-1 hidden @[600px]:table-cell">
+                <span className="text-[var(--color-text-muted)] text-[10px]">-</span>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[50px] hidden @[500px]:table-cell">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[50px] hidden @[500px]:table-cell">
                 <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as VariationCategory })}
-                    className="w-full px-0.5 py-0.5 bg-transparent border-0 hover:bg-[#37373d] focus:bg-[#37373d] rounded text-[10px] text-[#cccccc] focus:outline-none cursor-pointer text-center"
+                    className="w-full px-0.5 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[10px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer text-center"
                     style={{ colorScheme: 'dark' }}
                 >
-                    <option value="Principal" className="bg-[#2d2d30] text-[#cccccc]">PV</option>
-                    <option value="Contractor" className="bg-[#2d2d30] text-[#cccccc]">CV</option>
-                    <option value="Lessor Works" className="bg-[#2d2d30] text-[#cccccc]">LV</option>
+                    <option value="Principal" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">PV</option>
+                    <option value="Contractor" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">CV</option>
+                    <option value="Lessor Works" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">LV</option>
                 </select>
             </td>
-            <td className="border-x border-[#3e3e42] px-1 py-1 w-[40px]">
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[40px]">
                 <div className="flex items-center justify-center gap-0.5">
                     <button
                         onClick={handleSave}
@@ -717,24 +717,38 @@ interface DeleteConfirmDialogProps {
 }
 
 function DeleteConfirmDialog({ itemName, itemType, onClose, onConfirm, isSubmitting }: DeleteConfirmDialogProps) {
+    // Handle Enter key to confirm delete
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && !isSubmitting) {
+                e.preventDefault();
+                onConfirm();
+            } else if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onConfirm, onClose, isSubmitting]);
+
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-            <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-sm border border-[#3e3e42]">
-                <div className="px-4 py-3 border-b border-[#3e3e42]">
-                    <h2 className="text-sm font-semibold text-[#cccccc]">Delete {itemType}</h2>
+            <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-sm border border-[var(--color-border)]">
+                <div className="px-4 py-3 border-b border-[var(--color-border)]">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Delete {itemType}</h2>
                 </div>
                 <div className="p-4 space-y-4">
-                    <p className="text-sm text-[#cccccc]">
+                    <p className="text-sm text-[var(--color-text-primary)]">
                         Are you sure you want to delete <strong>&quot;{itemName}&quot;</strong>?
                     </p>
-                    <p className="text-xs text-[#858585]">
+                    <p className="text-xs text-[var(--color-text-muted)]">
                         This action cannot be undone.
                     </p>
                     <div className="flex justify-end gap-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-xs text-[#858585] hover:text-[#cccccc] transition-colors"
+                            className="px-4 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                         >
                             Cancel
                         </button>
@@ -742,7 +756,7 @@ function DeleteConfirmDialog({ itemName, itemType, onClose, onConfirm, isSubmitt
                             type="button"
                             onClick={onConfirm}
                             disabled={isSubmitting}
-                            className="px-4 py-2 text-xs bg-[#f87171] text-white rounded hover:bg-[#ef4444] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-4 py-2 text-xs bg-[var(--color-accent-coral)] text-white rounded hover:bg-[var(--color-accent-coral)]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             {isSubmitting ? 'Deleting...' : 'Delete'}
                         </button>

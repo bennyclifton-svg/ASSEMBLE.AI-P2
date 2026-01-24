@@ -13,7 +13,8 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Trash2, Plus, AlertTriangle, Sparkles, Merge } from 'lucide-react';
+import { Trash2, Plus, AlertTriangle, Merge } from 'lucide-react';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import type { EvaluationRow, EvaluationFirm, EvaluationRowSource } from '@/types/evaluation';
 import { ThDropZone } from './EvaluationDropZone';
 import { Button } from '@/components/ui/button';
@@ -214,9 +215,9 @@ export function EvaluationSheet({
 
                 {/* Header with T037-T039 drop zones and T098-T100 merge button */}
                 <thead>
-                    <tr className="bg-[#252526] border-b border-[#3e3e42]">
+                    <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]">
                         <th
-                            className="px-3 text-left text-xs font-medium text-[#858585] border-r border-[#3e3e42]"
+                            className="px-3 text-left text-xs font-medium text-[var(--color-text-muted)] border-r border-[var(--color-border)]"
                             style={{ height: cellHeight }}
                         >
                             <div className="flex items-center gap-2">
@@ -227,7 +228,7 @@ export function EvaluationSheet({
                                         variant="ghost"
                                         size="sm"
                                         onClick={onMergeClick}
-                                        className="h-5 px-1.5 text-[10px] text-[#4fc1ff] hover:text-[#4fc1ff] hover:bg-[#4fc1ff]/10"
+                                        className="h-5 px-1.5 text-[10px] text-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/10"
                                     >
                                         <Merge className="w-3 h-3 mr-1" />
                                         Merge ({selectedRowIds.size})
@@ -248,11 +249,11 @@ export function EvaluationSheet({
                             ) : (
                                 <th
                                     key={firm.id}
-                                    className="p-0 border-r border-[#3e3e42]"
+                                    className="p-0 border-r border-[var(--color-border)]"
                                     style={{ height: cellHeight }}
                                 >
                                     <div
-                                        className="px-3 text-right text-xs font-medium text-[#858585] flex items-center justify-end"
+                                        className="px-3 text-right text-xs font-medium text-[var(--color-text-muted)] flex items-center justify-end"
                                         style={{ height: cellHeight }}
                                     >
                                         <span className="truncate">{firm.companyName}</span>
@@ -264,7 +265,7 @@ export function EvaluationSheet({
                         <th className="px-2 text-center" style={{ height: cellHeight }}>
                             <button
                                 onClick={onAddRow}
-                                className="text-[#858585] hover:text-[#cccccc] transition-colors"
+                                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                                 title="Add row"
                             >
                                 <Plus className="w-3.5 h-3.5" />
@@ -279,7 +280,7 @@ export function EvaluationSheet({
                         <tr>
                             <td
                                 colSpan={firms.length + 2}
-                                className="px-3 text-center text-sm text-[#585858] border-b border-[#2d2d30]"
+                                className="px-3 text-center text-sm text-[var(--color-text-muted)] border-b border-[var(--color-border)]"
                                 style={{ height: cellHeight }}
                             >
                                 No line items
@@ -294,17 +295,17 @@ export function EvaluationSheet({
                             return (
                                 <tr
                                     key={row.id}
-                                    className={`border-b border-[#2d2d30] group cursor-pointer ${
+                                    className={`border-b border-[var(--color-border)] group cursor-pointer ${
                                         // T093: Visual highlight for selected rows
                                         isSelected
-                                            ? 'bg-[#094771]'
-                                            : 'bg-[#1e1e1e] hover:bg-[#252526]'
+                                            ? 'bg-[var(--color-accent-copper-tint)]'
+                                            : 'bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-secondary)]'
                                     }`}
                                     onClick={(e) => onRowSelect(row.id, e)}
                                 >
                                     {/* Description cell with T104-T106 AI indicator and T101-T103 inline editing */}
                                     <td
-                                        className="px-3 text-sm text-[#cccccc] border-r border-[#3e3e42] overflow-hidden"
+                                        className="px-3 text-sm text-[var(--color-text-primary)] border-r border-[var(--color-border)] overflow-hidden"
                                         style={{ height: cellHeight }}
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -315,7 +316,7 @@ export function EvaluationSheet({
                                             {/* T104-T106: AI row indicator */}
                                             {isAIRow && (
                                                 <span title="AI-generated row">
-                                                    <Sparkles className="w-3 h-3 text-[#4fc1ff] flex-shrink-0" />
+                                                    <DiamondIcon className="w-3 h-3 text-[var(--color-accent-copper)] flex-shrink-0" />
                                                 </span>
                                             )}
                                             {/* T101-T103: Inline description editing */}
@@ -328,7 +329,7 @@ export function EvaluationSheet({
                                                     onBlur={handleDescriptionBlur}
                                                     onKeyDown={handleDescriptionKeyDown}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="flex-1 bg-transparent text-sm text-[#cccccc] outline-none border-b border-[#4fc1ff]"
+                                                    className="flex-1 bg-transparent text-sm text-[var(--color-text-primary)] outline-none border-b border-[var(--color-accent-copper)]"
                                                 />
                                             ) : (
                                                 <span className="truncate">
@@ -351,8 +352,8 @@ export function EvaluationSheet({
                                                 className={`px-0 border-r cursor-pointer relative ${
                                                     // Low confidence warning indicator only
                                                     isAI && lowConfidence
-                                                        ? 'border-l-2 border-l-yellow-500/50 border-[#3e3e42]'
-                                                        : 'border-[#3e3e42]'
+                                                        ? 'border-l-2 border-l-yellow-500/50 border-[var(--color-border)]'
+                                                        : 'border-[var(--color-border)]'
                                                 }`}
                                                 style={{ height: cellHeight }}
                                                 onClick={(e) => {
@@ -369,7 +370,7 @@ export function EvaluationSheet({
                                                         onChange={(e) => setEditValue(e.target.value)}
                                                         onBlur={handleCellBlur}
                                                         onKeyDown={handleKeyDown}
-                                                        className="w-full px-3 text-right text-sm bg-transparent text-[#cccccc] outline-none"
+                                                        className="w-full px-3 text-right text-sm bg-transparent text-[var(--color-text-primary)] outline-none"
                                                         style={{ height: cellHeight, lineHeight: `${cellHeight}px` }}
                                                     />
                                                 ) : (
@@ -384,7 +385,7 @@ export function EvaluationSheet({
                                                         )}
                                                         <div
                                                             className={`px-2 text-right text-sm ${
-                                                                value ? 'text-[#cccccc]' : 'text-[#3e3e42]'
+                                                                value ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-border)]'
                                                             }`}
                                                             style={{ height: cellHeight, lineHeight: `${cellHeight}px` }}
                                                         >
@@ -404,7 +405,7 @@ export function EvaluationSheet({
                                     >
                                         <button
                                             onClick={() => handleDelete(row.id)}
-                                            className="opacity-0 group-hover:opacity-100 text-[#585858] hover:text-red-400 transition-all"
+                                            className="opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-all"
                                             title="Delete row"
                                         >
                                             <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -416,9 +417,9 @@ export function EvaluationSheet({
                     )}
 
                     {/* Subtotal row */}
-                    <tr className="bg-[#252526]">
+                    <tr className="bg-[var(--color-bg-secondary)]">
                         <td
-                            className="px-3 text-sm font-medium text-[#cccccc] border-r border-[#3e3e42]"
+                            className="px-3 text-sm font-medium text-[var(--color-text-primary)] border-r border-[var(--color-border)]"
                             style={{ height: cellHeight }}
                         >
                             Sub-Total
@@ -426,7 +427,7 @@ export function EvaluationSheet({
                         {firms.map(firm => (
                             <td
                                 key={firm.id}
-                                className="px-3 text-right text-sm font-medium text-[#4ec9b0] border-r border-[#3e3e42]"
+                                className="px-3 text-right text-sm font-medium text-[var(--color-accent-copper)] border-r border-[var(--color-border)]"
                                 style={{ height: cellHeight }}
                             >
                                 {formatCurrency(subtotals[firm.id] || 0)}

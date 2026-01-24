@@ -1,7 +1,7 @@
 /**
  * T109: Addenda Hook for Managing Addendum Reports
  *
- * Provides functionality to create, update, and delete addenda per discipline/trade.
+ * Provides functionality to create, update, and delete addenda per stakeholder.
  * Supports auto-save with debouncing.
  */
 
@@ -14,8 +14,7 @@ import { useToast } from './use-toast';
 export interface Addendum {
     id: string;
     projectId: string;
-    disciplineId: string | null;
-    tradeId: string | null;
+    stakeholderId: string | null;
     addendumNumber: number;
     content: string | null;
     addendumDate: string | null;
@@ -26,8 +25,7 @@ export interface Addendum {
 
 interface UseAddendaOptions {
     projectId: string;
-    disciplineId?: string | null;
-    tradeId?: string | null;
+    stakeholderId?: string | null;
 }
 
 interface UseAddendaReturn {
@@ -51,16 +49,14 @@ const fetcher = async (url: string): Promise<Addendum[]> => {
 };
 
 /**
- * Hook for managing addenda per discipline/trade
+ * Hook for managing addenda per stakeholder
  *
  * @param options.projectId - The project ID
- * @param options.disciplineId - Optional discipline ID (for consultant addenda)
- * @param options.tradeId - Optional trade ID (for contractor addenda)
+ * @param options.stakeholderId - The stakeholder ID
  */
 export function useAddenda({
     projectId,
-    disciplineId,
-    tradeId,
+    stakeholderId,
 }: UseAddendaOptions): UseAddendaReturn {
     const { toast } = useToast();
     const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -68,10 +64,9 @@ export function useAddenda({
     // Build the query URL for fetching addenda
     const queryParams = new URLSearchParams();
     queryParams.set('projectId', projectId);
-    if (disciplineId) queryParams.set('disciplineId', disciplineId);
-    if (tradeId) queryParams.set('tradeId', tradeId);
+    if (stakeholderId) queryParams.set('stakeholderId', stakeholderId);
 
-    const shouldFetch = projectId && (disciplineId || tradeId);
+    const shouldFetch = projectId && stakeholderId;
     const swrKey = shouldFetch ? `/api/addenda?${queryParams.toString()}` : null;
 
     const { data, error, isLoading, mutate: localMutate } = useSWR<Addendum[]>(
@@ -85,13 +80,13 @@ export function useAddenda({
     );
 
     /**
-     * Create a new addendum for the current discipline/trade
+     * Create a new addendum for the current stakeholder
      */
     const createAddendum = useCallback(async (): Promise<Addendum | null> => {
-        if (!projectId || (!disciplineId && !tradeId)) {
+        if (!projectId || !stakeholderId) {
             toast({
                 title: 'Error',
-                description: 'Project and discipline/trade are required',
+                description: 'Project and stakeholder are required',
                 variant: 'destructive',
             });
             return null;
@@ -103,8 +98,7 @@ export function useAddenda({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     projectId,
-                    disciplineId: disciplineId || null,
-                    tradeId: tradeId || null,
+                    stakeholderId,
                 }),
             });
 
@@ -133,7 +127,7 @@ export function useAddenda({
             });
             return null;
         }
-    }, [projectId, disciplineId, tradeId, localMutate, toast]);
+    }, [projectId, stakeholderId, localMutate, toast]);
 
     /**
      * Update addendum content with debouncing for auto-save

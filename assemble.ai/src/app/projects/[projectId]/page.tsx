@@ -7,6 +7,7 @@ import { PlanningCard } from '@/components/dashboard/PlanningCard';
 import { ProcurementCard } from '@/components/dashboard/ProcurementCard';
 import { DocumentCard } from '@/components/dashboard/DocumentCard';
 import { Loader2 } from 'lucide-react';
+import type { BuildingClass, ProjectType } from '@/types/profiler';
 
 interface Project {
   id: string;
@@ -25,6 +26,13 @@ export default function ProjectWorkspace() {
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Profiler state - shared between left nav and middle panel
+  const [profileBuildingClass, setProfileBuildingClass] = useState<BuildingClass | null>(null);
+  const [profileProjectType, setProfileProjectType] = useState<ProjectType | null>(null);
+
+  // Center panel tab state - for cross-panel navigation
+  const [centerActiveTab, setCenterActiveTab] = useState<string>('cost-planning');
+
   // Handler to set selected document IDs from an array (for transmittal load)
   const handleSetSelectedDocumentIds = useCallback((ids: string[]) => {
     setSelectedDocumentIds(new Set(ids));
@@ -33,6 +41,39 @@ export default function ProjectWorkspace() {
   // Handler for project name changes - triggers refresh of project switcher
   const handleProjectNameChange = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1);
+  }, []);
+
+  // Handler for profile class/type changes from left nav
+  const handleProfileChange = useCallback((buildingClass: string | null, projectType: string | null) => {
+    setProfileBuildingClass(buildingClass as BuildingClass | null);
+    setProfileProjectType(projectType as ProjectType | null);
+  }, []);
+
+  // Handler for profile completion - refresh planning data
+  const handleProfileComplete = useCallback(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, []);
+
+  // Handler for profile load - update shared state and refresh PlanningCard
+  const handleProfileLoad = useCallback((buildingClass: string, projectType: string) => {
+    setProfileBuildingClass(buildingClass as BuildingClass);
+    setProfileProjectType(projectType as ProjectType);
+    setRefreshTrigger((prev) => prev + 1); // Trigger PlanningCard re-fetch
+  }, []);
+
+  // Handler for stakeholder navigation - switches center panel to Stakeholders tab
+  const handleStakeholderNavigate = useCallback(() => {
+    setCenterActiveTab('stakeholders');
+  }, []);
+
+  // Handler for profiler navigation - switches center panel to Profiler tab
+  const handleShowProfiler = useCallback(() => {
+    setCenterActiveTab('profiler');
+  }, []);
+
+  // Handler for objectives navigation - switches center panel to Objectives tab
+  const handleShowObjectives = useCallback(() => {
+    setCenterActiveTab('objectives');
   }, []);
 
   // Fetch project details
@@ -85,22 +126,22 @@ export default function ProjectWorkspace() {
 
   if (isLoading) {
     return (
-      <div className="h-screen w-full bg-[#1e1e1e] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#808080] animate-spin" />
+      <div className="h-screen w-full bg-background bg-blueprint flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="h-screen w-full bg-[#1e1e1e] flex items-center justify-center">
-        <div className="text-[#808080]">Project not found</div>
+      <div className="h-screen w-full bg-background bg-blueprint flex items-center justify-center">
+        <div className="text-muted-foreground">Project not found</div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-full bg-[#1e1e1e]">
+    <div className="h-screen w-full bg-background bg-blueprint">
       {/* Full-height resizable layout - columns extend to top */}
       <ResizableLayout
         selectedProject={project}
@@ -112,6 +153,12 @@ export default function ProjectWorkspace() {
             selectedDocumentIds={Array.from(selectedDocumentIds)}
             onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
             onProjectNameChange={handleProjectNameChange}
+            onProfileChange={handleProfileChange}
+            onStakeholderNavigate={handleStakeholderNavigate}
+            onShowProfiler={handleShowProfiler}
+            onShowObjectives={handleShowObjectives}
+            activeMainTab={centerActiveTab}
+            refreshKey={refreshTrigger}
           />
         }
         centerContent={
@@ -119,6 +166,12 @@ export default function ProjectWorkspace() {
             projectId={project.id}
             selectedDocumentIds={Array.from(selectedDocumentIds)}
             onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
+            buildingClass={profileBuildingClass}
+            projectType={profileProjectType}
+            onProfileComplete={handleProfileComplete}
+            onProfileLoad={handleProfileLoad}
+            activeMainTab={centerActiveTab}
+            onMainTabChange={setCenterActiveTab}
           />
         }
         rightContent={

@@ -10,7 +10,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { type RftNew } from '@/lib/hooks/use-rft-new';
 import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
 import { Textarea } from '@/components/ui/textarea';
-import { AIGenerateIcon } from '@/components/ui/ai-generate-icon';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
+import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useFieldGeneration } from '@/lib/hooks/use-field-generation';
 
@@ -25,11 +26,9 @@ interface ProjectDetails {
     address: string;
 }
 
-interface PlanningObjectives {
-    functional?: string;
-    quality?: string;
-    budget?: string;
-    program?: string;
+interface ProfilerObjectives {
+    functionalQuality?: string;
+    planningCompliance?: string;
 }
 
 interface CostLine {
@@ -47,17 +46,19 @@ interface ProgramActivity {
     name: string;
     startDate: string | null;
     endDate: string | null;
+    collapsed: boolean;
     color: string | null;
     sortOrder: number;
 }
+
+type ZoomLevel = 'week' | 'month';
+const ZOOM_STORAGE_KEY = 'program-zoom-level';
 
 interface RFTNewShortTabProps {
     projectId: string;
     rftNew: RftNew;
     contextName: string;
-    contextType: 'discipline' | 'trade';
-    disciplineId?: string | null;
-    tradeId?: string | null;
+    stakeholderId?: string | null;
     onDateChange?: (date: string) => void;
 }
 
@@ -71,34 +72,46 @@ function getWeekStart(date: Date): Date {
     return d;
 }
 
-// Generate weekly columns with month grouping
-interface WeekColumn {
+// Generate timeline columns with month grouping (supports both week and month zoom)
+interface TimelineColumn {
     start: Date;
-    dayLabel: number;
+    label: string;
     month: string;
     year: number;
 }
 
-function generateWeekColumnsWithMonths(startDate: Date, endDate: Date): WeekColumn[] {
-    const columns: WeekColumn[] = [];
-    const current = getWeekStart(startDate);
+function generateTimelineColumns(startDate: Date, endDate: Date, zoomLevel: ZoomLevel): TimelineColumn[] {
+    const columns: TimelineColumn[] = [];
+    const current = zoomLevel === 'week' ? getWeekStart(startDate) : new Date(startDate.getFullYear(), startDate.getMonth(), 1);
     const end = new Date(endDate);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     while (current <= end) {
         columns.push({
             start: new Date(current),
-            dayLabel: current.getDate(),
+            label: zoomLevel === 'week' ? current.getDate().toString() : months[current.getMonth()],
             month: months[current.getMonth()],
             year: current.getFullYear(),
         });
-        current.setDate(current.getDate() + 7);
+        if (zoomLevel === 'week') {
+            current.setDate(current.getDate() + 7);
+        } else {
+            current.setMonth(current.getMonth() + 1);
+        }
     }
     return columns;
 }
 
 // Group columns by month for header
-function groupColumnsByMonth(columns: WeekColumn[]): { label: string; count: number }[] {
+function groupColumnsByMonth(columns: TimelineColumn[], zoomLevel: ZoomLevel): { label: string; count: number }[] {
+    // In month view, each column IS a month, so just return one per column
+    if (zoomLevel === 'month') {
+        return columns.map(col => ({
+            label: `${col.month} ${col.year}`,
+            count: 1,
+        }));
+    }
+
     const groups: { label: string; count: number }[] = [];
     let currentGroup: { label: string; count: number } | null = null;
 
@@ -115,19 +128,48 @@ function groupColumnsByMonth(columns: WeekColumn[]): { label: string; count: num
     return groups;
 }
 
+// Flatten activities respecting collapsed state (hide children of collapsed parents)
+function flattenVisibleActivities(activities: ProgramActivity[]): ProgramActivity[] {
+    // Build a map of parent -> children
+    const parentActivities = activities.filter(a => !a.parentId);
+    const childActivities = activities.filter(a => a.parentId);
+
+    const result: ProgramActivity[] = [];
+
+    parentActivities.forEach(parent => {
+        result.push(parent);
+        // Only include children if parent is not collapsed
+        if (!parent.collapsed) {
+            const children = childActivities.filter(c => c.parentId === parent.id);
+            children.sort((a, b) => a.sortOrder - b.sortOrder);
+            result.push(...children);
+        }
+    });
+
+    // Add any orphaned activities (children without valid parent in the list)
+    childActivities.filter(c => !parentActivities.some(p => p.id === c.parentId)).forEach(a => {
+        result.push(a);
+    });
+
+    return result;
+}
+
 // Program Gantt Section Component - matches Program module appearance
-function ProgramGanttSection({ activities }: { activities: ProgramActivity[] }) {
+function ProgramGanttSection({ activities, zoomLevel }: { activities: ProgramActivity[]; zoomLevel: ZoomLevel }) {
+    // Filter visible activities based on collapsed state
+    const visibleActivities = flattenVisibleActivities(activities);
+
     // Filter activities with dates and calculate date range
-    const activitiesWithDates = activities.filter(a => a.startDate && a.endDate);
+    const activitiesWithDates = visibleActivities.filter(a => a.startDate && a.endDate);
 
     if (activitiesWithDates.length === 0) {
         return (
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     Program
                 </h3>
-                <div className="border border-[#3e3e42] rounded overflow-hidden">
-                    <div className="px-4 py-3 text-[#858585] text-sm">
+                <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                    <div className="px-4 py-3 text-[var(--color-text-muted)] text-sm">
                         No program activities with dates.
                     </div>
                 </div>
@@ -143,28 +185,15 @@ function ProgramGanttSection({ activities }: { activities: ProgramActivity[] }) 
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
-    // Generate week columns with month info
-    const weekColumns = generateWeekColumnsWithMonths(minDate, maxDate);
-    const monthGroups = groupColumnsByMonth(weekColumns);
+    // Generate timeline columns based on zoom level
+    const timelineColumns = generateTimelineColumns(minDate, maxDate, zoomLevel);
+    const monthGroups = groupColumnsByMonth(timelineColumns, zoomLevel);
     const totalDuration = maxDate.getTime() - minDate.getTime();
-    const columnWidth = 50; // pixels per week column
+    // Use different column widths for week vs month view
+    const columnWidth = zoomLevel === 'week' ? 50 : 80;
 
-    // Build hierarchy (parent activities first, then children)
-    const parentActivities = activities.filter(a => !a.parentId);
-    const childActivities = activities.filter(a => a.parentId);
-
-    // Order activities: parent followed by its children
-    const orderedActivities: ProgramActivity[] = [];
-    parentActivities.forEach(parent => {
-        orderedActivities.push(parent);
-        const children = childActivities.filter(c => c.parentId === parent.id);
-        children.sort((a, b) => a.sortOrder - b.sortOrder);
-        orderedActivities.push(...children);
-    });
-    // Add any orphaned activities
-    childActivities.filter(c => !parentActivities.some(p => p.id === c.parentId)).forEach(a => {
-        orderedActivities.push(a);
-    });
+    // Use the already-filtered visibleActivities for rendering
+    const orderedActivities = visibleActivities;
 
     // Calculate bar position for an activity
     const calculateBarPosition = (activity: ProgramActivity) => {
@@ -174,12 +203,12 @@ function ProgramGanttSection({ activities }: { activities: ProgramActivity[] }) 
         const activityEnd = new Date(activity.endDate);
 
         if (totalDuration === 0) {
-            return { left: 0, width: weekColumns.length * columnWidth };
+            return { left: 0, width: timelineColumns.length * columnWidth };
         }
 
         const leftPercent = (activityStart.getTime() - minDate.getTime()) / totalDuration;
         const widthPercent = (activityEnd.getTime() - activityStart.getTime()) / totalDuration;
-        const totalWidth = weekColumns.length * columnWidth;
+        const totalWidth = timelineColumns.length * columnWidth;
 
         return {
             left: Math.max(0, leftPercent * totalWidth),
@@ -195,28 +224,28 @@ function ProgramGanttSection({ activities }: { activities: ProgramActivity[] }) 
     // Today line position
     const today = new Date();
     const todayPosition = totalDuration > 0
-        ? ((today.getTime() - minDate.getTime()) / totalDuration) * (weekColumns.length * columnWidth)
+        ? ((today.getTime() - minDate.getTime()) / totalDuration) * (timelineColumns.length * columnWidth)
         : null;
-    const showTodayLine = todayPosition !== null && todayPosition >= 0 && todayPosition <= weekColumns.length * columnWidth;
+    const showTodayLine = todayPosition !== null && todayPosition >= 0 && todayPosition <= timelineColumns.length * columnWidth;
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                 Program
             </h3>
-            <div className="border border-[#3e3e42] rounded overflow-hidden bg-[#1e1e1e]">
+            <div className="border border-[var(--color-border)] rounded overflow-hidden bg-[var(--color-bg-primary)]">
                 <div className="overflow-x-auto">
-                    <div style={{ minWidth: `${160 + weekColumns.length * columnWidth}px` }}>
+                    <div style={{ minWidth: `${160 + timelineColumns.length * columnWidth}px` }}>
                         {/* Header: Month row */}
-                        <div className="flex border-b border-[#3e3e42] bg-[#252526]">
-                            <div className="w-40 flex-shrink-0 px-3 py-1.5 text-[#858585] text-xs font-medium border-r border-[#3e3e42]">
+                        <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                            <div className="w-40 flex-shrink-0 px-3 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)]">
                                 Activity
                             </div>
                             <div className="flex">
                                 {monthGroups.map((group, i) => (
                                     <div
                                         key={i}
-                                        className="text-center text-[#858585] text-xs py-1.5 border-r border-[#3e3e42] last:border-r-0"
+                                        className="text-center text-[var(--color-text-muted)] text-xs py-1.5 border-r border-[var(--color-border)] last:border-r-0"
                                         style={{ width: `${group.count * columnWidth}px` }}
                                     >
                                         {group.label}
@@ -225,42 +254,53 @@ function ProgramGanttSection({ activities }: { activities: ProgramActivity[] }) 
                             </div>
                         </div>
 
-                        {/* Header: Day numbers row */}
-                        <div className="flex border-b border-[#3e3e42] bg-[#252526]">
-                            <div className="w-40 flex-shrink-0 border-r border-[#3e3e42]" />
-                            <div className="flex">
-                                {weekColumns.map((col, i) => (
-                                    <div
-                                        key={i}
-                                        className="text-center text-[#858585] text-xs py-1 border-r border-[#3e3e42] last:border-r-0"
-                                        style={{ width: `${columnWidth}px` }}
-                                    >
-                                        {col.dayLabel}
-                                    </div>
-                                ))}
+                        {/* Header: Day/Week numbers row - only show in week view */}
+                        {zoomLevel === 'week' && (
+                            <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                                <div className="w-40 flex-shrink-0 border-r border-[var(--color-border)]" />
+                                <div className="flex">
+                                    {timelineColumns.map((col, i) => (
+                                        <div
+                                            key={i}
+                                            className="text-center text-[var(--color-text-muted)] text-xs py-1 border-r border-[var(--color-border)] last:border-r-0"
+                                            style={{ width: `${columnWidth}px` }}
+                                        >
+                                            {col.label}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Activity rows */}
                         {orderedActivities.map((activity) => {
                             const barPos = calculateBarPosition(activity);
                             const isChild = !!activity.parentId;
+                            const hasChildren = activities.some(a => a.parentId === activity.id);
                             const color = getActivityColor();
 
                             return (
                                 <div
                                     key={activity.id}
-                                    className="flex border-b border-[#3e3e42] last:border-b-0 hover:bg-[#2a2a2a]"
+                                    className="flex border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-bg-tertiary)]"
                                 >
                                     {/* Activity name cell with indentation for children */}
                                     <div
-                                        className={`w-40 flex-shrink-0 py-2 border-r border-[#3e3e42] flex items-center gap-2 ${isChild ? 'pl-6 pr-2' : 'px-3'}`}
+                                        className={`w-40 flex-shrink-0 py-2 border-r border-[var(--color-border)] flex items-center gap-2 ${isChild ? 'pl-6 pr-2' : 'px-3'}`}
                                     >
-                                        {/* Collapse indicator for parents */}
-                                        {!isChild && (
-                                            <svg className="w-3 h-3 text-[#858585] flex-shrink-0" viewBox="0 0 12 12" fill="currentColor">
+                                        {/* Collapse indicator for parents - show expanded/collapsed state */}
+                                        {!isChild && hasChildren && (
+                                            <svg
+                                                className={`w-3 h-3 text-[var(--color-text-muted)] flex-shrink-0 transition-transform ${activity.collapsed ? '' : 'rotate-90'}`}
+                                                viewBox="0 0 12 12"
+                                                fill="currentColor"
+                                            >
                                                 <path d="M4 2l4 4-4 4V2z" />
                                             </svg>
+                                        )}
+                                        {/* Spacer for parents without children */}
+                                        {!isChild && !hasChildren && (
+                                            <div className="w-3 flex-shrink-0" />
                                         )}
                                         {/* Color indicator for children */}
                                         {isChild && (
@@ -269,7 +309,7 @@ function ProgramGanttSection({ activities }: { activities: ProgramActivity[] }) 
                                                 style={{ backgroundColor: color }}
                                             />
                                         )}
-                                        <span className={`text-xs truncate ${isChild ? 'text-[#a0a0a0]' : 'text-[#cccccc] font-medium'}`}>
+                                        <span className={`text-xs truncate ${isChild ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)] font-medium'}`}>
                                             {activity.name}
                                         </span>
                                     </div>
@@ -277,14 +317,14 @@ function ProgramGanttSection({ activities }: { activities: ProgramActivity[] }) 
                                     {/* Timeline cell */}
                                     <div
                                         className="relative py-2"
-                                        style={{ width: `${weekColumns.length * columnWidth}px` }}
+                                        style={{ width: `${timelineColumns.length * columnWidth}px` }}
                                     >
                                         {/* Grid lines */}
                                         <div className="absolute inset-0 flex">
-                                            {weekColumns.map((_, i) => (
+                                            {timelineColumns.map((_, i) => (
                                                 <div
                                                     key={i}
-                                                    className="border-r border-[#3e3e42] last:border-r-0"
+                                                    className="border-r border-[var(--color-border)] last:border-r-0"
                                                     style={{ width: `${columnWidth}px` }}
                                                 />
                                             ))}
@@ -329,38 +369,49 @@ export function RFTNewShortTab({
     projectId,
     rftNew,
     contextName,
-    contextType,
-    disciplineId,
-    tradeId,
+    stakeholderId,
     onDateChange,
 }: RFTNewShortTabProps) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
-    const [objectives, setObjectives] = useState<PlanningObjectives>({});
+    const [objectives, setObjectives] = useState<ProfilerObjectives>({});
     const [programActivities, setProgramActivities] = useState<ProgramActivity[]>([]);
     const [briefData, setBriefData] = useState({ service: '', deliverables: '' });
     const [isSavingBrief, setIsSavingBrief] = useState(false);
     const [costLines, setCostLines] = useState<CostLine[]>([]);
 
+    // Read zoom level from localStorage to match Program tab configuration
+    const [zoomLevel] = useState<ZoomLevel>(() => {
+        if (typeof window !== 'undefined') {
+            const stored = localStorage.getItem(ZOOM_STORAGE_KEY);
+            if (stored === 'week' || stored === 'month') {
+                return stored;
+            }
+        }
+        return 'week';
+    });
+
     // Unified Field Generation hooks for Brief fields
     const {
-        generate: generateService,
+        generate: generateServiceApi,
         isGenerating: isGeneratingService,
     } = useFieldGeneration({
         fieldType: 'brief.service',
         projectId,
-        disciplineId: disciplineId || undefined,
-        tradeId: tradeId || undefined,
+        stakeholderId: stakeholderId || undefined,
     });
 
     const {
-        generate: generateDeliverables,
+        generate: generateDeliverablesApi,
         isGenerating: isGeneratingDeliverables,
     } = useFieldGeneration({
         fieldType: 'brief.deliverables',
         projectId,
-        disciplineId: disciplineId || undefined,
-        tradeId: tradeId || undefined,
+        stakeholderId: stakeholderId || undefined,
     });
+
+    // Polish loading states (using same API but with existing content)
+    const [isPolishingService, setIsPolishingService] = useState(false);
+    const [isPolishingDeliverables, setIsPolishingDeliverables] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [rftDate, setRftDate] = useState(rftNew.rftDate || new Date().toISOString().split('T')[0]);
     const dateInputRef = useRef<HTMLInputElement>(null);
@@ -415,16 +466,18 @@ export function RFTNewShortTab({
                         });
                     }
 
-                    // Set Objectives
-                    if (data.objectives) {
+                }
+
+                // Fetch Objectives from new profilerObjectives API
+                const objectivesRes = await fetch(`/api/projects/${projectId}/objectives`);
+                if (objectivesRes.ok) {
+                    const objectivesData = await objectivesRes.json();
+                    if (objectivesData.success && objectivesData.data) {
                         setObjectives({
-                            functional: data.objectives.functional || '',
-                            quality: data.objectives.quality || '',
-                            budget: data.objectives.budget || '',
-                            program: data.objectives.program || '',
+                            functionalQuality: objectivesData.data.functionalQuality?.content || '',
+                            planningCompliance: objectivesData.data.planningCompliance?.content || '',
                         });
                     }
-
                 }
 
                 // Fetch Program Activities
@@ -436,30 +489,18 @@ export function RFTNewShortTab({
                     }
                 }
 
-                // Fetch cost lines filtered by discipline/trade
+                // Fetch cost lines filtered by stakeholder
                 let costUrl = `/api/projects/${projectId}/cost-lines`;
-                if (disciplineId) {
-                    costUrl += `?disciplineId=${disciplineId}`;
+                if (stakeholderId) {
+                    costUrl += `?stakeholderId=${stakeholderId}`;
 
-                    // Fetch Consultant Brief info
-                    const discRes = await fetch(`/api/planning/${projectId}/consultants/${disciplineId}`);
-                    if (discRes.ok) {
-                        const discData = await discRes.json();
+                    // Fetch Stakeholder Brief info
+                    const stakeholderRes = await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`);
+                    if (stakeholderRes.ok) {
+                        const stakeholderData = await stakeholderRes.json();
                         setBriefData({
-                            service: discData.briefServices || '',
-                            deliverables: discData.briefDeliverables || '',
-                        });
-                    }
-                } else if (tradeId) {
-                    costUrl += `?tradeId=${tradeId}`;
-
-                    // Fetch Contractor Scope info
-                    const tradeRes = await fetch(`/api/planning/${projectId}/contractors/${tradeId}`);
-                    if (tradeRes.ok) {
-                        const tradeData = await tradeRes.json();
-                        setBriefData({
-                            service: tradeData.scopeWorks || '',
-                            deliverables: tradeData.scopeDeliverables || '',
+                            service: stakeholderData.briefServices || stakeholderData.scopeWorks || '',
+                            deliverables: stakeholderData.briefDeliverables || stakeholderData.scopeDeliverables || '',
                         });
                     }
                 }
@@ -479,22 +520,44 @@ export function RFTNewShortTab({
         };
 
         fetchData();
-    }, [projectId, disciplineId, tradeId]);
+    }, [projectId, stakeholderId]);
 
     /**
-     * Generate Service field using Unified Field Generation
-     * Uses existing text as input for interpretation (instruction, enhance, generate)
+     * Build informative description of sources used for generation
+     */
+    const buildSourceDescription = (metadata: { usedRAG: boolean; usedProjectContext: boolean; usedProfiler: boolean; usedObjectives: boolean; ragDocumentCount: number; ragChunkCount: number }, sourceCount: number): string => {
+        const parts: string[] = [];
+        if (metadata.usedRAG && sourceCount > 0) {
+            parts.push(`${sourceCount} Knowledge Source document(s)`);
+        }
+        if (metadata.usedProfiler) {
+            parts.push('Project Profile');
+        }
+        if (metadata.usedObjectives) {
+            parts.push('Project Objectives');
+        }
+        if (metadata.usedProjectContext && !metadata.usedProfiler && !metadata.usedObjectives) {
+            parts.push('Project Context');
+        }
+        if (!metadata.usedRAG) {
+            parts.push('(no Knowledge Source)');
+        }
+        return parts.length > 0 ? `Generated using: ${parts.join(', ')}` : 'Generated using project context';
+    };
+
+    /**
+     * Generate Service field from scratch using Unified Field Generation
      */
     const handleGenerateService = useCallback(async () => {
         try {
-            const result = await generateService(briefData.service);
+            const result = await generateServiceApi('');
             setBriefData(prev => ({
                 ...prev,
                 service: result.content,
             }));
             toast({
                 title: 'Service Generated',
-                description: `Generated using ${result.sources.length} source(s) from Knowledge Source`,
+                description: buildSourceDescription(result.metadata, result.sources.length),
             });
         } catch (error) {
             toast({
@@ -503,21 +566,55 @@ export function RFTNewShortTab({
                 variant: 'destructive',
             });
         }
-    }, [generateService, briefData.service, toast]);
+    }, [generateServiceApi, toast]);
 
     /**
-     * Generate Deliverables field using Unified Field Generation
+     * Polish Service field by enhancing existing content
+     */
+    const handlePolishService = useCallback(async () => {
+        if (!briefData.service.trim()) {
+            toast({
+                title: 'Nothing to Polish',
+                description: 'Enter some content first, then polish it',
+                variant: 'destructive',
+            });
+            return;
+        }
+        setIsPolishingService(true);
+        try {
+            const result = await generateServiceApi(briefData.service);
+            setBriefData(prev => ({
+                ...prev,
+                service: result.content,
+            }));
+            toast({
+                title: 'Service Polished',
+                description: buildSourceDescription(result.metadata, result.sources.length),
+            });
+        } catch (error) {
+            toast({
+                title: 'Polish Failed',
+                description: error instanceof Error ? error.message : 'Failed to polish',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsPolishingService(false);
+        }
+    }, [generateServiceApi, briefData.service, toast]);
+
+    /**
+     * Generate Deliverables field from scratch using Unified Field Generation
      */
     const handleGenerateDeliverables = useCallback(async () => {
         try {
-            const result = await generateDeliverables(briefData.deliverables);
+            const result = await generateDeliverablesApi('');
             setBriefData(prev => ({
                 ...prev,
                 deliverables: result.content,
             }));
             toast({
                 title: 'Deliverables Generated',
-                description: `Generated using ${result.sources.length} source(s) from Knowledge Source`,
+                description: buildSourceDescription(result.metadata, result.sources.length),
             });
         } catch (error) {
             toast({
@@ -526,11 +623,45 @@ export function RFTNewShortTab({
                 variant: 'destructive',
             });
         }
-    }, [generateDeliverables, briefData.deliverables, toast]);
+    }, [generateDeliverablesApi, toast]);
+
+    /**
+     * Polish Deliverables field by enhancing existing content
+     */
+    const handlePolishDeliverables = useCallback(async () => {
+        if (!briefData.deliverables.trim()) {
+            toast({
+                title: 'Nothing to Polish',
+                description: 'Enter some content first, then polish it',
+                variant: 'destructive',
+            });
+            return;
+        }
+        setIsPolishingDeliverables(true);
+        try {
+            const result = await generateDeliverablesApi(briefData.deliverables);
+            setBriefData(prev => ({
+                ...prev,
+                deliverables: result.content,
+            }));
+            toast({
+                title: 'Deliverables Polished',
+                description: buildSourceDescription(result.metadata, result.sources.length),
+            });
+        } catch (error) {
+            toast({
+                title: 'Polish Failed',
+                description: error instanceof Error ? error.message : 'Failed to polish',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsPolishingDeliverables(false);
+        }
+    }, [generateDeliverablesApi, briefData.deliverables, toast]);
 
     if (isLoading) {
         return (
-            <div className="p-8 text-center text-[#858585]">
+            <div className="p-8 text-center text-[var(--color-text-muted)]">
                 <p>Loading RFT data...</p>
             </div>
         );
@@ -543,24 +674,17 @@ export function RFTNewShortTab({
     };
 
     const handleSaveBrief = async (field: 'service' | 'deliverables') => {
+        if (!stakeholderId) return;
         setIsSavingBrief(true);
         try {
             const payload: Record<string, string> = {};
-            if (disciplineId) {
-                if (field === 'service') payload.briefServices = briefData.service;
-                if (field === 'deliverables') payload.briefDeliverables = briefData.deliverables;
-                await fetch(`/api/planning/${projectId}/consultants/${disciplineId}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(payload),
-                });
-            } else if (tradeId) {
-                if (field === 'service') payload.scopeWorks = briefData.service;
-                if (field === 'deliverables') payload.scopeDeliverables = briefData.deliverables;
-                await fetch(`/api/planning/${projectId}/contractors/${tradeId}`, {
-                    method: 'PUT',
-                    body: JSON.stringify(payload),
-                });
-            }
+            if (field === 'service') payload.briefServices = briefData.service;
+            if (field === 'deliverables') payload.briefDeliverables = briefData.deliverables;
+            await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
         } catch (error) {
             console.error('Failed to save brief', error);
         } finally {
@@ -571,34 +695,34 @@ export function RFTNewShortTab({
     return (
         <div className="space-y-6">
             {/* 1. Project Information Table */}
-            <div className="border border-[#3e3e42] rounded overflow-hidden">
+            <div className="border border-[var(--color-border)] rounded overflow-hidden">
                 <table className="w-full text-sm">
                     <tbody>
-                        <tr className="border-b border-[#3e3e42]">
-                            <td className="w-36 px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                        <tr className="border-b border-[var(--color-border)]">
+                            <td className="w-36 px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium">
                                 Project Name
                             </td>
-                            <td className="px-4 py-2.5 text-[#cccccc]" colSpan={2}>
+                            <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
                                 {projectDetails?.projectName || 'Loading...'}
                             </td>
                         </tr>
-                        <tr className="border-b border-[#3e3e42]">
-                            <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                        <tr className="border-b border-[var(--color-border)]">
+                            <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium">
                                 Address
                             </td>
-                            <td className="px-4 py-2.5 text-[#cccccc]" colSpan={2}>
+                            <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
                                 {projectDetails?.address || '-'}
                             </td>
                         </tr>
                         <tr>
-                            <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
+                            <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium">
                                 Document
                             </td>
-                            <td className="px-4 py-2.5 text-[#cccccc] font-semibold">
+                            <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
                                 {rftLabel}
                             </td>
                             <td
-                                className="w-36 px-4 py-2.5 text-[rgb(187,235,255)] border-l border-[#3e3e42] cursor-pointer hover:bg-[#2a2a2a] transition-colors relative"
+                                className="w-36 px-4 py-2.5 text-[var(--color-accent-copper)] font-medium border-l border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative"
                                 onClick={handleDateClick}
                             >
                                 <span className="select-none">{formatDisplayDate(rftDate)}</span>
@@ -618,42 +742,26 @@ export function RFTNewShortTab({
 
             {/* 2. Objectives Section */}
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     Objectives
                 </h3>
-                <div className="border border-[#3e3e42] rounded overflow-hidden">
+                <div className="border border-[var(--color-border)] rounded overflow-hidden">
                     <table className="w-full text-sm">
                         <tbody>
-                            <tr className="border-b border-[#3e3e42]">
-                                <td className="w-36 px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
-                                    Functional
+                            <tr className="border-b border-[var(--color-border)]">
+                                <td className="w-36 px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium align-top">
+                                    Functional & Quality
                                 </td>
-                                <td className="px-4 py-2.5 text-[#cccccc] whitespace-pre-wrap">
-                                    {objectives.functional || '-'}
-                                </td>
-                            </tr>
-                            <tr className="border-b border-[#3e3e42]">
-                                <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
-                                    Quality
-                                </td>
-                                <td className="px-4 py-2.5 text-[#cccccc] whitespace-pre-wrap">
-                                    {objectives.quality || '-'}
-                                </td>
-                            </tr>
-                            <tr className="border-b border-[#3e3e42]">
-                                <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
-                                    Budget
-                                </td>
-                                <td className="px-4 py-2.5 text-[#cccccc] whitespace-pre-wrap">
-                                    {objectives.budget || '-'}
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)] whitespace-pre-wrap">
+                                    {objectives.functionalQuality || '-'}
                                 </td>
                             </tr>
                             <tr>
-                                <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium">
-                                    Program
+                                <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium align-top">
+                                    Planning & Compliance
                                 </td>
-                                <td className="px-4 py-2.5 text-[#cccccc] whitespace-pre-wrap">
-                                    {objectives.program || '-'}
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)] whitespace-pre-wrap">
+                                    {objectives.planningCompliance || '-'}
                                 </td>
                             </tr>
                         </tbody>
@@ -661,99 +769,159 @@ export function RFTNewShortTab({
                 </div>
             </div>
 
-            {/* 3. Brief Section */}
+            {/* 3. Brief Section - Service */}
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
-                        Brief
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+                        Service
                     </h3>
-                    {isSavingBrief && (
-                        <span className="text-xs text-[#4fc1ff]">Saving...</span>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {/* Generate Button */}
+                        <button
+                            onClick={handleGenerateService}
+                            disabled={isGeneratingService || isPolishingService}
+                            className={`
+                                flex items-center gap-1.5 text-sm font-medium transition-all
+                                ${isGeneratingService || isPolishingService
+                                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                }
+                            `}
+                            title="Generate service description from scratch"
+                        >
+                            {isGeneratingService ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <DiamondIcon className="w-4 h-4" variant="empty" />
+                            )}
+                            <span>{isGeneratingService ? 'Generating...' : 'Generate'}</span>
+                        </button>
+                        {/* Polish Button */}
+                        <button
+                            onClick={handlePolishService}
+                            disabled={isGeneratingService || isPolishingService || !briefData.service.trim()}
+                            className={`
+                                flex items-center gap-1.5 text-sm font-medium transition-all
+                                ${(isGeneratingService || isPolishingService || !briefData.service.trim())
+                                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                }
+                            `}
+                            title="Polish and enhance existing content"
+                        >
+                            {isPolishingService ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <DiamondIcon className="w-4 h-4" variant="filled" />
+                            )}
+                            <span>{isPolishingService ? 'Polishing...' : 'Polish'}</span>
+                        </button>
+                        {isSavingBrief && (
+                            <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
+                        )}
+                    </div>
                 </div>
-                <div className="border border-[#3e3e42] rounded overflow-hidden">
-                    <table className="w-full text-sm">
-                        <tbody>
-                            <tr className="border-b border-[#3e3e42]">
-                                <td className="w-36 px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium align-top pt-4">
-                                    <div className="flex items-center gap-2">
-                                        <span>Service</span>
-                                        <AIGenerateIcon
-                                            size={12}
-                                            className="text-[#4fc1ff] hover:text-[#6fd1ff]"
-                                            onClick={handleGenerateService}
-                                            isLoading={isGeneratingService}
-                                            disabled={isGeneratingService}
-                                            title="Generate service description with AI"
-                                        />
-                                    </div>
-                                </td>
-                                <td className="p-0">
-                                    <Textarea
-                                        value={briefData.service}
-                                        onChange={(e) => handleBriefChange('service', e.target.value)}
-                                        onBlur={() => handleSaveBrief('service')}
-                                        placeholder="Enter service details or instructions for AI (e.g., 'list 4 key services')..."
-                                        disabled={isGeneratingService}
-                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text disabled:opacity-70"
-                                        style={{ fieldSizing: 'content' } as React.CSSProperties}
-                                    />
-                                </td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 bg-[#2d2d30] text-[#858585] font-medium align-top pt-4">
-                                    <div className="flex items-center gap-2">
-                                        <span>Deliverables</span>
-                                        <AIGenerateIcon
-                                            size={12}
-                                            className="text-[#4fc1ff] hover:text-[#6fd1ff]"
-                                            onClick={handleGenerateDeliverables}
-                                            isLoading={isGeneratingDeliverables}
-                                            disabled={isGeneratingDeliverables}
-                                            title="Generate deliverables with AI"
-                                        />
-                                    </div>
-                                </td>
-                                <td className="p-0">
-                                    <Textarea
-                                        value={briefData.deliverables}
-                                        onChange={(e) => handleBriefChange('deliverables', e.target.value)}
-                                        onBlur={() => handleSaveBrief('deliverables')}
-                                        placeholder="Enter deliverables or instructions for AI..."
-                                        disabled={isGeneratingDeliverables}
-                                        className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[100px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text disabled:opacity-70"
-                                        style={{ fieldSizing: 'content' } as React.CSSProperties}
-                                    />
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                    <Textarea
+                        value={briefData.service}
+                        onChange={(e) => handleBriefChange('service', e.target.value)}
+                        onBlur={() => handleSaveBrief('service')}
+                        placeholder="Enter service details..."
+                        disabled={isGeneratingService || isPolishingService}
+                        className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        style={{ fieldSizing: 'content' } as React.CSSProperties}
+                    />
+                </div>
+            </div>
+
+            {/* 3b. Brief Section - Deliverables */}
+            <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+                        Deliverables
+                    </h3>
+                    <div className="flex items-center gap-3">
+                        {/* Generate Button */}
+                        <button
+                            onClick={handleGenerateDeliverables}
+                            disabled={isGeneratingDeliverables || isPolishingDeliverables}
+                            className={`
+                                flex items-center gap-1.5 text-sm font-medium transition-all
+                                ${isGeneratingDeliverables || isPolishingDeliverables
+                                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                }
+                            `}
+                            title="Generate deliverables from scratch"
+                        >
+                            {isGeneratingDeliverables ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <DiamondIcon className="w-4 h-4" variant="empty" />
+                            )}
+                            <span>{isGeneratingDeliverables ? 'Generating...' : 'Generate'}</span>
+                        </button>
+                        {/* Polish Button */}
+                        <button
+                            onClick={handlePolishDeliverables}
+                            disabled={isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim()}
+                            className={`
+                                flex items-center gap-1.5 text-sm font-medium transition-all
+                                ${(isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim())
+                                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                }
+                            `}
+                            title="Polish and enhance existing content"
+                        >
+                            {isPolishingDeliverables ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <DiamondIcon className="w-4 h-4" variant="filled" />
+                            )}
+                            <span>{isPolishingDeliverables ? 'Polishing...' : 'Polish'}</span>
+                        </button>
+                        {isSavingBrief && (
+                            <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
+                        )}
+                    </div>
+                </div>
+                <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                    <Textarea
+                        value={briefData.deliverables}
+                        onChange={(e) => handleBriefChange('deliverables', e.target.value)}
+                        onBlur={() => handleSaveBrief('deliverables')}
+                        placeholder="Enter deliverables..."
+                        disabled={isGeneratingDeliverables || isPolishingDeliverables}
+                        className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                        style={{ fieldSizing: 'content' } as React.CSSProperties}
+                    />
                 </div>
             </div>
 
             {/* 4. Program Section - Visual Gantt */}
-            <ProgramGanttSection activities={programActivities} />
+            <ProgramGanttSection activities={programActivities} zoomLevel={zoomLevel} />
 
             {/* 5. Fee Section */}
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     Fee
                 </h3>
-                <div className="border border-[#3e3e42] rounded overflow-hidden">
+                <div className="border border-[var(--color-border)] rounded overflow-hidden">
                     {costLines.length > 0 ? (
                         <table className="w-full text-sm">
-                            <thead className="bg-[#2d2d30]">
-                                <tr className="border-b border-[#3e3e42]">
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium w-[70%]">Description</th>
-                                    <th className="px-4 py-2.5 text-left text-[#858585] font-medium w-[30%]">Amount (Excl. GST)</th>
+                            <thead className="bg-[var(--color-accent-copper-tint)]">
+                                <tr className="border-b border-[var(--color-border)]">
+                                    <th className="px-4 py-2.5 text-left text-[var(--color-accent-copper)] font-medium w-[70%]">Description</th>
+                                    <th className="px-4 py-2.5 text-left text-[var(--color-accent-copper)] font-medium w-[30%]">Amount (Excl. GST)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {/* Existing Cost Lines */}
                                 {costLines.map((line) => (
-                                    <tr key={line.id} className="border-b border-[#3e3e42]">
-                                        <td className="px-4 py-2.5 text-[#cccccc]">{line.activity}</td>
-                                        <td className="px-4 py-2.5 text-[#cccccc]">
+                                    <tr key={line.id} className="border-b border-[var(--color-border)]">
+                                        <td className="px-4 py-2.5 text-[var(--color-text-primary)]">{line.activity}</td>
+                                        <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
                                             {/* Amount left empty for consultant to nominate */}
                                         </td>
                                     </tr>
@@ -761,8 +929,8 @@ export function RFTNewShortTab({
                             </tbody>
                         </table>
                     ) : (
-                        <div className="px-4 py-3 text-[#858585] text-sm">
-                            No cost plan items for this {contextType}
+                        <div className="px-4 py-3 text-[var(--color-text-muted)] text-sm">
+                            No cost plan items for this {contextName}
                         </div>
                     )}
                 </div>
@@ -770,7 +938,7 @@ export function RFTNewShortTab({
 
             {/* 6. Transmittal Section */}
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     Transmittal
                 </h3>
                 <RFTNewTransmittalSchedule rftNewId={rftNew.id} />

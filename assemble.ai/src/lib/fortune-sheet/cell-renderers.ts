@@ -232,19 +232,22 @@ export function createCompanyCell(
 }
 
 /**
- * Create FortuneSheet cell data for discipline
+ * Create FortuneSheet cell data for stakeholder
  */
-export function createDisciplineCell(
-  discipline: { disciplineName: string; id?: string } | null | undefined,
+export function createStakeholderCell(
+  stakeholder: { name: string; id?: string } | null | undefined,
   editable = false
 ): Record<string, unknown> {
   return {
-    v: discipline?.disciplineName ?? '',
+    v: stakeholder?.name ?? '',
     ct: { fa: '@', t: 's' },
     fc: editable ? COLORS.accent.blue : COLORS.text.secondary,
     ht: 1, // Left align
   };
 }
+
+// Legacy alias for backward compatibility
+export const createDisciplineCell = createStakeholderCell;
 
 // ============================================================================
 // VARIANCE RENDERING
@@ -317,8 +320,8 @@ export function createHeaderCell(
   return {
     v: label,
     ct: { fa: '@', t: 's' },
-    bg: COLORS.accent.costPlan,
-    fc: COLORS.text.white,
+    bg: COLORS.accent.copper,
+    fc: COLORS.text.inverse,
     bl: 1,
     ht: htMap[align],
   };

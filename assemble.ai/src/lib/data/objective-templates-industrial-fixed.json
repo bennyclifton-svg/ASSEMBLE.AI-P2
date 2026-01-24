@@ -1,0 +1,43 @@
+{
+  "industrial": {
+    "functional": {
+      "template": "Deliver a {{facility_type}} facility. Design for efficient industrial operations with appropriate loading facilities, heavy vehicle access, and office/amenities component to support operational needs. Provide flexibility to accommodate various tenant requirements.",
+      "variations": {
+        "warehouse": "Deliver a warehouse/distribution facility. Design for efficient warehouse operations with container loading capability and B-double access. Provide office/amenities component (approximately 5-10% of GFA) to support warehouse operations and staff facilities.",
+        "logistics": "Deliver a logistics/e-commerce facility. Design for high-volume logistics operations with extensive dock facilities for rapid turnaround and cross-docking capability. Provide office/amenities component to support 24/7 operations with appropriate staff facilities and amenities.",
+        "manufacturing": "Deliver a manufacturing facility. Design for manufacturing operations with appropriate power infrastructure, crane provisions, and efficient process flow. Provide office/amenities component including quality control areas and staff facilities.",
+        "cold_storage": "Deliver a cold storage/food grade facility. Design for temperature-controlled storage with insulated envelope, refrigeration infrastructure, and food safety compliance (HACCP). Provide office/amenities component and separate dock facilities for different temperature zones.",
+        "data_centre": "Deliver a data centre facility. Design for mission-critical operations with redundant power, cooling, and security systems. Provide appropriate office/amenities component for operations staff and separate secure data hall areas.",
+        "multi_unit": "Deliver a multi-unit industrial facility designed for strata subdivision. Design for flexible tenancy mix with individual unit access, separate utilities, and strata-ready configuration. Provide common areas, visitor parking, and shared facilities."
+      }
+    },
+    "quality": {
+      "template": "Steel portal frame construction with insulated metal cladding walls. Insulated roof sheeting with 5% translucent panels for natural light. Industrial-grade concrete floor with appropriate load rating and flatness specification. All services to comply with relevant Australian Standards. Design for 40+ year design life with minimal maintenance requirements.",
+      "variations": {
+        "traditional": "Steel portal frame construction with insulated metal cladding walls. Insulated roof sheeting with 5% translucent panels for natural light. Industrial-grade concrete floor with appropriate load rating (typically 30-50 kPa) and FM2 flatness specification. Fire services to comply with NCC requirements. Design for 40+ year design life.",
+        "precast": "Steel portal frame construction with precast concrete tilt-up wall panels. Insulated roof sheeting with 5% translucent panels for natural light. Industrial-grade concrete floor with appropriate load rating (typically 30-50 kPa) and FM2 flatness specification. Fire services to comply with NCC requirements. Design for 40+ year design life.",
+        "modular": "Prefabricated modular steel frame construction with insulated composite wall panels. Insulated roof sheeting with 5% translucent panels for natural light. Industrial-grade concrete floor with appropriate load rating (typically 30-50 kPa) and FM2 flatness specification. Fire services to comply with NCC requirements. Design for 40+ year design life."
+      }
+    },
+    "sustainability": {
+      "template": "Comply with NCC 2022 Section J energy efficiency requirements. Design for efficient operations including: high-efficiency LED lighting with daylight dimming, efficient HVAC to office component, and rainwater harvesting for landscape irrigation and wash-down areas. Provide rooftop solar PV system with export capability to reduce operational carbon.",
+      "variations": {
+        "ncc_minimum": "Comply with NCC 2022 Section J energy efficiency requirements as minimum standard. Design for efficient operations including: high-efficiency LED lighting, efficient HVAC to office component, and rainwater harvesting for landscape irrigation.",
+        "green_star_5": "Target 5-Star Green Star Buildings rating. Design for sustainable operations including: high-efficiency LED lighting with daylight dimming, efficient HVAC systems, rainwater harvesting, and large-scale rooftop solar PV system. Incorporate sustainable materials with recycled content.",
+        "green_star_6": "Target 6-Star Green Star Buildings rating. Design for excellent sustainability performance including: high-efficiency systems, extensive solar PV (targeting net zero operational carbon), battery storage provisions, rainwater harvesting, and sustainable materials with high recycled content.",
+        "net_zero": "Target net zero operational carbon. Design with: comprehensive solar PV system covering available roof area, battery storage for load shifting, high-efficiency LED lighting with advanced controls, efficient HVAC, and rainwater harvesting. Use low-embodied carbon materials where practical."
+      }
+    },
+    "budget": {
+      "template": "Budget to include site works, building construction, services, landscaping, and authority contributions. Maintain 5% construction contingency for variations and unforeseen conditions. All costs subject to 3.5% annual escalation from cost plan date to construction midpoint. Costs exclude land acquisition, tenant-specific fitout, and specialized equipment/racking."
+    },
+    "program": {
+      "template": "Targeting completion within approximately 18-24 months from commencement. Design and approvals: approximately 4-6 months. Construction period to suit project scale and complexity. Commissioning and handover: 1 month. Allow for tenant fitout period following practical completion.",
+      "variations": {
+        "traditional": "Targeting completion within approximately 18-24 months from commencement using traditional steel frame construction. Design and approvals: approximately 4-6 months. Construction period to suit project scale. Commissioning and handover: 1 month.",
+        "precast": "Targeting completion within approximately 16-20 months from commencement using precast concrete tilt-up construction to accelerate program. Design and approvals: approximately 4-6 months. Construction period reduced through efficient precast methodology. Commissioning and handover: 1 month.",
+        "modular": "Targeting completion within approximately 14-18 months from commencement using modular/off-site construction to significantly accelerate program. Design and approvals: approximately 4-6 months. Construction period minimized through factory fabrication and rapid on-site assembly. Commissioning and handover: 1 month."
+      }
+    }
+  }
+}

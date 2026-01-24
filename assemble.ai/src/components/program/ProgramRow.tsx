@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Trash2, GripVertical, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useUpdateActivity, useDeleteActivity, useCreateMilestone } from '@/lib/hooks/use-program';
 import { useRefetch } from './ProgramPanel';
 import { ProgramBar } from './ProgramBar';
@@ -53,6 +55,22 @@ export function ProgramRow({
     const createMilestone = useCreateMilestone(projectId);
     const refetch = useRefetch();
     const timelineRef = useRef<HTMLDivElement>(null);
+
+    // Sortable hook for drag reordering
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: activity.id });
+
+    const sortableStyle = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
 
     // State for drag-to-create bar
     const [isCreatingBar, setIsCreatingBar] = useState(false);
@@ -225,33 +243,16 @@ export function ProgramRow({
                 const startDate = getDateFromPosition(startX);
                 const endDate = getDateFromPosition(finalEndX);
 
-                // Snap to week boundaries if in week mode
-                let finalStartDate = startDate;
-                let finalEndDate = endDate;
-
-                if (zoomLevel === 'week') {
-                    // Snap start to Monday
-                    const startDay = finalStartDate.getDay();
-                    const startDiff = startDay === 0 ? -6 : 1 - startDay;
-                    finalStartDate = new Date(finalStartDate);
-                    finalStartDate.setDate(finalStartDate.getDate() + startDiff);
-
-                    // Snap end to Sunday
-                    const endDay = finalEndDate.getDay();
-                    const endDiff = endDay === 0 ? 0 : 7 - endDay;
-                    finalEndDate = new Date(finalEndDate);
-                    finalEndDate.setDate(finalEndDate.getDate() + endDiff);
-                }
-
+                // Free-form dragging - no snap-to-week constraint
                 try {
                     console.log('Creating bar for activity:', activity.id, {
-                        startDate: formatDate(finalStartDate),
-                        endDate: formatDate(finalEndDate),
+                        startDate: formatDate(startDate),
+                        endDate: formatDate(endDate),
                     });
                     const result = await updateActivity.mutate({
                         id: activity.id,
-                        startDate: formatDate(finalStartDate),
-                        endDate: formatDate(finalEndDate),
+                        startDate: formatDate(startDate),
+                        endDate: formatDate(endDate),
                     }, async () => {
                         console.log('Refetching program data...');
                         await refetch();
@@ -275,13 +276,51 @@ export function ProgramRow({
     const rowHeight = 32;
     const indentWidth = 16;
 
+    // Handle tier toggle (promote/demote)
+    const handleToggleTier = () => {
+        const hasChildActivities = allActivities.some(a => a.parentId === activity.id);
+
+        if (activity.parentId) {
+            // Currently Tier 2 -> Promote to Tier 1
+            updateActivity.mutate({ id: activity.id, parentId: null }, refetch);
+        } else {
+            // Currently Tier 1 -> Demote to Tier 2
+            if (hasChildActivities) {
+                alert('Cannot demote: Remove children first');
+                return;
+            }
+            const topLevelActivities = allActivities
+                .filter(a => a.parentId === null)
+                .sort((a, b) => a.sortOrder - b.sortOrder);
+            const myIndex = topLevelActivities.findIndex(a => a.id === activity.id);
+
+            if (myIndex <= 0) {
+                alert('Cannot demote: No parent activity above');
+                return;
+            }
+
+            const newParent = topLevelActivities[myIndex - 1];
+            updateActivity.mutate({ id: activity.id, parentId: newParent.id }, refetch);
+        }
+    };
+
     if (isNameColumn) {
         // Render the activity name column
         return (
             <div
-                className="group flex items-center border-b border-[#3e3e42] hover:bg-[#2a2a2a]"
-                style={{ height: rowHeight }}
+                ref={setNodeRef}
+                className="group flex items-center border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)]"
+                style={{ height: rowHeight, ...sortableStyle }}
             >
+                {/* Drag handle - always visible */}
+                <div
+                    className="cursor-grab active:cursor-grabbing p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] touch-none"
+                    {...attributes}
+                    {...listeners}
+                >
+                    <GripVertical className="h-3 w-3" />
+                </div>
+
                 {/* Indent spacer */}
                 <div style={{ width: depth * indentWidth }} />
 
@@ -290,7 +329,7 @@ export function ProgramRow({
                     {hasChildren && (
                         <button
                             onClick={handleToggleCollapse}
-                            className="p-0.5 text-gray-500 hover:text-gray-300"
+                            className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
                         >
                             {activity.collapsed ? (
                                 <ChevronRight className="h-3.5 w-3.5" />
@@ -303,9 +342,25 @@ export function ProgramRow({
 
                 {/* Color indicator */}
                 <div
-                    className="mr-2 h-3 w-1 rounded-full"
-                    style={{ backgroundColor: '#56b6c2' }}
+                    className="mr-1 h-3 w-1 rounded-full bg-[var(--color-accent-teal)]"
                 />
+
+                {/* Tier toggle button */}
+                <button
+                    onClick={handleToggleTier}
+                    className={`mr-1 p-0.5 rounded transition-colors ${
+                        activity.parentId
+                            ? 'text-[var(--color-accent-teal)] hover:bg-[var(--color-accent-teal)]/20'
+                            : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]'
+                    }`}
+                    title={activity.parentId ? 'Promote to Tier 1 (top-level)' : 'Demote to Tier 2 (sub-item)'}
+                >
+                    {activity.parentId ? (
+                        <ChevronsLeft className="h-3 w-3" />
+                    ) : (
+                        <ChevronsRight className="h-3 w-3" />
+                    )}
+                </button>
 
                 {/* Activity name */}
                 <div className="flex-1 min-w-0">
@@ -317,13 +372,13 @@ export function ProgramRow({
                             onChange={(e) => setEditName(e.target.value)}
                             onBlur={handleSaveName}
                             onKeyDown={handleKeyDown}
-                            className="w-full bg-[#3e3e42] px-1 py-0.5 text-xs text-white outline-none ring-1 ring-[#0e639c]"
+                            className="w-full bg-[var(--color-bg-tertiary)] px-1 py-0.5 text-xs text-[var(--color-text-primary)] outline-none ring-1 ring-[var(--color-accent-teal)]"
                         />
                     ) : (
                         <span
                             onDoubleClick={handleStartEdit}
                             className={`block truncate text-xs cursor-text ${
-                                hasChildren ? 'font-medium text-white' : 'text-gray-300'
+                                hasChildren ? 'font-medium text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'
                             }`}
                         >
                             {activity.name}
@@ -334,7 +389,7 @@ export function ProgramRow({
                 {/* Delete button (visible on hover) */}
                 <button
                     onClick={handleDelete}
-                    className="invisible mr-2 p-0.5 text-gray-500 hover:text-red-400 group-hover:visible"
+                    className="invisible mr-2 p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] group-hover:visible"
                 >
                     <Trash2 className="h-3.5 w-3.5" />
                 </button>
@@ -357,7 +412,7 @@ export function ProgramRow({
         <div
             ref={timelineRef}
             data-activity-id={activity.id}
-            className={`relative flex border-b border-[#3e3e42] hover:bg-[#2a2a2a]/50 ${
+            className={`relative flex border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)]/50 ${
                 !hasExistingDates ? 'cursor-crosshair' : ''
             }`}
             style={{ height: rowHeight }}
@@ -368,7 +423,7 @@ export function ProgramRow({
             {columns.map((col, i) => (
                 <div
                     key={i}
-                    className="shrink-0 border-r border-[#3e3e42]/50"
+                    className="shrink-0 border-r border-[var(--color-border)]/50"
                     style={{ width: columnWidth }}
                 />
             ))}
@@ -391,14 +446,12 @@ export function ProgramRow({
             {/* Creating bar preview */}
             {isCreatingBar && creatingBarWidth > 10 && (
                 <div
-                    className="absolute pointer-events-none"
+                    className="absolute pointer-events-none bg-[var(--color-accent-teal)]/20 border border-[var(--color-accent-teal)]/40"
                     style={{
                         left: creatingBarLeft,
                         top: topOffset,
                         width: creatingBarWidth,
                         height: barHeight,
-                        backgroundColor: 'rgba(86, 182, 194, 0.2)',
-                        border: '1px solid rgba(86, 182, 194, 0.4)',
                     }}
                 />
             )}
@@ -412,7 +465,6 @@ export function ProgramRow({
                     columns={columns}
                     columnWidth={columnWidth}
                     rowHeight={rowHeight}
-                    color="#56b6c2"
                 />
             ))}
         </div>

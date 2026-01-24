@@ -101,19 +101,19 @@ function createSectionHeader(section: CostLine['section']) {
 // Convert cost lines to FortuneSheet cell data with section headers
 function costLinesToCellData(costLines: CostLine[]) {
   const headerRow = [
-    { v: 'Cost Code', ct: { fa: '@', t: 's' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Company', ct: { fa: '@', t: 's' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Description', ct: { fa: '@', t: 's' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Reference', ct: { fa: '@', t: 's' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Budget', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Approved Contract', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Forecast Vars', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Approved Vars', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Final Forecast', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Variance', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Claimed', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'Current Month', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: 'ETC', ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
+    { v: 'Cost Code', ct: { fa: '@', t: 's' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Company', ct: { fa: '@', t: 's' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Description', ct: { fa: '@', t: 's' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Reference', ct: { fa: '@', t: 's' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Budget', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Approved Contract', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Forecast Vars', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Approved Vars', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Final Forecast', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Variance', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Claimed', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'Current Month', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: 'ETC', ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
   ];
 
   const rows: ReturnType<typeof createSectionHeader>[] = [headerRow];

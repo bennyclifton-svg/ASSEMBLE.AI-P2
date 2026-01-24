@@ -1,0 +1,1251 @@
+{
+  "costPlanTemplates": {
+    "metadata": {
+      "version": "2.0",
+      "lastUpdated": "2025-01-01",
+      "effectiveDate": "2025-01-01",
+      "jurisdiction": "NSW, Australia",
+      "currency": "AUD",
+      "gstNote": "All costs EXCLUDE GST unless otherwise stated",
+      "sources": [
+        "Rawlinsons Australian Construction Handbook 2025",
+        "Rider Levett Bucknall Oceania Report Q4 2024",
+        "Cordell Construction Cost Index (CCCI)",
+        "BMT Tax Depreciation Construction Cost Guide",
+        "NSW Government Gazette (Long Service Levy)"
+      ],
+      "assumptions": [
+        "Sydney metropolitan area as base location",
+        "Normal site conditions (no significant abnormals)",
+        "Standard procurement methods",
+        "Competitive market conditions",
+        "No heritage or significant environmental constraints unless stated"
+      ],
+      "disclaimer": "Rates are indicative only. Project-specific estimates should be prepared by qualified Quantity Surveyors."
+    },
+
+    "locationFactors": {
+      "description": "Multipliers to apply to Sydney base rates",
+      "factors": {
+        "sydney_cbd": 1.10,
+        "sydney_metro": 1.00,
+        "sydney_outer": 0.95,
+        "newcastle": 0.92,
+        "wollongong": 0.93,
+        "central_coast": 0.90,
+        "regional_nsw_major": 0.88,
+        "regional_nsw_minor": 0.82,
+        "remote_nsw": 1.15,
+        "melbourne": 0.98,
+        "brisbane": 0.95,
+        "perth": 1.05,
+        "adelaide": 0.90,
+        "hobart": 0.95,
+        "canberra": 1.02
+      },
+      "notes": "Remote locations may attract significant premiums (1.15-1.50x) due to logistics and labour availability"
+    },
+
+    "escalation": {
+      "description": "Construction cost escalation guidance",
+      "currentAnnualRate": {
+        "percentage": 3.5,
+        "range": { "min": 3.0, "max": 4.5 },
+        "asAt": "Q4 2024"
+      },
+      "historicalRates": {
+        "2024": 3.4,
+        "2023": 4.2,
+        "2022": 8.1,
+        "2021": 5.3
+      },
+      "forecast": {
+        "2025": { "low": 3.0, "mid": 3.5, "high": 4.5 },
+        "2026": { "low": 2.5, "mid": 3.0, "high": 4.0 }
+      },
+      "applicationMethod": "Apply escalation from cost plan date to construction midpoint",
+      "drivers": [
+        "Labour cost increases (primary driver 2024-2025)",
+        "Material supply chain normalization",
+        "Energy costs",
+        "Regulatory compliance (NCC 2022)"
+      ]
+    },
+
+    "categories": {
+      "authority_costs": {
+        "name": "Authority & Statutory Costs",
+        "description": "Government fees, levies, and statutory charges",
+        "items": {
+          "da_fees": {
+            "name": "DA Application Fees",
+            "calculation": "council_fee_schedule",
+            "typicalRange": { "min": 5000, "max": 150000 },
+            "notes": "Based on construction cost brackets per EP&A Regulation",
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "pre_da_fees": {
+            "name": "Pre-DA Meeting Fees",
+            "calculation": "council_fee_schedule",
+            "typicalRange": { "min": 1000, "max": 10000 },
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "design_excellence_fees": {
+            "name": "Design Excellence Panel Fees",
+            "calculation": "council_fee_schedule",
+            "typicalRange": { "min": 5000, "max": 50000 },
+            "notes": "Required for projects in Design Excellence precincts or over height/FSR thresholds",
+            "applicableProjectTypes": ["apartments", "office", "mixed-use"],
+            "mandatory": false
+          },
+          "cc_fees": {
+            "name": "Construction Certificate Fees",
+            "calculation": "certifier_quote",
+            "typicalRange": { "min": 3000, "max": 80000 },
+            "notes": "Based on construction cost and project complexity",
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "pca_appointment": {
+            "name": "PCA Appointment & Administration",
+            "calculation": "certifier_quote",
+            "typicalRange": { "min": 2000, "max": 30000 },
+            "notes": "Separate from CC/OC fees - ongoing inspection administration",
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "section_7_11": {
+            "name": "Section 7.11 Contributions",
+            "calculation": "council_contribution_plan",
+            "notes": "Local infrastructure - varies by council and development type",
+            "typicalRates": {
+              "residential_per_dwelling": { "min": 10000, "max": 40000 },
+              "commercial_per_sqm": { "min": 100, "max": 300 }
+            },
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "section_7_12": {
+            "name": "Section 7.12 Levy",
+            "calculation": "percentage",
+            "percentage": 1.0,
+            "basis": "construction_cost",
+            "notes": "Alternative to 7.11 - typically 1% of construction cost over $200k",
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "special_infrastructure": {
+            "name": "Special Infrastructure Contributions (SIC)",
+            "calculation": "state_contribution_plan",
+            "typicalRates": {
+              "residential_per_dwelling": { "min": 10000, "max": 30000 },
+              "commercial_per_sqm": { "min": 50, "max": 150 }
+            },
+            "notes": "State infrastructure - applies in designated growth areas",
+            "applicableProjectTypes": ["apartments", "townhouses", "office", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "affordable_housing_contribution": {
+            "name": "Affordable Housing Contribution",
+            "calculation": "council_specific",
+            "notes": "Applies in designated affordable housing contribution areas (e.g., City of Sydney)",
+            "typicalRates": {
+              "residential_per_sqm": { "min": 50, "max": 150 },
+              "commercial_per_sqm": { "min": 25, "max": 75 }
+            },
+            "applicableProjectTypes": ["apartments", "office", "mixed-use"],
+            "mandatory": false
+          },
+          "basix_fees": {
+            "name": "BASIX Certificate Fees",
+            "calculation": "fixed_per_dwelling",
+            "rates": {
+              "single_dwelling": 62,
+              "multi_dwelling_base": 62,
+              "multi_dwelling_per_additional": 12,
+              "alterations": 50
+            },
+            "notes": "2025 rates - indexed annually",
+            "applicableProjectTypes": ["house", "apartments", "townhouses", "retirement-living"],
+            "mandatory": true
+          },
+          "long_service_levy": {
+            "name": "Long Service Levy",
+            "calculation": "percentage",
+            "percentage": 0.25,
+            "basis": "construction_cost",
+            "threshold": 250000,
+            "notes": "Rate reduced to 0.25% from January 2023. Applies to works ≥$250,000 (incl GST). Paid to Building & Construction Industry Long Service Payments Corporation.",
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "water_service_charges": {
+            "name": "Sydney Water Section 73 Application",
+            "calculation": "fixed",
+            "typicalRange": { "min": 500, "max": 2000 },
+            "notes": "Application fee only - connection charges separate",
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "water_developer_charges": {
+            "name": "Sydney Water Developer Charges",
+            "calculation": "utility_formula",
+            "typicalRates": {
+              "water_per_ET": { "min": 3000, "max": 6000 },
+              "sewer_per_ET": { "min": 5000, "max": 10000 }
+            },
+            "notes": "ET = Equivalent Tenement. Varies by zone and infrastructure capacity",
+            "applicableProjectTypes": ["apartments", "townhouses", "office", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "water_building_plan_approval": {
+            "name": "Sydney Water Building Plan Approval",
+            "calculation": "fixed",
+            "typicalRange": { "min": 300, "max": 1500 },
+            "notes": "Required for buildings near Sydney Water assets",
+            "applicableProjectTypes": ["all"],
+            "mandatory": false
+          },
+          "electrical_headworks": {
+            "name": "Electrical Supply/Headworks Charges",
+            "calculation": "utility_quote",
+            "typicalRange": { "min": 10000, "max": 500000 },
+            "notes": "Varies significantly based on load requirements and network capacity",
+            "applicableProjectTypes": ["apartments", "office", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "gas_connection": {
+            "name": "Gas Connection Charges",
+            "calculation": "utility_quote",
+            "typicalRange": { "min": 2000, "max": 20000 },
+            "applicableProjectTypes": ["apartments", "office", "industrial"],
+            "mandatory": false
+          },
+          "telecommunications": {
+            "name": "Telecommunications Infrastructure (NBN)",
+            "calculation": "nbn_quote",
+            "typicalRange": { "min": 500, "max": 50000 },
+            "notes": "Free for standard MDU connections; charges for complex installations",
+            "applicableProjectTypes": ["apartments", "townhouses", "office"],
+            "mandatory": true
+          },
+          "strata_registration": {
+            "name": "Strata Plan Registration",
+            "calculation": "surveyor_quote",
+            "typicalRange": { "min": 3000, "max": 25000 },
+            "notes": "Includes survey, plan preparation, and LRS fees",
+            "applicableProjectTypes": ["apartments", "townhouses"],
+            "mandatory": true
+          },
+          "occupation_certificate": {
+            "name": "Occupation Certificate Fees",
+            "calculation": "certifier_quote",
+            "typicalRange": { "min": 2000, "max": 50000 },
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "hoarding_permit": {
+            "name": "Hoarding/Scaffolding Permit",
+            "calculation": "council_fee_schedule",
+            "typicalRates": {
+              "application_fee": { "min": 200, "max": 1000 },
+              "weekly_fee_per_metre": { "min": 20, "max": 100 }
+            },
+            "notes": "Ongoing weekly/monthly fees apply. CBD rates significantly higher.",
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "road_occupancy_permit": {
+            "name": "Road Occupancy Permit",
+            "calculation": "tmc_quote",
+            "typicalRange": { "min": 500, "max": 5000 },
+            "notes": "Required for crane lifts, concrete pours affecting roads. TfNSW/Council fees.",
+            "applicableProjectTypes": ["all"],
+            "mandatory": false
+          },
+          "work_zone_permit": {
+            "name": "Work Zone Permit",
+            "calculation": "council_fee_schedule",
+            "typicalRates": {
+              "application_fee": { "min": 100, "max": 500 },
+              "monthly_fee": { "min": 500, "max": 5000 }
+            },
+            "notes": "For loading/unloading zones during construction",
+            "applicableProjectTypes": ["all"],
+            "mandatory": false
+          },
+          "infrastructure_bond": {
+            "name": "Public Infrastructure Bond/Deposit",
+            "calculation": "council_fee_schedule",
+            "typicalRange": { "min": 5000, "max": 100000 },
+            "notes": "Refundable upon satisfactory completion of works. Based on construction cost.",
+            "applicableProjectTypes": ["apartments", "townhouses", "office", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "public_notification": {
+            "name": "Public Notification/Advertising Fees",
+            "calculation": "fixed",
+            "typicalRange": { "min": 500, "max": 5000 },
+            "notes": "Newspaper advertising for DAs requiring notification",
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "planning_panel_fees": {
+            "name": "Planning Panel/Court Fees",
+            "calculation": "fixed",
+            "typicalRange": { "min": 2000, "max": 50000 },
+            "notes": "If determination goes to Sydney Planning Panel or Land & Environment Court",
+            "applicableProjectTypes": ["apartments", "office", "industrial", "mixed-use"],
+            "mandatory": false
+          }
+        }
+      },
+
+      "consultant_costs": {
+        "name": "Professional Fees",
+        "description": "Design and advisory consultant fees",
+        "notes": "Percentages typically decrease for larger projects. Ranges shown are for medium-scale projects ($20-100M construction).",
+        "stageDistribution": {
+          "description": "Typical fee distribution across 5 master stages for full-service consultants",
+          "percentages": {
+            "initiation": 10,
+            "schematic_design": 25,
+            "design_development": 35,
+            "procurement": 5,
+            "delivery": 25
+          },
+          "notes": [
+            "Percentages are of total consultant fee",
+            "Can be adjusted per discipline based on scope",
+            "Initiation includes feasibility and initial studies",
+            "Schematic Design includes concept design and DA preparation",
+            "Design Development includes detailed design and construction documentation",
+            "Procurement covers tender process support",
+            "Delivery includes contract administration through to completion"
+          ]
+        },
+        "items": {
+          "architect": {
+            "name": "Architect",
+            "calculation": "percentage",
+            "percentageRange": { "min": 4, "max": 8 },
+            "basis": "construction_cost",
+            "stageBreakdown": true,
+            "tieredRates": {
+              "under_5M": { "min": 7, "max": 12 },
+              "5M_to_20M": { "min": 5, "max": 8 },
+              "20M_to_50M": { "min": 4, "max": 6 },
+              "over_50M": { "min": 3, "max": 5 }
+            },
+            "notes": "Full service including CA. Part services reduce by 20-40%.",
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "structural": {
+            "name": "Structural Engineer",
+            "calculation": "percentage",
+            "percentageRange": { "min": 1.5, "max": 3 },
+            "basis": "construction_cost",
+            "stageBreakdown": true,
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "civil": {
+            "name": "Civil Engineer",
+            "calculation": "percentage",
+            "percentageRange": { "min": 0.5, "max": 1.5 },
+            "basis": "construction_cost",
+            "stageBreakdown": true,
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "mechanical": {
+            "name": "Mechanical Engineer",
+            "calculation": "percentage",
+            "percentageRange": { "min": 1, "max": 2 },
+            "basis": "construction_cost",
+            "stageBreakdown": true,
+            "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "fitout", "refurbishment", "mixed-use"],
+            "mandatory": true
+          },
+          "electrical": {
+            "name": "Electrical Engineer",
+            "calculation": "percentage",
+            "percentageRange": { "min": 1, "max": 2 },
+            "basis": "construction_cost",
+            "stageBreakdown": true,
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "hydraulic": {
+            "name": "Hydraulic Engineer",
+            "calculation": "percentage",
+            "percentageRange": { "min": 0.5, "max": 1.5 },
+            "basis": "construction_cost",
+            "stageBreakdown": true,
+            "applicableProjectTypes": ["house", "apartments", "townhouses", "office", "retail", "industrial", "fitout", "mixed-use"],
+            "mandatory": true
+          },
+          "fire": {
+            "name": "Fire Engineer",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 15000, "max": 120000 },
+            "notes": "Performance solutions significantly increase fees",
+            "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "refurbishment", "mixed-use"],
+            "mandatory": true
+          },
+          "facade": {
+            "name": "Façade Engineer",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 30000, "max": 200000 },
+            "notes": "Required for complex facades, typically high-rise",
+            "applicableProjectTypes": ["apartments", "office", "mixed-use"],
+            "mandatory": false
+          },
+          "landscape": {
+            "name": "Landscape Architect",
+            "calculation": "percentage",
+            "percentageRange": { "min": 8, "max": 15 },
+            "basis": "landscape_cost",
+            "typicalRange": { "min": 15000, "max": 150000 },
+            "applicableProjectTypes": ["house", "apartments", "townhouses", "retirement-living", "office", "retail", "mixed-use"],
+            "mandatory": true
+          },
+          "interior": {
+            "name": "Interior Designer",
+            "calculation": "percentage",
+            "percentageRange": { "min": 5, "max": 12 },
+            "basis": "fitout_cost",
+            "applicableProjectTypes": ["apartments", "office", "retail", "fitout", "mixed-use"],
+            "mandatory": false
+          },
+          "town_planner": {
+            "name": "Town Planner",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 15000, "max": 100000 },
+            "notes": "Varies by approval pathway complexity",
+            "applicableProjectTypes": ["feasibility", "apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "quantity_surveyor": {
+            "name": "Quantity Surveyor",
+            "calculation": "percentage",
+            "percentageRange": { "min": 0.3, "max": 1 },
+            "basis": "construction_cost",
+            "tieredRates": {
+              "under_10M": { "min": 0.6, "max": 1.0 },
+              "10M_to_50M": { "min": 0.4, "max": 0.7 },
+              "over_50M": { "min": 0.25, "max": 0.5 }
+            },
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "project_manager": {
+            "name": "Project Manager",
+            "calculation": "percentage",
+            "percentageRange": { "min": 2, "max": 5 },
+            "basis": "construction_cost",
+            "notes": "May also be time-based. Higher % for complex projects.",
+            "applicableProjectTypes": ["all"],
+            "mandatory": false
+          },
+          "development_manager": {
+            "name": "Development Manager",
+            "calculation": "percentage",
+            "percentageRange": { "min": 1.5, "max": 3 },
+            "basis": "total_development_cost",
+            "notes": "Broader scope than PM - includes commercial/financial oversight",
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "mixed-use"],
+            "mandatory": false
+          },
+          "building_surveyor": {
+            "name": "Building Surveyor/Certifier",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 8000, "max": 100000 },
+            "notes": "Includes CC, OC and critical stage inspections",
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "esd": {
+            "name": "ESD Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 20000, "max": 180000 },
+            "notes": "Higher end for Green Star, NABERS, WELL certifications",
+            "applicableProjectTypes": ["apartments", "office", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "acoustic": {
+            "name": "Acoustic Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 10000, "max": 80000 },
+            "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "traffic": {
+            "name": "Traffic Engineer",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 10000, "max": 60000 },
+            "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "geotechnical": {
+            "name": "Geotechnical Engineer",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 15000, "max": 120000 },
+            "notes": "Investigation and reporting. Complex sites significantly higher.",
+            "applicableProjectTypes": ["house", "apartments", "townhouses", "office", "industrial", "mixed-use"],
+            "mandatory": true
+          },
+          "surveyor": {
+            "name": "Registered Surveyor",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 5000, "max": 50000 },
+            "notes": "Detail survey, setout, strata plan registration",
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "heritage": {
+            "name": "Heritage Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 10000, "max": 80000 },
+            "applicableProjectTypes": ["refurbishment", "mixed-use"],
+            "mandatory": false
+          },
+          "environmental": {
+            "name": "Environmental Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 15000, "max": 200000 },
+            "notes": "Phase 1/2 ESA, RAP, validation. Remediation significantly higher.",
+            "applicableProjectTypes": ["due-diligence", "feasibility", "industrial", "remediation"],
+            "mandatory": false
+          },
+          "access": {
+            "name": "Access Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 6000, "max": 35000 },
+            "applicableProjectTypes": ["apartments", "office", "retail", "refurbishment", "mixed-use"],
+            "mandatory": false
+          },
+          "arborist": {
+            "name": "Arborist",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 2500, "max": 20000 },
+            "applicableProjectTypes": ["house", "apartments", "townhouses", "retirement-living", "office", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "ecologist": {
+            "name": "Ecologist",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 8000, "max": 50000 },
+            "notes": "Flora/fauna, BDAR if required",
+            "applicableProjectTypes": ["apartments", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "wind_consultant": {
+            "name": "Wind Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 15000, "max": 100000 },
+            "notes": "Desktop study lower end; wind tunnel testing upper end",
+            "applicableProjectTypes": ["apartments", "office", "mixed-use"],
+            "mandatory": false
+          },
+          "vertical_transport": {
+            "name": "Vertical Transport Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 10000, "max": 60000 },
+            "notes": "Lift traffic analysis and specification",
+            "applicableProjectTypes": ["apartments", "office", "retail", "mixed-use"],
+            "mandatory": false
+          },
+          "lighting_designer": {
+            "name": "Lighting Designer",
+            "calculation": "percentage",
+            "percentageRange": { "min": 0.5, "max": 2 },
+            "basis": "electrical_cost",
+            "typicalRange": { "min": 15000, "max": 100000 },
+            "applicableProjectTypes": ["apartments", "office", "retail", "fitout", "mixed-use"],
+            "mandatory": false
+          },
+          "security_ict": {
+            "name": "Security / ICT Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 12000, "max": 80000 },
+            "notes": "Access control, CCTV, ICT infrastructure",
+            "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "bim_coordinator": {
+            "name": "BIM Coordinator / Digital Engineer",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 30000, "max": 200000 },
+            "notes": "Federated model, clash detection, digital delivery",
+            "applicableProjectTypes": ["apartments", "office", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "building_services_coord": {
+            "name": "Building Services Coordinator",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 25000, "max": 150000 },
+            "notes": "Services coordination and clash detection",
+            "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "waste_consultant": {
+            "name": "Waste Management Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 4000, "max": 20000 },
+            "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "pool_consultant": {
+            "name": "Pool / Aquatic Consultant",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 10000, "max": 50000 },
+            "applicableProjectTypes": ["apartments", "retirement-living", "mixed-use"],
+            "mandatory": false
+          },
+          "sustainability_certifier": {
+            "name": "Sustainability Certifier (Green Star/NABERS/WELL)",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 20000, "max": 100000 },
+            "notes": "Certification administration and submission fees",
+            "applicableProjectTypes": ["apartments", "office", "industrial", "mixed-use"],
+            "mandatory": false
+          },
+          "legal_development": {
+            "name": "Legal - Development",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 20000, "max": 150000 },
+            "includes": ["Planning agreements", "VPAs", "Easements", "Lease negotiations", "Contract review"],
+            "applicableProjectTypes": ["all"],
+            "mandatory": true
+          },
+          "legal_conveyancing": {
+            "name": "Legal - Conveyancing/Strata",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 5000, "max": 50000 },
+            "includes": ["Strata documentation", "Title registration", "Settlement"],
+            "applicableProjectTypes": ["apartments", "townhouses"],
+            "mandatory": true
+          }
+        }
+      },
+
+      "construction_costs": {
+        "name": "Construction Costs",
+        "description": "Direct construction costs by element",
+        "notes": "Rates shown are $/sqm GFA for Sydney metro, 2025 base date. Apply location factors and escalation as appropriate.",
+        
+        "structure": {
+          "preliminaries": {
+            "name": "Preliminaries & General Requirements",
+            "percentage": { "min": 10, "max": 18 },
+            "includes": [
+              "Site establishment and disestablishment",
+              "Site security and fencing",
+              "Temporary services (power, water, amenities)",
+              "Scaffolding and hoisting",
+              "Builder's insurances",
+              "Site supervision and management",
+              "Quality assurance",
+              "Environmental management",
+              "OHS compliance",
+              "Temporary works"
+            ],
+            "notes": "Higher percentages for CBD sites, complex logistics, or shorter programs"
+          },
+          "margin": {
+            "name": "Builder's Margin",
+            "percentage": { "min": 3, "max": 8 },
+            "notes": "Includes builder's overheads and profit. Varies by market conditions and risk."
+          },
+          "demolition": {
+            "name": "Demolition",
+            "rateType": "per_sqm_demolished",
+            "rates": {
+              "light_strip_out": { "min": 30, "max": 60, "unit": "$/sqm" },
+              "medium_full_demolition": { "min": 80, "max": 150, "unit": "$/sqm" },
+              "heavy_with_hazmat": { "min": 150, "max": 350, "unit": "$/sqm" },
+              "basement_demolition": { "min": 200, "max": 500, "unit": "$/sqm" }
+            },
+            "notes": "Hazmat (asbestos, lead) significantly increases costs"
+          },
+          "substructure": {
+            "name": "Substructure",
+            "includes": [
+              "Excavation (bulk and detailed)",
+              "Shoring and retention",
+              "Piling",
+              "Ground beams and pile caps",
+              "Ground slab",
+              "Basement waterproofing"
+            ],
+            "rates": {
+              "simple_strip_footing": { "min": 150, "max": 300, "unit": "$/sqm footprint" },
+              "raft_slab": { "min": 250, "max": 450, "unit": "$/sqm footprint" },
+              "piled_foundation": { "min": 400, "max": 800, "unit": "$/sqm footprint" },
+              "single_basement": { "min": 800, "max": 1400, "unit": "$/sqm basement" },
+              "double_basement": { "min": 1200, "max": 2000, "unit": "$/sqm basement" },
+              "triple_plus_basement": { "min": 1600, "max": 2800, "unit": "$/sqm basement" }
+            },
+            "notes": "Groundwater, rock, contamination significantly impact costs"
+          },
+          "superstructure": {
+            "name": "Superstructure",
+            "includes": ["Columns", "Beams", "Floor slabs", "Stairs", "Roof structure"],
+            "rates": {
+              "concrete_frame_low_rise": { "min": 350, "max": 500, "unit": "$/sqm GFA" },
+              "concrete_frame_high_rise": { "min": 450, "max": 650, "unit": "$/sqm GFA" },
+              "steel_frame": { "min": 400, "max": 600, "unit": "$/sqm GFA" },
+              "post_tensioned_slab": { "min": 400, "max": 600, "unit": "$/sqm GFA" },
+              "timber_frame": { "min": 250, "max": 400, "unit": "$/sqm GFA" }
+            }
+          },
+          "external_walls": {
+            "name": "External Walls & Façade",
+            "includes": ["Façade system", "Glazing", "External cladding", "Balustrades", "External doors"],
+            "rates": {
+              "brick_veneer": { "min": 350, "max": 550, "unit": "$/sqm façade" },
+              "rendered_masonry": { "min": 400, "max": 600, "unit": "$/sqm façade" },
+              "curtain_wall_basic": { "min": 800, "max": 1200, "unit": "$/sqm façade" },
+              "curtain_wall_premium": { "min": 1200, "max": 2000, "unit": "$/sqm façade" },
+              "unitised_curtain_wall": { "min": 1500, "max": 2500, "unit": "$/sqm façade" },
+              "composite_panel": { "min": 500, "max": 900, "unit": "$/sqm façade" },
+              "precast_concrete": { "min": 600, "max": 1000, "unit": "$/sqm façade" }
+            }
+          },
+          "internal_walls": {
+            "name": "Internal Walls & Doors",
+            "includes": ["Partitions", "Door frames", "Doors", "Hardware", "Glazed partitions"],
+            "rates": {
+              "plasterboard_partition": { "min": 80, "max": 150, "unit": "$/sqm GFA" },
+              "acoustic_rated": { "min": 120, "max": 200, "unit": "$/sqm GFA" },
+              "fire_rated": { "min": 150, "max": 250, "unit": "$/sqm GFA" },
+              "glazed_partitions": { "min": 400, "max": 800, "unit": "$/sqm partition" }
+            }
+          },
+          "finishes": {
+            "name": "Finishes",
+            "includes": ["Floor finishes", "Wall finishes", "Ceiling finishes", "Painting"],
+            "rates": {
+              "basic_commercial": { "min": 150, "max": 300, "unit": "$/sqm GFA" },
+              "standard_residential": { "min": 250, "max": 450, "unit": "$/sqm GFA" },
+              "premium_residential": { "min": 450, "max": 750, "unit": "$/sqm GFA" },
+              "luxury": { "min": 750, "max": 1500, "unit": "$/sqm GFA" }
+            }
+          },
+          "fittings": {
+            "name": "Fittings & Fixtures",
+            "includes": ["Joinery", "Signage", "Blinds", "Mirrors", "Accessories", "Appliances"],
+            "rates": {
+              "basic": { "min": 100, "max": 200, "unit": "$/sqm GFA" },
+              "standard": { "min": 200, "max": 400, "unit": "$/sqm GFA" },
+              "premium": { "min": 400, "max": 700, "unit": "$/sqm GFA" },
+              "luxury": { "min": 700, "max": 1500, "unit": "$/sqm GFA" }
+            }
+          },
+          "sanitary": {
+            "name": "Sanitary Fixtures",
+            "includes": ["WCs", "Basins", "Showers", "Baths", "Kitchen sinks", "Tapware"],
+            "rates": {
+              "basic_per_fixture": { "min": 800, "max": 1500, "unit": "$/fixture" },
+              "standard_per_fixture": { "min": 1500, "max": 3000, "unit": "$/fixture" },
+              "premium_per_fixture": { "min": 3000, "max": 6000, "unit": "$/fixture" },
+              "luxury_per_fixture": { "min": 6000, "max": 15000, "unit": "$/fixture" }
+            }
+          },
+          "mechanical": {
+            "name": "Mechanical Services",
+            "includes": ["HVAC systems", "Ventilation", "BMS", "Exhaust systems"],
+            "rates": {
+              "split_systems_residential": { "min": 80, "max": 150, "unit": "$/sqm GFA" },
+              "vrv_vrf_system": { "min": 180, "max": 300, "unit": "$/sqm GFA" },
+              "central_plant_commercial": { "min": 300, "max": 500, "unit": "$/sqm GFA" },
+              "central_plant_premium": { "min": 450, "max": 700, "unit": "$/sqm GFA" }
+            },
+            "notes": "Excludes lifts - see vertical transport"
+          },
+          "vertical_transport": {
+            "name": "Vertical Transport (Lifts)",
+            "rates": {
+              "standard_passenger_lift": { "min": 120000, "max": 200000, "unit": "$/lift" },
+              "premium_passenger_lift": { "min": 200000, "max": 350000, "unit": "$/lift" },
+              "goods_lift": { "min": 150000, "max": 280000, "unit": "$/lift" },
+              "car_stacker_per_space": { "min": 25000, "max": 45000, "unit": "$/space" }
+            },
+            "notes": "Add $15-25k per additional floor. High-rise premium 20-40%."
+          },
+          "electrical": {
+            "name": "Electrical Services",
+            "includes": ["Power distribution", "Lighting", "Emergency lighting", "Exit lighting"],
+            "rates": {
+              "basic_residential": { "min": 120, "max": 200, "unit": "$/sqm GFA" },
+              "standard_residential": { "min": 180, "max": 280, "unit": "$/sqm GFA" },
+              "commercial_office": { "min": 250, "max": 400, "unit": "$/sqm GFA" },
+              "commercial_premium": { "min": 350, "max": 550, "unit": "$/sqm GFA" }
+            }
+          },
+          "data_ict": {
+            "name": "Data / ICT / Communications",
+            "includes": ["Structured cabling", "Data racks", "WiFi infrastructure", "AV provisions"],
+            "rates": {
+              "basic_residential": { "min": 30, "max": 60, "unit": "$/sqm GFA" },
+              "standard_commercial": { "min": 80, "max": 150, "unit": "$/sqm GFA" },
+              "high_density_commercial": { "min": 150, "max": 280, "unit": "$/sqm GFA" },
+              "data_centre": { "min": 500, "max": 1500, "unit": "$/sqm GFA" }
+            }
+          },
+          "security": {
+            "name": "Security Systems",
+            "includes": ["Access control", "CCTV", "Intercom", "Intruder detection"],
+            "rates": {
+              "basic_residential": { "min": 25, "max": 50, "unit": "$/sqm GFA" },
+              "standard_commercial": { "min": 60, "max": 120, "unit": "$/sqm GFA" },
+              "high_security": { "min": 150, "max": 300, "unit": "$/sqm GFA" }
+            }
+          },
+          "hydraulic": {
+            "name": "Hydraulic Services",
+            "includes": ["Sanitary drainage", "Stormwater", "Water supply", "Gas reticulation", "Hot water"],
+            "rates": {
+              "basic_residential": { "min": 100, "max": 180, "unit": "$/sqm GFA" },
+              "standard_residential": { "min": 150, "max": 250, "unit": "$/sqm GFA" },
+              "commercial": { "min": 120, "max": 220, "unit": "$/sqm GFA" }
+            }
+          },
+          "fire": {
+            "name": "Fire Services",
+            "includes": ["Detection", "Suppression/sprinklers", "Hydrants", "Hose reels", "Extinguishers", "Emergency warning"],
+            "rates": {
+              "detection_only": { "min": 30, "max": 60, "unit": "$/sqm GFA" },
+              "sprinklered_residential": { "min": 80, "max": 150, "unit": "$/sqm GFA" },
+              "sprinklered_commercial": { "min": 100, "max": 180, "unit": "$/sqm GFA" },
+              "high_hazard": { "min": 180, "max": 350, "unit": "$/sqm GFA" }
+            }
+          },
+          "external_works": {
+            "name": "External Works",
+            "includes": ["Landscaping", "Paving", "Fencing", "External lighting", "Site drainage", "Retaining walls"],
+            "rates": {
+              "basic_landscaping": { "min": 80, "max": 150, "unit": "$/sqm site" },
+              "standard_landscaping": { "min": 150, "max": 300, "unit": "$/sqm site" },
+              "premium_landscaping": { "min": 300, "max": 600, "unit": "$/sqm site" },
+              "podium_landscape": { "min": 500, "max": 1200, "unit": "$/sqm" }
+            }
+          },
+          "sustainability_additions": {
+            "name": "Sustainability Add-ons",
+            "items": {
+              "solar_pv": {
+                "name": "Solar PV System",
+                "rates": { "min": 1200, "max": 1800, "unit": "$/kW installed" },
+                "notes": "Excludes battery storage"
+              },
+              "battery_storage": {
+                "name": "Battery Storage",
+                "rates": { "min": 800, "max": 1400, "unit": "$/kWh" }
+              },
+              "ev_charging_basic": {
+                "name": "EV Charging - Basic (Mode 2)",
+                "rates": { "min": 500, "max": 1500, "unit": "$/point" }
+              },
+              "ev_charging_fast": {
+                "name": "EV Charging - Fast (Mode 3)",
+                "rates": { "min": 3000, "max": 8000, "unit": "$/point" }
+              },
+              "rainwater_harvesting": {
+                "name": "Rainwater Harvesting",
+                "rates": { "min": 100, "max": 300, "unit": "$/kL tank capacity" }
+              },
+              "green_roof": {
+                "name": "Green Roof",
+                "rates": { 
+                  "extensive": { "min": 200, "max": 400, "unit": "$/sqm" },
+                  "intensive": { "min": 500, "max": 1200, "unit": "$/sqm" }
+                }
+              },
+              "triple_glazing": {
+                "name": "Triple Glazing Upgrade",
+                "rates": { "min": 150, "max": 350, "unit": "$/sqm additional" }
+              }
+            }
+          }
+        },
+
+        "benchmarkRates": {
+          "description": "All-in construction rates $/sqm GFA, Sydney metro, Q1 2025",
+          "notes": "Excludes land, professional fees, authority costs, contingency, and escalation",
+          "house": {
+            "project_home": { "min": 2000, "max": 2800 },
+            "standard": { "min": 2800, "max": 3800 },
+            "premium": { "min": 4000, "max": 5500 },
+            "luxury": { "min": 6000, "max": 10000 },
+            "ultra_luxury": { "min": 10000, "max": 20000 }
+          },
+          "apartments": {
+            "affordable_low_rise": { "min": 3200, "max": 4000 },
+            "market_low_rise": { "min": 3800, "max": 4800 },
+            "market_mid_rise": { "min": 4200, "max": 5500 },
+            "market_high_rise": { "min": 5000, "max": 6500 },
+            "premium_high_rise": { "min": 6000, "max": 8000 },
+            "luxury": { "min": 7500, "max": 12000 }
+          },
+          "townhouses": {
+            "affordable": { "min": 2800, "max": 3500 },
+            "market": { "min": 3500, "max": 4500 },
+            "premium": { "min": 4500, "max": 6000 }
+          },
+          "retirement_living": {
+            "ilu_standard": { "min": 3000, "max": 4000 },
+            "ilu_premium": { "min": 4000, "max": 5500 },
+            "serviced_apartments": { "min": 4500, "max": 6500 },
+            "aged_care_facility": { "min": 4000, "max": 6000 }
+          },
+          "office": {
+            "c_grade": { "min": 3000, "max": 4000 },
+            "b_grade": { "min": 4000, "max": 5200 },
+            "a_grade": { "min": 5000, "max": 6800 },
+            "premium": { "min": 6500, "max": 9000 }
+          },
+          "retail": {
+            "shell_only": { "min": 1800, "max": 3000 },
+            "warm_shell": { "min": 2800, "max": 4200 },
+            "fully_fitted_basic": { "min": 3500, "max": 5000 },
+            "fully_fitted_premium": { "min": 5000, "max": 8000 }
+          },
+          "industrial": {
+            "basic_warehouse": { "min": 1000, "max": 1500 },
+            "standard_warehouse": { "min": 1500, "max": 2200 },
+            "high_spec_warehouse": { "min": 2200, "max": 3200 },
+            "cold_storage": { "min": 3000, "max": 5000 },
+            "manufacturing": { "min": 2000, "max": 3500 },
+            "data_centre": { "min": 8000, "max": 20000 }
+          },
+          "fitout": {
+            "basic_office": { "min": 1000, "max": 1800 },
+            "standard_office": { "min": 1800, "max": 3000 },
+            "premium_office": { "min": 3000, "max": 5000 },
+            "high_end_office": { "min": 5000, "max": 8000 },
+            "basic_retail": { "min": 1500, "max": 2500 },
+            "premium_retail": { "min": 3000, "max": 6000 }
+          },
+          "refurbishment": {
+            "light_refresh": { "min": 800, "max": 1500 },
+            "medium_upgrade": { "min": 1500, "max": 3000 },
+            "heavy_refurbishment": { "min": 3000, "max": 5000 },
+            "full_strip_rebuild": { "min": 4500, "max": 7000 }
+          }
+        }
+      },
+
+      "other_costs": {
+        "name": "Other Development Costs",
+        "description": "Non-construction costs and allowances",
+        "items": {
+          "contingency": {
+            "name": "Contingency Allowances",
+            "calculation": "percentage",
+            "percentageByStage": {
+              "feasibility": { "design": 15, "construction": 10 },
+              "schematic_design": { "design": 10, "construction": 7.5 },
+              "design_development": { "design": 7.5, "construction": 5 },
+              "construction_documentation": { "design": 5, "construction": 3 },
+              "tender": { "design": 2.5, "construction": 2.5 }
+            },
+            "percentageByType": {
+              "new_build_simple": { "design": 7.5, "construction": 5 },
+              "new_build_complex": { "design": 10, "construction": 7.5 },
+              "refurbishment": { "design": 15, "construction": 10 },
+              "heritage": { "design": 20, "construction": 15 },
+              "remediation": { "design": 20, "construction": 15 }
+            },
+            "basis": "construction_cost",
+            "notes": "Design contingency covers scope development. Construction contingency covers unforeseen site conditions.",
+            "mandatory": true
+          },
+          "escalation": {
+            "name": "Escalation Allowance",
+            "calculation": "percentage_per_annum",
+            "currentRate": 3.5,
+            "range": { "min": 3.0, "max": 4.5 },
+            "application": "Apply from cost plan date to construction midpoint",
+            "mandatory": true
+          },
+          "risk_allowances": {
+            "name": "Specific Risk Allowances",
+            "items": {
+              "labour_market": {
+                "name": "Labour Market Risk",
+                "percentage": { "min": 0, "max": 3 },
+                "notes": "For tight labour markets or specialist trades"
+              },
+              "supply_chain": {
+                "name": "Supply Chain Risk",
+                "percentage": { "min": 0, "max": 2 },
+                "notes": "For long lead items or import dependencies"
+              },
+              "ground_conditions": {
+                "name": "Latent Ground Conditions",
+                "percentage": { "min": 2, "max": 10 },
+                "notes": "Higher for sites with limited investigation"
+              },
+              "heritage_discovery": {
+                "name": "Heritage / Archaeological Discovery",
+                "percentage": { "min": 2, "max": 5 },
+                "notes": "For sites with potential heritage constraints"
+              }
+            }
+          },
+          "finance_costs": {
+            "name": "Finance / Interest Costs",
+            "calculation": "project_specific",
+            "typicalComponents": {
+              "establishment_fee": { "percentage": { "min": 0.5, "max": 1.5 }, "basis": "facility_limit" },
+              "line_fee": { "percentage": { "min": 0.5, "max": 1.0 }, "basis": "undrawn_facility", "period": "per_annum" },
+              "interest_margin": { "percentage": { "min": 2.5, "max": 5.0 }, "basis": "drawn_amount", "period": "per_annum", "notes": "Over BBSY/RBA cash rate" },
+              "bank_guarantee_fee": { "percentage": { "min": 1.5, "max": 3.0 }, "basis": "guarantee_amount", "period": "per_annum" }
+            },
+            "mandatory": true
+          },
+          "insurance": {
+            "name": "Project Insurance",
+            "items": {
+              "construction_all_risk": {
+                "name": "Construction All Risk (CAR)",
+                "calculation": "percentage",
+                "percentage": { "min": 0.15, "max": 0.35 },
+                "basis": "construction_cost",
+                "notes": "Usually arranged by builder and included in contract"
+              },
+              "public_liability": {
+                "name": "Public Liability",
+                "calculation": "included_in_car",
+                "notes": "Usually included in CAR policy"
+              },
+              "professional_indemnity": {
+                "name": "Professional Indemnity (consultants)",
+                "calculation": "included_in_fees",
+                "notes": "Consultants required to hold PI insurance"
+              },
+              "principal_arranged": {
+                "name": "Principal Arranged Insurance (PAI)",
+                "calculation": "percentage",
+                "percentage": { "min": 0.3, "max": 0.6 },
+                "basis": "construction_cost",
+                "notes": "If principal arranges insurance instead of builder"
+              },
+              "home_warranty": {
+                "name": "Home Warranty Insurance",
+                "calculation": "included_in_contract",
+                "notes": "Required for residential work over $20,000. Builder arranges.",
+                "applicableProjectTypes": ["house", "apartments", "townhouses"]
+              }
+            }
+          },
+          "gst": {
+            "name": "GST",
+            "calculation": "percentage",
+            "percentage": 10,
+            "notes": "All costs in this template EXCLUDE GST. GST applies to most development costs except land and financial supplies.",
+            "gstFreeItems": ["Land purchase", "Loan interest", "Bank fees", "Stamp duty"]
+          },
+          "marketing": {
+            "name": "Marketing & Sales Costs",
+            "calculation": "percentage",
+            "percentage": { "min": 1.5, "max": 3.5 },
+            "basis": "gross_revenue",
+            "includes": ["Marketing strategy", "Branding", "Display suite", "Signage", "Digital marketing", "Print advertising", "Events"],
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living"],
+            "mandatory": true
+          },
+          "display_suite": {
+            "name": "Display Suite / Sales Centre",
+            "calculation": "lump_sum",
+            "typicalRange": { "min": 100000, "max": 1500000 },
+            "notes": "Highly variable based on project size and marketing strategy",
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living"],
+            "mandatory": false
+          },
+          "sales_commission": {
+            "name": "Sales Commission",
+            "calculation": "percentage",
+            "percentage": { "min": 1.5, "max": 2.5 },
+            "basis": "gross_revenue",
+            "notes": "Project marketing agent fees",
+            "applicableProjectTypes": ["apartments", "townhouses", "retirement-living"],
+            "mandatory": true
+          },
+          "leasing_commission": {
+            "name": "Leasing Commission",
+            "calculation": "weeks_rent",
+            "typicalRange": { "min": 1, "max": 2 },
+            "notes": "For build-to-rent or commercial leasing",
+            "applicableProjectTypes": ["apartments", "office", "retail", "industrial"],
+            "mandatory": false
+          },
+          "land_holding_costs": {
+            "name": "Land Holding Costs",
+            "calculation": "project_specific",
+            "typicalComponents": {
+              "council_rates": "Per council rates notice",
+              "land_tax": "Based on land value thresholds",
+              "insurance": { "percentage": { "min": 0.1, "max": 0.3 }, "basis": "land_value", "period": "per_annum" },
+              "security": { "min": 5000, "max": 50000, "period": "per_annum" },
+              "maintenance": "Site specific"
+            },
+            "mandatory": true
+          },
+          "acquisition_costs": {
+            "name": "Acquisition Costs",
+            "items": {
+              "stamp_duty": {
+                "name": "Stamp Duty (Transfer Duty)",
+                "calculation": "state_scale",
+                "notes": "NSW scale applies. Premium duty for foreign purchasers.",
+                "rates_guidance": {
+                  "up_to_15k": "1.25%",
+                  "15k_to_32k": "$187 + 1.5%",
+                  "32k_to_87k": "$442 + 1.75%",
+                  "87k_to_327k": "$1,405 + 3.5%",
+                  "327k_to_1.089M": "$9,805 + 4.5%",
+                  "over_1.089M": "$44,095 + 5.5%",
+                  "premium_over_3.268M": "7% flat"
+                }
+              },
+              "legal_acquisition": {
+                "name": "Legal - Acquisition",
+                "calculation": "lump_sum",
+                "typicalRange": { "min": 5000, "max": 30000 },
+                "notes": "Contract review, due diligence, settlement"
+              },
+              "due_diligence": {
+                "name": "Due Diligence Costs",
+                "calculation": "lump_sum",
+                "typicalRange": { "min": 20000, "max": 150000 },
+                "includes": ["Technical due diligence", "Environmental", "Planning", "Commercial"]
+              }
+            }
+          },
+          "developer_costs": {
+            "name": "Developer Overhead & Margin",
+            "items": {
+              "developer_overhead": {
+                "name": "Developer Overhead",
+                "calculation": "percentage",
+                "percentage": { "min": 2, "max": 4 },
+                "basis": "total_development_cost",
+                "notes": "Internal development team costs, office, admin"
+              },
+              "developer_margin": {
+                "name": "Developer Margin / Profit",
+                "calculation": "percentage",
+                "percentage": { "min": 15, "max": 25 },
+                "basis": "total_development_cost",
+                "notes": "Target profit margin. Higher for riskier projects.",
+                "guidance": {
+                  "low_risk": { "min": 15, "max": 18 },
+                  "medium_risk": { "min": 18, "max": 22 },
+                  "high_risk": { "min": 22, "max": 30 }
+                }
+              }
+            }
+          },
+          "sustainability_certifications": {
+            "name": "Sustainability Certification Fees",
+            "items": {
+              "green_star": {
+                "name": "Green Star Registration & Certification",
+                "typicalRange": { "min": 30000, "max": 150000 },
+                "notes": "GBCA fees. Excludes consultant costs.",
+                "ratingLevels": ["4 Star", "5 Star", "6 Star"]
+              },
+              "nabers": {
+                "name": "NABERS Commitment Agreement & Rating",
+                "typicalRange": { "min": 5000, "max": 25000 },
+                "notes": "Rating fees only"
+              },
+              "well": {
+                "name": "WELL Certification",
+                "typicalRange": { "min": 40000, "max": 200000 },
+                "notes": "IWBI fees. Higher than Green Star."
+              },
+              "climate_active": {
+                "name": "Climate Active Certification",
+                "typicalRange": { "min": 10000, "max": 50000 }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "costPlanFormats": {
+      "order_of_cost": {
+        "name": "Order of Cost Estimate",
+        "accuracy": "±25-30%",
+        "stage": "Feasibility / Concept",
+        "basis": "GFA rates and benchmarks",
+        "typicalContent": [
+          "Total GFA and site area",
+          "Benchmark rate selection",
+          "High-level authority costs",
+          "Percentage allowances for consultants",
+          "Contingency and escalation"
+        ]
+      },
+      "preliminary_estimate": {
+        "name": "Preliminary Cost Estimate",
+        "accuracy": "±15-20%",
+        "stage": "Schematic Design",
+        "basis": "Elemental rates",
+        "typicalContent": [
+          "Elemental breakdown (major elements)",
+          "Itemised authority costs",
+          "Consultant fee estimates",
+          "Contingency and escalation",
+          "Cash flow projection"
+        ]
+      },
+      "cost_plan": {
+        "name": "Cost Plan",
+        "accuracy": "±10-15%",
+        "stage": "Design Development",
+        "basis": "Measured quantities with rates",
+        "typicalContent": [
+          "Detailed elemental breakdown",
+          "Measured quantities where possible",
+          "Spec-based rates",
+          "Firm consultant fee quotes",
+          "Refined contingency",
+          "Escalation to midpoint"
+        ]
+      },
+      "pre_tender_estimate": {
+        "name": "Pre-Tender Estimate",
+        "accuracy": "±5-10%",
+        "stage": "Construction Documentation",
+        "basis": "Detailed quantities",
+        "typicalContent": [
+          "Fully measured quantities",
+          "Current market rates",
+          "Reduced contingency",
+          "Tender market assessment"
+        ]
+      },
+      "tender_analysis": {
+        "name": "Tender Analysis",
+        "accuracy": "Contract sum",
+        "stage": "Procurement",
+        "basis": "Tendered prices",
+        "typicalContent": [
+          "Tender comparison",
+          "Qualifications assessment",
+          "Risk analysis",
+          "Recommendation"
+        ]
+      }
+    }
+  }
+}

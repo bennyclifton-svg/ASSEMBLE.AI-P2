@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Modal } from '@/components/ui/modal';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 
 interface Project {
     id: string;
@@ -25,19 +22,19 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
     const router = useRouter();
     const [projects, setProjects] = useState<Project[]>([]);
     const [isOpen, setIsOpen] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-
-    const [formData, setFormData] = useState({
-        name: '',
-        code: '',
-        status: 'active' as 'active' | 'pending' | 'archived'
-    });
 
     const refreshProjects = async () => {
         try {
             const res = await fetch('/api/projects');
             const data = await res.json();
+
+            // Ensure data is an array before using it
+            if (!res.ok || !Array.isArray(data)) {
+                console.error('Error fetching projects:', data?.error || 'Invalid response');
+                return;
+            }
+
             setProjects(data);
             // Update selected project with latest data if it exists
             if (selectedProject) {
@@ -69,37 +66,43 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
         setIsOpen(false);
     };
 
-    const handleAddProjectClick = () => {
+    const handleAddProjectClick = async () => {
         setIsOpen(false);
-        setFormData({ name: '', code: '', status: 'active' });
-        setIsModalOpen(true);
-    };
-
-    const handleFormSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!formData.name.trim()) return;
-
         setIsLoading(true);
 
         try {
+            // Create project with auto-generated name
+            const timestamp = new Date().toLocaleDateString('en-AU', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+            const defaultName = `New Project - ${timestamp}`;
+
             const res = await fetch('/api/projects', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    name: defaultName,
+                    code: '',
+                    status: 'active'
+                })
             });
 
             if (res.ok) {
                 const newProject = await res.json();
                 await refreshProjects();
-                onSelectProject(newProject);
-                setIsModalOpen(false);
+                // Navigate directly to the project dashboard
+                router.push(`/projects/${newProject.id}`);
             } else {
                 const error = await res.json();
-                console.error('Error creating project:', error.error);
+                console.error('Error creating project:', error);
+                const errorMsg = error.details ? `${error.error}: ${error.details}` : error.error;
+                alert(`Failed to create project: ${errorMsg || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error creating project:', error);
+            alert(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
         } finally {
             setIsLoading(false);
         }
@@ -109,12 +112,12 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-center w-8 h-8 hover:bg-[#3e3e42] rounded transition-colors"
+                className="flex items-center justify-center w-8 h-8 hover:bg-[var(--color-bg-tertiary)] rounded transition-colors"
                 title={selectedProject ? selectedProject.name : 'Select Project'}
             >
                 <svg
                     className={cn(
-                        'w-4 h-4 text-[#aaaaaa] hover:text-[#cccccc] transition-transform',
+                        'w-4 h-4 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-transform',
                         isOpen && 'rotate-90'
                     )}
                     viewBox="0 0 12 12"
@@ -125,109 +128,38 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
             </button>
 
             {isOpen && (
-                <div className="absolute top-full right-0 mt-1 w-64 bg-[#252526] border border-[#3e3e42] rounded shadow-lg z-10">
+                <div className="absolute top-full right-0 mt-1 w-64 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg z-10">
                     {/* Home option */}
                     <button
                         onClick={() => {
                             setIsOpen(false);
                             router.push('/');
                         }}
-                        className="w-full px-4 py-2 text-left hover:bg-[#2a2d2e] flex items-center gap-2 border-b border-[#3e3e42]"
+                        className="w-full px-4 py-2 text-left hover:bg-[var(--color-bg-tertiary)] flex items-center gap-2 border-b border-[var(--color-border)]"
                     >
-                        <Home className="w-4 h-4 text-[#808080]" />
-                        <span className="text-sm text-[#cccccc]">Home</span>
+                        <Home className="w-4 h-4 text-[var(--color-text-muted)]" />
+                        <span className="text-sm text-[var(--color-text-primary)]">Home</span>
                     </button>
                     {projects.map(project => (
                         <button
                             key={project.id}
                             onClick={() => handleSelectProject(project)}
-                            className="w-full px-4 py-2 text-left hover:bg-[#2a2d2e] flex flex-col border-b border-[#3e3e42]"
+                            className="w-full px-4 py-2 text-left hover:bg-[var(--color-bg-tertiary)] flex flex-col border-b border-[var(--color-border)]"
                         >
-                            <span className="font-medium text-[#cccccc] text-sm">{project.name}</span>
-                            <span className="text-xs text-[#858585]">{project.code}</span>
+                            <span className="font-medium text-[var(--color-text-primary)] text-sm">{project.name}</span>
+                            <span className="text-xs text-[var(--color-text-muted)]">{project.code}</span>
                         </button>
                     ))}
                     <button
                         onClick={handleAddProjectClick}
-                        className="w-full px-4 py-3 flex items-center gap-2 hover:bg-[#2a2d2e] border-t border-[#3e3e42]"
+                        className="w-full px-4 py-3 flex items-center gap-2 hover:bg-[var(--color-bg-tertiary)] border-t border-[var(--color-border)]"
                     >
-                        <Plus className="w-4 h-4 text-[#cccccc]" />
-                        <span className="text-sm text-[#cccccc]">Add New Project</span>
+                        <Plus className="w-4 h-4 text-[var(--color-text-primary)]" />
+                        <span className="text-sm text-[var(--color-text-primary)]">Add New Project</span>
                     </button>
                 </div>
             )}
 
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="Create New Project"
-            >
-                <form onSubmit={handleFormSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-[#cccccc] mb-1">
-                            Project Name *
-                        </label>
-                        <Input
-                            type="text"
-                            placeholder="Enter project name"
-                            value={formData.name}
-                            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                            className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc] focus:border-[#007acc]"
-                            disabled={isLoading}
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-[#cccccc] mb-1">
-                            Project Code
-                        </label>
-                        <Input
-                            type="text"
-                            placeholder="Enter project code (optional)"
-                            value={formData.code}
-                            onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                            className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc] focus:border-[#007acc]"
-                            disabled={isLoading}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-[#cccccc] mb-1">
-                            Status
-                        </label>
-                        <select
-                            value={formData.status}
-                            onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'pending' | 'archived' }))}
-                            className="w-full px-3 py-2 bg-[#1e1e1e] border border-[#3e3e42] rounded text-[#cccccc] focus:border-[#007acc] focus:outline-none"
-                            disabled={isLoading}
-                        >
-                            <option value="active">Active</option>
-                            <option value="pending">Pending</option>
-                            <option value="archived">Archived</option>
-                        </select>
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setIsModalOpen(false)}
-                            disabled={isLoading}
-                            className="border-[#3e3e42] text-[#cccccc] hover:bg-[#2a2d2e]"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={isLoading || !formData.name.trim()}
-                            className="bg-[#007acc] hover:bg-[#005a9e] text-white"
-                        >
-                            {isLoading ? 'Creating...' : 'Create Project'}
-                        </Button>
-                    </div>
-                </form>
-            </Modal>
         </div>
     );
 }

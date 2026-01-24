@@ -8,7 +8,8 @@
  */
 
 import { useState, useRef, useCallback, type ReactNode, type DragEvent } from 'react';
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { toast } from '@/lib/hooks/use-toast';
 
 // ============================================================================
@@ -255,21 +256,21 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
         <div
           className={`absolute inset-0 z-50 flex items-center justify-center transition-all duration-200 ${
             status === 'dragging'
-              ? 'bg-[#0e639c]/20 border-2 border-dashed border-[#0e639c]'
+              ? 'bg-[var(--color-accent-green)]/20 border-2 border-dashed border-[var(--color-accent-green)]'
               : 'bg-black/70'
           }`}
           onClick={status === 'dragging' ? undefined : handleClick}
         >
-          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-[#252526] border border-[#3e3e42] shadow-xl max-w-md">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-lg bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-xl max-w-md">
             {/* Dragging state */}
             {status === 'dragging' && (
               <>
-                <div className="w-16 h-16 rounded-full bg-[#0e639c]/20 flex items-center justify-center">
-                  <Upload className="w-8 h-8 text-[#0e639c]" />
+                <div className="w-16 h-16 rounded-full bg-[var(--color-accent-green)]/20 flex items-center justify-center">
+                  <Upload className="w-8 h-8 text-[var(--color-accent-green)]" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-[#cccccc]">Drop Invoice PDF</p>
-                  <p className="text-sm text-[#858585] mt-1">AI will extract invoice details automatically</p>
+                  <p className="text-lg font-medium text-[var(--color-text-primary)]">Drop Invoice PDF</p>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1">AI will extract invoice details automatically</p>
                 </div>
               </>
             )}
@@ -277,15 +278,15 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
             {/* Uploading/Extracting state */}
             {(status === 'uploading' || status === 'extracting') && (
               <>
-                <div className="w-16 h-16 rounded-full bg-[#0e639c]/20 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-[#0e639c] animate-spin" />
+                <div className="w-16 h-16 rounded-full bg-[var(--color-accent-green)]/20 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-[var(--color-accent-green)] animate-spin" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-[#cccccc] flex items-center gap-2 justify-center">
-                    <Sparkles className="w-5 h-5 text-[#0e639c]" />
+                  <p className="text-lg font-medium text-[var(--color-text-primary)] flex items-center gap-2 justify-center">
+                    <DiamondIcon className="w-5 h-5 text-[var(--color-accent-green)]" />
                     {status === 'uploading' ? 'Uploading...' : 'Extracting with AI...'}
                   </p>
-                  <p className="text-sm text-[#858585] mt-1">{uploadProgress}</p>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1">{uploadProgress}</p>
                 </div>
               </>
             )}
@@ -298,16 +299,16 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-medium text-green-400">Invoice Created</p>
-                  <div className="mt-3 p-3 bg-[#1e1e1e] rounded border border-[#3e3e42] text-left">
+                  <div className="mt-3 p-3 bg-[var(--color-bg-primary)] rounded border border-[var(--color-border)] text-left">
                     <div className="flex items-center gap-2 mb-2">
-                      <FileText className="w-4 h-4 text-[#6B9BD1]" />
-                      <span className="font-mono text-[#6B9BD1]">{lastResult.invoice.invoiceNumber}</span>
+                      <FileText className="w-4 h-4 text-[var(--primitive-copper)]" />
+                      <span className="font-mono text-[var(--primitive-copper)]">{lastResult.invoice.invoiceNumber}</span>
                     </div>
-                    <div className="text-sm text-[#cccccc]">
+                    <div className="text-sm text-[var(--color-text-primary)]">
                       Amount: {formatCurrency(lastResult.invoice.amountCents)}
                     </div>
                     {lastResult.extraction?.companyMatchDetails && (
-                      <div className="text-xs text-[#858585] mt-1">
+                      <div className="text-xs text-[var(--color-text-muted)] mt-1">
                         Matched: {lastResult.extraction.companyMatchDetails.matchedName}
                         {lastResult.extraction.companyMatchDetails.discipline && (
                           <span> ({lastResult.extraction.companyMatchDetails.discipline})</span>
@@ -318,7 +319,7 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
                       </div>
                     )}
                     {lastResult.extraction?.confidence.overall && (
-                      <div className="text-xs text-[#6e6e6e] mt-1">
+                      <div className="text-xs text-[var(--color-text-muted)] mt-1">
                         Confidence: {Math.round(lastResult.extraction.confidence.overall * 100)}%
                       </div>
                     )}
@@ -335,8 +336,8 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
                 </div>
                 <div className="text-center">
                   <p className="text-lg font-medium text-red-400">Extraction Failed</p>
-                  <p className="text-sm text-[#858585] mt-1">{uploadProgress}</p>
-                  <p className="text-xs text-[#6e6e6e] mt-2">Click to try again</p>
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1">{uploadProgress}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-2">Click to try again</p>
                 </div>
               </>
             )}

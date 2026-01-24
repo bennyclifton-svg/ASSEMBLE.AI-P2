@@ -29,19 +29,19 @@ export function UploadZone({ onFilesSelected, className, disabled }: UploadZoneP
             {...getRootProps()}
             className={cn(
                 "border-4 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
-                isDragActive ? "border-[#0e639c] bg-[#0e639c]/10" : "border-[#3e3e42] hover:border-[#0e639c] hover:bg-[#0e639c]/5",
+                isDragActive ? "border-[var(--color-accent-green)] bg-[var(--color-accent-green)]/10" : "border-[var(--color-border)] hover:border-[var(--color-accent-green)] hover:bg-[var(--color-accent-green)]/5",
                 disabled && "opacity-50 cursor-not-allowed",
                 className
             )}
         >
             <input {...getInputProps()} />
-            <div className="flex flex-col items-center justify-center space-y-2 text-[#858585]">
+            <div className="flex flex-col items-center justify-center space-y-2 text-[var(--color-text-muted)]">
                 <UploadCloud className="h-10 w-10 mb-2" />
                 {isDragActive ? (
-                    <p className="text-[#cccccc]">Drop the files here ...</p>
+                    <p className="text-[var(--color-text-primary)]">Drop the files here ...</p>
                 ) : (
                     <>
-                        <p className="text-sm font-medium text-[#cccccc]">Drag & drop files here, or click to select files</p>
+                        <p className="text-sm font-medium text-[var(--color-text-primary)]">Drag & drop files here, or click to select files</p>
                         <p className="text-xs">Max file size: 50MB</p>
                     </>
                 )}

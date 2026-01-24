@@ -15,18 +15,14 @@ import type { QualityRating } from '@/types/evaluation';
 
 interface EvaluationNonPriceTabProps {
     projectId: string;
-    disciplineId?: string;
-    tradeId?: string;
-    disciplineName?: string;
-    tradeName?: string;
+    stakeholderId?: string;
+    stakeholderName?: string;
 }
 
 export function EvaluationNonPriceTab({
     projectId,
-    disciplineId,
-    tradeId,
-    disciplineName,
-    tradeName,
+    stakeholderId,
+    stakeholderName,
 }: EvaluationNonPriceTabProps) {
     const {
         data,
@@ -38,18 +34,15 @@ export function EvaluationNonPriceTab({
         updateCell,
         parseTender,
         shortlistedFirms,
+        firmType,
     } = useNonPriceEvaluation({
         projectId,
-        disciplineId,
-        tradeId,
+        stakeholderId,
     });
 
     const { toast } = useToast();
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-
-    // Determine firm type
-    const firmType = disciplineId ? 'consultant' : 'contractor';
 
     // Show save status indicator
     useEffect(() => {
@@ -116,8 +109,8 @@ export function EvaluationNonPriceTab({
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-5 h-5 text-[#858585] animate-spin" />
-                <span className="ml-2 text-sm text-[#858585]">Loading non-price evaluation data...</span>
+                <Loader2 className="w-5 h-5 text-[var(--color-text-muted)] animate-spin" />
+                <span className="ml-2 text-sm text-[var(--color-text-muted)]">Loading non-price evaluation data...</span>
             </div>
         );
     }
@@ -136,11 +129,11 @@ export function EvaluationNonPriceTab({
     if (shortlistedFirms.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-                <AlertCircle className="w-8 h-8 text-[#858585] mb-3" />
-                <h3 className="text-sm font-medium text-[#cccccc] mb-1">
+                <AlertCircle className="w-8 h-8 text-[var(--color-text-muted)] mb-3" />
+                <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
                     No Short-listed Firms
                 </h3>
-                <p className="text-xs text-[#858585] max-w-sm">
+                <p className="text-xs text-[var(--color-text-muted)] max-w-sm">
                     To evaluate non-price criteria, first short-list firms by toggling the
                     "Shortlisted" option on the firm cards above.
                 </p>
@@ -155,7 +148,7 @@ export function EvaluationNonPriceTab({
         <div className="space-y-4">
             {/* Save Status */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-[#858585]">
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     {saveStatus === 'saving' && (
                         <>
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -169,8 +162,8 @@ export function EvaluationNonPriceTab({
                         </>
                     )}
                 </div>
-                <div className="text-xs text-[#858585]">
-                    {disciplineName || tradeName} - Non-Price Evaluation
+                <div className="text-xs text-[var(--color-text-muted)]">
+                    {stakeholderName} - Non-Price Evaluation
                 </div>
             </div>
 
@@ -187,7 +180,7 @@ export function EvaluationNonPriceTab({
             />
 
             {/* Instructions */}
-            <div className="px-3 py-2 bg-[#252526] border border-[#3e3e42] rounded text-xs text-[#858585]">
+            <div className="px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-xs text-[var(--color-text-muted)]">
                 <p>
                     <strong>Tip:</strong> Click content area to edit inline. Use rating buttons (G/A/P) to set quality.
                     Drop a tender PDF onto a firm column to auto-extract criteria using AI.

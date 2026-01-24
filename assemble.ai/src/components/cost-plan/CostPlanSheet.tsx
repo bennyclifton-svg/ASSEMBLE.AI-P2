@@ -49,8 +49,8 @@ function createHeaderRow() {
   return headers.map((h) => ({
     v: h,
     ct: { fa: '@', t: 's' },
-    bg: '#1e3a5f',
-    fc: '#ffffff',
+    bg: '#D4A574',
+    fc: '#141618',
     bl: 1,
     ht: 0, // Center align
   }));
@@ -90,7 +90,7 @@ function createCostLineRow(line: CostLineWithCalculations) {
 
   return [
     { v: line.costCode || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
-    { v: line.discipline?.disciplineName || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
+    { v: line.stakeholder?.name || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
     { v: line.activity, ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
     { v: line.reference || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
     { v: line.budgetCents / 100, ct: { fa: '$#,##0', t: 'n' }, fc: '#3b82f6' },
@@ -110,19 +110,19 @@ function createTotalsRow(totals: CostPlanTotals) {
   const varianceColor = totals.varianceCents < 0 ? '#dc2626' : '#16a34a';
 
   return [
-    { v: 'TOTAL', ct: { fa: '@', t: 's' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: '', bg: '#1e3a5f' },
-    { v: '', bg: '#1e3a5f' },
-    { v: '', bg: '#1e3a5f' },
-    { v: totals.budgetCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: totals.approvedContractCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: totals.forecastVariationsCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: totals.approvedVariationsCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: totals.finalForecastCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: totals.varianceCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: varianceColor, bl: 1 },
-    { v: totals.claimedCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: totals.currentMonthCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
-    { v: totals.etcCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#1e3a5f', fc: '#ffffff', bl: 1 },
+    { v: 'TOTAL', ct: { fa: '@', t: 's' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: '', bg: '#D4A574' },
+    { v: '', bg: '#D4A574' },
+    { v: '', bg: '#D4A574' },
+    { v: totals.budgetCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: totals.approvedContractCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: totals.forecastVariationsCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: totals.approvedVariationsCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: totals.finalForecastCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: totals.varianceCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: varianceColor, bl: 1 },
+    { v: totals.claimedCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: totals.currentMonthCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
+    { v: totals.etcCents / 100, ct: { fa: '$#,##0', t: 'n' }, bg: '#D4A574', fc: '#141618', bl: 1 },
   ];
 }
 
@@ -217,7 +217,7 @@ export function CostPlanSheet({
       config: {
         columnlen: {
           0: 80,   // Cost Code
-          1: 150,  // Discipline
+          1: 200,  // Discipline
           2: 250,  // Description
           3: 100,  // Reference
           4: 100,  // Budget

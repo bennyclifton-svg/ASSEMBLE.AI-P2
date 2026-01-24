@@ -107,36 +107,79 @@ export async function extractVariationFromPdf(
 ): Promise<ExtractionResult> {
   console.log(`[variation-extract] Starting extraction for: ${filename}`);
 
-  // Step 1: Parse the PDF
-  let parsedDoc: ParsedDocument;
+  // Step 1: Try to parse the PDF with text extraction first
+  let parsedDoc: ParsedDocument | null = null;
+  let useNativePdf = false;
+
   try {
     parsedDoc = await parseDocument(fileBuffer, filename);
     console.log(`[variation-extract] Parsed with ${parsedDoc.metadata.parser}, ${parsedDoc.content.length} chars`);
+
+    // If no content was extracted, fall back to native PDF
+    if (!parsedDoc.content || parsedDoc.content.trim().length === 0) {
+      console.log('[variation-extract] No text extracted, falling back to native PDF support');
+      useNativePdf = true;
+    }
   } catch (parseError) {
-    console.error('[variation-extract] Parse failed:', parseError);
-    return {
-      success: false,
-      variation: null,
-      error: `Failed to parse document: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
-      parserUsed: 'text',
-    };
+    console.warn('[variation-extract] Parse failed, falling back to native PDF support:', parseError);
+    useNativePdf = true;
   }
 
   // Step 2: Extract data with Claude
   try {
-    console.log('[variation-extract] Calling Claude Haiku for extraction...');
-
     const anthropic = getAnthropicClient();
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 1500,
-      messages: [
-        {
-          role: 'user',
-          content: EXTRACTION_PROMPT + parsedDoc.content,
-        },
-      ],
-    });
+    let response;
+    let parserUsed: ParsedDocument['metadata']['parser'] = parsedDoc?.metadata.parser || 'text';
+
+    if (useNativePdf) {
+      // Use Claude's native PDF document support with Sonnet (better PDF support)
+      console.log('[variation-extract] Using Claude native PDF support for extraction...');
+      parserUsed = 'text';
+
+      const base64Pdf = fileBuffer.toString('base64');
+      try {
+        response = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1500,
+          betas: ['pdfs-2024-09-25'],
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'document',
+                  source: {
+                    type: 'base64',
+                    media_type: 'application/pdf',
+                    data: base64Pdf,
+                  },
+                },
+                {
+                  type: 'text',
+                  text: EXTRACTION_PROMPT,
+                },
+              ],
+            },
+          ],
+        });
+      } catch (pdfApiError: any) {
+        console.error('[variation-extract] Native PDF API error:', pdfApiError?.message || pdfApiError);
+        throw new Error(`PDF processing failed: ${pdfApiError?.message || 'Unable to process this PDF format'}`);
+      }
+    } else {
+      // Use pre-extracted text content
+      console.log('[variation-extract] Calling Claude Haiku for extraction...');
+      response = await anthropic.messages.create({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 1500,
+        messages: [
+          {
+            role: 'user',
+            content: EXTRACTION_PROMPT + parsedDoc!.content,
+          },
+        ],
+      });
+    }
 
     // Extract text content from response
     const textContent = response.content.find((c) => c.type === 'text');
@@ -183,7 +226,7 @@ export async function extractVariationFromPdf(
         overall: 0.8,
         fields: {},
       },
-      rawText: parsedDoc.content.substring(0, 2000), // Keep first 2000 chars for debugging
+      rawText: parsedDoc?.content?.substring(0, 2000) || '[PDF processed via native document support]',
     };
 
     console.log(`[variation-extract] Successfully extracted: ${variation.variationNumber || 'No number'} - ${variation.description.substring(0, 50)}...`);
@@ -191,7 +234,7 @@ export async function extractVariationFromPdf(
     return {
       success: true,
       variation,
-      parserUsed: parsedDoc.metadata.parser,
+      parserUsed,
     };
   } catch (extractError) {
     console.error('[variation-extract] Extraction failed:', extractError);
@@ -199,7 +242,7 @@ export async function extractVariationFromPdf(
       success: false,
       variation: null,
       error: `Failed to extract data: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`,
-      parserUsed: parsedDoc.metadata.parser,
+      parserUsed: parsedDoc?.metadata.parser || 'text',
     };
   }
 }

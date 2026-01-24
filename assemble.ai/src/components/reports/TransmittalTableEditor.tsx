@@ -77,7 +77,7 @@ export default function TransmittalTableEditor({
    */
   const getCategoryColor = (categoryId: string): string => {
     const category = categories.find(cat => cat.id === categoryId);
-    return category?.color || '#cccccc';
+    return category?.color || 'var(--color-text-primary)';
   };
 
   const getCategoryName = (categoryId: string): string => {
@@ -91,7 +91,7 @@ export default function TransmittalTableEditor({
       contentEditable={false}
     >
       {/* Header */}
-      <div className="bg-[#252526] px-4 py-2 border-b border-gray-700 flex items-center justify-between">
+      <div className="bg-[var(--color-bg-secondary)] px-4 py-2 border-b border-gray-700 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-300">Document Transmittal</h3>
         <Button
           size="sm"
@@ -124,7 +124,7 @@ export default function TransmittalTableEditor({
               </tr>
             ) : (
               documents.map((doc) => (
-                <tr key={doc.id} className="border-b border-gray-800 hover:bg-[#2a2a2a]">
+                <tr key={doc.id} className="border-b border-gray-800 hover:bg-[var(--color-bg-tertiary)]">
                   {/* Document Name */}
                   <td className="px-4 py-2">
                     {editingCell?.id === doc.id && editingCell.field === 'name' ? (
@@ -137,12 +137,12 @@ export default function TransmittalTableEditor({
                           if (e.key === 'Enter') setEditingCell(null);
                         }}
                         autoFocus
-                        className="w-full bg-[#1e1e1e] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full bg-[var(--color-bg-primary)] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
                       <div
                         onClick={() => setEditingCell({ id: doc.id, field: 'name' })}
-                        className="cursor-text px-2 py-1 rounded hover:bg-[#1e1e1e]"
+                        className="cursor-text px-2 py-1 rounded hover:bg-[var(--color-bg-primary)]"
                       >
                         {doc.name}
                       </div>
@@ -161,12 +161,12 @@ export default function TransmittalTableEditor({
                           if (e.key === 'Enter') setEditingCell(null);
                         }}
                         autoFocus
-                        className="w-full bg-[#1e1e1e] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full bg-[var(--color-bg-primary)] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
                       <div
                         onClick={() => setEditingCell({ id: doc.id, field: 'version' })}
-                        className="cursor-text px-2 py-1 rounded hover:bg-[#1e1e1e]"
+                        className="cursor-text px-2 py-1 rounded hover:bg-[var(--color-bg-primary)]"
                       >
                         {doc.version}
                       </div>
@@ -178,7 +178,7 @@ export default function TransmittalTableEditor({
                     <select
                       value={doc.categoryId}
                       onChange={(e) => handleUpdateField(doc.id, 'categoryId', e.target.value)}
-                      className="w-full bg-[#1e1e1e] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full bg-[var(--color-bg-primary)] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       style={{ color: getCategoryColor(doc.categoryId) }}
                     >
                       {categories.map((category) => (

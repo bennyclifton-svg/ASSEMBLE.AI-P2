@@ -18,16 +18,16 @@ export function StagingSection({ projectId, data, onUpdate }: StagingSectionProp
     const stages = data.length > 0 ? data : DEFAULT_STAGES;
 
     return (
-        <div className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42]">
-            <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Staging</h3>
+        <div className="bg-[var(--color-bg-secondary)] rounded-lg p-6 border border-[var(--color-border)]">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Staging</h3>
             <div className="space-y-2">
                 {stages.map((stage: any) => (
                     <div
                         key={stage.stageNumber}
-                        className="flex items-center justify-between px-4 py-3 bg-[#1e1e1e] rounded border border-[#3e3e42]"
+                        className="flex items-center justify-between px-4 py-3 bg-[var(--color-bg-primary)] rounded border border-[var(--color-border)]"
                     >
-                        <span className="text-[#cccccc]">{stage.stageName}</span>
-                        <span className="text-sm text-[#858585]">
+                        <span className="text-[var(--color-text-primary)]">{stage.stageName}</span>
+                        <span className="text-sm text-[var(--color-text-muted)]">
                             {stage.status || 'not_started'}
                         </span>
                     </div>

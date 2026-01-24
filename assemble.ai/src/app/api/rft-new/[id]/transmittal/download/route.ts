@@ -28,8 +28,7 @@ export async function GET(
         const [existing] = await db
             .select({
                 id: rftNew.id,
-                disciplineId: rftNew.disciplineId,
-                tradeId: rftNew.tradeId,
+                stakeholderId: rftNew.stakeholderId,
             })
             .from(rftNew)
             .where(eq(rftNew.id, id))

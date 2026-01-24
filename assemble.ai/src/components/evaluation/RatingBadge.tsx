@@ -58,10 +58,10 @@ export function RatingButton({ rating, selected, onClick, disabled }: RatingButt
             disabled={disabled}
             className={cn(
                 'px-4 py-2 text-sm font-medium rounded-md border-2 transition-all',
-                'hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#1e1e1e]',
+                'hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--color-bg-primary)]',
                 selected
-                    ? cn(colors.bg, colors.text, colors.border, 'ring-2 ring-offset-2 ring-offset-[#1e1e1e]')
-                    : 'bg-[#2d2d2d] text-[#858585] border-[#3e3e42] hover:bg-[#3e3e42] hover:text-[#cccccc]',
+                    ? cn(colors.bg, colors.text, colors.border, 'ring-2 ring-offset-2 ring-offset-[var(--color-bg-primary)]')
+                    : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] border-[var(--color-border)] hover:bg-[var(--color-border)] hover:text-[var(--color-text-primary)]',
                 disabled && 'opacity-50 cursor-not-allowed'
             )}
             style={{

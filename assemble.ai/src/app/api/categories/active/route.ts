@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { consultantDisciplines, contractorTrades } from '@/lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 import { getAllCategories, type ActiveCategory, type Subcategory } from '@/lib/constants/categories';
 
 export async function GET(request: NextRequest) {
@@ -16,14 +16,16 @@ export async function GET(request: NextRequest) {
         // Get all categories
         const categories = getAllCategories();
 
-        // Fetch active consultant disciplines
+        // Fetch active consultant disciplines (ordered alphabetically)
         const activeDisciplines = await db.query.consultantDisciplines.findMany({
             where: eq(consultantDisciplines.projectId, projectId),
+            orderBy: asc(consultantDisciplines.disciplineName),
         });
 
-        // Fetch active contractor trades
+        // Fetch active contractor trades (ordered alphabetically)
         const activeTrades = await db.query.contractorTrades.findMany({
             where: eq(contractorTrades.projectId, projectId),
+            orderBy: asc(contractorTrades.tradeName),
         });
 
         // Build active categories with their subcategories

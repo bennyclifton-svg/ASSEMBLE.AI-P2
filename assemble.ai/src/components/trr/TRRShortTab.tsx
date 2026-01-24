@@ -20,10 +20,8 @@ import { TRRAttachments } from './TRRAttachments';
 interface TRRShortTabProps {
     projectId: string;
     trr: TRR & { transmittalCount?: number };
-    disciplineId?: string | null;
-    tradeId?: string | null;
+    stakeholderId?: string | null;
     contextName: string;
-    contextType: 'discipline' | 'trade';
     onUpdateTRR: (data: TRRUpdateData) => Promise<TRR>;
 }
 
@@ -35,10 +33,8 @@ interface ProjectDetails {
 export function TRRShortTab({
     projectId,
     trr,
-    disciplineId,
-    tradeId,
+    stakeholderId,
     contextName,
-    contextType,
     onUpdateTRR,
 }: TRRShortTabProps) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
@@ -103,10 +99,9 @@ export function TRRShortTab({
                     }
                 }
 
-                // Fetch addenda for the discipline/trade
+                // Fetch addenda for the stakeholder
                 const addendaParams = new URLSearchParams({ projectId });
-                if (disciplineId) addendaParams.set('disciplineId', disciplineId);
-                if (tradeId) addendaParams.set('tradeId', tradeId);
+                if (stakeholderId) addendaParams.set('stakeholderId', stakeholderId);
 
                 const addendaRes = await fetch(`/api/addenda?${addendaParams.toString()}`);
                 if (addendaRes.ok) {
@@ -128,7 +123,7 @@ export function TRRShortTab({
         };
 
         fetchData();
-    }, [projectId, disciplineId, tradeId, contextType, contextName]);
+    }, [projectId, stakeholderId, contextType, contextName]);
 
     // Update local state when TRR changes
     useEffect(() => {
@@ -181,7 +176,7 @@ export function TRRShortTab({
 
     if (isLoading) {
         return (
-            <div className="p-8 text-center text-[#858585]">
+            <div className="p-8 text-center text-[var(--color-text-muted)]">
                 <p>Loading TRR data...</p>
             </div>
         );
@@ -191,7 +186,7 @@ export function TRRShortTab({
         <div className="space-y-6">
             {/* Saving indicator */}
             {isSaving && (
-                <div className="fixed top-4 right-4 bg-[#2d2d30] border border-[#3e3e42] rounded px-3 py-1.5 text-xs text-[#4fc1ff] z-50">
+                <div className="fixed top-4 right-4 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-3 py-1.5 text-xs text-[var(--color-accent-copper)] z-50">
                     Saving...
                 </div>
             )}
@@ -218,8 +213,7 @@ export function TRRShortTab({
             <TRRTenderProcessTable
                 firms={firms}
                 projectId={projectId}
-                disciplineId={disciplineId}
-                tradeId={tradeId}
+                stakeholderId={stakeholderId}
             />
 
             {/* 4. Addendum Table */}
@@ -228,15 +222,13 @@ export function TRRShortTab({
             {/* 5. Evaluation Price */}
             <TRREvaluationPrice
                 projectId={projectId}
-                disciplineId={disciplineId}
-                tradeId={tradeId}
+                stakeholderId={stakeholderId}
             />
 
             {/* 6. Evaluation Non-Price */}
             <TRREvaluationNonPrice
                 projectId={projectId}
-                disciplineId={disciplineId}
-                tradeId={tradeId}
+                stakeholderId={stakeholderId}
             />
 
             {/* 7. Clarifications */}

@@ -198,7 +198,7 @@ export function ProjectSummarySheet({
 function createCostLineRow(line: CostLineWithCalculations): Record<string, unknown>[] {
   return [
     createTextCell(line.costCode || '', { editable: true }),
-    createDisciplineCell(line.discipline, true),
+    createDisciplineCell(line.stakeholder, true),
     createTextCell(line.activity, { editable: true }),
     createTextCell(line.reference || '', { editable: true }),
     createCurrencyCell(line.budgetCents, { editable: true }),

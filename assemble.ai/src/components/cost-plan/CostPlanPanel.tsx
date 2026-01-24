@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Plus, Trash, GripVertical, Check, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Plus, Trash, GripVertical, Check, X, ChevronDown, ChevronRight } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
     DndContext,
@@ -22,36 +22,36 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useCostPlan, useCostLineMutations } from '@/lib/hooks/cost-plan';
-import { useConsultantDisciplines } from '@/lib/hooks/use-consultant-disciplines';
-import { useContractorTrades } from '@/lib/hooks/use-contractor-trades';
+import { useStakeholders } from '@/lib/hooks/use-stakeholders';
 import { formatCurrency } from '@/lib/calculations/cost-plan-formulas';
 import { VariationsPanel } from './VariationsPanel';
 import { InvoicesPanel } from './InvoicesPanel';
 import { DisciplineDropdown } from './cells/DisciplineDropdown';
-import type { CostLineSection, CostLineWithCalculations } from '@/types/cost-plan';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
+import type { CostLineSection, CostLineWithCalculations, GroupedLine, GroupedLineTotals } from '@/types/cost-plan';
 
 // App color palette - consistent with global styles
 const COLORS = {
     bg: {
-        primary: '#1e1e1e',
-        secondary: '#252526',
-        tertiary: '#2d2d30',
-        hover: '#37373d',
+        primary: 'var(--color-bg-primary)',
+        secondary: 'var(--color-bg-secondary)',
+        tertiary: 'var(--color-bg-tertiary)',
+        hover: 'var(--color-bg-tertiary)',
     },
     text: {
-        primary: '#cccccc',
-        secondary: '#858585',
-        muted: '#6e6e6e',
+        primary: 'var(--color-text-primary)',
+        secondary: 'var(--color-text-muted)',
+        muted: 'var(--color-text-muted)',
     },
     border: {
-        primary: '#3e3e42',
-        secondary: '#555555',
+        primary: 'var(--color-border)',
+        secondary: 'var(--color-border)',
     },
     accent: {
-        blue: '#0e639c',
-        costPlan: '#B85C5C',
-        variation: '#D4A574',
-        invoice: '#6B9BD1',
+        blue: 'var(--color-accent-green)',
+        costPlan: 'var(--primitive-copper)',    // copper - unified accent
+        variation: 'var(--primitive-copper)',   // copper - unified accent
+        invoice: 'var(--primitive-copper)',     // copper - unified accent
     },
     status: {
         positive: '#4ade80',
@@ -60,7 +60,7 @@ const COLORS = {
 };
 
 const SECTION_NAMES: Record<CostLineSection, string> = {
-    FEES: 'FEES AND CHARGES',
+    FEES: 'AUTHORITIES',
     CONSULTANTS: 'CONSULTANTS',
     CONSTRUCTION: 'CONSTRUCTION',
     CONTINGENCY: 'CONTINGENCY',
@@ -76,42 +76,42 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
     const [activeTab, setActiveTab] = useState('cost-plan');
 
     return (
-        <div className="h-full flex flex-col bg-[#1e1e1e]">
+        <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
             <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
-                className="flex-1 flex flex-col"
+                className="flex-1 flex flex-col min-h-0"
             >
-                <TabsList className="w-full justify-start bg-[#252526] border-b border-[#3e3e42] rounded-none h-auto p-0 px-2">
+                <TabsList className="w-full justify-start bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2">
                     <TabsTrigger
                         value="cost-plan"
-                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#B85C5C] rounded-none px-4 py-2 text-[#858585] text-xs font-medium"
+                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium"
                     >
                         Cost Plan
                     </TabsTrigger>
                     <TabsTrigger
                         value="variations"
-                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#D4A574] rounded-none px-4 py-2 text-[#858585] text-xs font-medium"
+                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium"
                     >
                         Variations
                     </TabsTrigger>
                     <TabsTrigger
                         value="invoices"
-                        className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] data-[state=active]:border-b-2 data-[state=active]:border-[#6B9BD1] rounded-none px-4 py-2 text-[#858585] text-xs font-medium"
+                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium"
                     >
                         Invoices
                     </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="cost-plan" className="flex-1 mt-0 overflow-hidden">
+                <TabsContent value="cost-plan" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
                     <CostPlanSpreadsheet projectId={projectId} />
                 </TabsContent>
 
-                <TabsContent value="variations" className="flex-1 mt-0 overflow-hidden">
+                <TabsContent value="variations" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
                     <VariationsPanel projectId={projectId} />
                 </TabsContent>
 
-                <TabsContent value="invoices" className="flex-1 mt-0 overflow-hidden">
+                <TabsContent value="invoices" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
                     <InvoicesPanel projectId={projectId} />
                 </TabsContent>
             </Tabs>
@@ -133,33 +133,47 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     const { costLines, totals, isLoading, error, refetch } = useCostPlan(projectId, selectedMonth);
     const { createCostLine, updateCostLine, deleteCostLine, reorderCostLines, isSubmitting } = useCostLineMutations(projectId);
 
-    // Fetch disciplines and trades for dropdown
-    const { disciplines } = useConsultantDisciplines(projectId);
-    const { trades } = useContractorTrades(projectId);
+    // Fetch stakeholders for dropdown options (replaces old disciplines/trades)
+    const { stakeholders } = useStakeholders({ projectId });
 
-    // Map disciplines and trades for dropdown component
-    const disciplineOptions = disciplines.map(d => ({
-        id: d.id,
-        name: d.disciplineName,
-        isEnabled: d.isEnabled,
-        order: d.order,
-    }));
-    const tradeOptions = trades.map(t => ({
-        id: t.id,
-        name: t.tradeName,
-        isEnabled: t.isEnabled,
-        order: t.order,
-    }));
+    // Map stakeholders to dropdown options by group
+    // CONSULTANTS section uses consultant stakeholders
+    // CONSTRUCTION section uses contractor stakeholders
+    // Note: stakeholder.name now contains the short discipline name (aligned with disciplineOrTrade)
+    const disciplineOptions = stakeholders
+        .filter(s => s.stakeholderGroup === 'consultant' && s.isEnabled)
+        .map((s, index) => ({
+            id: s.id,
+            name: s.name || s.disciplineOrTrade || 'Unknown',
+            isEnabled: true,
+            order: s.sortOrder ?? index,
+        }));
+    const tradeOptions = stakeholders
+        .filter(s => s.stakeholderGroup === 'contractor' && s.isEnabled)
+        .map((s, index) => ({
+            id: s.id,
+            name: s.name || s.disciplineOrTrade || 'Unknown',
+            isEnabled: true,
+            order: s.sortOrder ?? index,
+        }));
 
     const [showAddRow, setShowAddRow] = useState<CostLineSection | null>(null);
     const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; activity: string } | null>(null);
+    const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
     // Drag and drop state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
     const [localLinesBySection, setLocalLinesBySection] = useState<Record<CostLineSection, CostLineWithCalculations[]>>({} as Record<CostLineSection, CostLineWithCalculations[]>);
+
+    // Roll-up mode state
+    const [isRollUpMode, setIsRollUpMode] = useState(false);
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+    // Section generation state
+    const [generatingSection, setGeneratingSection] = useState<CostLineSection | null>(null);
 
     // DnD sensors
     const sensors = useSensors(
@@ -198,7 +212,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             processedValue = numValue !== null ? Math.round(numValue * 100) : null;
         }
 
-        // disciplineId can be null (to clear)
+        // stakeholderId can be null (to clear assignment)
         await updateCostLine(id, { [field]: processedValue });
         setEditingCell(null);
         refetch();
@@ -208,6 +222,124 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         await deleteCostLine(id);
         setDeleteConfirm(null);
         refetch();
+    };
+
+    const handleClearAll = async () => {
+        if (costLines.length === 0) {
+            alert('Cost plan is already empty');
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `Are you sure you want to clear all ${costLines.length} cost plan items?\n\nThis action cannot be undone.`
+        );
+        if (!confirmed) return;
+
+        setIsLoadingTemplate(true);
+        try {
+            const response = await fetch(`/api/projects/${projectId}/cost-plan/clear`, {
+                method: 'DELETE',
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to clear cost plan');
+            }
+
+            // Success - refetch the cost plan
+            await refetch();
+
+            alert(`Successfully cleared ${result.data.linesDeleted} cost plan items`);
+        } catch (error) {
+            console.error('Failed to clear cost plan:', error);
+            alert(error instanceof Error ? error.message : 'Failed to clear cost plan');
+        } finally {
+            setIsLoadingTemplate(false);
+        }
+    };
+
+    const handleLoadTemplate = async () => {
+        if (isLoadingTemplate) return;
+
+        // Check if there are existing cost lines and offer to clear them first
+        if (costLines.length > 0) {
+            const choice = window.confirm(
+                `There are ${costLines.length} existing cost plan items.\n\nClick OK to CLEAR existing items and load template.\nClick Cancel to KEEP existing items and add template items.`
+            );
+
+            if (choice) {
+                // User chose to clear first
+                try {
+                    setIsLoadingTemplate(true);
+                    const clearResponse = await fetch(`/api/projects/${projectId}/cost-plan/clear`, {
+                        method: 'DELETE',
+                    });
+
+                    if (!clearResponse.ok) {
+                        throw new Error('Failed to clear existing items');
+                    }
+
+                    await refetch();
+                } catch (error) {
+                    console.error('Failed to clear cost plan:', error);
+                    alert(error instanceof Error ? error.message : 'Failed to clear cost plan');
+                    setIsLoadingTemplate(false);
+                    return;
+                }
+            }
+        }
+
+        setIsLoadingTemplate(true);
+        try {
+            const response = await fetch(`/api/projects/${projectId}/cost-plan/generate-from-template`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to load template');
+            }
+
+            // Success - refetch the cost plan
+            await refetch();
+
+            // Show success message (you can add a toast notification here if available)
+            alert(`Successfully loaded ${result.data.linesCreated} cost plan items from ${result.data.projectType} template`);
+        } catch (error) {
+            console.error('Failed to load template:', error);
+            alert(error instanceof Error ? error.message : 'Failed to load template');
+        } finally {
+            setIsLoadingTemplate(false);
+        }
+    };
+
+    // Handler for generating a single section from stakeholders
+    const handleGenerateSection = async (section: CostLineSection) => {
+        if (generatingSection) return;
+
+        setGeneratingSection(section);
+        try {
+            const response = await fetch(`/api/projects/${projectId}/cost-plan/generate-section`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ section }),
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Failed to generate section');
+
+            await refetch();
+        } catch (error) {
+            console.error('Failed to generate section:', error);
+            alert(error instanceof Error ? error.message : 'Failed to generate section');
+        } finally {
+            setGeneratingSection(null);
+        }
     };
 
     // Update local state when costLines change
@@ -354,7 +486,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
 
     const linesBySection = localLinesBySection;
 
-    const getSectionTotals = (lines: CostLineWithCalculations[]) => {
+    const getSectionTotals = (lines: CostLineWithCalculations[]): GroupedLineTotals => {
         return lines.reduce((acc, line) => ({
             budget: acc.budget + line.budgetCents,
             approvedContract: acc.approvedContract + line.approvedContractCents,
@@ -371,12 +503,112 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         });
     };
 
+    // Roll-up helper functions
+    const getGroupKey = (section: CostLineSection, id: string | null): string => {
+        return `${section}:${id ?? 'UNASSIGNED'}`;
+    };
+
+    const toggleGroupExpanded = useCallback((groupKey: string) => {
+        setExpandedGroups(prev => {
+            const next = new Set(prev);
+            if (next.has(groupKey)) {
+                next.delete(groupKey);
+            } else {
+                next.add(groupKey);
+            }
+            return next;
+        });
+    }, []);
+
+    // Toggle roll-up mode (called from column header chevron)
+    const toggleRollUpMode = useCallback(() => {
+        setIsRollUpMode(prev => {
+            if (prev) {
+                // Turning off roll-up, clear expanded groups
+                setExpandedGroups(new Set());
+            }
+            return !prev;
+        });
+    }, []);
+
+    // Group lines by discipline (CONSULTANTS) or trade (CONSTRUCTION)
+    const groupLinesByDisciplineOrTrade = useCallback((
+        lines: CostLineWithCalculations[],
+        section: CostLineSection
+    ): GroupedLine[] => {
+        if (section !== 'CONSULTANTS' && section !== 'CONSTRUCTION') {
+            return [];
+        }
+
+        const groupMap = new Map<string, CostLineWithCalculations[]>();
+
+        lines.forEach(line => {
+            // Group by stakeholderId (unified FK for both consultants and contractors)
+            const groupId = line.stakeholderId ?? null;
+
+            const key = groupId ?? 'UNASSIGNED';
+            if (!groupMap.has(key)) {
+                groupMap.set(key, []);
+            }
+            groupMap.get(key)!.push(line);
+        });
+
+        const groups: GroupedLine[] = [];
+        groupMap.forEach((groupLines, key) => {
+            const isUnassigned = key === 'UNASSIGNED';
+            let groupName = 'Unassigned';
+
+            if (!isUnassigned) {
+                // Find stakeholder in appropriate options list based on section
+                if (section === 'CONSULTANTS') {
+                    const discipline = disciplineOptions.find(d => d.id === key);
+                    groupName = discipline?.name || 'Unknown Discipline';
+                } else {
+                    const trade = tradeOptions.find(t => t.id === key);
+                    groupName = trade?.name || 'Unknown Trade';
+                }
+            }
+
+            groups.push({
+                groupKey: getGroupKey(section, isUnassigned ? null : key),
+                groupName,
+                groupId: isUnassigned ? null : key,
+                lines: groupLines.sort((a, b) => a.sortOrder - b.sortOrder),
+                totals: getSectionTotals(groupLines),
+            });
+        });
+
+        // Sort: by discipline/trade order, with Unassigned last
+        return groups.sort((a, b) => {
+            if (a.groupId === null) return 1;
+            if (b.groupId === null) return -1;
+
+            const getOrder = (id: string) => {
+                if (section === 'CONSULTANTS') {
+                    return disciplineOptions.find(d => d.id === id)?.order ?? 999;
+                }
+                return tradeOptions.find(t => t.id === id)?.order ?? 999;
+            };
+
+            return getOrder(a.groupId) - getOrder(b.groupId);
+        });
+    }, [disciplineOptions, tradeOptions]);
+
+    // Memoized grouped sections data
+    const groupedSections = useMemo(() => {
+        if (!isRollUpMode) return null;
+        return {
+            CONSULTANTS: groupLinesByDisciplineOrTrade(linesBySection['CONSULTANTS'] || [], 'CONSULTANTS'),
+            CONSTRUCTION: groupLinesByDisciplineOrTrade(linesBySection['CONSTRUCTION'] || [], 'CONSTRUCTION'),
+        };
+    }, [isRollUpMode, linesBySection, groupLinesByDisciplineOrTrade]);
+
     if (error) {
         return (
-            <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
+            <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
                 <div className="text-center">
-                    <p className="text-[#f87171] mb-2">Failed to load cost plan</p>
-                    <button onClick={() => refetch()} className="text-sm text-[#0e639c] hover:text-[#1177bb]">
+                    <p className="text-[var(--color-accent-coral)] mb-2">Failed to load cost plan</p>
+                    <button onClick={() => refetch()} className="text-sm text-[var(--color-accent-teal)] hover:opacity-80">
                         Retry
                     </button>
                 </div>
@@ -414,22 +646,33 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     const monthOptions = generateMonthOptions();
 
     return (
-        <div className="h-full flex flex-col bg-[#1e1e1e]">
+        <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
             {/* Toolbar */}
-            <div className="flex items-center justify-end px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
-                {/* Month Selector */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex-shrink-0">
+                {/* Left side - Action Buttons */}
+                <div className="flex gap-2 items-center">
+                    <button
+                        onClick={handleClearAll}
+                        disabled={isLoadingTemplate || costLines.length === 0}
+                        className="text-xs bg-[var(--color-accent-coral)] text-white px-3 py-1.5 rounded hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-coral)] focus:ring-opacity-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Clear all cost plan items"
+                    >
+                        Clear All
+                    </button>
+                </div>
+
+                {/* Right side - Month Selector */}
                 <select
                     value={`${selectedMonth.year}-${String(selectedMonth.month).padStart(2, '0')}`}
                     onChange={(e) => {
                         const [year, month] = e.target.value.split('-').map(Number);
                         setSelectedMonth({ year, month });
                     }}
-                    className="text-xs bg-[#2d2d30] border border-[#3e3e42] text-[#cccccc] px-2 py-1 rounded hover:border-[#555555] focus:outline-none focus:border-[#0e639c] transition-colors cursor-pointer"
+                    className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-primary)] px-2 py-1 rounded hover:border-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-teal)] transition-colors cursor-pointer"
                     title="Select reporting month"
-                    style={{ colorScheme: 'dark' }}
                 >
                     {monthOptions.map(option => (
-                        <option key={option.value} value={option.value} className="bg-[#2d2d30] text-[#cccccc]">
+                        <option key={option.value} value={option.value} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                             {option.label}
                         </option>
                     ))}
@@ -443,33 +686,47 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <div className="flex-1 overflow-auto min-h-0" style={{ scrollbarGutter: 'stable' }}>
-                    <table className="border-collapse text-xs" style={{ minWidth: '900px', width: 'max-content' }}>
+                <div className="flex-1 h-0 overflow-x-auto overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
+                    <table className="border-collapse text-xs w-full min-w-[1100px]">
                         <thead className="sticky top-0 z-10">
-                            <tr style={{ backgroundColor: COLORS.accent.costPlan }}>
-                                <th className="border border-[#8a4a4a] px-0.5 py-1.5 w-6" rowSpan={2}></th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-left w-16" rowSpan={2}>Code</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-left w-20" rowSpan={2}>Discipline</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-left min-w-[60px]" rowSpan={2}>Description</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[72px]" rowSpan={2}>Budget</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[72px]" rowSpan={2}>Contract</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-center font-medium w-[120px]" colSpan={2} style={{ backgroundColor: COLORS.accent.variation, color: '#1e1e1e' }}>VARIATIONS</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[72px]" rowSpan={2}>Forecast</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[72px]" rowSpan={2}>Variance</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[72px]" rowSpan={2}>Claimed</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[60px]" rowSpan={2}>Month</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1.5 text-white font-medium text-right w-[72px]" rowSpan={2}>Remaining</th>
-                                <th className="border border-[#8a4a4a] px-1 py-1.5 w-7" rowSpan={2}></th>
+                            <tr className="bg-[var(--color-accent-copper-tint)] border border-[var(--color-accent-copper)]">
+                                <th className="border border-[var(--color-accent-copper)] px-0.5 py-1.5 w-6" rowSpan={2}>
+                                    <button
+                                        onClick={toggleRollUpMode}
+                                        className="p-0.5 text-[var(--color-accent-copper)]/70 hover:text-[var(--color-accent-copper)] transition-colors"
+                                        title={isRollUpMode ? "Expand all rows" : "Roll up by discipline/trade"}
+                                    >
+                                        {isRollUpMode ? (
+                                            <ChevronDown className="h-3.5 w-3.5" />
+                                        ) : (
+                                            <ChevronRight className="h-3.5 w-3.5" />
+                                        )}
+                                    </button>
+                                </th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-left w-16" rowSpan={2}>Code</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-left w-20" rowSpan={2}>Discipline</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-left w-[200px]" rowSpan={2}>Description</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Budget</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Contract</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-center text-[var(--color-accent-copper)] font-medium w-[120px]" colSpan={2}>VARIATIONS</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Forecast</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Variance</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Claimed</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[60px]" rowSpan={2}>Month</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Remaining</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1 py-1.5 w-7" rowSpan={2}></th>
                             </tr>
-                            <tr style={{ backgroundColor: COLORS.accent.costPlan }}>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1 text-center font-medium w-[60px]" style={{ backgroundColor: COLORS.accent.variation, color: '#1e1e1e' }}>Forecast</th>
-                                <th className="border border-[#8a4a4a] px-1.5 py-1 text-center font-medium w-[60px]" style={{ backgroundColor: COLORS.accent.variation, color: '#1e1e1e' }}>Approved</th>
+                            <tr className="bg-[var(--color-accent-copper-tint)]">
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1 text-center text-[var(--color-accent-copper)] font-medium w-[60px]">Forecast</th>
+                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1 text-center text-[var(--color-accent-copper)] font-medium w-[60px]">Approved</th>
                             </tr>
                         </thead>
                         <tbody>
                             {SECTIONS.map(section => {
                                 const lines = linesBySection[section] || [];
                                 const sectionTotals = getSectionTotals(lines);
+                                // Get grouped data for this section (only CONSULTANTS and CONSTRUCTION)
+                                const groupedData = groupedSections?.[section as 'CONSULTANTS' | 'CONSTRUCTION'] || [];
 
                                 return (
                                     <SectionBlock
@@ -491,28 +748,34 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                                         isSubmitting={isSubmitting}
                                         disciplines={disciplineOptions}
                                         trades={tradeOptions}
+                                        isRollUpMode={isRollUpMode}
+                                        expandedGroups={expandedGroups}
+                                        onToggleGroup={toggleGroupExpanded}
+                                        groupedData={groupedData}
+                                        onGenerateSection={handleGenerateSection}
+                                        isGeneratingSection={generatingSection === section}
                                     />
                                 );
                             })}
 
                             {/* GRAND TOTAL Row */}
-                            <tr className="bg-[#2d2d30] font-semibold">
-                                <td className="border border-[#3e3e42] px-0.5 py-1.5"></td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-[#cccccc]" colSpan={3}>GRAND TOTAL</td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right text-[#cccccc]">{formatCurrency(totals?.budgetCents || 0)}</td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right text-[#cccccc]">{formatCurrency(totals?.approvedContractCents || 0)}</td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right text-[#cccccc]">{formatCurrency(totals?.forecastVariationsCents || 0)}</td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right text-[#cccccc]">{formatCurrency(totals?.approvedVariationsCents || 0)}</td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right text-[#cccccc]">{formatCurrency(totals?.finalForecastCents || 0)}</td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right">
-                                    <span className={totals && totals.varianceCents < 0 ? 'text-[#f87171]' : 'text-[#4ade80]'}>
+                            <tr className="bg-[var(--color-bg-tertiary)] font-semibold">
+                                <td className="border border-[var(--color-border)] px-0.5 py-1.5"></td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-[var(--color-text-primary)]" colSpan={3}>GRAND TOTAL</td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.budgetCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.approvedContractCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.forecastVariationsCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.approvedVariationsCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.finalForecastCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right">
+                                    <span className={totals && totals.varianceCents < 0 ? 'text-[var(--color-accent-coral)]' : 'text-[var(--color-accent-green)]'}>
                                         {formatCurrency(totals?.varianceCents || 0)}
                                     </span>
                                 </td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right text-[#cccccc]">{formatCurrency(totals?.claimedCents || 0)}</td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right text-[#cccccc]">{formatCurrency(totals?.currentMonthCents || 0)}</td>
-                                <td className="border border-[#3e3e42] px-1.5 py-1.5 text-right text-[#cccccc]">{formatCurrency(totals?.etcCents || 0)}</td>
-                                <td className="border border-[#3e3e42] px-1 py-1.5"></td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.claimedCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.currentMonthCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.etcCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1 py-1.5"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -521,23 +784,23 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                 {/* Drag overlay for better visual feedback */}
                 <DragOverlay>
                     {activeLine ? (
-                        <table className="border-collapse text-xs" style={{ minWidth: '900px', width: 'max-content' }}>
+                        <table className="border-collapse text-xs min-w-[900px] w-max">
                             <tbody>
-                                <tr className="bg-[#37373d] shadow-lg opacity-90">
-                                    <td className="border border-[#3e3e42] px-0.5 py-1 w-6">
-                                        <GripVertical className="h-3.5 w-3.5 text-[#cccccc]" />
+                                <tr className="bg-[var(--color-bg-hover)] shadow-lg opacity-90">
+                                    <td className="border border-[var(--color-border)] px-0.5 py-1 w-6">
+                                        <GripVertical className="h-3.5 w-3.5 text-[var(--color-text-primary)]" />
                                     </td>
-                                    <td className="border border-[#3e3e42] px-1.5 py-1 text-[#6B9BD1] font-mono">{activeLine.costCode || '-'}</td>
-                                    <td className="border border-[#3e3e42] px-1.5 py-1 text-[#858585]">{activeLine.discipline?.disciplineName || '-'}</td>
-                                    <td className="border border-[#3e3e42] px-1.5 py-1 text-[#cccccc]">
+                                    <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-accent-teal)] font-mono">{activeLine.costCode || '-'}</td>
+                                    <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)]">{activeLine.stakeholder?.name || '-'}</td>
+                                    <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-primary)]">
                                         {activeLine.activity}
                                         {selectedIds.size > 1 && (
-                                            <span className="ml-2 px-1.5 py-0.5 bg-[#0e639c] text-white text-xs rounded">
+                                            <span className="ml-2 px-1.5 py-0.5 bg-[var(--color-accent-teal)] text-white text-xs rounded">
                                                 +{selectedIds.size - 1}
                                             </span>
                                         )}
                                     </td>
-                                    <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#6B9BD1]" colSpan={10}>
+                                    <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-accent-teal)]" colSpan={10}>
                                         {formatCurrency(activeLine.budgetCents)}
                                     </td>
                                 </tr>
@@ -597,6 +860,14 @@ interface SectionBlockProps {
     // Discipline/Trade dropdown options
     disciplines: DisciplineOption[];
     trades: TradeOption[];
+    // Roll-up mode props
+    isRollUpMode: boolean;
+    expandedGroups: Set<string>;
+    onToggleGroup: (groupKey: string) => void;
+    groupedData: GroupedLine[];
+    // Section generation props
+    onGenerateSection: (section: CostLineSection) => void;
+    isGeneratingSection: boolean;
 }
 
 function SectionBlock({
@@ -617,79 +888,136 @@ function SectionBlock({
     isSubmitting,
     disciplines,
     trades,
+    isRollUpMode,
+    expandedGroups,
+    onToggleGroup,
+    groupedData,
+    onGenerateSection,
+    isGeneratingSection,
 }: SectionBlockProps) {
+    // Determine if this section supports roll-up
+    const supportsRollUp = section === 'CONSULTANTS' || section === 'CONSTRUCTION';
+    const shouldShowRolledUp = isRollUpMode && supportsRollUp && groupedData.length > 0;
+
     return (
         <>
             {/* Section Header */}
-            <tr className="bg-[#37373d]">
-                <td className="border border-[#3e3e42] px-0.5 py-1.5"></td>
-                <td className="border border-[#3e3e42] px-1.5 py-1.5 font-semibold text-[#cccccc]" colSpan={3}>
-                    {SECTION_NAMES[section]}
+            <tr className="bg-[var(--color-bg-hover)]">
+                <td className="border border-[var(--color-border)] px-0.5 py-1.5"></td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1.5 font-semibold text-[var(--color-text-primary)]" colSpan={3}>
+                    <span className="flex items-center gap-2">
+                        {/* Diamond icon for sections with stakeholder mapping (not CONTINGENCY) */}
+                        {section !== 'CONTINGENCY' && (
+                            <button
+                                onClick={() => onGenerateSection(section)}
+                                disabled={isGeneratingSection || shouldShowRolledUp}
+                                className="p-0.5 text-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={`Populate ${SECTION_NAMES[section]} from stakeholders`}
+                            >
+                                <DiamondIcon variant="empty" className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                        {SECTION_NAMES[section]}
+                    </span>
                 </td>
-                <td className="border border-[#3e3e42] px-1.5 py-1.5" colSpan={9}></td>
-                <td className="border border-[#3e3e42] px-1 py-1.5 text-center">
+                <td className="border border-[var(--color-border)] px-1.5 py-1.5" colSpan={9}></td>
+                <td className="border border-[var(--color-border)] px-1 py-1.5 text-center">
                     <button
                         onClick={onAddLine}
-                        disabled={showAddRow}
-                        className="p-0.5 text-[#858585] hover:text-[#cccccc] hover:bg-[#4e4e52] rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={`Add line to ${SECTION_NAMES[section]}`}
+                        disabled={showAddRow || shouldShowRolledUp}
+                        className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={shouldShowRolledUp ? `Disable roll-up to add lines` : `Add line to ${SECTION_NAMES[section]}`}
                     >
                         <Plus className="h-3.5 w-3.5" />
                     </button>
                 </td>
             </tr>
 
-            {/* Cost Lines with SortableContext */}
-            <SortableContext
-                items={lines.map(l => l.id)}
-                strategy={verticalListSortingStrategy}
-            >
-                {lines.map(line => (
-                    <SortableCostLineRow
-                        key={line.id}
-                        line={line}
-                        section={section}
-                        editingCell={editingCell}
-                        onStartEdit={onStartEdit}
-                        onCellChange={onCellChange}
-                        onCancelEdit={onCancelEdit}
-                        onDelete={() => onDeleteLine(line.id, line.activity)}
-                        isSelected={selectedIds.has(line.id)}
-                        onRowClick={onRowClick}
-                        selectedCount={selectedIds.size}
-                        disciplines={disciplines}
-                        trades={trades}
-                    />
-                ))}
-            </SortableContext>
+            {shouldShowRolledUp ? (
+                /* Grouped accordion view for roll-up mode */
+                <>
+                    {groupedData.map(group => {
+                        const isExpanded = expandedGroups.has(group.groupKey);
+                        return (
+                            <React.Fragment key={group.groupKey}>
+                                {isExpanded ? (
+                                    /* When expanded, show only the detail lines (no header) */
+                                    group.lines.map((line, idx) => (
+                                        <ReadOnlyLineRow
+                                            key={line.id}
+                                            line={line}
+                                            showDiscipline={idx === 0}
+                                            disciplineName={group.groupName}
+                                            onCollapse={() => onToggleGroup(group.groupKey)}
+                                        />
+                                    ))
+                                ) : (
+                                    /* When collapsed, show only the summary row */
+                                    <CollapsedGroupRow
+                                        group={group}
+                                        isExpanded={false}
+                                        onToggle={() => onToggleGroup(group.groupKey)}
+                                    />
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
+                </>
+            ) : (
+                /* Normal editable view with drag-drop */
+                <>
+                    <SortableContext
+                        items={lines.map(l => l.id)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {lines.map(line => (
+                            <SortableCostLineRow
+                                key={line.id}
+                                line={line}
+                                section={section}
+                                editingCell={editingCell}
+                                onStartEdit={onStartEdit}
+                                onCellChange={onCellChange}
+                                onCancelEdit={onCancelEdit}
+                                onDelete={() => onDeleteLine(line.id, line.activity)}
+                                isSelected={selectedIds.has(line.id)}
+                                onRowClick={onRowClick}
+                                selectedCount={selectedIds.size}
+                                disciplines={disciplines}
+                                trades={trades}
+                            />
+                        ))}
+                    </SortableContext>
 
-            {/* Inline Add Row */}
-            {showAddRow && (
-                <AddCostLineRow
-                    onSave={onSaveNewLine}
-                    onCancel={onCancelNewLine}
-                    isSubmitting={isSubmitting}
-                />
+                    {/* Inline Add Row - only in normal mode */}
+                    {showAddRow && (
+                        <AddCostLineRow
+                            onSave={onSaveNewLine}
+                            onCancel={onCancelNewLine}
+                            isSubmitting={isSubmitting}
+                        />
+                    )}
+                </>
             )}
 
             {/* Sub-Total Row */}
-            <tr className="bg-[#2d2d30]">
-                <td className="border border-[#3e3e42] px-0.5 py-1"></td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-[#858585] font-medium" colSpan={3}>Sub-Total</td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">{formatCurrency(sectionTotals.budget)}</td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">{formatCurrency(sectionTotals.approvedContract)}</td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">{formatCurrency(sectionTotals.forecastVars)}</td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">{formatCurrency(sectionTotals.approvedVars)}</td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">{formatCurrency(sectionTotals.finalForecast)}</td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right">
-                    <span className={sectionTotals.variance < 0 ? 'text-[#f87171]' : sectionTotals.variance > 0 ? 'text-[#4ade80]' : 'text-[#858585]'}>
+            <tr className="bg-[var(--color-bg-tertiary)]">
+                <td className="border border-[var(--color-border)] px-0.5 py-1"></td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)] font-medium" colSpan={3}>Sub-Total</td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.budget)}</td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.approvedContract)}</td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.forecastVars)}</td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.approvedVars)}</td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.finalForecast)}</td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right">
+                    <span className={sectionTotals.variance < 0 ? 'text-[var(--color-accent-coral)]' : sectionTotals.variance > 0 ? 'text-[var(--color-accent-green)]' : 'text-[var(--color-text-muted)]'}>
                         {formatCurrency(sectionTotals.variance)}
                     </span>
                 </td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">{formatCurrency(sectionTotals.claimed)}</td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">{formatCurrency(sectionTotals.currentMonth)}</td>
-                <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">{formatCurrency(sectionTotals.etc)}</td>
-                <td className="border border-[#3e3e42] px-1 py-1"></td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.claimed)}</td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.currentMonth)}</td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.etc)}</td>
+                <td className="border border-[var(--color-border)] px-1 py-1"></td>
             </tr>
         </>
     );
@@ -799,14 +1127,14 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
             onClick={handleClick}
             className={`
                 transition-colors group
-                ${isDragging ? 'opacity-50 bg-[#37373d]' : 'bg-[#252526] hover:bg-[#2a2d2e]'}
-                ${isSelected ? 'bg-[#264f78] hover:bg-[#264f78]' : ''}
+                ${isDragging ? 'opacity-50 bg-[var(--color-bg-hover)]' : 'bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]'}
+                ${isSelected ? 'bg-[var(--color-accent-teal)]/20 hover:bg-[var(--color-accent-teal)]/20' : ''}
             `}
         >
             {/* Grip Handle */}
-            <td className="border border-[#3e3e42] px-0.5 py-1 w-6">
+            <td className="border border-[var(--color-border)] px-0.5 py-1 w-6">
                 <button
-                    className="cursor-grab active:cursor-grabbing text-[#6e6e6e] hover:text-[#cccccc] p-0.5"
+                    className="cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-0.5"
                     {...dragHandleProps}
                 >
                     <GripVertical className="h-3.5 w-3.5" />
@@ -818,22 +1146,18 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
                 onStartEdit={() => onStartEdit(line.id, 'costCode')}
                 onSave={(value) => onCellChange(line.id, 'costCode', value)}
                 onCancel={onCancelEdit}
-                className="font-mono text-[#6B9BD1]"
+                className="font-mono text-[var(--color-accent-teal)]"
             />
-            <td className="border border-[#3e3e42] px-1 py-0.5 min-w-[100px]">
+            <td className="border border-[var(--color-border)] px-1 py-0.5 min-w-[100px]">
                 <DisciplineDropdown
-                    value={section === 'CONSULTANTS' ? line.disciplineId : line.tradeId}
-                    displayValue={section === 'CONSULTANTS' ? line.discipline?.disciplineName : line.trade?.tradeName}
+                    value={line.stakeholderId}
+                    displayValue={line.stakeholder?.disciplineOrTrade || line.stakeholder?.name}
                     section={section}
                     disciplines={disciplines}
                     trades={trades}
                     onChange={(id) => {
-                        // Send disciplineId for CONSULTANTS, tradeId for CONSTRUCTION
-                        if (section === 'CONSULTANTS') {
-                            onCellChange(line.id, 'disciplineId', id);
-                        } else if (section === 'CONSTRUCTION') {
-                            onCellChange(line.id, 'tradeId', id);
-                        }
+                        // Use unified stakeholderId for both CONSULTANTS and CONSTRUCTION
+                        onCellChange(line.id, 'stakeholderId', id);
                     }}
                 />
             </td>
@@ -843,7 +1167,7 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
                 onStartEdit={() => onStartEdit(line.id, 'activity')}
                 onSave={(value) => onCellChange(line.id, 'activity', value)}
                 onCancel={onCancelEdit}
-                className="text-[#cccccc]"
+                className="text-[var(--color-text-primary)]"
             />
             <EditableNumberCell
                 value={line.budgetCents / 100}
@@ -851,7 +1175,7 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
                 onStartEdit={() => onStartEdit(line.id, 'budgetCents')}
                 onSave={(value) => onCellChange(line.id, 'budgetCents', value)}
                 onCancel={onCancelEdit}
-                className="text-[#6B9BD1]"
+                className="text-[var(--color-accent-teal)]"
             />
             <EditableNumberCell
                 value={line.approvedContractCents / 100}
@@ -859,35 +1183,35 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
                 onStartEdit={() => onStartEdit(line.id, 'approvedContractCents')}
                 onSave={(value) => onCellChange(line.id, 'approvedContractCents', value)}
                 onCancel={onCancelEdit}
-                className="text-[#6B9BD1]"
+                className="text-[var(--color-accent-teal)]"
             />
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#858585]">
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.forecastVariationsCents ? formatCurrency(line.calculated.forecastVariationsCents) : '-'}
             </td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#858585]">
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.approvedVariationsCents ? formatCurrency(line.calculated.approvedVariationsCents) : '-'}
             </td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#cccccc]">
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
                 {formatCurrency(line.calculated.finalForecastCents)}
             </td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right">
-                <span className={variance < 0 ? 'text-[#f87171]' : variance > 0 ? 'text-[#4ade80]' : 'text-[#858585]'}>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right">
+                <span className={variance < 0 ? 'text-[var(--color-accent-coral)]' : variance > 0 ? 'text-[var(--color-accent-green)]' : 'text-[var(--color-text-muted)]'}>
                     {variance !== 0 ? formatCurrency(variance) : '-'}
                 </span>
             </td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#858585]">
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.claimedToDateCents ? formatCurrency(line.calculated.claimedToDateCents) : '-'}
             </td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#858585]">
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.currentMonthCents ? formatCurrency(line.calculated.currentMonthCents) : '-'}
             </td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#858585]">
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.etcCents ? formatCurrency(line.calculated.etcCents) : '-'}
             </td>
-            <td className="border border-[#3e3e42] px-1 py-1 text-center">
+            <td className="border border-[var(--color-border)] px-1 py-1 text-center">
                 <button
                     onClick={onDelete}
-                    className="p-0.5 text-[#858585] hover:text-[#f87171] hover:bg-[#4e4e52] rounded transition-colors opacity-0 group-hover:opacity-100"
+                    className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] hover:bg-[var(--color-bg-hover)] rounded transition-colors opacity-0 group-hover:opacity-100"
                     title="Delete line"
                 >
                     <Trash className="h-3 w-3" />
@@ -935,7 +1259,7 @@ function EditableCell({ value, isEditing, onStartEdit, onSave, onCancel, classNa
 
     return (
         <td
-            className="border border-[#3e3e42] px-1.5 py-1 cursor-text"
+            className="border border-[var(--color-border)] px-1.5 py-1 cursor-text overflow-hidden"
             onClick={!isEditing ? onStartEdit : undefined}
         >
             {isEditing ? (
@@ -946,7 +1270,7 @@ function EditableCell({ value, isEditing, onStartEdit, onSave, onCancel, classNa
                     onChange={(e) => setEditValue(e.target.value)}
                     onBlur={() => onSave(editValue)}
                     onKeyDown={handleKeyDown}
-                    className={`w-full p-0 bg-transparent border-none text-[#cccccc] outline-none text-xs ${className}`}
+                    className={`w-full p-0 bg-transparent border-none text-[var(--color-text-primary)] outline-none text-xs ${className}`}
                 />
             ) : (
                 <span className={`block truncate ${className}`}>
@@ -995,7 +1319,7 @@ function EditableNumberCell({ value, isEditing, onStartEdit, onSave, onCancel, c
 
     return (
         <td
-            className="border border-[#3e3e42] px-1.5 py-1 text-right cursor-text"
+            className="border border-[var(--color-border)] px-1.5 py-1 text-right cursor-text"
             onClick={!isEditing ? onStartEdit : undefined}
         >
             {isEditing ? (
@@ -1007,7 +1331,7 @@ function EditableNumberCell({ value, isEditing, onStartEdit, onSave, onCancel, c
                     onChange={(e) => setEditValue(e.target.value)}
                     onBlur={() => onSave(parseFloat(editValue) || 0)}
                     onKeyDown={handleKeyDown}
-                    className={`w-full p-0 bg-transparent border-none text-[#cccccc] text-right outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${className}`}
+                    className={`w-full p-0 bg-transparent border-none text-[var(--color-text-primary)] text-right outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${className}`}
                 />
             ) : (
                 <span className={`block ${className}`}>
@@ -1057,13 +1381,13 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
         }
     };
 
-    const inputClass = "w-full px-1.5 py-1 bg-transparent border-none text-xs text-[#cccccc] placeholder-[#6e6e6e] focus:outline-none";
+    const inputClass = "w-full px-1.5 py-1 bg-transparent border-none text-xs text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none";
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
     return (
-        <tr className="bg-[#252526] hover:bg-[#2a2d2e]" onKeyDown={handleKeyDown}>
-            <td className="border border-[#3e3e42] px-0.5 py-1"></td>
-            <td className="border border-[#3e3e42] px-1 py-1">
+        <tr className="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]" onKeyDown={handleKeyDown}>
+            <td className="border border-[var(--color-border)] px-0.5 py-1"></td>
+            <td className="border border-[var(--color-border)] px-1 py-1">
                 <input
                     type="text"
                     value={formData.costCode}
@@ -1072,8 +1396,8 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
                     className={inputClass}
                 />
             </td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-[#6e6e6e]">-</td>
-            <td className="border border-[#3e3e42] px-1 py-1">
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1 py-1">
                 <input
                     ref={activityRef}
                     type="text"
@@ -1083,7 +1407,7 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
                     className={inputClass}
                 />
             </td>
-            <td className="border border-[#3e3e42] px-1 py-1">
+            <td className="border border-[var(--color-border)] px-1 py-1">
                 <input
                     type="number"
                     value={formData.budgetCents / 100 || ''}
@@ -1092,7 +1416,7 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
                     className={numberInputClass}
                 />
             </td>
-            <td className="border border-[#3e3e42] px-1 py-1">
+            <td className="border border-[var(--color-border)] px-1 py-1">
                 <input
                     type="number"
                     value={formData.approvedContractCents / 100 || ''}
@@ -1101,14 +1425,14 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
                     className={numberInputClass}
                 />
             </td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#6e6e6e]">-</td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#6e6e6e]">-</td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#6e6e6e]">-</td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#6e6e6e]">-</td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#6e6e6e]">-</td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#6e6e6e]">-</td>
-            <td className="border border-[#3e3e42] px-1.5 py-1 text-right text-[#6e6e6e]">-</td>
-            <td className="border border-[#3e3e42] px-1 py-1 text-center">
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1 py-1 text-center">
                 <div className="flex items-center justify-center gap-1">
                     <button
                         onClick={handleSave}
@@ -1132,6 +1456,168 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
     );
 }
 
+// ============================================================================
+// ROLL-UP MODE COMPONENTS
+// ============================================================================
+
+interface CollapsedGroupRowProps {
+    group: GroupedLine;
+    isExpanded: boolean;
+    onToggle: () => void;
+}
+
+function CollapsedGroupRow({ group, isExpanded, onToggle }: CollapsedGroupRowProps) {
+    const { totals } = group;
+
+    return (
+        <tr
+            className="bg-[var(--color-bg-tertiary)]/70 hover:bg-[var(--color-bg-tertiary)] cursor-pointer transition-colors"
+            onClick={onToggle}
+        >
+            {/* Chevron Column */}
+            <td className="border border-[var(--color-border)] px-0.5 py-1.5 w-6">
+                <button className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
+                    {isExpanded ? (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                        <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                </button>
+            </td>
+
+            {/* Code - empty for group row */}
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-[var(--color-text-muted)]">-</td>
+
+            {/* Discipline/Trade Name */}
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 font-medium whitespace-nowrap">
+                <span className={group.groupId === null ? 'text-[var(--color-accent-yellow)] italic' : 'text-[var(--color-text-primary)]'}>
+                    {group.groupName}
+                </span>
+            </td>
+
+            {/* Description - show line count */}
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-[var(--color-text-muted)] italic">
+                {group.lines.length} {group.lines.length === 1 ? 'item' : 'items'}
+            </td>
+
+            {/* Aggregated numeric columns */}
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)] font-medium">
+                {formatCurrency(totals.budget)}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">
+                {formatCurrency(totals.approvedContract)}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+                {totals.forecastVars ? formatCurrency(totals.forecastVars) : '-'}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+                {totals.approvedVars ? formatCurrency(totals.approvedVars) : '-'}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)] font-medium">
+                {formatCurrency(totals.finalForecast)}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right">
+                <span className={totals.variance < 0 ? 'text-[var(--color-accent-coral)]' : totals.variance > 0 ? 'text-[var(--color-accent-green)]' : 'text-[var(--color-text-muted)]'}>
+                    {totals.variance !== 0 ? formatCurrency(totals.variance) : '-'}
+                </span>
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+                {totals.claimed ? formatCurrency(totals.claimed) : '-'}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+                {totals.currentMonth ? formatCurrency(totals.currentMonth) : '-'}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+                {totals.etc ? formatCurrency(totals.etc) : '-'}
+            </td>
+
+            {/* Actions column - empty for group row */}
+            <td className="border border-[var(--color-border)] px-1 py-1.5 w-7"></td>
+        </tr>
+    );
+}
+
+interface ReadOnlyLineRowProps {
+    line: CostLineWithCalculations;
+    isIndented?: boolean;
+    showDiscipline?: boolean;
+    disciplineName?: string;
+    onCollapse?: () => void;
+}
+
+function ReadOnlyLineRow({ line, isIndented = false, showDiscipline = false, disciplineName, onCollapse }: ReadOnlyLineRowProps) {
+    const variance = line.calculated.varianceToBudgetCents;
+
+    return (
+        <tr className={`bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] ${isIndented ? 'opacity-90' : ''}`}>
+            {/* Chevron to collapse (only on first row when expanded) */}
+            <td className="border border-[var(--color-border)] px-0.5 py-1 w-6">
+                {showDiscipline && onCollapse ? (
+                    <button
+                        onClick={onCollapse}
+                        className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                    >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                ) : null}
+            </td>
+
+            {/* Code */}
+            <td className="border border-[var(--color-border)] px-1.5 py-1 font-mono text-[var(--color-accent-teal)]">
+                {line.costCode || '-'}
+            </td>
+
+            {/* Discipline/Trade - show name on first row, dash on others */}
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-primary)] whitespace-nowrap">
+                {showDiscipline ? disciplineName : '-'}
+            </td>
+
+            {/* Description */}
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-primary)]">
+                {line.activity}
+            </td>
+
+            {/* All numeric fields - read-only */}
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
+                {formatCurrency(line.budgetCents)}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
+                {formatCurrency(line.approvedContractCents)}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+                {line.calculated.forecastVariationsCents ? formatCurrency(line.calculated.forecastVariationsCents) : '-'}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+                {line.calculated.approvedVariationsCents ? formatCurrency(line.calculated.approvedVariationsCents) : '-'}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
+                {formatCurrency(line.calculated.finalForecastCents)}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right">
+                <span className={variance < 0 ? 'text-[var(--color-accent-coral)]' : variance > 0 ? 'text-[var(--color-accent-green)]' : 'text-[var(--color-text-muted)]'}>
+                    {variance !== 0 ? formatCurrency(variance) : '-'}
+                </span>
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+                {line.calculated.claimedToDateCents ? formatCurrency(line.calculated.claimedToDateCents) : '-'}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+                {line.calculated.currentMonthCents ? formatCurrency(line.calculated.currentMonthCents) : '-'}
+            </td>
+            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+                {line.calculated.etcCents ? formatCurrency(line.calculated.etcCents) : '-'}
+            </td>
+
+            {/* No delete button in read-only mode */}
+            <td className="border border-[var(--color-border)] px-1 py-1 w-7"></td>
+        </tr>
+    );
+}
+
+// ============================================================================
+// DELETE CONFIRM DIALOG
+// ============================================================================
+
 interface DeleteConfirmDialogProps {
     activity: string;
     onClose: () => void;
@@ -1140,24 +1626,38 @@ interface DeleteConfirmDialogProps {
 }
 
 function DeleteConfirmDialog({ activity, onClose, onConfirm, isSubmitting }: DeleteConfirmDialogProps) {
+    // Handle Enter key to confirm delete
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && !isSubmitting) {
+                e.preventDefault();
+                onConfirm();
+            } else if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onConfirm, onClose, isSubmitting]);
+
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-            <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-sm border border-[#3e3e42]">
-                <div className="px-4 py-3 border-b border-[#3e3e42]">
-                    <h2 className="text-sm font-semibold text-[#cccccc]">Delete Cost Line</h2>
+            <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-sm border border-[var(--color-border)]">
+                <div className="px-4 py-3 border-b border-[var(--color-border)]">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Delete Cost Line</h2>
                 </div>
                 <div className="p-4 space-y-4">
-                    <p className="text-sm text-[#cccccc]">
+                    <p className="text-sm text-[var(--color-text-primary)]">
                         Are you sure you want to delete <strong>&quot;{activity}&quot;</strong>?
                     </p>
-                    <p className="text-xs text-[#858585]">
+                    <p className="text-xs text-[var(--color-text-muted)]">
                         This action cannot be undone.
                     </p>
                     <div className="flex justify-end gap-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-xs text-[#858585] hover:text-[#cccccc] transition-colors"
+                            className="px-4 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                         >
                             Cancel
                         </button>
@@ -1165,7 +1665,7 @@ function DeleteConfirmDialog({ activity, onClose, onConfirm, isSubmitting }: Del
                             type="button"
                             onClick={onConfirm}
                             disabled={isSubmitting}
-                            className="px-4 py-2 text-xs bg-[#f87171] text-white rounded hover:bg-[#ef4444] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="px-4 py-2 text-xs bg-[var(--color-accent-coral)] text-white rounded hover:bg-[var(--color-accent-coral)]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             {isSubmitting ? 'Deleting...' : 'Delete'}
                         </button>

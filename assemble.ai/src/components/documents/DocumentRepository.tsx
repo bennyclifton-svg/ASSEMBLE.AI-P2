@@ -358,10 +358,13 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     };
 
     return (
-        <div className="h-full flex flex-col bg-[#1e1e1e]">
+        <div className="h-full flex flex-col">
             {/* Header */}
             <div className="p-6 pb-4">
-                <h2 className="text-2xl font-bold text-[#cccccc]">Documents</h2>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] flex items-center gap-3 font-[var(--font-heading)]">
+                    <span className="w-1 h-6 rounded-full bg-[var(--color-accent-yellow)]"></span>
+                    Documents
+                </h2>
             </div>
 
             {/* Category Upload Tiles */}

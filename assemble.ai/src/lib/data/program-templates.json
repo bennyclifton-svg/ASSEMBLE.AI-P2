@@ -1,0 +1,1977 @@
+{
+  "programTemplates": {
+    "metadata": {
+      "version": "2.0",
+      "lastUpdated": "2025-01-01",
+      "jurisdiction": "NSW, Australia",
+      "sources": [
+        "NSW Planning Portal - DA Processing Times 2024-2025",
+        "NSW Statement of Expectations 2024-2025",
+        "Low and Mid-Rise Housing Reforms (Feb 2025)",
+        "Transport Oriented Development Program (2024)",
+        "Industry benchmarks - RLB, Rider Levett Bucknall"
+      ],
+      "assumptions": [
+        "Sydney metropolitan area",
+        "Standard procurement (Design-Bid-Build unless noted)",
+        "No major appeals or legal challenges",
+        "Normal market conditions for labour and materials",
+        "All durations in weeks unless stated"
+      ],
+      "notes": "Durations are indicative. Apply location, complexity, and reform factors as appropriate."
+    },
+
+    "standardPhases": {
+      "description": "Standard phase definitions for consistency across project types",
+      "phases": [
+        { "id": "pre_design", "name": "Pre-Design / Feasibility", "order": 1 },
+        { "id": "concept_design", "name": "Concept Design", "order": 2 },
+        { "id": "schematic_design", "name": "Schematic Design", "order": 3 },
+        { "id": "development_approval", "name": "Development Approval (DA)", "order": 4 },
+        { "id": "design_development", "name": "Design Development", "order": 5 },
+        { "id": "construction_documentation", "name": "Construction Documentation", "order": 6 },
+        { "id": "procurement", "name": "Procurement / Tender", "order": 7 },
+        { "id": "construction", "name": "Construction", "order": 8 },
+        { "id": "completion", "name": "Completion / Handover", "order": 9 },
+        { "id": "defects", "name": "Defects Liability Period", "order": 10 }
+      ]
+    },
+
+    "phaseStructures": {
+      "due-diligence": {
+        "totalTypicalWeeks": { "min": 3, "max": 8 },
+        "phases": [
+          {
+            "id": "engagement",
+            "name": "Engagement & Scoping",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 1, 
+              "range": { "min": 0.5, "max": 2 }
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Consultant engagement letters signed", "critical": true },
+              { "name": "Site access confirmed", "critical": true }
+            ],
+            "activities": [
+              "Issue consultant briefs",
+              "Confirm scope of investigations",
+              "Arrange site access and insurance",
+              "Obtain existing documentation"
+            ],
+            "risks": ["Access delays", "Scope creep"]
+          },
+          {
+            "id": "investigation",
+            "name": "Investigation & Data Gathering",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 3, 
+              "range": { "min": 2, "max": 6 },
+              "variable": "urgency"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 0.5,
+            "milestones": [
+              { "name": "Site inspections complete", "critical": true },
+              { "name": "All testing/sampling complete", "critical": false },
+              { "name": "Data gathering complete", "critical": true }
+            ],
+            "activities": [
+              "Site inspections (all disciplines)",
+              "Document and title review",
+              "Stakeholder interviews",
+              "Physical testing (geotech, hazmat, environmental)",
+              "Authority searches",
+              "Market research"
+            ]
+          },
+          {
+            "id": "analysis",
+            "name": "Analysis & Reporting",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 3, 
+              "range": { "min": 2, "max": 4 },
+              "variable": "urgency"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 1,
+            "milestones": [
+              { "name": "Draft reports issued for review", "critical": false },
+              { "name": "Client review meeting", "critical": false },
+              { "name": "Final reports issued", "critical": true }
+            ],
+            "activities": [
+              "Data analysis",
+              "Report writing",
+              "Risk assessment",
+              "Cost estimation",
+              "Peer review",
+              "Client review and comments",
+              "Final report issue"
+            ]
+          }
+        ]
+      },
+
+      "feasibility": {
+        "totalTypicalWeeks": { "min": 6, "max": 14 },
+        "phases": [
+          {
+            "id": "planning_assessment",
+            "name": "Planning & Yield Assessment",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 3, 
+              "range": { "min": 2, "max": 4 }
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Planning controls confirmed", "critical": true },
+              { "name": "Preliminary yield established", "critical": true },
+              { "name": "Pre-DA meeting (if held)", "critical": false }
+            ],
+            "activities": [
+              "Planning controls analysis (LEP, DCP, SEPP)",
+              "Height and FSR assessment",
+              "Setback and design requirements",
+              "Yield modelling (GFA, apartment mix)",
+              "Pre-DA meeting coordination (optional)",
+              "Preliminary risk assessment"
+            ]
+          },
+          {
+            "id": "concept_design",
+            "name": "Concept Design",
+            "standardPhase": "concept_design",
+            "duration": { 
+              "weeks": 4, 
+              "range": { "min": 3, "max": 6 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 1,
+            "milestones": [
+              { "name": "Concept options complete", "critical": true },
+              { "name": "Preferred scheme selected", "critical": true }
+            ],
+            "activities": [
+              "Site analysis and constraints",
+              "Concept options development (minimum 2)",
+              "Massing and envelope studies",
+              "Preliminary floor plates",
+              "Option evaluation matrix",
+              "Client presentation and selection"
+            ]
+          },
+          {
+            "id": "cost_planning",
+            "name": "Cost Planning & Revenue",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 2, 
+              "range": { "min": 1, "max": 3 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Order of cost estimate complete", "critical": true },
+              { "name": "Revenue assumptions confirmed", "critical": true }
+            ],
+            "activities": [
+              "Area schedule (GFA, NLA, efficiency)",
+              "Cost benchmarking",
+              "Order of cost estimate",
+              "Revenue research and assumptions",
+              "Authority cost estimates"
+            ]
+          },
+          {
+            "id": "feasibility_analysis",
+            "name": "Feasibility Analysis & Reporting",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 2, 
+              "range": { "min": 1, "max": 3 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 1,
+            "milestones": [
+              { "name": "Feasibility model complete", "critical": true },
+              { "name": "Investment committee / Board approval", "critical": true }
+            ],
+            "activities": [
+              "Feasibility model preparation",
+              "Sensitivity analysis",
+              "Risk assessment",
+              "Program and cash flow",
+              "Report preparation",
+              "Client presentation"
+            ]
+          }
+        ]
+      },
+
+      "house": {
+        "totalTypicalWeeks": { "min": 52, "max": 90 },
+        "phases": [
+          {
+            "id": "briefing",
+            "name": "Briefing & Site Analysis",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 3, 
+              "range": { "min": 2, "max": 4 }
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Client brief confirmed", "critical": true },
+              { "name": "Survey and geotech complete", "critical": true }
+            ],
+            "activities": [
+              "Client briefing and requirements",
+              "Budget confirmation",
+              "Site survey",
+              "Geotechnical investigation",
+              "Planning review",
+              "Contamination screening"
+            ]
+          },
+          {
+            "id": "schematic_design",
+            "name": "Schematic Design",
+            "standardPhase": "schematic_design",
+            "duration": { 
+              "weeks": 5, 
+              "range": { "min": 4, "max": 8 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 1,
+            "milestones": [
+              { "name": "Concept options presented", "critical": false },
+              { "name": "Concept approved by client", "critical": true },
+              { "name": "Schematic design complete", "critical": true }
+            ],
+            "activities": [
+              "Concept options (minimum 2)",
+              "Client review and feedback",
+              "Scheme development",
+              "Preliminary consultant input (structural, energy)",
+              "Preliminary cost check",
+              "BASIX preparation"
+            ]
+          },
+          {
+            "id": "development_approval",
+            "name": "Development Approval",
+            "standardPhase": "development_approval",
+            "duration": { 
+              "weeks": 12, 
+              "range": { "min": 4, "max": 20 },
+              "variable": "approval_path"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "DA/CDC lodged", "critical": true },
+              { "name": "DA/CDC approved", "critical": true }
+            ],
+            "activities": [
+              "Approval pathway selection (CDC vs DA)",
+              "DA/CDC documentation",
+              "Consultant reports (BASIX, geotech, etc)",
+              "Lodgement",
+              "RFI response (if DA)",
+              "Determination"
+            ],
+            "approvalPathDurations": {
+              "cdc": { "weeks": 4, "notes": "Complying Development Certificate - 20 business day statutory" },
+              "standard_da": { "weeks": 12, "notes": "Standard DA - council average" },
+              "complex_da": { "weeks": 20, "notes": "Complex DA with neighbour objections or variations" }
+            }
+          },
+          {
+            "id": "construction_documentation",
+            "name": "Construction Documentation",
+            "standardPhase": "construction_documentation",
+            "duration": { 
+              "weeks": 6, 
+              "range": { "min": 4, "max": 10 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "notes": "Can commence during DA if approval likely",
+            "milestones": [
+              { "name": "Documentation complete", "critical": true },
+              { "name": "CC issued", "critical": true }
+            ],
+            "activities": [
+              "Detailed design development",
+              "Specification preparation",
+              "Consultant coordination",
+              "CC application and issue"
+            ]
+          },
+          {
+            "id": "tender",
+            "name": "Tender & Award",
+            "standardPhase": "procurement",
+            "duration": { 
+              "weeks": 5, 
+              "range": { "min": 3, "max": 8 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Tender issued", "critical": true },
+              { "name": "Tenders received", "critical": true },
+              { "name": "Contract awarded", "critical": true }
+            ],
+            "activities": [
+              "Tender documentation",
+              "Builder selection/prequalification",
+              "Tender period (3-4 weeks)",
+              "Evaluation and interviews",
+              "Negotiation",
+              "Contract award"
+            ]
+          },
+          {
+            "id": "construction",
+            "name": "Construction",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 40, 
+              "range": { "min": 30, "max": 60 },
+              "variable": "dwelling_size"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site establishment", "critical": true },
+              { "name": "Slab complete", "critical": true },
+              { "name": "Frame complete", "critical": true },
+              { "name": "Lock-up", "critical": true },
+              { "name": "Fit-off complete", "critical": false },
+              { "name": "Practical completion", "critical": true }
+            ],
+            "activities": [
+              "Site establishment and demolition",
+              "Earthworks and services",
+              "Foundations and slab",
+              "Frame erection",
+              "Roof",
+              "Windows and external cladding (lock-up)",
+              "Internal linings",
+              "Services rough-in",
+              "Fit-off (kitchens, bathrooms)",
+              "Finishes and painting",
+              "Landscaping",
+              "Final clean and commissioning"
+            ],
+            "risks": ["Weather delays", "Material lead times", "Labour availability"]
+          },
+          {
+            "id": "completion",
+            "name": "Completion & Handover",
+            "standardPhase": "completion",
+            "duration": { 
+              "weeks": 2, 
+              "range": { "min": 1, "max": 4 }
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "OC issued", "critical": true },
+              { "name": "Handover complete", "critical": true }
+            ],
+            "activities": [
+              "Final inspections",
+              "Defects identification",
+              "OC application",
+              "Owner orientation",
+              "Key handover",
+              "O&M manuals"
+            ]
+          },
+          {
+            "id": "defects",
+            "name": "Defects Liability Period",
+            "standardPhase": "defects",
+            "duration": { 
+              "weeks": 52, 
+              "notes": "Typically 12 months for residential"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "3-month inspection", "critical": false },
+              { "name": "Final defects inspection", "critical": true },
+              { "name": "Final completion certificate", "critical": true }
+            ],
+            "activities": [
+              "Ongoing defects reporting",
+              "Defects rectification",
+              "Interim inspections",
+              "Final inspection",
+              "Release of retention"
+            ]
+          }
+        ]
+      },
+
+      "apartments": {
+        "totalTypicalWeeks": { "min": 130, "max": 220 },
+        "phases": [
+          {
+            "id": "feasibility",
+            "name": "Feasibility & Investment Decision",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 10, 
+              "range": { "min": 6, "max": 16 }
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site due diligence complete", "critical": true },
+              { "name": "Feasibility approved", "critical": true },
+              { "name": "Project brief confirmed", "critical": true }
+            ],
+            "activities": [
+              "Site analysis and due diligence",
+              "Market research",
+              "Planning assessment",
+              "Preliminary yield studies",
+              "Feasibility modelling",
+              "Investment approval",
+              "Brief development"
+            ]
+          },
+          {
+            "id": "concept_design",
+            "name": "Concept Design",
+            "standardPhase": "concept_design",
+            "duration": { 
+              "weeks": 8, 
+              "range": { "min": 6, "max": 12 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Concept options complete", "critical": true },
+              { "name": "Preferred scheme selected", "critical": true },
+              { "name": "Pre-DA submission (if required)", "critical": false }
+            ],
+            "activities": [
+              "Massing and envelope options",
+              "Floor plate development",
+              "Apartment mix optimisation",
+              "Facade concept",
+              "ADG compliance check",
+              "Preliminary consultant engagement",
+              "Pre-DA submission and meeting"
+            ]
+          },
+          {
+            "id": "schematic_design",
+            "name": "Schematic Design",
+            "standardPhase": "schematic_design",
+            "duration": { 
+              "weeks": 10, 
+              "range": { "min": 8, "max": 14 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Schematic design complete", "critical": true },
+              { "name": "Cost plan confirmed", "critical": true },
+              { "name": "Design Excellence submission (if required)", "critical": false }
+            ],
+            "activities": [
+              "Design development",
+              "Full consultant team coordination",
+              "ADG and SEPP 65 compliance",
+              "Sustainability strategy",
+              "Cost planning",
+              "Design Excellence Panel (if required)"
+            ]
+          },
+          {
+            "id": "development_approval",
+            "name": "Development Approval",
+            "standardPhase": "development_approval",
+            "duration": { 
+              "weeks": 36, 
+              "range": { "min": 20, "max": 52 },
+              "variable": "approval_path"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "DA lodged", "critical": true },
+              { "name": "Additional information response complete", "critical": false },
+              { "name": "DA determined", "critical": true }
+            ],
+            "activities": [
+              "DA documentation preparation",
+              "SEE preparation",
+              "All consultant reports",
+              "Lodgement",
+              "Public notification period",
+              "Assessment and RFIs",
+              "Stop-the-clock responses",
+              "Independent panel (if required)",
+              "Determination"
+            ],
+            "approvalPathDurations": {
+              "low_rise_reform": { "weeks": 8, "notes": "Low-Rise Housing Code (Feb 2025) - fast track for compliant designs" },
+              "mid_rise_reform": { "weeks": 12, "notes": "Mid-Rise Housing Code (Feb 2025) - compliant infill" },
+              "tod_precinct": { "weeks": 20, "notes": "Transport Oriented Development - accelerated pathway" },
+              "standard_da": { "weeks": 36, "notes": "Standard council DA - 2024/25 average" },
+              "complex_da": { "weeks": 52, "notes": "Complex DA with panel, heritage, or objections" },
+              "state_significant": { "weeks": 65, "notes": "State Significant Development - DPE assessment" }
+            },
+            "risks": ["RFI delays", "Stop-the-clock periods", "Panel referral", "Appeals"]
+          },
+          {
+            "id": "design_development",
+            "name": "Design Development",
+            "standardPhase": "design_development",
+            "duration": { 
+              "weeks": 14, 
+              "range": { "min": 10, "max": 18 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 6,
+            "notes": "Can commence at-risk during DA assessment",
+            "milestones": [
+              { "name": "DD complete", "critical": true },
+              { "name": "Updated cost plan confirmed", "critical": true },
+              { "name": "Key subcontractor engagement", "critical": false }
+            ],
+            "activities": [
+              "Detailed design development",
+              "Full consultant coordination",
+              "Facade development",
+              "Services coordination",
+              "Value engineering",
+              "Updated cost plan",
+              "Early contractor involvement (if applicable)"
+            ]
+          },
+          {
+            "id": "construction_documentation",
+            "name": "Construction Documentation",
+            "standardPhase": "construction_documentation",
+            "duration": { 
+              "weeks": 18, 
+              "range": { "min": 14, "max": 24 },
+              "variable": "building_scale"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 6,
+            "milestones": [
+              { "name": "Base building documentation complete", "critical": true },
+              { "name": "Coordinated drawings issued", "critical": true },
+              { "name": "CC issued", "critical": true }
+            ],
+            "activities": [
+              "Working drawings - all disciplines",
+              "Specification writing",
+              "BIM coordination and clash detection",
+              "Services coordination drawings",
+              "CC application and approval"
+            ]
+          },
+          {
+            "id": "marketing_sales",
+            "name": "Marketing & Pre-Sales",
+            "standardPhase": "procurement",
+            "duration": { 
+              "weeks": 26, 
+              "range": { "min": 16, "max": 52 },
+              "notes": "Can run parallel to design/documentation"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 20,
+            "parallelWith": ["design_development", "construction_documentation"],
+            "milestones": [
+              { "name": "Marketing launch", "critical": false },
+              { "name": "Display suite open", "critical": false },
+              { "name": "Pre-sale target achieved", "critical": true },
+              { "name": "Finance approval", "critical": true }
+            ],
+            "activities": [
+              "Marketing strategy development",
+              "Branding and collateral",
+              "Display suite construction",
+              "Sales agent appointment",
+              "Sales campaign",
+              "Contract exchanges",
+              "Finance drawdown requirements"
+            ]
+          },
+          {
+            "id": "procurement",
+            "name": "Procurement & Contract",
+            "standardPhase": "procurement",
+            "duration": { 
+              "weeks": 14, 
+              "range": { "min": 10, "max": 20 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 8,
+            "milestones": [
+              { "name": "Tender issued", "critical": true },
+              { "name": "Tenders received", "critical": true },
+              { "name": "Builder selected", "critical": true },
+              { "name": "Contract executed", "critical": true },
+              { "name": "S7.11/7.12 contributions paid", "critical": true }
+            ],
+            "activities": [
+              "Procurement strategy finalisation",
+              "Builder prequalification",
+              "Tender documentation",
+              "Tender period (4-6 weeks)",
+              "Tender evaluation and interviews",
+              "Negotiation",
+              "Contract finalisation",
+              "Authority contributions payment"
+            ]
+          },
+          {
+            "id": "construction",
+            "name": "Construction",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 90, 
+              "range": { "min": 60, "max": 156 },
+              "variable": "building_scale"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site establishment", "critical": true },
+              { "name": "Demolition complete", "critical": false },
+              { "name": "Excavation complete", "critical": true },
+              { "name": "Basement/podium complete", "critical": true },
+              { "name": "Structure complete", "critical": true },
+              { "name": "Facade complete", "critical": true },
+              { "name": "Services rough-in complete", "critical": false },
+              { "name": "Fit-off complete", "critical": true },
+              { "name": "Common areas complete", "critical": false },
+              { "name": "External works complete", "critical": false },
+              { "name": "Practical completion", "critical": true }
+            ],
+            "activities": [
+              "Site establishment",
+              "Demolition",
+              "Bulk excavation",
+              "Shoring and retention",
+              "Substructure (basement, ground slab)",
+              "Superstructure",
+              "Facade installation",
+              "Services - rough-in",
+              "Internal linings",
+              "Fit-off (apartments)",
+              "Finishes",
+              "Common area fitout",
+              "Landscaping and external works",
+              "Commissioning and testing",
+              "Defects identification"
+            ],
+            "risks": ["Weather", "Labour shortages", "Material delays", "Subcontractor capacity", "COVID/pandemic impacts"]
+          },
+          {
+            "id": "completion",
+            "name": "Completion & Settlement",
+            "standardPhase": "completion",
+            "duration": { 
+              "weeks": 16, 
+              "range": { "min": 12, "max": 24 }
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 4,
+            "milestones": [
+              { "name": "OC issued", "critical": true },
+              { "name": "Strata plan registered", "critical": true },
+              { "name": "First settlement", "critical": true },
+              { "name": "All settlements complete", "critical": true }
+            ],
+            "activities": [
+              "Final defects rectification",
+              "Authority inspections",
+              "OC application and issue",
+              "Strata plan registration",
+              "Settlement notices",
+              "Pre-settlement inspections",
+              "Settlements",
+              "Key handover",
+              "O&M manuals"
+            ]
+          },
+          {
+            "id": "defects",
+            "name": "Defects Liability Period",
+            "standardPhase": "defects",
+            "duration": { 
+              "weeks": 104, 
+              "notes": "2 years for major defects (statutory), 6 years for structural"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "3-month inspection", "critical": false },
+              { "name": "12-month inspection", "critical": true },
+              { "name": "24-month final inspection", "critical": true },
+              { "name": "Final completion", "critical": true }
+            ],
+            "activities": [
+              "Ongoing defects management",
+              "Strata liaison",
+              "Defects rectification",
+              "Interim inspections",
+              "Final defects inspection",
+              "Retention release"
+            ]
+          }
+        ]
+      },
+
+      "townhouses": {
+        "totalTypicalWeeks": { "min": 80, "max": 140 },
+        "phases": [
+          {
+            "id": "feasibility",
+            "name": "Feasibility & Brief",
+            "standardPhase": "pre_design",
+            "duration": { "weeks": 8, "range": { "min": 4, "max": 12 } },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Feasibility complete", "critical": true },
+              { "name": "Brief confirmed", "critical": true }
+            ],
+            "activities": [
+              "Site analysis",
+              "Planning assessment",
+              "Yield studies",
+              "Feasibility modelling",
+              "Brief development"
+            ]
+          },
+          {
+            "id": "concept_design",
+            "name": "Concept Design",
+            "standardPhase": "concept_design",
+            "duration": { "weeks": 6, "range": { "min": 4, "max": 8 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Concept complete", "critical": true },
+              { "name": "Pre-DA meeting (if required)", "critical": false }
+            ],
+            "activities": [
+              "Site layout options",
+              "Dwelling types and mix",
+              "Streetscape design",
+              "Landscape concept"
+            ]
+          },
+          {
+            "id": "schematic_design",
+            "name": "Schematic Design",
+            "standardPhase": "schematic_design",
+            "duration": { "weeks": 8, "range": { "min": 6, "max": 12 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Schematic complete", "critical": true },
+              { "name": "Cost plan confirmed", "critical": true }
+            ],
+            "activities": [
+              "Design development",
+              "Consultant coordination",
+              "Cost planning"
+            ]
+          },
+          {
+            "id": "development_approval",
+            "name": "Development Approval",
+            "standardPhase": "development_approval",
+            "duration": { 
+              "weeks": 24, 
+              "range": { "min": 8, "max": 40 },
+              "variable": "approval_path"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "DA lodged", "critical": true },
+              { "name": "DA approved", "critical": true }
+            ],
+            "activities": [
+              "DA documentation",
+              "Consultant reports",
+              "Lodgement",
+              "Assessment",
+              "RFI response",
+              "Determination"
+            ],
+            "approvalPathDurations": {
+              "low_rise_reform": { "weeks": 8, "notes": "Low-Rise Housing Code - compliant dual occ/terraces" },
+              "standard_da": { "weeks": 24, "notes": "Standard council DA" },
+              "complex_da": { "weeks": 40, "notes": "Complex/contested DA" }
+            }
+          },
+          {
+            "id": "construction_documentation",
+            "name": "Construction Documentation",
+            "standardPhase": "construction_documentation",
+            "duration": { "weeks": 10, "range": { "min": 8, "max": 14 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 4,
+            "milestones": [
+              { "name": "Documentation complete", "critical": true },
+              { "name": "CC issued", "critical": true }
+            ],
+            "activities": [
+              "Working drawings",
+              "Specification",
+              "Coordination",
+              "CC application"
+            ]
+          },
+          {
+            "id": "marketing_sales",
+            "name": "Marketing & Pre-Sales",
+            "standardPhase": "procurement",
+            "duration": { "weeks": 20, "range": { "min": 12, "max": 36 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 16,
+            "parallelWith": ["construction_documentation", "development_approval"],
+            "milestones": [
+              { "name": "Marketing launch", "critical": false },
+              { "name": "Pre-sale target achieved", "critical": true }
+            ],
+            "activities": [
+              "Marketing strategy",
+              "Sales campaign",
+              "Contract exchanges"
+            ]
+          },
+          {
+            "id": "procurement",
+            "name": "Procurement",
+            "standardPhase": "procurement",
+            "duration": { "weeks": 8, "range": { "min": 6, "max": 12 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 4,
+            "milestones": [
+              { "name": "Tender issued", "critical": true },
+              { "name": "Contract executed", "critical": true }
+            ],
+            "activities": [
+              "Tender documentation",
+              "Tender period",
+              "Evaluation",
+              "Award"
+            ]
+          },
+          {
+            "id": "construction",
+            "name": "Construction",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 52, 
+              "range": { "min": 40, "max": 78 },
+              "variable": "dwelling_count"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site establishment", "critical": true },
+              { "name": "Slabs complete", "critical": true },
+              { "name": "Frames complete", "critical": true },
+              { "name": "Lock-up", "critical": true },
+              { "name": "Practical completion", "critical": true }
+            ],
+            "activities": [
+              "Site works",
+              "Civil infrastructure",
+              "Foundations",
+              "Construction - staged or concurrent",
+              "Finishes",
+              "External works",
+              "Commissioning"
+            ]
+          },
+          {
+            "id": "completion",
+            "name": "Completion & Settlement",
+            "standardPhase": "completion",
+            "duration": { "weeks": 12, "range": { "min": 8, "max": 20 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "OC issued", "critical": true },
+              { "name": "Torrens/Strata registration", "critical": true },
+              { "name": "Settlements complete", "critical": true }
+            ],
+            "activities": [
+              "Final inspections",
+              "OC application",
+              "Subdivision/strata registration",
+              "Settlements"
+            ]
+          }
+        ]
+      },
+
+      "office": {
+        "totalTypicalWeeks": { "min": 160, "max": 260 },
+        "phases": [
+          {
+            "id": "feasibility",
+            "name": "Feasibility & Investment",
+            "standardPhase": "pre_design",
+            "duration": { "weeks": 12, "range": { "min": 8, "max": 20 } },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Market analysis complete", "critical": true },
+              { "name": "Feasibility approved", "critical": true },
+              { "name": "Investment approval", "critical": true }
+            ],
+            "activities": [
+              "Market analysis",
+              "Tenant demand assessment",
+              "Feasibility modelling",
+              "Sustainability strategy (NABERS/Green Star)",
+              "Brief development"
+            ]
+          },
+          {
+            "id": "concept_design",
+            "name": "Concept Design",
+            "standardPhase": "concept_design",
+            "duration": { "weeks": 10, "range": { "min": 8, "max": 14 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Concept complete", "critical": true },
+              { "name": "Sustainability targets confirmed", "critical": true }
+            ],
+            "activities": [
+              "Massing studies",
+              "Floor plate optimisation",
+              "Core/structure options",
+              "Facade concept",
+              "Services strategy",
+              "Sustainability pathway (NABERS/Green Star targets)"
+            ]
+          },
+          {
+            "id": "schematic_design",
+            "name": "Schematic Design",
+            "standardPhase": "schematic_design",
+            "duration": { "weeks": 12, "range": { "min": 10, "max": 16 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Schematic complete", "critical": true },
+              { "name": "Cost plan confirmed", "critical": true },
+              { "name": "Design Excellence submission", "critical": false }
+            ],
+            "activities": [
+              "Design development",
+              "Consultant coordination",
+              "Cost planning",
+              "Design Excellence Panel (City of Sydney, etc)"
+            ]
+          },
+          {
+            "id": "development_approval",
+            "name": "Development Approval",
+            "standardPhase": "development_approval",
+            "duration": { 
+              "weeks": 40, 
+              "range": { "min": 26, "max": 65 },
+              "variable": "approval_path"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "DA lodged", "critical": true },
+              { "name": "DA approved", "critical": true }
+            ],
+            "activities": [
+              "DA documentation",
+              "EIS preparation (if SSD)",
+              "Lodgement",
+              "Assessment",
+              "RFI response",
+              "Determination"
+            ],
+            "approvalPathDurations": {
+              "standard_da": { "weeks": 40, "notes": "Council DA for commercial" },
+              "regional_panel": { "weeks": 52, "notes": "Sydney Planning Panel referral" },
+              "state_significant": { "weeks": 65, "notes": "State Significant Development" }
+            }
+          },
+          {
+            "id": "design_development",
+            "name": "Design Development",
+            "standardPhase": "design_development",
+            "duration": { "weeks": 18, "range": { "min": 14, "max": 24 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 8,
+            "milestones": [
+              { "name": "DD complete", "critical": true },
+              { "name": "Cost plan updated", "critical": true }
+            ],
+            "activities": [
+              "Detailed design",
+              "Services coordination",
+              "Facade development",
+              "Value engineering",
+              "Early contractor involvement"
+            ]
+          },
+          {
+            "id": "construction_documentation",
+            "name": "Construction Documentation",
+            "standardPhase": "construction_documentation",
+            "duration": { 
+              "weeks": 22, 
+              "range": { "min": 18, "max": 30 },
+              "variable": "building_scale"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 8,
+            "milestones": [
+              { "name": "Documentation complete", "critical": true },
+              { "name": "CC issued", "critical": true }
+            ],
+            "activities": [
+              "Working drawings",
+              "Specification",
+              "BIM coordination",
+              "CC application"
+            ]
+          },
+          {
+            "id": "procurement",
+            "name": "Procurement",
+            "standardPhase": "procurement",
+            "duration": { "weeks": 16, "range": { "min": 12, "max": 24 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 10,
+            "milestones": [
+              { "name": "Tender issued", "critical": true },
+              { "name": "Contract executed", "critical": true }
+            ],
+            "activities": [
+              "Procurement strategy",
+              "Prequalification",
+              "Tender",
+              "Evaluation",
+              "Negotiation",
+              "Award"
+            ]
+          },
+          {
+            "id": "construction",
+            "name": "Construction",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 120, 
+              "range": { "min": 78, "max": 180 },
+              "variable": "building_scale"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site establishment", "critical": true },
+              { "name": "Excavation complete", "critical": true },
+              { "name": "Structure complete", "critical": true },
+              { "name": "Facade complete", "critical": true },
+              { "name": "Base building PC", "critical": true }
+            ],
+            "activities": [
+              "Demolition",
+              "Excavation",
+              "Substructure",
+              "Superstructure",
+              "Facade",
+              "Services",
+              "Base building finishes",
+              "Commissioning"
+            ]
+          },
+          {
+            "id": "sustainability_certification",
+            "name": "Sustainability Certification",
+            "standardPhase": "completion",
+            "duration": { "weeks": 26, "range": { "min": 16, "max": 40 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 20,
+            "parallelWith": ["construction"],
+            "milestones": [
+              { "name": "Green Star Design & As-Built submitted", "critical": false },
+              { "name": "NABERS Commitment Agreement rating achieved", "critical": true }
+            ],
+            "activities": [
+              "Commissioning verification",
+              "Green Star documentation",
+              "NABERS modelling verification",
+              "Certification submissions"
+            ]
+          },
+          {
+            "id": "completion",
+            "name": "Completion & Handover",
+            "standardPhase": "completion",
+            "duration": { "weeks": 8, "range": { "min": 6, "max": 12 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 4,
+            "milestones": [
+              { "name": "OC issued", "critical": true },
+              { "name": "Base building handover", "critical": true }
+            ],
+            "activities": [
+              "Final inspections",
+              "OC application",
+              "O&M manuals",
+              "FM training",
+              "Handover"
+            ]
+          },
+          {
+            "id": "defects",
+            "name": "Defects Liability Period",
+            "standardPhase": "defects",
+            "duration": { "weeks": 52, "notes": "12 months minimum" },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Final defects inspection", "critical": true },
+              { "name": "Final completion", "critical": true }
+            ],
+            "activities": [
+              "Defects rectification",
+              "Final inspection",
+              "Retention release"
+            ]
+          }
+        ]
+      },
+
+      "fitout": {
+        "totalTypicalWeeks": { "min": 16, "max": 36 },
+        "phases": [
+          {
+            "id": "briefing",
+            "name": "Briefing & Surveys",
+            "standardPhase": "pre_design",
+            "duration": { "weeks": 2, "range": { "min": 1, "max": 4 } },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Brief confirmed", "critical": true },
+              { "name": "Base building survey complete", "critical": true }
+            ],
+            "activities": [
+              "Client briefing",
+              "Space requirements",
+              "Base building survey",
+              "Landlord requirements review",
+              "Budget confirmation"
+            ]
+          },
+          {
+            "id": "concept_design",
+            "name": "Concept Design",
+            "standardPhase": "concept_design",
+            "duration": { "weeks": 3, "range": { "min": 2, "max": 5 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 0.5,
+            "milestones": [
+              { "name": "Concept approved", "critical": true }
+            ],
+            "activities": [
+              "Space planning options",
+              "Look and feel development",
+              "Concept presentation"
+            ]
+          },
+          {
+            "id": "design_development",
+            "name": "Design Development",
+            "standardPhase": "design_development",
+            "duration": { "weeks": 4, "range": { "min": 3, "max": 6 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 1,
+            "milestones": [
+              { "name": "DD complete", "critical": true },
+              { "name": "Cost plan confirmed", "critical": true },
+              { "name": "Landlord approval", "critical": true }
+            ],
+            "activities": [
+              "Layout finalisation",
+              "Joinery design",
+              "Finishes selection",
+              "Services coordination",
+              "Cost planning",
+              "Landlord review and approval"
+            ]
+          },
+          {
+            "id": "documentation",
+            "name": "Documentation",
+            "standardPhase": "construction_documentation",
+            "duration": { "weeks": 3, "range": { "min": 2, "max": 5 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 1,
+            "milestones": [
+              { "name": "Documentation complete", "critical": true },
+              { "name": "BA/CC issued", "critical": true }
+            ],
+            "activities": [
+              "Working drawings",
+              "Specifications",
+              "Authority applications",
+              "Long lead item identification"
+            ]
+          },
+          {
+            "id": "procurement",
+            "name": "Procurement",
+            "standardPhase": "procurement",
+            "duration": { "weeks": 4, "range": { "min": 3, "max": 6 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Contract awarded", "critical": true },
+              { "name": "Long lead items ordered", "critical": true }
+            ],
+            "activities": [
+              "Tender",
+              "Evaluation",
+              "Award",
+              "Long lead item ordering",
+              "FF&E procurement"
+            ]
+          },
+          {
+            "id": "construction",
+            "name": "Construction",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 10, 
+              "range": { "min": 6, "max": 20 },
+              "variable": "nla"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site possession", "critical": true },
+              { "name": "Practical completion", "critical": true }
+            ],
+            "activities": [
+              "Demolition/strip-out",
+              "Partitions and ceilings",
+              "Services rough-in",
+              "Joinery installation",
+              "Finishes",
+              "Services fit-off",
+              "Commissioning"
+            ],
+            "considerations": {
+              "after_hours": "May require after-hours or weekend work in occupied buildings",
+              "disruption": "Minimise disruption to adjacent tenants",
+              "access": "Goods lift booking and material staging"
+            }
+          },
+          {
+            "id": "ffne_move",
+            "name": "FF&E & Move-in",
+            "standardPhase": "completion",
+            "duration": { "weeks": 2, "range": { "min": 1, "max": 4 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 1,
+            "milestones": [
+              { "name": "FF&E installed", "critical": true },
+              { "name": "Occupation", "critical": true }
+            ],
+            "activities": [
+              "FF&E delivery and installation",
+              "AV commissioning",
+              "ICT testing",
+              "Staff orientation",
+              "Move coordination"
+            ]
+          }
+        ]
+      },
+
+      "industrial": {
+        "totalTypicalWeeks": { "min": 50, "max": 100 },
+        "phases": [
+          {
+            "id": "feasibility",
+            "name": "Brief & Feasibility",
+            "standardPhase": "pre_design",
+            "duration": { "weeks": 6, "range": { "min": 4, "max": 10 } },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Operational brief confirmed", "critical": true },
+              { "name": "Feasibility approved", "critical": true }
+            ],
+            "activities": [
+              "Operational requirements analysis",
+              "Site analysis",
+              "Feasibility assessment",
+              "Logistics planning"
+            ]
+          },
+          {
+            "id": "concept_design",
+            "name": "Concept Design",
+            "standardPhase": "concept_design",
+            "duration": { "weeks": 5, "range": { "min": 4, "max": 8 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 1,
+            "milestones": [
+              { "name": "Concept approved", "critical": true }
+            ],
+            "activities": [
+              "Layout options",
+              "Structural concept",
+              "Services concept",
+              "Office/amenities planning"
+            ]
+          },
+          {
+            "id": "development_approval",
+            "name": "Development Approval",
+            "standardPhase": "development_approval",
+            "duration": { 
+              "weeks": 16, 
+              "range": { "min": 8, "max": 30 },
+              "variable": "approval_path"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "DA lodged", "critical": true },
+              { "name": "DA approved", "critical": true }
+            ],
+            "activities": [
+              "Design development for DA",
+              "DA documentation",
+              "Lodgement",
+              "Assessment",
+              "Approval"
+            ],
+            "approvalPathDurations": {
+              "complying_development": { "weeks": 6, "notes": "CDC for standard industrial" },
+              "standard_da": { "weeks": 16, "notes": "Council DA" },
+              "state_significant": { "weeks": 30, "notes": "Large industrial/logistics SSD" }
+            }
+          },
+          {
+            "id": "construction_documentation",
+            "name": "Construction Documentation",
+            "standardPhase": "construction_documentation",
+            "duration": { "weeks": 8, "range": { "min": 6, "max": 12 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 4,
+            "milestones": [
+              { "name": "Documentation complete", "critical": true },
+              { "name": "CC issued", "critical": true }
+            ],
+            "activities": [
+              "Working drawings",
+              "Specifications",
+              "Coordination",
+              "CC application"
+            ]
+          },
+          {
+            "id": "procurement",
+            "name": "Procurement",
+            "standardPhase": "procurement",
+            "duration": { "weeks": 8, "range": { "min": 6, "max": 12 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 4,
+            "milestones": [
+              { "name": "Tender issued", "critical": true },
+              { "name": "Contract awarded", "critical": true }
+            ],
+            "activities": [
+              "Tender documentation",
+              "Tender period",
+              "Evaluation",
+              "Award"
+            ]
+          },
+          {
+            "id": "construction",
+            "name": "Construction",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 32, 
+              "range": { "min": 20, "max": 52 },
+              "variable": "gfa"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site establishment", "critical": true },
+              { "name": "Slab complete", "critical": true },
+              { "name": "Structure complete", "critical": true },
+              { "name": "Cladding complete", "critical": true },
+              { "name": "Practical completion", "critical": true }
+            ],
+            "activities": [
+              "Site works and civil",
+              "Foundations",
+              "Floor slab",
+              "Structural steel erection",
+              "Roof and cladding",
+              "Services installation",
+              "Office fitout",
+              "External works",
+              "Commissioning"
+            ]
+          },
+          {
+            "id": "modular_option",
+            "name": "Modular/Prefab Option",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 24, 
+              "range": { "min": 16, "max": 36 },
+              "notes": "Alternative to traditional construction"
+            },
+            "optional": true,
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Modules delivered", "critical": true },
+              { "name": "Assembly complete", "critical": true }
+            ],
+            "activities": [
+              "Site works and foundations (parallel with fabrication)",
+              "Off-site fabrication",
+              "Module delivery",
+              "Assembly and connection",
+              "Commissioning"
+            ]
+          },
+          {
+            "id": "completion",
+            "name": "Commissioning & Handover",
+            "standardPhase": "completion",
+            "duration": { "weeks": 4, "range": { "min": 2, "max": 6 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "OC issued", "critical": true },
+              { "name": "Handover complete", "critical": true }
+            ],
+            "activities": [
+              "Systems commissioning",
+              "Defects inspection",
+              "OC application",
+              "FM training",
+              "Handover"
+            ]
+          }
+        ]
+      },
+
+      "refurbishment": {
+        "totalTypicalWeeks": { "min": 40, "max": 90 },
+        "phases": [
+          {
+            "id": "investigation",
+            "name": "Investigation & Assessment",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 6, 
+              "range": { "min": 4, "max": 10 },
+              "variable": "building_complexity"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Condition assessment complete", "critical": true },
+              { "name": "Hazmat survey complete", "critical": true }
+            ],
+            "activities": [
+              "Building audit",
+              "Services assessment",
+              "Structural assessment",
+              "Hazmat survey (asbestos, lead)",
+              "Compliance review (BCA, DDA)",
+              "Heritage assessment (if applicable)"
+            ]
+          },
+          {
+            "id": "design",
+            "name": "Design Development",
+            "standardPhase": "design_development",
+            "duration": { 
+              "weeks": 10, 
+              "range": { "min": 8, "max": 16 },
+              "variable": "refurb_scope"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Design complete", "critical": true },
+              { "name": "Cost plan confirmed", "critical": true }
+            ],
+            "activities": [
+              "Scope development",
+              "Design documentation",
+              "Consultant coordination",
+              "Cost planning",
+              "Value engineering"
+            ]
+          },
+          {
+            "id": "approvals",
+            "name": "Approvals",
+            "standardPhase": "development_approval",
+            "duration": { 
+              "weeks": 12, 
+              "range": { "min": 4, "max": 26 },
+              "variable": "refurb_scope"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 4,
+            "milestones": [
+              { "name": "All approvals obtained", "critical": true }
+            ],
+            "activities": [
+              "DA/S4.55 application (if required)",
+              "CC application",
+              "Landlord approvals",
+              "Heritage approvals (if required)",
+              "Tenant liaison"
+            ]
+          },
+          {
+            "id": "procurement",
+            "name": "Procurement",
+            "standardPhase": "procurement",
+            "duration": { "weeks": 8, "range": { "min": 6, "max": 12 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 4,
+            "milestones": [
+              { "name": "Contract awarded", "critical": true }
+            ],
+            "activities": [
+              "Tender documentation",
+              "Tender",
+              "Evaluation",
+              "Award"
+            ]
+          },
+          {
+            "id": "construction",
+            "name": "Construction",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 36, 
+              "range": { "min": 20, "max": 65 },
+              "variable": "refurb_scope"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site establishment", "critical": true },
+              { "name": "Hazmat removal complete", "critical": true },
+              { "name": "Structure works complete", "critical": false },
+              { "name": "Facade works complete", "critical": false },
+              { "name": "Practical completion", "critical": true }
+            ],
+            "activities": [
+              "Enabling works",
+              "Hazmat removal",
+              "Demolition",
+              "Structural works (if required)",
+              "Facade (if required)",
+              "Services upgrade",
+              "Finishes",
+              "Commissioning"
+            ],
+            "risks": ["Unknown conditions", "Hazmat discovery", "Structural issues", "Tenant disruption"],
+            "contingencyRecommendation": "15-20%"
+          },
+          {
+            "id": "completion",
+            "name": "Completion",
+            "standardPhase": "completion",
+            "duration": { "weeks": 4, "range": { "min": 2, "max": 8 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "OC issued", "critical": true },
+              { "name": "Handover complete", "critical": true }
+            ],
+            "activities": [
+              "Defects inspection",
+              "OC application",
+              "Handover"
+            ]
+          },
+          {
+            "id": "defects",
+            "name": "Defects Liability",
+            "standardPhase": "defects",
+            "duration": { "weeks": 52 },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Final completion", "critical": true }
+            ],
+            "activities": [
+              "Defects rectification",
+              "Final inspection",
+              "Retention release"
+            ]
+          }
+        ]
+      },
+
+      "remediation": {
+        "totalTypicalWeeks": { "min": 24, "max": 78 },
+        "phases": [
+          {
+            "id": "assessment",
+            "name": "Site Assessment",
+            "standardPhase": "pre_design",
+            "duration": { 
+              "weeks": 8, 
+              "range": { "min": 4, "max": 16 },
+              "variable": "site_complexity"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Phase 1 ESA complete", "critical": true },
+              { "name": "Phase 2 ESA complete (if required)", "critical": true },
+              { "name": "DSI complete (if required)", "critical": false }
+            ],
+            "activities": [
+              "Desktop review",
+              "Site history research",
+              "Site inspection",
+              "Sampling program design",
+              "Sampling and analysis",
+              "Laboratory testing",
+              "Reporting"
+            ]
+          },
+          {
+            "id": "planning",
+            "name": "Remediation Planning",
+            "standardPhase": "design_development",
+            "duration": { 
+              "weeks": 8, 
+              "range": { "min": 4, "max": 12 },
+              "variable": "remediation_type"
+            },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "RAP prepared", "critical": true },
+              { "name": "Site Auditor review complete", "critical": true },
+              { "name": "RAP approved", "critical": true }
+            ],
+            "activities": [
+              "Options assessment",
+              "Remediation Action Plan preparation",
+              "Site Auditor engagement and review",
+              "EPA notification (if required)",
+              "RAP approval"
+            ]
+          },
+          {
+            "id": "procurement",
+            "name": "Procurement",
+            "standardPhase": "procurement",
+            "duration": { "weeks": 6, "range": { "min": 4, "max": 10 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Remediation contractor engaged", "critical": true }
+            ],
+            "activities": [
+              "Tender preparation",
+              "Tender",
+              "Evaluation",
+              "Award"
+            ]
+          },
+          {
+            "id": "remediation",
+            "name": "Remediation Works",
+            "standardPhase": "construction",
+            "duration": { 
+              "weeks": 16, 
+              "range": { "min": 8, "max": 40 },
+              "variable": "remediation_type"
+            },
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Site establishment", "critical": true },
+              { "name": "Excavation complete", "critical": true },
+              { "name": "Treatment complete", "critical": true },
+              { "name": "Backfill complete", "critical": true }
+            ],
+            "activities": [
+              "Site establishment",
+              "Dewatering (if required)",
+              "Excavation",
+              "Soil treatment (on-site or off-site)",
+              "Disposal to licensed facility",
+              "Groundwater treatment (if required)",
+              "Backfill with validated material",
+              "Ongoing sampling"
+            ],
+            "risks": ["Unexpected contamination extent", "Weather delays", "Disposal capacity", "Groundwater complexity"]
+          },
+          {
+            "id": "validation",
+            "name": "Validation",
+            "standardPhase": "completion",
+            "duration": { "weeks": 6, "range": { "min": 4, "max": 10 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Validation sampling complete", "critical": true },
+              { "name": "Validation report complete", "critical": true }
+            ],
+            "activities": [
+              "Validation sampling",
+              "Laboratory analysis",
+              "Data evaluation",
+              "Validation report preparation"
+            ]
+          },
+          {
+            "id": "site_audit",
+            "name": "Site Audit",
+            "standardPhase": "completion",
+            "duration": { "weeks": 6, "range": { "min": 4, "max": 12 } },
+            "canOverlapPrevious": true,
+            "overlapWeeks": 2,
+            "milestones": [
+              { "name": "Site Audit Statement issued", "critical": true }
+            ],
+            "activities": [
+              "Documentation compilation",
+              "Site Auditor review",
+              "Site Audit Statement issue"
+            ]
+          },
+          {
+            "id": "ongoing_management",
+            "name": "Ongoing Environmental Management",
+            "standardPhase": "defects",
+            "duration": { "weeks": 104, "notes": "Varies - may be indefinite for some sites" },
+            "optional": true,
+            "canOverlapPrevious": false,
+            "milestones": [
+              { "name": "Annual compliance report", "critical": false }
+            ],
+            "activities": [
+              "Long-term Environmental Management Plan implementation",
+              "Groundwater monitoring",
+              "Compliance reporting"
+            ]
+          }
+        ]
+      }
+    },
+
+    "durationFactors": {
+      "description": "Multipliers to apply to base durations",
+      
+      "building_scale": {
+        "description": "For apartments and office construction phases",
+        "factors": {
+          "low_rise_1_3": { "factor": 0.5, "notes": "1-3 storeys" },
+          "low_rise_4_6": { "factor": 0.65, "notes": "4-6 storeys" },
+          "mid_rise_7_12": { "factor": 0.8, "notes": "7-12 storeys" },
+          "high_rise_13_25": { "factor": 1.0, "notes": "13-25 storeys (base)" },
+          "high_rise_26_40": { "factor": 1.2, "notes": "26-40 storeys" },
+          "super_tall_40_plus": { "factor": 1.5, "notes": "40+ storeys" }
+        }
+      },
+
+      "approval_path": {
+        "description": "For DA/approval phases - NSW specific",
+        "factors": {
+          "cdc_complying": { "factor": 0.25, "notes": "Complying Development Certificate - 20 business days statutory" },
+          "low_rise_reform": { "factor": 0.4, "notes": "Low-Rise Housing Code (Feb 2025) - dual occ, terraces" },
+          "mid_rise_reform": { "factor": 0.5, "notes": "Mid-Rise Housing Code (Feb 2025) - infill apartments to 6 storeys" },
+          "tod_precinct": { "factor": 0.6, "notes": "Transport Oriented Development areas" },
+          "pattern_book": { "factor": 0.4, "notes": "Pattern Book compliant designs (2025)" },
+          "standard_da": { "factor": 1.0, "notes": "Standard council DA (base)" },
+          "complex_da": { "factor": 1.4, "notes": "Complex DA - heritage, VPA, significant objection" },
+          "regional_panel": { "factor": 1.3, "notes": "Sydney Planning Panel determination" },
+          "state_significant": { "factor": 1.8, "notes": "SSD - DPE assessment" }
+        }
+      },
+
+      "dwelling_size": {
+        "description": "For house construction",
+        "factors": {
+          "small_under_200sqm": { "factor": 0.7, "notes": "Under 200sqm GFA" },
+          "medium_200_350sqm": { "factor": 0.85, "notes": "200-350sqm GFA" },
+          "large_350_500sqm": { "factor": 1.0, "notes": "350-500sqm GFA (base)" },
+          "luxury_500_plus": { "factor": 1.3, "notes": "Over 500sqm GFA" }
+        }
+      },
+
+      "dwelling_count": {
+        "description": "For townhouse projects",
+        "factors": {
+          "small_2_4": { "factor": 0.7, "notes": "2-4 dwellings" },
+          "medium_5_10": { "factor": 0.85, "notes": "5-10 dwellings" },
+          "large_11_20": { "factor": 1.0, "notes": "11-20 dwellings (base)" },
+          "very_large_20_plus": { "factor": 1.2, "notes": "20+ dwellings" }
+        }
+      },
+
+      "nla": {
+        "description": "For fitout projects - Net Lettable Area",
+        "factors": {
+          "small_under_500sqm": { "factor": 0.6, "notes": "Under 500sqm" },
+          "medium_500_2000sqm": { "factor": 0.8, "notes": "500-2,000sqm" },
+          "large_2000_5000sqm": { "factor": 1.0, "notes": "2,000-5,000sqm (base)" },
+          "very_large_5000_plus": { "factor": 1.3, "notes": "Over 5,000sqm" }
+        }
+      },
+
+      "gfa": {
+        "description": "For industrial/warehouse - Gross Floor Area",
+        "factors": {
+          "small_under_5000sqm": { "factor": 0.6, "notes": "Under 5,000sqm" },
+          "medium_5000_15000sqm": { "factor": 0.8, "notes": "5,000-15,000sqm" },
+          "large_15000_40000sqm": { "factor": 1.0, "notes": "15,000-40,000sqm (base)" },
+          "very_large_40000_plus": { "factor": 1.3, "notes": "Over 40,000sqm" }
+        }
+      },
+
+      "urgency": {
+        "description": "For due diligence and feasibility",
+        "factors": {
+          "urgent": { "factor": 0.5, "notes": "Fast-track - reduced scope or parallel activities" },
+          "standard": { "factor": 1.0, "notes": "Normal timeframe (base)" },
+          "comprehensive": { "factor": 1.5, "notes": "Detailed/extensive scope" }
+        }
+      },
+
+      "site_complexity": {
+        "description": "For remediation and geotech",
+        "factors": {
+          "low": { "factor": 0.6, "notes": "Simple site, known conditions" },
+          "medium": { "factor": 1.0, "notes": "Moderate complexity (base)" },
+          "high": { "factor": 1.5, "notes": "Complex site, multiple contaminants" },
+          "unknown": { "factor": 1.8, "notes": "Limited information available" }
+        }
+      },
+
+      "remediation_type": {
+        "description": "For remediation works",
+        "factors": {
+          "dig_and_dump": { "factor": 0.7, "notes": "Simple excavation and disposal" },
+          "on_site_treatment": { "factor": 1.0, "notes": "On-site soil treatment (base)" },
+          "in_situ_treatment": { "factor": 1.3, "notes": "In-situ remediation" },
+          "groundwater": { "factor": 1.8, "notes": "Groundwater remediation required" }
+        }
+      },
+
+      "refurb_scope": {
+        "description": "For refurbishment projects",
+        "factors": {
+          "cosmetic": { "factor": 0.5, "notes": "Cosmetic refresh only" },
+          "moderate": { "factor": 0.8, "notes": "Services and finishes upgrade" },
+          "substantial": { "factor": 1.0, "notes": "Major works including facade/structure (base)" },
+          "heritage_full": { "factor": 1.5, "notes": "Heritage building full restoration" }
+        }
+      },
+
+      "building_complexity": {
+        "description": "For investigation phases",
+        "factors": {
+          "simple": { "factor": 0.7, "notes": "Simple building form and systems" },
+          "moderate": { "factor": 1.0, "notes": "Standard commercial building (base)" },
+          "complex": { "factor": 1.3, "notes": "Complex building, multiple systems" },
+          "heritage": { "factor": 1.5, "notes": "Heritage building" }
+        }
+      },
+
+      "location": {
+        "description": "Geographic location factors",
+        "factors": {
+          "sydney_cbd": { "factor": 1.15, "notes": "CBD logistics, hoarding, access constraints" },
+          "sydney_metro": { "factor": 1.0, "notes": "Sydney metropolitan (base)" },
+          "regional_nsw": { "factor": 0.9, "notes": "Regional NSW - less constraints but material logistics" },
+          "remote": { "factor": 1.3, "notes": "Remote locations - logistics and labour" }
+        }
+      },
+
+      "procurement_method": {
+        "description": "Impact of procurement method on program",
+        "factors": {
+          "design_bid_build": { "factor": 1.0, "notes": "Traditional (base)" },
+          "design_and_construct": { "factor": 0.85, "notes": "D&C - contractor efficiency" },
+          "eci": { "factor": 0.9, "notes": "Early Contractor Involvement" },
+          "construction_management": { "factor": 1.1, "notes": "CM - coordination complexity" }
+        }
+      },
+
+      "construction_method": {
+        "description": "Impact of construction method",
+        "factors": {
+          "traditional": { "factor": 1.0, "notes": "Traditional construction (base)" },
+          "prefab_hybrid": { "factor": 0.85, "notes": "Hybrid prefab elements" },
+          "modular": { "factor": 0.7, "notes": "Full modular construction" },
+          "panelised": { "factor": 0.8, "notes": "Panelised systems" }
+        }
+      }
+    },
+
+    "contingencyGuidance": {
+      "description": "Recommended program contingency (float) by phase",
+      "byPhase": {
+        "pre_design": { "percentage": 5, "notes": "Lower risk, controllable" },
+        "design": { "percentage": 10, "notes": "Design development variability" },
+        "approval": { "percentage": 20, "notes": "External dependencies, council variability" },
+        "documentation": { "percentage": 10, "notes": "Coordination complexity" },
+        "procurement": { "percentage": 10, "notes": "Market conditions" },
+        "construction": { "percentage": 10, "notes": "Weather, supply chain, labour" },
+        "completion": { "percentage": 5, "notes": "Defects rectification" }
+      },
+      "byProjectType": {
+        "new_build": { "percentage": 10, "notes": "Standard allowance" },
+        "refurbishment": { "percentage": 20, "notes": "Unknown conditions" },
+        "heritage": { "percentage": 25, "notes": "Discoveries, approvals" },
+        "remediation": { "percentage": 25, "notes": "Contamination extent variability" }
+      }
+    },
+
+    "criticalPathNotes": {
+      "description": "Typical critical path drivers by project type",
+      "apartments": [
+        "DA approval (longest single duration)",
+        "Pre-sales and finance approval",
+        "Structure and facade sequence",
+        "Lift installation (long lead)"
+      ],
+      "office": [
+        "DA approval",
+        "Facade procurement and installation",
+        "Base building commissioning",
+        "NABERS verification"
+      ],
+      "industrial": [
+        "Slab and structure sequence",
+        "Cladding installation",
+        "Mechanical/electrical commissioning"
+      ],
+      "refurbishment": [
+        "Hazmat removal",
+        "Structural works (if required)",
+        "Services upgrade coordination"
+      ]
+    }
+  }
+}

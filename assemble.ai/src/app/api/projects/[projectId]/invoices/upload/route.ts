@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { invoices, fileAssets, documents, versions, categories, subcategories, consultantDisciplines, contractorTrades, costLines } from '@/lib/db';
+import { invoices, fileAssets, documents, versions, categories, subcategories, projectStakeholders, costLines } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';
@@ -162,34 +162,32 @@ export async function POST(
     const periodYear = invoiceDate.getFullYear();
     const periodMonth = invoiceDate.getMonth() + 1; // 1-12
 
-    // Step 6.5: Match to cost line based on discipline/trade
+    // Step 6.5: Match to cost line based on stakeholder
     let matchedCostLineId: string | null = null;
 
-    if (companyMatch.discipline?.disciplineId) {
-      // Find cost line with matching disciplineId
-      const matchedCostLine = await db.query.costLines.findFirst({
+    // Find stakeholder by name (discipline or trade name)
+    const stakeholderName = companyMatch.discipline?.disciplineName || companyMatch.trade?.tradeName;
+    if (stakeholderName) {
+      const stakeholder = await db.query.projectStakeholders.findFirst({
         where: and(
-          eq(costLines.projectId, projectId),
-          eq(costLines.disciplineId, companyMatch.discipline.disciplineId),
-          isNull(costLines.deletedAt)
+          eq(projectStakeholders.projectId, projectId),
+          eq(projectStakeholders.name, stakeholderName)
         ),
       });
-      if (matchedCostLine) {
-        matchedCostLineId = matchedCostLine.id;
-        console.log(`[invoice-upload] Matched to cost line by discipline: ${matchedCostLine.id}`);
-      }
-    } else if (companyMatch.trade?.tradeId) {
-      // Find cost line with matching tradeId
-      const matchedCostLine = await db.query.costLines.findFirst({
-        where: and(
-          eq(costLines.projectId, projectId),
-          eq(costLines.tradeId, companyMatch.trade.tradeId),
-          isNull(costLines.deletedAt)
-        ),
-      });
-      if (matchedCostLine) {
-        matchedCostLineId = matchedCostLine.id;
-        console.log(`[invoice-upload] Matched to cost line by trade: ${matchedCostLine.id}`);
+
+      if (stakeholder) {
+        // Find cost line with matching stakeholderId
+        const matchedCostLine = await db.query.costLines.findFirst({
+          where: and(
+            eq(costLines.projectId, projectId),
+            eq(costLines.stakeholderId, stakeholder.id),
+            isNull(costLines.deletedAt)
+          ),
+        });
+        if (matchedCostLine) {
+          matchedCostLineId = matchedCostLine.id;
+          console.log(`[invoice-upload] Matched to cost line by stakeholder: ${matchedCostLine.id}`);
+        }
       }
     }
 

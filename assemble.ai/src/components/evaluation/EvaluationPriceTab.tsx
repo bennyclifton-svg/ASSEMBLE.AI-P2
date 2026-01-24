@@ -14,23 +14,21 @@ import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useEvaluation } from '@/lib/hooks/use-evaluation';
 import { EvaluationSheet } from './EvaluationSheet';
 import { MergeRowsDialog } from './MergeRowsDialog';
-import { Loader2, AlertCircle, CheckCircle2, Sparkles } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import type { EvaluationTotals, EvaluationRow } from '@/types/evaluation';
 
 interface EvaluationPriceTabProps {
     projectId: string;
-    disciplineId?: string;
-    tradeId?: string;
-    disciplineName?: string;
-    tradeName?: string;
+    stakeholderId?: string;
+    stakeholderName?: string;
 }
 
 export function EvaluationPriceTab({
     projectId,
-    disciplineId,
-    tradeId,
+    stakeholderId,
 }: EvaluationPriceTabProps) {
     const {
         isLoading,
@@ -38,6 +36,7 @@ export function EvaluationPriceTab({
         isSaving,
         isParsing,
         parsingFirmId,
+        firmType,
         updateCell,
         addRow,
         deleteRow,
@@ -49,8 +48,7 @@ export function EvaluationPriceTab({
         addSubsRows,
     } = useEvaluation({
         projectId,
-        disciplineId,
-        tradeId,
+        stakeholderId,
     });
 
     const { toast } = useToast();
@@ -159,7 +157,6 @@ export function EvaluationPriceTab({
         firmId: string,
         amountCents: number
     ) => {
-        const firmType = disciplineId ? 'consultant' : 'contractor';
         await updateCell({
             rowId,
             firmId,
@@ -167,7 +164,7 @@ export function EvaluationPriceTab({
             amountCents,
             source: 'manual',
         });
-    }, [disciplineId, updateCell]);
+    }, [firmType, updateCell]);
 
     // Handle add row for each table
     const handleAddRow = useCallback((tableType: 'initial_price' | 'adds_subs') => {
@@ -330,8 +327,8 @@ export function EvaluationPriceTab({
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-5 h-5 text-[#858585] animate-spin" />
-                <span className="ml-2 text-sm text-[#858585]">Loading evaluation data...</span>
+                <Loader2 className="w-5 h-5 text-[var(--color-text-muted)] animate-spin" />
+                <span className="ml-2 text-sm text-[var(--color-text-muted)]">Loading evaluation data...</span>
             </div>
         );
     }
@@ -350,11 +347,11 @@ export function EvaluationPriceTab({
     if (shortlistedFirms.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-                <AlertCircle className="w-8 h-8 text-[#858585] mb-3" />
-                <h3 className="text-sm font-medium text-[#cccccc] mb-1">
+                <AlertCircle className="w-8 h-8 text-[var(--color-text-muted)] mb-3" />
+                <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
                     No Short-listed Firms
                 </h3>
-                <p className="text-xs text-[#858585] max-w-sm">
+                <p className="text-xs text-[var(--color-text-muted)] max-w-sm">
                     To use the evaluation tables, first short-list firms by toggling the
                     "Shortlisted" option on the firm cards above.
                 </p>
@@ -366,7 +363,7 @@ export function EvaluationPriceTab({
         <div className="space-y-6">
             {/* Save Status & Actions */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-[#858585]">
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     {saveStatus === 'saving' && (
                         <>
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -384,10 +381,10 @@ export function EvaluationPriceTab({
                     variant="ghost"
                     size="sm"
                     className="h-6 px-2 text-xs"
-                    style={{ color: '#4fc1ff' }}
+                    style={{ color: 'var(--color-accent-copper)' }}
                     disabled
                 >
-                    <Sparkles className="w-3 h-3 mr-1" />
+                    <DiamondIcon className="w-3 h-3 mr-1" />
                     Evaluate All Submissions
                 </Button>
             </div>
@@ -429,7 +426,7 @@ export function EvaluationPriceTab({
             />
 
             {/* Grand Total */}
-            <div className="bg-[#252526]">
+            <div className="bg-[var(--color-bg-secondary)]">
                 <table className="w-full border-collapse table-fixed">
                     <colgroup>
                         <col style={{ width: '200px' }} />
@@ -441,7 +438,7 @@ export function EvaluationPriceTab({
                     <tbody>
                         <tr>
                             <td
-                                className="px-3 text-sm font-semibold text-[#cccccc] border-r border-[#3e3e42]"
+                                className="px-3 text-sm font-semibold text-[var(--color-text-primary)] border-r border-[var(--color-border)]"
                                 style={{ height: 28 }}
                             >
                                 GRAND TOTAL
@@ -449,7 +446,7 @@ export function EvaluationPriceTab({
                             {shortlistedFirms.map(firm => (
                                 <td
                                     key={firm.id}
-                                    className="px-3 text-right text-sm font-semibold text-[#4fc1ff] border-r border-[#3e3e42]"
+                                    className="px-3 text-right text-sm font-semibold text-[var(--color-accent-copper)] border-r border-[var(--color-border)]"
                                     style={{ height: 28 }}
                                 >
                                     {formatCurrency(totals.grandTotals[firm.id] || 0)}

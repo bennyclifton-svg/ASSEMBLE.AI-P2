@@ -31,14 +31,18 @@ import {
     projectObjectives,
     consultantDisciplines,
     contractorTrades,
+    projectProfiles,
+    profilerObjectives,
+    projectStakeholders,
 } from '@/lib/db';
 
 interface GenerateFieldRequest {
     projectId: string;
     fieldType: FieldType;
     userInput: string;
-    disciplineId?: string;
-    tradeId?: string;
+    stakeholderId?: string;
+    disciplineId?: string;  // deprecated - use stakeholderId
+    tradeId?: string;       // deprecated - use stakeholderId
     additionalContext?: {
         firmName?: string;
         evaluationData?: object;
@@ -54,6 +58,14 @@ interface GenerateFieldResponse {
         relevanceScore: number;
     }[];
     inputInterpretation: InputInterpretation;
+    metadata: {
+        usedRAG: boolean;
+        usedProjectContext: boolean;
+        usedProfiler: boolean;
+        usedObjectives: boolean;
+        ragDocumentCount: number;
+        ragChunkCount: number;
+    };
 }
 
 export async function POST(req: NextRequest) {
@@ -84,16 +96,17 @@ export async function POST(req: NextRequest) {
         const metadata = FIELD_METADATA[body.fieldType];
 
         // Validate context requirements
-        if (metadata.requiresDiscipline && !body.disciplineId) {
+        // stakeholderId can be used as an alternative to disciplineId/tradeId
+        if (metadata.requiresDiscipline && !body.disciplineId && !body.stakeholderId) {
             return NextResponse.json(
-                { error: `disciplineId is required for field type ${body.fieldType}` },
+                { error: `disciplineId or stakeholderId is required for field type ${body.fieldType}` },
                 { status: 400 }
             );
         }
 
-        if (metadata.requiresTrade && !body.tradeId) {
+        if (metadata.requiresTrade && !body.tradeId && !body.stakeholderId) {
             return NextResponse.json(
-                { error: `tradeId is required for field type ${body.fieldType}` },
+                { error: `tradeId or stakeholderId is required for field type ${body.fieldType}` },
                 { status: 400 }
             );
         }
@@ -105,87 +118,100 @@ export async function POST(req: NextRequest) {
         // Fetch project context
         const projectContext = await fetchProjectContext(body.projectId);
 
-        // Fetch discipline/trade name if provided
+        // Fetch discipline/trade name from stakeholder or legacy tables
         let contextName = '';
-        if (body.disciplineId) {
+        let stakeholderContext = '';
+        if (body.stakeholderId) {
+            // New: Use projectStakeholders table
+            const stakeholder = await fetchStakeholderContext(body.stakeholderId);
+            if (stakeholder) {
+                contextName = stakeholder.disciplineOrTrade || stakeholder.name || 'Unknown Discipline';
+                stakeholderContext = stakeholder.context;
+            }
+        } else if (body.disciplineId) {
+            // Legacy: Use consultantDisciplines table
             const discipline = await fetchDisciplineName(body.projectId, body.disciplineId);
             contextName = discipline || 'Unknown Discipline';
         } else if (body.tradeId) {
+            // Legacy: Use contractorTrades table
             const trade = await fetchTradeName(body.projectId, body.tradeId);
             contextName = trade || 'Unknown Trade';
         }
 
-        // Find the project's Knowledge document set
-        const documentSetResult = await ragDb.execute(sql`
-            SELECT id, name
-            FROM document_sets
-            WHERE project_id = ${body.projectId}
-            AND name = 'Knowledge'
-            LIMIT 1
-        `);
+        // Attempt RAG retrieval (optional - don't fail if unavailable)
+        let ragResults: any[] = [];
+        let ragChunksContext = '';
+        let documentNames = new Map<string, string>();
+        let ragAvailable = false;
 
-        const documentSets = (documentSetResult.rows || []) as any[];
-        if (documentSets.length === 0) {
-            return NextResponse.json(
-                { error: 'No Knowledge Source configured. Add documents to the Knowledge category first.' },
-                { status: 404 }
-            );
+        try {
+            // Find the project's Knowledge document set
+            const documentSetResult = await ragDb.execute(sql`
+                SELECT id, name
+                FROM document_sets
+                WHERE project_id = ${body.projectId}
+                AND name = 'Knowledge'
+                LIMIT 1
+            `);
+
+            const documentSets = (documentSetResult.rows || []) as any[];
+
+            if (documentSets.length > 0) {
+                const documentSetId = documentSets[0].id;
+
+                // Get synced documents in the set
+                const memberResults = await ragDb.execute(sql`
+                    SELECT DISTINCT document_id as "documentId"
+                    FROM document_set_members
+                    WHERE document_set_id = ${documentSetId}
+                    AND sync_status = 'synced'
+                `);
+
+                const documentIds = ((memberResults.rows || []) as any[]).map(m => m.documentId);
+
+                if (documentIds.length > 0) {
+                    // Build query for RAG retrieval based on mode
+                    const ragQuery = buildRagQuery(body.userInput, inputMode, body.fieldType, contextName);
+
+                    // Retrieve relevant chunks using RAG
+                    ragResults = await retrieve(ragQuery, {
+                        documentIds,
+                        topK: 10,
+                        rerankTopK: 5,
+                        includeParentContext: true,
+                    });
+
+                    if (ragResults.length > 0) {
+                        ragAvailable = true;
+
+                        // Build RAG chunks context
+                        ragChunksContext = ragResults
+                            .map((r, i) => `[Source ${i + 1}${r.sectionTitle ? ` - ${r.sectionTitle}` : ''}]\n${r.content}`)
+                            .join('\n\n---\n\n');
+
+                        // Get document names for sources
+                        documentNames = await getDocumentNames(ragResults.map(r => r.documentId));
+                    }
+                }
+            }
+        } catch (ragError) {
+            // Log but don't fail - RAG is optional
+            console.log('[generate-field] RAG retrieval unavailable:', ragError);
         }
 
-        const documentSetId = documentSets[0].id;
-
-        // Get synced documents in the set
-        const memberResults = await ragDb.execute(sql`
-            SELECT DISTINCT document_id as "documentId"
-            FROM document_set_members
-            WHERE document_set_id = ${documentSetId}
-            AND sync_status = 'synced'
-        `);
-
-        const documentIds = ((memberResults.rows || []) as any[]).map(m => m.documentId);
-
-        if (documentIds.length === 0) {
-            return NextResponse.json(
-                { error: 'No documents synced in Knowledge Source. Wait for processing to complete.' },
-                { status: 404 }
-            );
-        }
-
-        // Build query for RAG retrieval based on mode
-        const ragQuery = buildRagQuery(body.userInput, inputMode, body.fieldType, contextName);
-
-        // Retrieve relevant chunks using RAG
-        const results = await retrieve(ragQuery, {
-            documentIds,
-            topK: 10,
-            rerankTopK: 5,
-            includeParentContext: true,
-        });
-
-        if (results.length === 0) {
-            return NextResponse.json(
-                { error: 'No relevant content found in Knowledge Source. Try adding more documents.' },
-                { status: 404 }
-            );
-        }
-
-        // Build RAG chunks context
-        const ragChunksContext = results
-            .map((r, i) => `[Source ${i + 1}${r.sectionTitle ? ` - ${r.sectionTitle}` : ''}]\n${r.content}`)
-            .join('\n\n---\n\n');
-
-        // Get document names for sources
-        const documentNames = await getDocumentNames(results.map(r => r.documentId));
+        // Log which sources are available
+        console.log(`[generate-field] Sources: RAG=${ragAvailable}, ProjectContext=${!!projectContext}, StakeholderContext=${!!stakeholderContext}`);
 
         // Build the full prompt
-        const promptTemplate = getPromptTemplate(body.fieldType, inputMode);
+        const promptTemplate = getPromptTemplate(body.fieldType, inputMode, ragAvailable);
         const fullPrompt = buildFullPrompt(
             promptTemplate,
             body.userInput,
             projectContext,
             contextName,
             ragChunksContext,
-            body.additionalContext
+            body.additionalContext,
+            stakeholderContext
         );
 
         // Generate content using Claude
@@ -205,17 +231,26 @@ export async function POST(req: NextRequest) {
             throw new Error('No text response from Claude');
         }
 
-        // Build sources array
-        const sources = results.map(r => ({
+        // Build sources array (empty if RAG not used)
+        const sources = ragResults.map(r => ({
             chunkId: r.chunkId,
             documentName: documentNames.get(r.documentId) || 'Unknown Document',
             relevanceScore: Math.round(r.relevanceScore * 100),
         }));
 
+        // Build response with metadata about sources used
         const response: GenerateFieldResponse = {
             content: textContent.text.trim(),
             sources,
             inputInterpretation: inputMode,
+            metadata: {
+                usedRAG: ragAvailable,
+                usedProjectContext: !!projectContext && projectContext !== 'No project context available.',
+                usedProfiler: projectContext.includes('## Project Profile'),
+                usedObjectives: projectContext.includes('## Project Objectives'),
+                ragDocumentCount: new Set(ragResults.map(r => r.documentId)).size,
+                ragChunkCount: ragResults.length,
+            },
         };
 
         return NextResponse.json(response);
@@ -231,35 +266,136 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Fetch project context (details and objectives)
+ * Fetch project context (details, profiler data, and objectives)
+ * Includes profiler selections (buildingClass, projectType, subclass, complexity, scale)
+ * and profiler objectives (functional quality, planning compliance)
  */
 async function fetchProjectContext(projectId: string): Promise<string> {
     try {
+        // Fetch project details
         const [details] = await db
             .select()
             .from(projectDetails)
             .where(eq(projectDetails.projectId, projectId));
 
+        // Fetch profiler data (buildingClass, projectType, subclass, complexity, scale, workScope)
+        const [profile] = await db
+            .select()
+            .from(projectProfiles)
+            .where(eq(projectProfiles.projectId, projectId));
+
+        // Fetch profiler objectives (new 2-category structure)
         const [objectives] = await db
             .select()
-            .from(projectObjectives)
-            .where(eq(projectObjectives.projectId, projectId));
+            .from(profilerObjectives)
+            .where(eq(profilerObjectives.projectId, projectId));
+
+        // Fallback to legacy objectives if profilerObjectives not found
+        const [legacyObjectives] = !objectives
+            ? await db.select().from(projectObjectives).where(eq(projectObjectives.projectId, projectId))
+            : [null];
 
         const lines: string[] = [];
 
+        // Project Details
         if (details) {
             if (details.projectName) lines.push(`Project Name: ${details.projectName}`);
             if (details.address) lines.push(`Address: ${details.address}`);
-            if (details.buildingClass) lines.push(`Building Class: ${details.buildingClass}`);
-            if (details.numberOfStories) lines.push(`Number of Stories: ${details.numberOfStories}`);
             if (details.jurisdiction) lines.push(`Jurisdiction: ${details.jurisdiction}`);
+            if (details.numberOfStories) lines.push(`Number of Stories: ${details.numberOfStories}`);
+            if (details.buildingClass) lines.push(`Building Class: ${details.buildingClass}`);
+            if (details.zoning) lines.push(`Zoning: ${details.zoning}`);
+            if (details.lotArea) lines.push(`Lot Area: ${details.lotArea} sqm`);
         }
 
+        // Profiler Data
+        if (profile) {
+            lines.push('');
+            lines.push('## Project Profile');
+            if (profile.buildingClass) lines.push(`Building Class: ${profile.buildingClass}`);
+            if (profile.projectType) lines.push(`Project Type: ${profile.projectType}`);
+
+            // Parse and add subclass
+            if (profile.subclass) {
+                try {
+                    const subclasses = JSON.parse(profile.subclass);
+                    if (Array.isArray(subclasses) && subclasses.length > 0) {
+                        lines.push(`Subclass: ${subclasses.join(', ')}`);
+                    }
+                } catch { /* ignore parse errors */ }
+            }
+
+            // Parse and add scale data
+            if (profile.scaleData) {
+                try {
+                    const scale = JSON.parse(profile.scaleData);
+                    if (Object.keys(scale).length > 0) {
+                        const scaleItems = Object.entries(scale)
+                            .filter(([_, v]) => v !== null && v !== undefined)
+                            .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+                            .join(', ');
+                        if (scaleItems) lines.push(`Scale: ${scaleItems}`);
+                    }
+                } catch { /* ignore parse errors */ }
+            }
+
+            // Parse and add complexity
+            if (profile.complexity) {
+                try {
+                    const complexity = JSON.parse(profile.complexity);
+                    if (Object.keys(complexity).length > 0) {
+                        const complexityItems = Object.entries(complexity)
+                            .filter(([_, v]) => v !== null && v !== undefined && v !== '')
+                            .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
+                            .join(', ');
+                        if (complexityItems) lines.push(`Complexity: ${complexityItems}`);
+                    }
+                } catch { /* ignore parse errors */ }
+            }
+
+            // Parse and add work scope
+            if (profile.workScope) {
+                try {
+                    const workScope = JSON.parse(profile.workScope);
+                    if (Array.isArray(workScope) && workScope.length > 0) {
+                        lines.push(`Work Scope: ${workScope.join(', ')}`);
+                    }
+                } catch { /* ignore parse errors */ }
+            }
+
+            if (profile.complexityScore) {
+                lines.push(`Complexity Score: ${profile.complexityScore}/10`);
+            }
+        }
+
+        // Profiler Objectives (new structure with Functional Quality + Planning Compliance)
         if (objectives) {
-            if (objectives.functional) lines.push(`Functional Objectives: ${objectives.functional}`);
-            if (objectives.quality) lines.push(`Quality Objectives: ${objectives.quality}`);
-            if (objectives.budget) lines.push(`Budget Objectives: ${objectives.budget}`);
-            if (objectives.program) lines.push(`Program Objectives: ${objectives.program}`);
+            lines.push('');
+            lines.push('## Project Objectives');
+
+            // Parse functionalQuality JSON
+            if (objectives.functionalQuality) {
+                try {
+                    const fq = JSON.parse(objectives.functionalQuality);
+                    if (fq.content) lines.push(`Functional & Quality Objectives: ${fq.content}`);
+                } catch { /* ignore parse errors */ }
+            }
+
+            // Parse planningCompliance JSON
+            if (objectives.planningCompliance) {
+                try {
+                    const pc = JSON.parse(objectives.planningCompliance);
+                    if (pc.content) lines.push(`Planning & Compliance Objectives: ${pc.content}`);
+                } catch { /* ignore parse errors */ }
+            }
+        } else if (legacyObjectives) {
+            // Fallback to legacy objectives
+            lines.push('');
+            lines.push('## Project Objectives');
+            if (legacyObjectives.functional) lines.push(`Functional Objectives: ${legacyObjectives.functional}`);
+            if (legacyObjectives.quality) lines.push(`Quality Objectives: ${legacyObjectives.quality}`);
+            if (legacyObjectives.budget) lines.push(`Budget Objectives: ${legacyObjectives.budget}`);
+            if (legacyObjectives.program) lines.push(`Program Objectives: ${legacyObjectives.program}`);
         }
 
         return lines.length > 0 ? lines.join('\n') : 'No project context available.';
@@ -287,7 +423,7 @@ async function fetchDisciplineName(projectId: string, disciplineId: string): Pro
 }
 
 /**
- * Fetch trade name by ID
+ * Fetch trade name by ID (legacy - use fetchStakeholderContext instead)
  */
 async function fetchTradeName(projectId: string, tradeId: string): Promise<string | null> {
     try {
@@ -299,6 +435,57 @@ async function fetchTradeName(projectId: string, tradeId: string): Promise<strin
         return trade?.name || null;
     } catch (error) {
         console.error('[generate-field] Error fetching trade name:', error);
+        return null;
+    }
+}
+
+/**
+ * Fetch stakeholder context from projectStakeholders table
+ * Returns the discipline/trade name and additional context for prompts
+ */
+async function fetchStakeholderContext(stakeholderId: string): Promise<{
+    disciplineOrTrade: string | null;
+    name: string | null;
+    stakeholderGroup: string | null;
+    context: string;
+} | null> {
+    try {
+        const [stakeholder] = await db
+            .select({
+                name: projectStakeholders.name,
+                disciplineOrTrade: projectStakeholders.disciplineOrTrade,
+                stakeholderGroup: projectStakeholders.stakeholderGroup,
+                role: projectStakeholders.role,
+                organization: projectStakeholders.organization,
+            })
+            .from(projectStakeholders)
+            .where(eq(projectStakeholders.id, stakeholderId));
+
+        if (!stakeholder) return null;
+
+        // Build context string for prompts
+        const contextParts: string[] = [];
+        if (stakeholder.disciplineOrTrade) {
+            contextParts.push(`Discipline/Trade: ${stakeholder.disciplineOrTrade}`);
+        }
+        if (stakeholder.role) {
+            contextParts.push(`Role: ${stakeholder.role}`);
+        }
+        if (stakeholder.organization) {
+            contextParts.push(`Organization: ${stakeholder.organization}`);
+        }
+        if (stakeholder.stakeholderGroup) {
+            contextParts.push(`Stakeholder Type: ${stakeholder.stakeholderGroup}`);
+        }
+
+        return {
+            disciplineOrTrade: stakeholder.disciplineOrTrade,
+            name: stakeholder.name,
+            stakeholderGroup: stakeholder.stakeholderGroup,
+            context: contextParts.join('\n'),
+        };
+    } catch (error) {
+        console.error('[generate-field] Error fetching stakeholder context:', error);
         return null;
     }
 }
@@ -374,7 +561,8 @@ function buildFullPrompt(
         firmName?: string;
         evaluationData?: object;
         sectionTitle?: string;
-    }
+    },
+    stakeholderContext?: string
 ): string {
     let prompt = template
         .replace('{userInput}', userInput || '(no user input provided)')
@@ -384,6 +572,11 @@ function buildFullPrompt(
     // Add context name if available
     if (contextName) {
         prompt = prompt.replace(/{disciplineName}|{tradeName}|{contextName}/g, contextName);
+    }
+
+    // Add stakeholder context if provided (discipline-specific information)
+    if (stakeholderContext) {
+        prompt += `\n\n## Stakeholder Context\n${stakeholderContext}`;
     }
 
     // Add additional context if provided
@@ -403,8 +596,8 @@ function buildFullPrompt(
         }
     }
 
-    // Add instruction to generate plain text
-    prompt += `\n\nIMPORTANT: Generate only the content text directly. Do not include JSON formatting, markdown code blocks, or any wrapper structure. Just provide the professional text content.`;
+    // Add instruction to generate discipline-specific content
+    prompt += `\n\nIMPORTANT: Generate content that is SPECIFIC to the discipline/trade mentioned above (${contextName}). Do not generate a generic project brief - focus only on the services and deliverables relevant to this specific discipline. Generate only the content text directly. Do not include JSON formatting, markdown code blocks, or any wrapper structure. Just provide the professional text content.`;
 
     return prompt;
 }

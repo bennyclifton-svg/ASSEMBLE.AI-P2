@@ -1,0 +1,595 @@
+{
+  "objectivesTemplates": {
+    "metadata": {
+      "version": "2.0",
+      "lastUpdated": "2025-01-01",
+      "jurisdiction": "NSW, Australia",
+      "notes": [
+        "All costs exclude GST unless otherwise stated",
+        "NCC 2022 energy efficiency provisions mandatory from October 2024",
+        "7-star NatHERS + Whole of Home mandatory for Class 1 & 2 buildings",
+        "Livable Housing Design (Silver equivalent) mandatory for most new residential",
+        "Time units standardised to months for construction, weeks for short-term projects"
+      ],
+      "structure": {
+        "FQBP": "Functional, Quality, Budget, Program - core project drivers",
+        "optional_sections": ["Sustainability", "Risk", "Stakeholder", "Digital/BIM"]
+      },
+      "placeholder_conventions": {
+        "{{variable}}": "Required user input",
+        "{{variable:default}}": "Optional with default value",
+        "[[optional_text]]": "Conditionally included based on project type"
+      }
+    },
+
+    "common_placeholders": {
+      "sustainability": {
+        "ncc_2022_residential": "Achieve minimum NCC 2022 energy efficiency provisions (7-star NatHERS thermal shell + Whole of Home assessment)",
+        "ncc_2022_commercial": "Achieve minimum NCC 2022 Section J energy efficiency requirements",
+        "above_minimum_residential": "Target {{nathers_rating:8}}-star NatHERS rating, exceeding NCC 2022 minimum requirements",
+        "passive_house": "Achieve Passive House certification",
+        "net_zero_ready": "Design for net zero operational carbon with provision for future renewable energy systems",
+        "net_zero_carbon": "Achieve net zero operational carbon emissions through on-site renewables and/or verified offsets",
+        "embodied_carbon": "Target {{embodied_carbon_reduction:20}}% reduction in embodied carbon against industry baseline through material selection and design optimisation",
+        "green_star_buildings": "Achieve {{green_star_rating:5}}-Star Green Star Buildings rating, addressing carbon, nature, and circularity requirements",
+        "nabers_energy": "Achieve {{nabers_rating:5}}-star NABERS Energy Commitment Agreement rating",
+        "nabers_verified": "Achieve {{nabers_rating:5}}-star NABERS Energy rating verified post-occupancy",
+        "well_certification": "Achieve WELL {{well_level:Silver}} certification for occupant health and wellbeing"
+      },
+      "ev_infrastructure": {
+        "ev_ready_all": "Provide EV-ready infrastructure to 100% of parking spaces with electrical capacity for future charger installation",
+        "ev_ready_partial": "Provide EV-ready infrastructure to {{ev_percentage:20}}% of parking spaces with provision for future expansion",
+        "ev_installed": "Install Level 2 EV chargers to {{ev_charger_count}} parking spaces with smart load management"
+      },
+      "climate_resilience": {
+        "bushfire": "Design to BAL-{{bal_rating}} requirements with appropriate construction detailing and landscaping setbacks",
+        "flood": "Design for flood resilience with habitable floor levels above {{flood_level}} and flood-compatible materials below",
+        "heat": "Incorporate passive cooling strategies and heat refuge areas for extreme temperature events",
+        "general": "Incorporate climate resilience measures appropriate to identified site risks including {{resilience_features}}"
+      },
+      "digital_bim": {
+        "bim_execution": "Develop and maintain BIM model to LOD {{lod_level:350}} in accordance with project BIM Execution Plan",
+        "digital_handover": "Provide digital handover package including as-built BIM model, COBie data, and O&M documentation",
+        "digital_twin": "Establish digital twin platform for ongoing facility management and performance monitoring"
+      },
+      "livable_housing": {
+        "silver": "Achieve Livable Housing Design Guidelines Silver level (NCC 2022 mandatory minimum)",
+        "gold": "Achieve Livable Housing Design Guidelines Gold level, exceeding mandatory requirements",
+        "platinum": "Achieve Livable Housing Design Guidelines Platinum level for full accessibility"
+      },
+      "contingency_escalation": {
+        "standard": "Maintain {{contingency:5}}% contingency allowance within approved budget",
+        "refurbishment": "Maintain {{contingency:10}}% contingency allowance given potential for unforeseen conditions",
+        "heritage": "Maintain {{contingency:15}}% contingency allowance given heritage constraints and discovery risk",
+        "remediation": "Maintain {{contingency:20}}% contingency allowance given potential for unforeseen contamination extent",
+        "escalation": "Allow {{escalation:3.5}}% per annum escalation from cost plan date to construction midpoint"
+      }
+    },
+
+    "due-diligence": {
+      "functional": {
+        "template": "Complete a comprehensive {{scope_list}} assessment of the {{asset_type}} at {{address}}. {{purpose_specific}} Identify all immediate, short-term (1-3 years), and long-term (3-10 years) capital expenditure requirements. Provide risk-rated recommendations with cost estimates for all identified defects and compliance issues. [[Include assessment of climate resilience and adaptation requirements.]] [[Assess current sustainability performance and identify improvement opportunities.]]",
+        "variations": {
+          "acquisition": "Support the acquisition decision by identifying material risks, hidden liabilities, and required capital works that should inform the purchase price and settlement conditions. Include assessment of NCC compliance gaps and estimated rectification costs.",
+          "disposal": "Prepare the asset for sale by identifying issues that may impact value, recommending pre-sale rectification works, and providing vendor disclosure documentation. Include current NABERS rating (if applicable) and sustainability credentials.",
+          "refinance": "Support the refinance application by demonstrating the asset's condition and identifying any works required to maintain or enhance value. Document current sustainability performance and ESG credentials.",
+          "capex": "Develop a prioritised capital works program with cost estimates to inform annual budgeting and long-term asset planning. Include sustainability upgrade opportunities and associated ROI analysis.",
+          "esg_audit": "Complete comprehensive ESG audit including energy performance, carbon footprint, climate risk assessment, and social/governance factors to support sustainability reporting requirements."
+        }
+      },
+      "quality": {
+        "template": "Engage appropriately qualified consultants (minimum 10 years relevant experience) to conduct all assessments. All reports to comply with relevant Australian Standards and industry best practice. Structural assessments to be conducted by Chartered Structural Engineers. Hazmat surveys (including asbestos, lead, and PFAS screening where applicable) to be conducted by licensed assessors. Environmental assessments to comply with NEPM guidelines. All recommendations to be risk-rated using a standardised matrix (Critical/High/Medium/Low)."
+      },
+      "budget": {
+        "template": "Complete all assessments within a total professional fees budget of ${{budget}} (excluding GST). {{budget_allocation}} Provide itemised cost estimates for all recommended works with accuracy of ±20% for immediate works and ±30% for long-term works. All cost estimates to exclude GST and include {{escalation:3.5}}% annual escalation allowance.",
+        "budget_allocation": "Allocate approximately 35% to structural/façade assessment, 30% to building services, 20% to compliance/hazmat/environmental, and 15% to report compilation, peer review, and sustainability assessment."
+      },
+      "program": {
+        "template": "Complete all site inspections within {{inspection_weeks}} weeks of engagement. Deliver draft reports within {{draft_weeks}} weeks of inspection completion. Allow {{review_weeks}} week(s) for client review and queries. Deliver final reports within {{final_weeks}} weeks of engagement.",
+        "default_weeks": {
+          "urgent": { "inspection": 1, "draft": 1, "review": 0.5, "final": 3 },
+          "standard": { "inspection": 2, "draft": 2, "review": 1, "final": 6 },
+          "comprehensive": { "inspection": 4, "draft": 4, "review": 2, "final": 12 }
+        }
+      },
+      "risk": {
+        "template": "Identify and document key risks including: structural defects, façade failure, services end-of-life, compliance gaps (BCA, DDA, fire, WHS), hazardous materials, contamination, climate vulnerability, and stranded asset risk. Provide risk register with likelihood, consequence, and mitigation recommendations."
+      }
+    },
+
+    "feasibility": {
+      "functional": {
+        "template": "Assess the development potential of the {{site_status}} site at {{address}} for {{development_type}} use. Determine the maximum permissible GFA/yield under current planning controls {{planning_pathway_note}}. Identify key planning risks, approval pathways, and timeline implications. Develop {{study_depth}} financial modelling to determine project viability and optimal development strategy. [[Assess applicability of Low/Mid-Rise Housing reforms or TOD provisions.]]",
+        "planning_pathway_notes": {
+          "standard": "via standard Development Application",
+          "cdc": "via Complying Development Certificate pathway",
+          "low_rise_reform": "under Low-Rise Housing Code provisions (effective February 2025)",
+          "mid_rise_reform": "under Mid-Rise Housing Code provisions (effective February 2025)",
+          "tod": "within Transport Oriented Development precinct provisions",
+          "ssd": "as State Significant Development"
+        }
+      },
+      "quality": {
+        "template": "Engage specialist town planning consultant to provide planning assessment and yield analysis. Financial modelling to be prepared using industry-standard feasibility software with sensitivity analysis on key variables (construction cost ±10%, revenue ±10%, program ±3 months). All cost estimates to be supported by quantity surveyor cost plan referencing current market benchmarks. Market assumptions to be validated against current comparable sales/rental evidence (within 12 months). Include sustainability cost/benefit analysis for rating tool options."
+      },
+      "budget": {
+        "template": "Total project budget of ${{budget}} (excluding GST) for feasibility study. Deliverables to include planning assessment, concept design options (minimum 2), quantity surveyor cost estimate, sustainability pathway analysis, and development feasibility analysis. Financial modelling to achieve {{target_return}} target return on costs with sensitivity analysis demonstrating range of outcomes."
+      },
+      "program": {
+        "template": "Complete preliminary planning assessment within 2 weeks. Develop concept design options within 4 weeks. Complete cost planning and feasibility modelling within 6 weeks. Deliver final feasibility report with recommendations within {{total_weeks}} weeks. [[Note accelerated approval pathway may reduce overall program by {{pathway_reduction}} weeks.]]"
+      },
+      "sustainability": {
+        "template": "Assess sustainability pathway options including: NCC 2022 minimum compliance, Green Star Buildings (4-6 Star), NABERS Energy (4.5-6 Star), and net zero carbon pathway. Provide cost/benefit analysis for each pathway including capital cost premium, operational savings, and market positioning benefits. Identify any mandatory requirements (e.g., government tenant NABERS requirements, Green Star planning conditions)."
+      }
+    },
+
+    "house": {
+      "functional": {
+        "template": "Deliver a {{quality_level}} {{dwelling_size}} {{project_scope}} at {{address}}. {{bedroom_config}} {{special_requirements_text}} Design to maximise natural light, cross ventilation, and connection to outdoor living areas while ensuring privacy from neighbouring properties. [[Design for climate resilience appropriate to site conditions including {{climate_risks}}.]]",
+        "bedroom_configs": {
+          "small": "Provide 2-3 bedrooms including master with ensuite, open plan living/dining/kitchen, single garage or carport, and outdoor entertaining area.",
+          "medium": "Provide 3-4 bedrooms including master suite with walk-in robe and ensuite, separate living and family rooms, kitchen with butler's pantry, double garage with EV charger provision, and landscaped outdoor areas.",
+          "large": "Provide 4-5 bedrooms including master suite with his/hers robes and luxury ensuite, formal and informal living areas, gourmet kitchen with scullery, home office, triple garage with EV charging, pool provision, and comprehensive landscaping.",
+          "luxury": "Provide 5+ bedrooms including master suite with retreat, multiple living zones, commercial-grade kitchen with full scullery, home theatre, wine cellar, 4+ car garage with EV charging and car lift provision, pool with cabana, and resort-style landscaping."
+        }
+      },
+      "quality": {
+        "template": "Achieve {{quality_level}} specification throughout. All materials and finishes to be selected from reputable suppliers with minimum 10-year warranties on structural elements. Engage licensed builder with proven track record in {{quality_level}} residential construction and appropriate Home Building Compensation Fund cover."
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} {{sustainability_target}} Incorporate all-electric design with heat pump hot water and reverse cycle air conditioning (no gas connection). {{ev_provision}} Design for future adaptability including provision for solar PV system ({{solar_capacity:6.6}}kW minimum) and battery storage. [[Target {{embodied_carbon_reduction:20}}% reduction in embodied carbon through sustainable material selection.]] [[Achieve {{wellbeing_target}}.]]",
+        "ncc_compliance_options": {
+          "minimum": "Achieve minimum NCC 2022 energy efficiency provisions (7-star NatHERS thermal shell + Whole of Home assessment).",
+          "above_minimum": "Exceed NCC 2022 minimum requirements with target {{nathers_rating:8}}-star NatHERS rating.",
+          "high_performance": "Achieve high performance design with {{nathers_rating:9}}+ star NatHERS rating.",
+          "passive_house": "Achieve Passive House certification for exceptional thermal performance and comfort."
+        },
+        "ev_provision_options": {
+          "ready": "Provide EV-ready infrastructure to garage with dedicated circuit and provision for future charger installation.",
+          "installed": "Install Level 2 EV charger (7kW minimum) in garage."
+        }
+      },
+      "livable_housing": {
+        "template": "{{livable_level}} Design to support ageing in place with: step-free entry, accessible bathroom on ground floor, reinforcement for future grab rails, and clear door widths. [[Include provision for future lift installation.]]",
+        "livable_options": {
+          "silver": "Achieve Livable Housing Design Guidelines Silver level (NCC 2022 mandatory minimum).",
+          "gold": "Achieve Livable Housing Design Guidelines Gold level, exceeding mandatory requirements with enhanced accessibility.",
+          "platinum": "Achieve Livable Housing Design Guidelines Platinum level for full wheelchair accessibility."
+        }
+      },
+      "budget": {
+        "template": "Total project budget of ${{budget}} (excluding GST) including: construction (${{construction_budget}}), professional fees (${{fees_budget}}), authority costs (${{authority_budget}}), and contingency (${{contingency_budget}}). Construction budget based on ${{cost_per_sqm}}/m² for {{gfa}}m² GFA. {{contingency_note}} All costs to be subject to {{escalation:3.5}}% annual escalation from estimate date.",
+        "contingency_notes": {
+          "new_build": "Maintain 5% contingency allowance within approved budget.",
+          "renovation": "Maintain 10% contingency allowance given potential for unforeseen conditions in existing building.",
+          "heritage": "Maintain 15% contingency allowance given heritage constraints and discovery risk."
+        }
+      },
+      "program": {
+        "template": "Target completion within {{total_months}} months. Schematic design: {{design_weeks}} weeks. Approval ({{approval_pathway}}): {{approval_weeks}} weeks. Construction documentation: {{doc_weeks}} weeks. Tender and award: 4 weeks. Construction: {{construction_months}} months. Practical completion to final completion: 3 months.",
+        "approval_pathways": {
+          "cdc": "CDC - approximately 4 weeks",
+          "standard_da": "Standard DA - approximately 12 weeks",
+          "complex_da": "Complex DA - approximately 20 weeks"
+        }
+      },
+      "climate_resilience": {
+        "template": "[[Design to BAL-{{bal_rating}} bushfire requirements with appropriate construction detailing, ember guards, and landscaping setbacks.]] [[Design for flood resilience with floor levels above {{flood_level}} and flood-compatible materials below.]] [[Incorporate passive cooling and heat refuge design for extreme temperature events.]] [[Install rainwater harvesting system with minimum {{tank_capacity:5000}}L capacity for landscape irrigation and toilet flushing.]]"
+      },
+      "risk": {
+        "template": "Key project risks include: {{site_risks}}, approval delays, construction cost escalation, builder capacity/insolvency, and weather delays. Maintain risk register throughout project with regular review and mitigation actions."
+      }
+    },
+
+    "apartments": {
+      "functional": {
+        "template": "Deliver a {{market_segment}} {{building_scale}} apartment development at {{address}} comprising approximately {{unit_count}} apartments. Provide a mix of {{apartment_mix}} apartments with {{nla_per_unit}}m² average NLA. Include {{parking_ratio}} car parking spaces per apartment with {{ev_provision}}. Ground floor to include residential lobby, {{ground_floor_uses}}. Design to maximise views, natural light, and cross ventilation while achieving full ADG compliance. [[Designed for {{planning_pathway}} approval pathway.]]",
+        "ground_floor_options": {
+          "boutique": "concierge, mail room, parcel lockers, and secure bicycle storage",
+          "standard": "concierge, mail room, parcel lockers, bicycle storage, and end-of-trip facilities",
+          "premium": "attended lobby, concierge services, resident lounge, gymnasium, and bicycle storage with repair station",
+          "luxury": "24-hour concierge, residents' lounge, private dining room, business centre, gymnasium, pool, spa facilities, and secure bicycle storage"
+        },
+        "ev_provision_options": {
+          "ready_20": "EV-ready infrastructure to 20% of spaces with provision for future expansion",
+          "ready_100": "EV-ready infrastructure to 100% of spaces",
+          "installed": "EV chargers installed to {{ev_charger_count}} spaces with smart load management"
+        }
+      },
+      "quality": {
+        "template": "Achieve minimum SEPP 65 / ADG compliance with target of exceeding minimums on solar access ({{solar_target:70}}% achieving 2+ hours), natural cross-ventilation ({{ventilation_target:60}}% achieving), and apartment size ({{size_target:5}}% above minimums). All apartments to have minimum 2.7m floor-to-ceiling heights (3.1m for ground floor). {{finish_level}} finishes throughout apartments and common areas. {{construction_type}} construction with design life of 50+ years. All materials to comply with NCC combustible cladding requirements."
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} {{sustainability_rating}} {{energy_systems}} [[Target {{embodied_carbon_reduction:20}}% reduction in embodied carbon through material selection including low-carbon concrete, recycled steel, and sustainable timber.]] [[Design for circular economy principles with consideration for future adaptability and end-of-life deconstruction.]] Achieve post-completion verification of sustainability performance through {{verification_method}}.",
+        "ncc_compliance": "Achieve minimum NCC 2022 energy efficiency provisions (7-star NatHERS average + Whole of Home assessment for each apartment).",
+        "rating_options": {
+          "green_star_5": "Target 5-Star Green Star Buildings rating.",
+          "green_star_6": "Target 6-Star Green Star Buildings rating (World Leadership).",
+          "climate_active": "Achieve Climate Active carbon neutral certification.",
+          "net_zero": "Design for net zero operational carbon through on-site renewables and high-efficiency systems."
+        },
+        "energy_options": {
+          "all_electric": "All-electric building design with no gas connection. Heat pump hot water to each apartment. High-efficiency reverse cycle air conditioning.",
+          "embedded_network": "Establish embedded electricity network with central solar PV system and fair allocation of renewable energy to residents.",
+          "standard": "Gas cooking with electric heating/cooling. Central gas hot water plant."
+        }
+      },
+      "livable_housing": {
+        "template": "{{livable_level}} Provide {{accessible_percentage:10}}% of apartments as accessible (compliant with AS1428.1) with remainder achieving {{standard_level}}. All common areas to be fully accessible with DDA-compliant paths of travel.",
+        "livable_options": {
+          "silver": "Achieve Livable Housing Design Guidelines Silver level (NCC 2022 mandatory minimum) for all apartments.",
+          "gold": "Achieve Livable Housing Design Guidelines Gold level for all apartments, exceeding mandatory requirements.",
+          "mixed": "Achieve Platinum level for {{platinum_percentage:20}}% of apartments, Gold for remainder."
+        }
+      },
+      "budget": {
+        "template": "Total project budget of ${{budget}} (excluding GST and land) including: construction (${{construction_budget}}), professional fees, statutory costs, finance costs, marketing, and contingency. Target construction cost of ${{construction_cost_per_sqm}}/m² GFA (excluding land, finance, and marketing). Maintain {{contingency:5}}% construction contingency. All costs subject to {{escalation:3.5}}% annual escalation from cost plan date to construction midpoint.",
+        "cost_breakdown": "Budget allocation: substructure/basement {{basement_percent:15}}%, superstructure {{structure_percent:25}}%, façade {{facade_percent:15}}%, services {{services_percent:20}}%, internal finishes {{finishes_percent:15}}%, external works {{external_percent:5}}%, preliminaries {{prelims_percent:5}}%."
+      },
+      "program": {
+        "template": "Target practical completion {{completion_date}}. Feasibility and brief: 2 months. Concept and schematic design: {{design_months}} months. DA approval: {{da_months}} months ({{planning_pathway}}). Design development and documentation: {{doc_months}} months. Procurement: 3 months. Construction: {{construction_months}} months. Defects and settlement: 4 months. [[Pre-sales and marketing to run parallel from DA lodgement.]]",
+        "planning_pathways": {
+          "low_rise_reform": "Low-Rise Housing Code - approximately 2 months",
+          "mid_rise_reform": "Mid-Rise Housing Code - approximately 3 months",
+          "tod": "TOD Precinct - approximately 5 months",
+          "standard_da": "Standard DA - approximately 9 months",
+          "complex_da": "Complex DA - approximately 12 months"
+        }
+      },
+      "digital": {
+        "template": "Develop and maintain federated BIM model to LOD {{lod_level:350}} throughout design and construction. Implement clash detection at each design phase milestone. Provide digital handover package including: as-built BIM model (LOD 500), COBie asset data, O&M documentation, and building user guide. [[Establish building management system with energy monitoring and reporting capability.]]"
+      },
+      "risk": {
+        "template": "Key project risks include: DA approval delays/refusal, pre-sales targets not achieved, construction cost escalation, contractor capacity/insolvency, defects and warranty claims. Maintain project risk register with monthly review. Implement quality management system throughout construction. Obtain appropriate insurance coverage including construction all-risk and professional indemnity."
+      },
+      "stakeholder": {
+        "template": "Key stakeholders include: {{stakeholder_list}}. Establish regular reporting schedule with monthly progress reports to {{primary_stakeholder}}. Conduct stakeholder consultation as required for DA including neighbour notification and (if applicable) design excellence panel presentation. [[Establish resident communication protocol for construction phase.]]",
+        "typical_stakeholders": "project owner/investor, project director, design team, certifier, builder, sales/marketing agent, purchasers, neighbours, council"
+      }
+    },
+
+    "apartments-btr": {
+      "functional": {
+        "template": "Deliver a {{market_segment}} Build-to-Rent (BTR) apartment development at {{address}} comprising approximately {{unit_count}} apartments designed for long-term rental. Provide a mix of {{apartment_mix}} apartments with {{nla_per_unit}}m² average NLA optimised for rental market. Include {{parking_ratio}} car parking spaces with {{ev_provision}}. Design for operational efficiency and resident amenity with: {{amenity_list}}. Prioritise durable, maintainable materials and efficient services design to minimise operating costs. [[Design to support institutional investor requirements including {{investor_requirements}}.]]",
+        "amenity_options": {
+          "standard": "concierge/reception, co-working spaces, gymnasium, bicycle storage, and parcel lockers",
+          "premium": "24-hour concierge, co-working hub, meeting rooms, gymnasium, yoga studio, rooftop terrace, pet facilities, bicycle storage with repair station, and resident app integration",
+          "luxury": "24-hour concierge and property management on-site, premium co-working and conference facilities, gymnasium with personal training, pool and wellness centre, private dining and event spaces, pet spa, car share and bicycle fleet"
+        }
+      },
+      "quality": {
+        "template": "Design for institutional investment grade with: 50+ year design life, low maintenance material selection, efficient MEP systems, and flexibility for future adaptation. All apartments to achieve ADG compliance with target of exceeding minimums. Provide consistent finish quality across all apartments (no upgrade tiers). Specify commercial-grade fixtures and fittings with focus on durability and ease of replacement. Design common areas to premium standard reflecting brand positioning."
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} Achieve {{sustainability_rating}} to meet institutional investor ESG requirements. All-electric building design mandatory. {{ev_provision}} Design for {{nabers_target}} NABERS Energy rating with commitment agreement at DA. Target {{water_rating}} NABERS Water rating. [[Achieve Climate Active carbon neutral certification.]] [[Establish operational carbon monitoring and annual reporting.]] Provide sustainability features as resident amenity including: energy monitoring dashboard, community garden, and sustainability education program.",
+        "rating_options": {
+          "green_star_5": "5-Star Green Star Buildings rating",
+          "green_star_6": "6-Star Green Star Buildings rating (World Leadership) - required for most institutional investors",
+          "net_zero": "Net zero operational carbon ready"
+        }
+      },
+      "budget": {
+        "template": "Total development cost of ${{budget}} (excluding GST and land) including: construction, professional fees, statutory costs, finance costs, and pre-leasing/marketing. Target construction cost of ${{construction_cost_per_sqm}}/m² GFA. [[Design to achieve target yield of {{target_yield}}% based on projected rental income.]] Optimise capital expenditure against whole-of-life operating costs. Maintain {{contingency:5}}% construction contingency."
+      },
+      "program": {
+        "template": "Target practical completion {{completion_date}}. Design development: {{design_months}} months. DA approval: {{da_months}} months. Documentation: {{doc_months}} months. Construction: {{construction_months}} months. Commissioning and fit-out: 2 months. Leasing to commence {{leasing_lead}} months prior to completion with target {{occupancy_target}}% occupancy at 6 months post-completion."
+      },
+      "operational": {
+        "template": "Design to support efficient property management operations including: centralised building management system, smart access control, resident app integration, remote monitoring capability, and streamlined maintenance access. Provide dedicated property management office and staff amenities. Design for high resident turnover efficiency with standardised fixtures and rapid make-good capability."
+      }
+    },
+
+    "student-housing": {
+      "functional": {
+        "template": "Deliver purpose-built student accommodation (PBSA) at {{address}} comprising approximately {{bed_count}} beds in {{room_type_mix}}. Design to support student wellbeing, academic success, and community building. Provide comprehensive amenity including: {{amenity_list}}. Design for 24/7 operation with appropriate acoustic separation, security, and management infrastructure. [[Location adjacent to {{institution}} with walking distance to campus.]]",
+        "room_types": {
+          "cluster": "cluster apartments (4-8 beds sharing kitchen/living) with private bedrooms and shared bathrooms",
+          "studio": "self-contained studio apartments with private kitchen and bathroom",
+          "mixed": "mix of cluster apartments ({{cluster_percent}}%) and studios ({{studio_percent}}%)"
+        },
+        "amenity_options": {
+          "standard": "study rooms, common room, laundry, bicycle storage, and outdoor areas",
+          "premium": "study library with bookable rooms, common lounges on each floor, cinema room, gymnasium, games room, laundry, bicycle storage, and landscaped courtyard"
+        }
+      },
+      "quality": {
+        "template": "Design for intensive use with robust, easily maintained materials and finishes. Acoustic performance critical - achieve minimum Rw 55 between beds and DnTw+Ctr 45 between apartments. Provide high-speed internet infrastructure (minimum 1Gbps to building) with WiFi throughout. Design for efficient housekeeping and maintenance access. All furniture to be commercial grade with minimum 10-year lifecycle."
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} {{sustainability_rating}} All-electric building design. Design for efficient operation with: central laundry (coin/card operated), efficient common area lighting with occupancy sensors, and water-efficient fixtures. [[Target NABERS Energy rating for multi-unit residential.]]"
+      },
+      "budget": {
+        "template": "Total development cost of ${{budget}} (excluding GST and land) equating to approximately ${{cost_per_bed}} per bed. Include FFE (furniture, fixtures, equipment) within budget. Design to achieve target yield based on projected rental income of ${{weekly_rent}} per bed per week."
+      },
+      "program": {
+        "template": "Target completion {{completion_date}} aligned with academic calendar (ideally February or July intake). Construction: {{construction_months}} months. Commissioning and FFE installation: 2 months. Pre-leasing to commence {{leasing_lead}} months prior to completion."
+      }
+    },
+
+    "townhouses": {
+      "functional": {
+        "template": "Deliver {{dwelling_count}} {{dwelling_type}} at {{address}} comprising {{dwelling_mix}}. Each dwelling to provide {{typical_accommodation}}. Include {{parking_provision}} with {{ev_provision}}. Design for privacy between dwellings while creating attractive streetscape and sense of community. [[Suitable for approval under {{planning_pathway}}.]]",
+        "dwelling_types": {
+          "terrace": "attached terrace houses with individual street frontage",
+          "townhouse": "multi-level townhouses",
+          "dual_occ": "dual occupancy dwellings",
+          "manor_house": "manor house style (2-3 attached dwellings appearing as single building)"
+        }
+      },
+      "quality": {
+        "template": "Achieve {{quality_level}} specification throughout. Design for family living with durable, low-maintenance materials. Each dwelling to be individually metered for all services. Common property (if any) to be designed for minimal body corporate requirements. Engage licensed builder with proven track record in medium-density residential construction."
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} Design each dwelling as all-electric with: heat pump hot water, reverse cycle air conditioning, and induction cooktop. Provide solar PV system (minimum {{solar_capacity:5}}kW) to each dwelling or shared system with fair allocation. {{ev_provision}} [[Target {{nathers_rating:8}}-star NatHERS rating, exceeding NCC 2022 minimum.]] [[Incorporate rainwater harvesting for landscape irrigation.]]",
+        "ncc_compliance": "Achieve minimum NCC 2022 energy efficiency provisions (7-star NatHERS thermal shell + Whole of Home assessment) for each dwelling.",
+        "ev_options": {
+          "ready": "Provide EV-ready infrastructure to each garage with dedicated circuit and conduit.",
+          "installed": "Install Level 2 EV charger to each dwelling."
+        }
+      },
+      "livable_housing": {
+        "template": "{{livable_level}} Design ground floor of each dwelling for accessibility with: step-free entry (or ramp provision), accessible bathroom, and clear circulation paths.",
+        "livable_options": {
+          "silver": "Achieve Livable Housing Design Guidelines Silver level (NCC 2022 mandatory minimum) for all dwellings.",
+          "gold": "Achieve Livable Housing Design Guidelines Gold level for all dwellings.",
+          "mixed": "Achieve Gold level for {{gold_percentage:50}}% of dwellings, Silver for remainder."
+        }
+      },
+      "budget": {
+        "template": "Total project budget of ${{budget}} (excluding GST and land) including: construction, professional fees, authority costs, and contingency. Target construction cost of ${{cost_per_sqm}}/m² GFA or ${{cost_per_dwelling}} per dwelling. Maintain {{contingency:5}}% contingency. All costs subject to {{escalation:3.5}}% annual escalation."
+      },
+      "program": {
+        "template": "Target completion within {{total_months}} months. Design: {{design_months}} months. Approval ({{planning_pathway}}): {{approval_months}} months. Documentation: {{doc_months}} months. Construction: {{construction_months}} months. Settlement: 2 months.",
+        "planning_pathways": {
+          "cdc": "CDC - approximately 1 month",
+          "low_rise_reform": "Low-Rise Housing Code - approximately 2 months",
+          "standard_da": "Standard DA - approximately 6 months",
+          "complex_da": "Complex DA - approximately 10 months"
+        }
+      }
+    },
+
+    "retirement-living": {
+      "functional": {
+        "template": "Deliver a {{facility_type}} at {{address}} comprising {{unit_count}} {{unit_type}}. Design for ageing residents with focus on safety, accessibility, community, and independent living. Provide comprehensive community amenities including: {{amenity_list}}. Design for future care needs with provision for {{care_provisions}}. [[Design to comply with Retirement Villages Act requirements.]] [[Design to NDIS Specialist Disability Accommodation (SDA) requirements where applicable.]]",
+        "facility_types": {
+          "ilu_village": "Independent Living Unit (ILU) retirement village",
+          "serviced_apartments": "serviced apartment retirement community",
+          "vertical": "vertical retirement living (apartment style)",
+          "mixed_care": "integrated retirement community with ILU and aged care components",
+          "sda": "Specialist Disability Accommodation (SDA) housing"
+        },
+        "amenity_options": {
+          "standard": "community centre/clubhouse, bowling green or similar, community garden, and guest parking",
+          "premium": "community centre with multiple function rooms, indoor pool/hydrotherapy, gymnasium, library, workshop, hairdresser, and medical consulting rooms",
+          "integrated": "all premium amenities plus aged care facility with dementia unit, allied health services, and 24-hour care capability"
+        }
+      },
+      "quality": {
+        "template": "Design for safety and ease of use with: non-slip surfaces, contrast edging, excellent lighting, clear wayfinding, and minimal level changes. All units to include emergency call system. Services to be easily accessible for maintenance. Acoustic separation to support rest and privacy. HVAC systems to maintain comfortable temperatures for elderly residents year-round."
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} Design all-electric with efficient heating/cooling systems appropriate for elderly comfort needs. Provide excellent thermal envelope to maintain stable temperatures with minimal energy use. Include solar PV system with battery storage for common areas. [[Target {{sustainability_rating}} for marketing differentiation and operating cost reduction.]]"
+      },
+      "accessibility": {
+        "template": "{{accessibility_level}} All common areas to achieve full DDA compliance. Design for residents using mobility aids including: wide corridors (1500mm minimum), accessible bathrooms with hobless showers, lever door handles, and accessible kitchen designs. [[Provide {{sda_percentage}}% of units as NDIS SDA compliant.]]",
+        "accessibility_options": {
+          "silver": "Achieve Livable Housing Design Guidelines Silver level (NCC 2022 mandatory minimum) for all units.",
+          "gold": "Achieve Livable Housing Design Guidelines Gold level for all units - recommended for retirement living.",
+          "platinum": "Achieve Livable Housing Design Guidelines Platinum level for {{platinum_percentage}}% of units, Gold for remainder.",
+          "sda": "Achieve NDIS SDA Design Standard for {{sda_category}} category."
+        }
+      },
+      "budget": {
+        "template": "Total project budget of ${{budget}} (excluding GST and land) including: construction, professional fees, authority costs, fit-out of common areas, and contingency. Target construction cost of ${{cost_per_unit}} per ILU or ${{cost_per_sqm}}/m² GFA. Include FFE for common areas within budget."
+      },
+      "program": {
+        "template": "Target completion {{completion_date}}. Design and approvals: {{design_months}} months. Construction: {{construction_months}} months. Commissioning and fit-out: 2 months. Staged handover to operator/residents over 3 months."
+      }
+    },
+
+    "office": {
+      "functional": {
+        "template": "Deliver a {{building_grade}} commercial office building at {{address}} with {{nla}}m² NLA across {{floors}} floors. Design for maximum lettable efficiency (target {{efficiency:85}}% NLA:GFA). Provide flexible floor plates suitable for single or multiple tenants. Include end-of-trip facilities for {{cyclist_capacity}} cyclists. Ground floor to include {{ground_floor_uses}}. [[Design to support {{tenant_type}} tenant requirements.]] [[Design within TOD precinct guidelines where applicable.]]",
+        "ground_floor_options": {
+          "standard": "commercial lobby, retail/café tenancy, and back-of-house",
+          "premium": "premium lobby with concierge, retail tenancies, and activated streetscape",
+          "campus": "community uses, childcare, and activated ground plane"
+        }
+      },
+      "quality": {
+        "template": "Achieve {{building_grade}} specification throughout with: {{ceiling_height}}m floor-to-ceiling heights, premium lift performance (target {{lift_interval:25}} second intervals), flexible services distribution, and high-quality common area finishes. Design for 50+ year design life with robust, maintainable materials. Façade to achieve minimum NCC 2022 Section J thermal performance with high-performance glazing. [[Achieve {{target_pca}} PCA quality grade.]]"
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} Achieve {{nabers_target}}-star NABERS Energy Commitment Agreement rating at DA with contractual commitment to verify post-occupancy. {{green_star_target}} [[Achieve {{well_target}}.]] Design all-electric with no on-site fossil fuel combustion. {{ev_provision}} [[Target net zero operational carbon through: high-efficiency systems, on-site solar PV, and (if required) verified renewable energy procurement.]] [[Target {{embodied_carbon}} reduction in embodied carbon through low-carbon concrete, recycled steel, and mass timber elements.]] Facilitate tenant sustainability through: sub-metering, waste management infrastructure, and bicycle facilities.",
+        "nabers_options": {
+          "5_star": "5-star NABERS Energy (market expectation for A-grade)",
+          "5_5_star": "5.5-star NABERS Energy (government tenant requirement)",
+          "6_star": "6-star NABERS Energy (market leading)"
+        },
+        "green_star_options": {
+          "5_star": "Target 5-Star Green Star Buildings rating.",
+          "6_star": "Target 6-Star Green Star Buildings rating (World Leadership)."
+        },
+        "well_options": {
+          "silver": "Achieve WELL Silver certification for base building.",
+          "gold": "Achieve WELL Gold certification for base building.",
+          "platinum": "Achieve WELL Platinum certification for base building."
+        }
+      },
+      "budget": {
+        "template": "Total project budget of ${{budget}} (excluding GST, land, tenant fitout, and finance costs). Target base building construction cost of ${{construction_cost_per_sqm}}/m² GFA. Budget to include: shell and core, base building services, lift installation, façade, landscaping, and common area finishes. Exclude tenant fitout (landlord contribution of ${{fitout_contribution}}/m² to be negotiated). Maintain {{contingency:5}}% construction contingency. All costs subject to {{escalation:3.5}}% annual escalation."
+      },
+      "program": {
+        "template": "Target practical completion {{completion_date}}. Design: {{design_months}} months. DA approval: {{da_months}} months. Documentation and CC: {{doc_months}} months. Construction: {{construction_months}} months. Base building commissioning: 2 months. Allow {{fitout_months}} months for tenant fitout following base building completion.",
+        "parallel_activities": "Pre-leasing to commence from DA lodgement. Tenant fitout design to commence during construction."
+      },
+      "digital": {
+        "template": "Develop federated BIM model to LOD {{lod_level:350}} with ongoing coordination throughout design. Implement digital engineering including: automated clash detection, 4D construction sequencing, and 5D cost integration. Provide digital handover including: as-built BIM model (LOD 500), COBie data export, and BMS integration documentation. [[Establish digital twin for ongoing facility management.]]"
+      },
+      "post_occupancy": {
+        "template": "Commission independent NABERS rating within 12 months of practical completion. Conduct post-occupancy evaluation at 12 months including: energy/water performance, indoor environment quality, and occupant satisfaction survey. Provide building tuning services for 12 months post-completion. [[Complete Green Star As-Built submission within 12 months of completion.]]"
+      }
+    },
+
+    "retail": {
+      "functional": {
+        "template": "Deliver {{retail_type}} at {{address}} with {{gla}}m² GLA. {{retail_specific}} Design for efficient retail operations with appropriate servicing, back-of-house, and customer amenity. [[Design for {{anchor_tenant}} as anchor tenant with {{specialty_count}} specialty tenancies.]]",
+        "retail_specifics": {
+          "strip": "Design for activated street frontage with individual tenancies and cohesive streetscape presentation.",
+          "centre": "Design efficient retail layout with strong anchor tenant positioning, logical customer flow, and clear wayfinding.",
+          "showroom": "Design for large-format retail with high visibility, easy customer access, and efficient loading.",
+          "food": "Design for food and beverage precinct with shared seating, efficient waste management, and appropriate exhaust/ventilation systems."
+        }
+      },
+      "quality": {
+        "template": "Achieve {{fitout_scope}} standard. Common areas and mall finishes to be {{quality_level}} quality with durable, easily maintained materials. Design for high foot traffic with appropriate floor finishes and robust fixtures. Provide flexible tenancy infrastructure to support diverse retail uses."
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} [[Target {{green_star_rating}}-Star Green Star rating.]] Design for efficient retail operations including: LED lighting throughout, efficient HVAC zoning, and waste management infrastructure supporting tenant recycling. [[Provide EV charging to {{ev_percentage}}% of customer parking.]]"
+      },
+      "budget": {
+        "template": "Total project budget of ${{budget}} (excluding GST and land) for {{fitout_scope}} works. Target construction cost of ${{cost_per_sqm}}/m² GLA. [[Tenant contributions of ${{tenant_contribution}}/m² to offset fitout costs.]]"
+      },
+      "program": {
+        "template": "Target completion {{completion_date}}. Design and approvals: {{design_months}} months. Construction: {{construction_months}} months. Tenant fitout period: {{fitout_months}} months. Grand opening: aligned with {{opening_timing}}."
+      }
+    },
+
+    "industrial": {
+      "functional": {
+        "template": "Deliver a {{facility_type}} facility at {{address}} with {{gfa}}m² GFA. Provide {{clear_height}}m minimum clear height to underside of structure. {{dock_requirements}} Include {{office_percentage}}% office/amenities component ({{office_area}}m²). {{special_requirements_text}} Design for heavy vehicle access with {{hardstand}}m² hardstand area and {{truck_dock_count}} truck docks. [[Design for {{tenant_type}} tenant operations.]] [[Design for potential future subdivision/strata.]]"
+      },
+      "quality": {
+        "template": "Steel portal frame construction with {{wall_type}}. Insulated roof sheeting with {{skylight_percentage:5}}% translucent panels for natural light. Industrial-grade concrete floor with {{floor_loading}} load rating and {{floor_flatness}} flatness specification. {{fire_requirements}} All services to comply with relevant Australian Standards for {{facility_type}} facilities. Design for 40+ year design life with minimal maintenance requirements."
+      },
+      "sustainability": {
+        "template": "{{ncc_compliance}} [[Target {{green_star_rating}}-Star Green Star Buildings rating.]] Design for efficient operations including: high-efficiency LED lighting with daylight dimming, efficient HVAC to office component, and rainwater harvesting for landscape/wash-down. Provide large-scale rooftop solar PV system ({{solar_capacity}}kW) with export capability. {{ev_provision}} [[Design for net zero operational carbon through solar and high-efficiency systems.]] [[Target {{embodied_carbon}}% reduction in embodied carbon through recycled content steel and low-carbon concrete.]]",
+        "ev_options": {
+          "ready": "Provide EV-ready infrastructure to {{ev_percentage}}% of car parking with provision for future chargers.",
+          "installed": "Install EV chargers to {{ev_charger_count}} car parking spaces.",
+          "fleet": "Install DC fast chargers for electric fleet vehicle charging."
+        }
+      },
+      "budget": {
+        "template": "Total project budget of ${{budget}} (excluding GST and land). Target construction cost of ${{cost_per_sqm}}/m² for warehouse component and ${{office_cost_per_sqm}}/m² for office component. Include site works, services connections, and landscaping. Maintain {{contingency:5}}% contingency. All costs subject to {{escalation:3.5}}% annual escalation."
+      },
+      "program": {
+        "template": "Target completion within {{total_months}} months. Design and approvals: {{approval_months}} months. Construction: {{construction_months}} months. Commissioning and handover: 1 month. [[Consider {{construction_method}} construction to accelerate program.]]",
+        "construction_methods": {
+          "traditional": "traditional steel frame construction",
+          "precast": "precast concrete tilt-up construction",
+          "modular": "modular/off-site construction"
+        }
+      }
+    },
+
+    "fitout": {
+      "functional": {
+        "template": "Deliver a {{fitout_level}} {{fitout_type}} fitout at {{address}} for {{tenant_name}} with {{nla}}m² NLA. {{fitout_specific}} {{workpoint_requirements}} Include {{amenity_requirements}}. Design to reflect tenant brand and culture while maximising flexibility for future changes. [[Design to support {{work_style}} working arrangements.]]",
+        "fitout_specifics": {
+          "office": "Create a contemporary workplace supporting activity-based working with mix of focus, collaboration, and social spaces.",
+          "retail": "Create an engaging retail environment that maximises product display, customer flow, and brand experience.",
+          "hospitality": "Create a distinctive dining/entertainment experience with efficient back-of-house operations and compliance with food safety requirements.",
+          "medical": "Create a compliant healthcare environment with appropriate infection control, patient flow, and clinical functionality.",
+          "coworking": "Create flexible, vibrant co-working environment with variety of work settings and strong community spaces."
+        },
+        "work_style_options": {
+          "office_based": "primarily office-based work",
+          "hybrid": "hybrid working with reduced desk-to-staff ratio",
+          "agile": "fully agile/activity-based working"
+        }
+      },
+      "quality": {
+        "template": "All works to comply with base building requirements and NCC/BCA requirements. {{quality_spec}} Minimise disruption to adjacent tenants through appropriate noise, dust, and vibration control measures. All materials to have appropriate fire ratings, low VOC emissions, and sustainability credentials. Ensure base building systems integration (BMS, security, fire) is coordinated and compliant."
+      },
+      "sustainability": {
+        "template": "[[Target {{green_star_interiors}} Green Star Interiors rating.]] [[Target {{well_level}} WELL certification.]] Specify sustainable materials throughout including: FSC-certified timber, low VOC finishes, recycled content carpet, and PVC-free products where practical. Design for energy efficiency with: LED lighting, occupancy sensors, and efficient supplementary HVAC. [[Include end-of-trip facilities for {{cyclist_count}} cyclists.]] Design for waste minimisation during construction and operation."
+      },
+      "budget": {
+        "template": "Total fitout budget of ${{budget}} (excluding GST) equating to ${{cost_per_sqm}}/m² NLA. {{inclusions}} Landlord contribution of ${{contribution}}/m² (if applicable). Maintain {{contingency:7.5}}% contingency for unforeseen conditions. All costs subject to {{escalation:3.5}}% annual escalation.",
+        "inclusion_options": {
+          "basic": "Budget includes construction works only. Furniture, AV, and ICT excluded.",
+          "standard": "Budget includes construction works and furniture (workstations, task chairs, meeting tables). AV and ICT excluded.",
+          "turnkey": "Budget includes construction works, furniture, AV systems, and ICT infrastructure. Move management excluded."
+        }
+      },
+      "program": {
+        "template": "Target occupation {{completion_date}}. Design and documentation: {{design_weeks}} weeks. Approvals and procurement: {{procurement_weeks}} weeks. Construction: {{construction_weeks}} weeks. Defects and snagging: 2 weeks. FFE installation and move: {{move_weeks}} weeks. Maintain access to premises {{access_hours}}.",
+        "access_options": {
+          "normal": "during normal business hours (with weekend/after-hours for noisy works)",
+          "after_hours": "after hours only due to occupied building constraints",
+          "24_7": "24/7 access during construction phase"
+        }
+      }
+    },
+
+    "refurbishment": {
+      "functional": {
+        "template": "Complete {{refurb_scope_text}} refurbishment of the existing {{building_type}} building at {{address}}. {{scope_specific}} Upgrade building to current {{target_grade}} market standards while {{occupancy_constraint}}. [[Improve NABERS rating from current {{current_nabers}} to target {{target_nabers}}.]] [[Address identified compliance gaps including {{compliance_gaps}}.]]",
+        "scope_specifics": {
+          "facade": "Replace/overclad existing façade system with high-performance system. Improve thermal performance to NCC 2022 requirements. Address any weatherproofing or structural issues. Improve building appearance and market positioning.",
+          "services": "Replace end-of-life HVAC plant with modern high-efficiency systems. Upgrade electrical distribution to current standards. Install LED lighting throughout with smart controls. Upgrade BMS for improved monitoring and efficiency.",
+          "lobby": "Transform lobby arrival experience with contemporary finishes, improved wayfinding, enhanced security, and upgraded vertical transport lobbies.",
+          "amenities": "Install premium end-of-trip facilities including: secure bike storage for {{bike_count}} bikes, showers, lockers, and repair station. Include wellness amenities.",
+          "compliance": "Address all identified BCA and DDA compliance gaps. Install compliant egress paths, accessible facilities, and fire safety upgrades.",
+          "sustainability": "Comprehensive sustainability upgrade including: HVAC efficiency, lighting upgrade, façade thermal performance, solar PV installation, and electrification of gas systems."
+        }
+      },
+      "quality": {
+        "template": "All works to integrate seamlessly with retained building elements. New materials and systems to be equal to or better than current {{target_grade}} standards. Maintain building operations throughout works with minimal disruption to tenants (maximum {{disruption_hours}} hours notice for planned disruptions). Implement strict quality control given integration with existing structure."
+      },
+      "sustainability": {
+        "template": "[[Improve NABERS Energy rating from {{current_nabers}} to {{target_nabers}} stars.]] [[Achieve {{green_star_performance}} Green Star Performance rating post-works.]] Specify high-efficiency systems and sustainable materials throughout. [[Electrify gas systems where practical to support net zero pathway.]] [[Install rooftop solar PV system ({{solar_capacity}}kW) subject to structural capacity.]] Design works to maximise operational efficiency improvements and minimise waste."
+      },
+      "budget": {
+        "template": "Total refurbishment budget of ${{budget}} (excluding GST). {{scope_breakdown}} Include allowance for unforeseen conditions typical of refurbishment works. Maintain {{contingency:10}}% contingency ({{contingency:15}}% for heritage buildings). All costs subject to {{escalation:3.5}}% annual escalation."
+      },
+      "program": {
+        "template": "Target completion within {{total_months}} months. Investigation and design: {{design_months}} months. Approvals: {{approval_months}} months. Procurement: {{procurement_months}} months. Construction: {{construction_months}} months ({{occupancy_approach}}). Commissioning: 1 month. Defects: 2 months.",
+        "occupancy_approaches": {
+          "vacant": "building vacant - full access",
+          "partial": "partially occupied - staged works",
+          "occupied": "fully occupied - after-hours and staged works"
+        }
+      },
+      "heritage": {
+        "template": "[[All works to comply with {{heritage_listing}} heritage requirements and approved Heritage Impact Statement.]] [[Engage heritage consultant throughout design and construction.]] [[Obtain all required heritage approvals prior to works commencement.]] [[Document existing conditions and heritage fabric prior to works.]]"
+      },
+      "risk": {
+        "template": "Key refurbishment risks include: unforeseen structural conditions, hazardous materials discovery (asbestos, lead, PCBs), tenant disruption claims, weather impacts to exposed building, and integration challenges with existing systems. Maintain comprehensive risk register with mitigation strategies. Conduct thorough investigation prior to works to minimise discovery risk."
+      }
+    },
+
+    "remediation": {
+      "functional": {
+        "template": "Complete remediation of {{remediation_types}} at {{address}} to achieve site suitability for {{end_use}} use ({{sensitivity_level}}). {{site_classification_action}} All remediation to be completed in accordance with approved Remediation Action Plan (RAP) and relevant EPA/NEPM guidelines. Achieve Site Audit Statement (if required) confirming site suitable for intended use without ongoing management (or with documented management requirements).",
+        "classification_actions": {
+          "unknown": "Commission Phase 1 (Preliminary Site Investigation) and Phase 2 (Detailed Site Investigation) to characterise contamination extent, pathways, and receptors. Develop remediation strategy based on findings.",
+          "low": "Implement remediation strategy as per approved RAP with validation sampling program to confirm remediation objectives achieved.",
+          "medium": "Engage NSW EPA-accredited Site Auditor. Implement remediation with comprehensive validation sampling program. Achieve Site Audit Statement - Statement A.",
+          "high": "Notify EPA and engage accredited Site Auditor from project commencement. Implement comprehensive remediation program with extensive validation. Achieve Site Audit Statement confirming suitability for use.",
+          "pfas": "Engage specialist PFAS consultant and accredited Site Auditor. Implement remediation in accordance with PFAS NEMP 2.0 guidelines. Note: PFAS remediation may require ongoing management plan."
+        }
+      },
+      "quality": {
+        "template": "All contaminated material to be transported by EPA-licensed transporters and disposed of at EPA-licensed facilities with full chain of custody documentation. Validation sampling to be conducted by NATA-accredited laboratory to appropriate LORs. Site Audit Statement (if required) to be issued by NSW EPA-accredited Site Auditor. Maintain comprehensive records including: daily logs, sampling data, disposal records, and validation results for future disclosure requirements. [[All works to comply with SafeWork NSW requirements for contaminated sites.]]"
+      },
+      "sustainability": {
+        "template": "Minimise environmental impact of remediation through: on-site treatment where practical (reducing transport emissions), beneficial reuse of treated material, and responsible disposal of untreatable material. [[Consider in-situ treatment technologies to reduce excavation and transport.]] [[Implement dust, noise, and odour controls to protect neighbours and workers.]]"
+      },
+      "budget": {
+        "template": "Total remediation budget of ${{budget}} (excluding GST). Include: investigation (${{investigation_budget}}), RAP preparation (${{rap_budget}}), remediation works (${{works_budget}}), validation (${{validation_budget}}), and Site Audit (${{audit_budget}}). Maintain {{contingency:20}}% contingency given potential for unforeseen contamination extent or complexity. Budget excludes: costs associated with EPA-imposed requirements beyond current scope, third-party claims, and ongoing management (if required)."
+      },
+      "program": {
+        "template": "Target Site Audit Statement (or validation report) within {{total_months}} months. Phase 1/2 assessment: {{assessment_months}} months. RAP preparation and approval: {{rap_months}} months. Procurement: 1 month. Remediation works: {{remediation_months}} months. Validation: {{validation_months}} months. Site Audit (if required): {{audit_months}} months. [[Note: Groundwater remediation or PFAS contamination may extend program significantly.]]"
+      },
+      "risk": {
+        "template": "Key remediation risks include: contamination extent greater than anticipated, additional contaminants discovered (particularly PFAS), groundwater complexity, disposal facility capacity constraints, weather delays, and regulatory changes. Maintain comprehensive risk register. Allow appropriate contingency. Consider phased remediation if risk profile is high. [[Maintain regular communication with EPA/regulator throughout works.]]"
+      },
+      "stakeholder": {
+        "template": "Key stakeholders include: {{stakeholder_list}}. Maintain notification to relevant authorities (EPA, Council) as required. Implement community consultation plan for sensitive sites including: notification of works commencement, contact details for complaints, and regular progress updates. [[Coordinate with future development team to integrate remediation with construction program where possible.]]"
+      }
+    }
+  }
+}

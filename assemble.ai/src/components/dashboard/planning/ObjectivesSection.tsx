@@ -218,7 +218,7 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
 
     return (
         <div
-            className="bg-[#252526] rounded-lg p-6 border border-[#3e3e42] relative"
+            className="bg-[var(--color-bg-primary)] rounded-lg p-6 border border-[var(--color-border)] relative"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -227,29 +227,29 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
         >
             {/* Extraction Progress Overlay */}
             {isExtracting && (
-                <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
-                    <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-6 flex flex-col items-center gap-3">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0e639c]"></div>
-                        <p className="text-[#cccccc] font-semibold">Extracting objectives...</p>
-                        <p className="text-xs text-[#858585]">This may take a few moments</p>
+                <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 rounded-lg flex items-center justify-center">
+                    <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
+                        <p className="text-[var(--color-text-primary)] font-semibold">Extracting objectives...</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
                     </div>
                 </div>
             )}
 
             {/* Drag & Drop Overlay */}
             {isDragging && !isExtracting && (
-                <div className="absolute inset-0 z-50 bg-[#0e639c]/20 border-2 border-dashed border-[#0e639c] rounded-lg flex items-center justify-center">
-                    <div className="bg-[#1e1e1e] border border-[#0e639c] rounded-lg p-6 flex flex-col items-center gap-3">
-                        <Upload className="w-10 h-10 text-[#0e639c]" />
-                        <p className="text-[#cccccc] font-semibold">Drop to extract objectives</p>
-                        <p className="text-xs text-[#858585]">PDF, Word, Image, or Text</p>
+                <div className="absolute inset-0 z-50 bg-[var(--color-accent-green)]/20 border-2 border-dashed border-[var(--color-accent-green)] rounded-lg flex items-center justify-center">
+                    <div className="bg-[var(--color-bg-primary)] border border-[var(--color-accent-green)] rounded-lg p-6 flex flex-col items-center gap-3">
+                        <Upload className="w-10 h-10 text-[var(--color-accent-green)]" />
+                        <p className="text-[var(--color-text-primary)] font-semibold">Drop to extract objectives</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">PDF, Word, Image, or Text</p>
                     </div>
                 </div>
             )}
 
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-[#cccccc]">Objectives</h3>
-                <Upload className="w-5 h-5 text-[#858585]" />
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Objectives</h3>
+                <Upload className="w-5 h-5 text-[var(--color-text-muted)]" />
             </div>
             <div className="space-y-4">
                 <InlineEditField

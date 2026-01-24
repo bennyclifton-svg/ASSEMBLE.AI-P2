@@ -12,6 +12,7 @@
 import { useState, useCallback } from 'react';
 import { useRftNew } from '@/lib/hooks/use-rft-new';
 import { useRftNewTransmittal } from '@/lib/hooks/use-rft-new-transmittal';
+import { useRFTSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { RFTNewShortTab } from './RFTNewShortTab';
 import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
 import { FileText, Save, RotateCcw, Download } from 'lucide-react';
@@ -19,15 +20,15 @@ import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Highlight blue color for icons and buttons
-const HIGHLIGHT_BLUE = '#4fc1ff';
+// Procurement section accent color (copper from design system)
+const SECTION_ACCENT = 'var(--color-accent-copper)'; // Copper for icons (better contrast)
+const SECTION_TINT = 'var(--color-accent-copper-tint)';
+const SECTION_TEXT = 'var(--color-accent-copper)'; // Copper text for better contrast on dark bg
 
 interface RFTNewSectionProps {
     projectId: string;
-    disciplineId?: string;
-    disciplineName?: string;
-    tradeId?: string;
-    tradeName?: string;
+    stakeholderId?: string;
+    stakeholderName?: string;
     selectedDocumentIds?: string[];
     onLoadTransmittal?: (documentIds: string[]) => void;
     onSaveTransmittal?: () => string[];
@@ -35,28 +36,26 @@ interface RFTNewSectionProps {
 
 export function RFTNewSection({
     projectId,
-    disciplineId,
-    tradeId,
-    disciplineName,
-    tradeName,
+    stakeholderId,
+    stakeholderName,
     selectedDocumentIds = [],
     onLoadTransmittal,
     onSaveTransmittal,
 }: RFTNewSectionProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
-    const [activeTab, setActiveTab] = useState<'short' | 'long'>('short');
 
-    // Get or create the RFT NEW for this discipline/trade
+    // Use context for expanded state persistence across tab navigation
+    const { isExpanded, activeTab, setExpanded: setIsExpanded, setActiveTab } = useRFTSectionUI(stakeholderId);
+
+    // Get or create the RFT NEW for this stakeholder
     const {
         rftNew,
         isLoading,
         updateRftDate,
     } = useRftNew({
         projectId,
-        disciplineId,
-        tradeId,
+        stakeholderId,
     });
 
     // Get transmittal for the RFT NEW
@@ -99,7 +98,7 @@ export function RFTNewSection({
 
             const blob = await response.blob();
             const contentDisposition = response.headers.get('Content-Disposition');
-            const contextName = disciplineName || tradeName || 'RFT';
+            const contextName = stakeholderName || 'RFT';
             let filename = `${contextName}_Transmittal.zip`;
             if (contentDisposition) {
                 const match = contentDisposition.match(/filename="(.+)"/);
@@ -119,7 +118,7 @@ export function RFTNewSection({
         } finally {
             setIsDownloading(false);
         }
-    }, [rftNew, disciplineName, tradeName]);
+    }, [rftNew, stakeholderName]);
 
     const handleExport = useCallback(async (format: 'pdf' | 'docx') => {
         if (!rftNew) return;
@@ -179,12 +178,12 @@ export function RFTNewSection({
         }
     };
 
-    const contextName = disciplineName || tradeName || 'Unknown';
+    const contextName = stakeholderName || 'Unknown';
 
     // Solid triangle icons - matching Firm Cards style
     const TriangleRight = () => (
         <svg
-            className="w-3.5 h-3.5 text-[#858585]"
+            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
             viewBox="0 0 12 12"
             fill="currentColor"
         >
@@ -194,7 +193,7 @@ export function RFTNewSection({
 
     const TriangleDown = () => (
         <svg
-            className="w-3.5 h-3.5 text-[#858585]"
+            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
             viewBox="0 0 12 12"
             fill="currentColor"
         >
@@ -203,15 +202,15 @@ export function RFTNewSection({
     );
 
     return (
-        <div className="mt-6 border border-[#3e3e42] rounded-lg overflow-hidden">
+        <div className="mt-6 border border-[var(--color-border)] rounded-lg overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#2d2d30] border-b border-[#3e3e42]">
+            <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="flex items-center gap-2 hover:opacity-80 transition-opacity"
                 >
-                    <FileText className="w-4 h-4" style={{ color: HIGHLIGHT_BLUE }} />
-                    <span className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                    <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
+                    <span className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         RFT
                     </span>
                     {isExpanded ? <TriangleDown /> : <TriangleRight />}
@@ -222,10 +221,10 @@ export function RFTNewSection({
                         size="sm"
                         onClick={handleSaveTransmittal}
                         disabled={!rftNew || selectedDocumentIds.length === 0}
-                        className="h-7 px-2 text-xs"
+                        className="h-7 px-2 text-xs font-medium"
                         style={{
-                            backgroundColor: `rgba(79, 193, 255, 0.2)`,
-                            color: HIGHLIGHT_BLUE,
+                            backgroundColor: SECTION_TINT,
+                            color: SECTION_TEXT,
                         }}
                     >
                         <Save className="w-3 h-3 mr-1" />
@@ -236,10 +235,10 @@ export function RFTNewSection({
                         size="sm"
                         onClick={handleLoadTransmittal}
                         disabled={!rftNew || !hasTransmittal}
-                        className="h-7 px-2 text-xs"
+                        className="h-7 px-2 text-xs font-medium"
                         style={{
-                            backgroundColor: `rgba(79, 193, 255, 0.2)`,
-                            color: HIGHLIGHT_BLUE,
+                            backgroundColor: SECTION_TINT,
+                            color: SECTION_TEXT,
                         }}
                     >
                         <RotateCcw className="w-3 h-3 mr-1" />
@@ -250,10 +249,10 @@ export function RFTNewSection({
                         size="sm"
                         onClick={handleDownloadTransmittal}
                         disabled={!rftNew || !hasTransmittal || isDownloading}
-                        className="h-7 px-2 text-xs"
+                        className="h-7 px-2 text-xs font-medium"
                         style={{
-                            backgroundColor: `rgba(79, 193, 255, 0.2)`,
-                            color: HIGHLIGHT_BLUE,
+                            backgroundColor: SECTION_TINT,
+                            color: SECTION_TEXT,
                         }}
                     >
                         <Download className="w-3 h-3 mr-1" />
@@ -263,15 +262,15 @@ export function RFTNewSection({
             </div>
 
             {/* Content Area */}
-            <div className="bg-[#252526]">
+            <div className="bg-[var(--color-bg-secondary)]">
                 {/* Tabs and Export Actions Row */}
-                <div className="flex items-center justify-between px-4 pt-2 border-b border-[#3e3e42]">
+                <div className="flex items-center justify-between px-4 pt-2 border-b border-[var(--color-border)]">
                     {/* SHORT/LONG Tabs - Custom consistency with AddendumTabs */}
                     <div className="flex items-center">
                         <div
                             className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'short'
-                                ? 'text-[#cccccc] border-b-[3px] border-[#0e639c] -mb-px'
-                                : 'text-[#858585] hover:text-[#cccccc]'
+                                ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                                 }`}
                             onClick={() => handleTabClick('short')}
                         >
@@ -279,8 +278,8 @@ export function RFTNewSection({
                         </div>
                         <div
                             className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'long'
-                                ? 'text-[#cccccc] border-b-[3px] border-[#0e639c] -mb-px'
-                                : 'text-[#858585] hover:text-[#cccccc]'
+                                ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                                 }`}
                             onClick={() => handleTabClick('long')}
                         >
@@ -295,7 +294,7 @@ export function RFTNewSection({
                             size="sm"
                             onClick={() => handleExport('pdf')}
                             disabled={!rftNew || isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export PDF"
                         >
                             <PdfIcon size={22} />
@@ -305,7 +304,7 @@ export function RFTNewSection({
                             size="sm"
                             onClick={() => handleExport('docx')}
                             disabled={!rftNew || isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[#3e3e42]"
+                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export Word"
                         >
                             <DocxIcon size={22} />
@@ -315,29 +314,27 @@ export function RFTNewSection({
 
                 {/* Tab Content - only shown when expanded */}
                 {isExpanded && (
-                    <div className="p-4 bg-[#1e1e1e]">
+                    <div className="p-4 bg-[var(--color-bg-primary)]">
                         {activeTab === 'short' ? (
                             isLoading ? (
-                                <div className="p-8 text-center text-[#858585]">
+                                <div className="p-8 text-center text-[var(--color-text-muted)]">
                                     <p>Loading RFT...</p>
                                 </div>
                             ) : rftNew ? (
                                 <RFTNewShortTab
                                     projectId={projectId}
                                     rftNew={rftNew}
-                                    disciplineId={disciplineId}
-                                    tradeId={tradeId}
+                                    stakeholderId={stakeholderId}
                                     contextName={contextName}
-                                    contextType={disciplineId ? 'discipline' : 'trade'}
                                     onDateChange={updateRftDate}
                                 />
                             ) : (
-                                <div className="p-8 text-center text-[#858585]">
+                                <div className="p-8 text-center text-[var(--color-text-muted)]">
                                     <p>Unable to load RFT</p>
                                 </div>
                             )
                         ) : (
-                            <div className="p-8 text-center text-[#858585]">
+                            <div className="p-8 text-center text-[var(--color-text-muted)]">
                                 <p>LONG tab content coming in future release</p>
                             </div>
                         )}

@@ -85,13 +85,13 @@ export function TRREditableSection({
     return (
         <div className="space-y-2">
             <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-[#cccccc] uppercase tracking-wide">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     {title}
                 </h3>
                 {canGenerateAI && (
                     <AIGenerateIcon
                         size={14}
-                        className="text-[#4fc1ff] hover:text-[#6fd1ff]"
+                        className="text-[var(--color-accent-copper)] hover:text-[#6fd1ff]"
                         onClick={handleGenerate}
                         isLoading={isGenerating}
                         disabled={isGenerating}
@@ -99,17 +99,17 @@ export function TRREditableSection({
                     />
                 )}
                 {isGenerating && (
-                    <span className="text-xs text-[#4fc1ff]">Generating...</span>
+                    <span className="text-xs text-[var(--color-accent-copper)]">Generating...</span>
                 )}
             </div>
-            <div className="border border-[#3e3e42] rounded overflow-hidden">
+            <div className="border border-[var(--color-border)] rounded overflow-hidden">
                 <Textarea
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
                     onBlur={onBlur}
                     placeholder={placeholder}
                     disabled={isGenerating}
-                    className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[#1a1a1a] text-[#cccccc] resize-y min-h-[120px] p-4 border-l-2 border-l-[#4fc1ff]/30 hover:border-l-[#4fc1ff] hover:bg-[#1e1e1e] transition-colors cursor-text disabled:opacity-70"
+                    className="w-full border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[120px] p-4 border-l-2 border-l-[var(--color-accent-copper)]/30 hover:border-l-[var(--color-accent-copper)] hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70"
                     style={{ fieldSizing: 'content' } as React.CSSProperties}
                 />
             </div>

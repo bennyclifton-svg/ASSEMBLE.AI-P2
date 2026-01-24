@@ -152,49 +152,49 @@ export function LinkInvoiceDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-[#3e3e42] flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <Link2 className="w-5 h-5" />
               Link Invoice
             </h2>
-            <p className="text-sm text-[#858585]">
-              Select an invoice to link to: <span className="text-[#cccccc]">{costLineDescription}</span>
+            <p className="text-sm text-[var(--color-text-muted)]">
+              Select an invoice to link to: <span className="text-[var(--color-text-primary)]">{costLineDescription}</span>
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-[#858585] hover:text-white rounded transition-colors"
+            className="p-1 text-[var(--color-text-muted)] hover:text-white rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Search and Filters */}
-        <div className="px-4 py-3 border-b border-[#3e3e42] space-y-3 shrink-0">
+        <div className="px-4 py-3 border-b border-[var(--color-border)] space-y-3 shrink-0">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#858585]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search by invoice number, description, or company..."
-              className="w-full pl-10 pr-4 py-2 bg-[#1e1e1e] border border-[#3e3e42] rounded text-[#cccccc] placeholder-[#6e6e6e] focus:outline-none focus:border-[#007acc]"
+              className="w-full pl-10 pr-4 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-green)]"
             />
           </div>
 
           {/* Filters */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#858585]" />
-              <span className="text-sm text-[#858585]">Status:</span>
+              <Filter className="w-4 h-4 text-[var(--color-text-muted)]" />
+              <span className="text-sm text-[var(--color-text-muted)]">Status:</span>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as PaidStatus | 'all')}
-                className="px-2 py-1 bg-[#1e1e1e] border border-[#3e3e42] rounded text-sm text-[#cccccc] focus:outline-none focus:border-[#007acc]"
+                className="px-2 py-1 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-green)]"
               >
                 <option value="all">All</option>
                 <option value="unpaid">Unpaid</option>
@@ -203,7 +203,7 @@ export function LinkInvoiceDialog({
               </select>
             </div>
 
-            <div className="flex items-center gap-2 ml-auto text-sm text-[#858585]">
+            <div className="flex items-center gap-2 ml-auto text-sm text-[var(--color-text-muted)]">
               <span>{filteredInvoices.length} invoice{filteredInvoices.length !== 1 ? 's' : ''}</span>
             </div>
           </div>
@@ -212,22 +212,22 @@ export function LinkInvoiceDialog({
         {/* Invoice List */}
         <div className="flex-1 overflow-auto min-h-0">
           {isLoading ? (
-            <div className="text-center py-12 text-[#858585]">
+            <div className="text-center py-12 text-[var(--color-text-muted)]">
               Loading invoices...
             </div>
           ) : filteredInvoices.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-[#4e4e4e] mx-auto mb-3" />
-              <p className="text-[#858585]">
+              <FileText className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-3" />
+              <p className="text-[var(--color-text-muted)]">
                 {searchTerm || statusFilter !== 'all'
                   ? 'No invoices match your filters'
                   : 'No unlinked invoices available'}
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-[#3e3e42]">
+            <div className="divide-y divide-[var(--color-border)]">
               {/* Table Header */}
-              <div className="px-4 py-2 bg-[#1e1e1e] grid grid-cols-[1fr_120px_140px_100px] gap-4 text-xs text-[#858585] font-medium uppercase tracking-wider sticky top-0">
+              <div className="px-4 py-2 bg-[var(--color-bg-primary)] grid grid-cols-[1fr_120px_140px_100px] gap-4 text-xs text-[var(--color-text-muted)] font-medium uppercase tracking-wider sticky top-0">
                 <button
                   onClick={() => toggleSort('number')}
                   className="flex items-center gap-1 hover:text-white transition-colors text-left"
@@ -272,20 +272,20 @@ export function LinkInvoiceDialog({
                       w-full px-4 py-3 grid grid-cols-[1fr_120px_140px_100px] gap-4 items-center text-left
                       transition-colors cursor-pointer
                       ${isSelected
-                        ? 'bg-[#094771]'
-                        : 'hover:bg-[#2a2d2e]'}
+                        ? 'bg-[var(--color-accent-green)]/20'
+                        : 'hover:bg-[var(--color-bg-tertiary)]'}
                     `}
                   >
                     {/* Invoice Info */}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-[#858585] shrink-0" />
-                        <span className="text-[#cccccc] font-medium truncate">
+                        <FileText className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
+                        <span className="text-[var(--color-text-primary)] font-medium truncate">
                           {invoice.invoiceNumber}
                         </span>
                       </div>
                       {(inv.company?.name || invoice.description) && (
-                        <div className="text-sm text-[#858585] truncate pl-6">
+                        <div className="text-sm text-[var(--color-text-muted)] truncate pl-6">
                           {inv.company?.name && (
                             <span className="flex items-center gap-1">
                               <Building2 className="w-3 h-3" />
@@ -300,18 +300,18 @@ export function LinkInvoiceDialog({
                     </div>
 
                     {/* Date */}
-                    <div className="text-sm text-[#cccccc] flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-[#858585]" />
+                    <div className="text-sm text-[var(--color-text-primary)] flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-[var(--color-text-muted)]" />
                       {formatPeriod(invoice.periodYear, invoice.periodMonth)}
                     </div>
 
                     {/* Amount */}
                     <div className="text-right">
-                      <span className="text-[#cccccc] font-medium">
+                      <span className="text-[var(--color-text-primary)] font-medium">
                         {formatCurrency(invoice.amountCents)}
                       </span>
                       {invoice.gstCents > 0 && (
-                        <span className="text-xs text-[#858585] ml-1">
+                        <span className="text-xs text-[var(--color-text-muted)] ml-1">
                           +{formatCurrency(invoice.gstCents)} GST
                         </span>
                       )}
@@ -333,10 +333,10 @@ export function LinkInvoiceDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-[#3e3e42] flex items-center justify-between shrink-0">
-          <div className="text-sm text-[#858585]">
+        <div className="px-4 py-3 border-t border-[var(--color-border)] flex items-center justify-between shrink-0">
+          <div className="text-sm text-[var(--color-text-muted)]">
             {selectedId && (
-              <span className="text-[#cccccc]">
+              <span className="text-[var(--color-text-primary)]">
                 1 invoice selected
               </span>
             )}
@@ -344,14 +344,14 @@ export function LinkInvoiceDialog({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-[#cccccc] hover:text-white transition-colors"
+              className="px-4 py-2 text-[var(--color-text-primary)] hover:text-white transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleLink}
               disabled={!selectedId || isLinking}
-              className="px-4 py-2 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-[var(--color-accent-green)] text-white rounded hover:bg-[var(--color-accent-green)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Link2 className="w-4 h-4" />
               {isLinking ? 'Linking...' : 'Link Invoice'}

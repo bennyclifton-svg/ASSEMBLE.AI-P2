@@ -77,8 +77,8 @@ export function TenderProgressBar({ statuses, onStageClick, disabled = false }: 
               'px-1.5 py-0.5 text-[10px] font-medium leading-tight transition-all duration-150',
               'border-y border-r first:border-l first:rounded-l last:rounded-r',
               isActive
-                ? 'bg-[#56b6c2]/20 text-[#56b6c2] border-[#56b6c2]/40'
-                : 'bg-transparent text-[#858585] border-[#3e3e42] hover:text-[#cccccc] hover:border-[#555]',
+                ? 'bg-[var(--color-accent-teal)]/20 text-[var(--color-accent-teal)] border-[var(--color-accent-teal)]/40'
+                : 'bg-transparent text-[var(--color-text-muted)] border-[var(--color-border)] hover:text-[var(--color-text-primary)] hover:border-[#555]',
               disabled && 'opacity-40 cursor-not-allowed',
               !disabled && 'cursor-pointer'
             )}

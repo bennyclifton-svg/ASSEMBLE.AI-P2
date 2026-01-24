@@ -113,29 +113,70 @@ export function CategoryTile({
         }
     };
 
-    const tileColor = category.color;
     const displayName = subcategory ? subcategory.name : category.name;
 
     // Check if this is a Consultants or Contractors tile
     const isConsultantsOrContractors = category.id === 'consultants' || category.id === 'contractors';
 
-    // Helper to convert hex to rgba
-    const hexToRgba = (hex: string, alpha: number) => {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    // Map category IDs to accent colors for theme support
+    const getAccentColorClasses = (categoryId: string): { bg: string; bgHover: string; text: string; ring: string } => {
+        switch (categoryId) {
+            case 'planning':
+                return {
+                    bg: 'bg-[var(--color-accent-green)]/20',
+                    bgHover: 'hover:bg-[var(--color-accent-green)]/30',
+                    text: 'text-[var(--color-accent-green)]',
+                    ring: 'ring-[var(--color-accent-green)]',
+                };
+            case 'scheme-design':
+                return {
+                    bg: 'bg-[var(--color-accent-yellow)]/20',
+                    bgHover: 'hover:bg-[var(--color-accent-yellow)]/30',
+                    text: 'text-[var(--color-accent-yellow)]',
+                    ring: 'ring-[var(--color-accent-yellow)]',
+                };
+            case 'detail-design':
+                return {
+                    bg: 'bg-[var(--color-accent-purple)]/20',
+                    bgHover: 'hover:bg-[var(--color-accent-purple)]/30',
+                    text: 'text-[var(--color-accent-purple)]',
+                    ring: 'ring-[var(--color-accent-purple)]',
+                };
+            case 'procurement':
+                return {
+                    bg: 'bg-[var(--color-accent-coral)]/20',
+                    bgHover: 'hover:bg-[var(--color-accent-coral)]/30',
+                    text: 'text-[var(--color-accent-coral)]',
+                    ring: 'ring-[var(--color-accent-coral)]',
+                };
+            case 'cost-planning':
+                return {
+                    bg: 'bg-[var(--color-accent-yellow)]/20',
+                    bgHover: 'hover:bg-[var(--color-accent-yellow)]/30',
+                    text: 'text-[var(--color-accent-yellow)]',
+                    ring: 'ring-[var(--color-accent-yellow)]',
+                };
+            case 'administration':
+                return {
+                    bg: 'bg-[var(--color-text-muted)]/15',
+                    bgHover: 'hover:bg-[var(--color-text-muted)]/25',
+                    text: 'text-[var(--color-text-secondary)]',
+                    ring: 'ring-[var(--color-text-muted)]',
+                };
+            case 'meetings':
+            case 'knowledge':
+            default:
+                return {
+                    bg: 'bg-[var(--color-accent-teal)]/20',
+                    bgHover: 'hover:bg-[var(--color-accent-teal)]/30',
+                    text: 'text-[var(--color-accent-teal)]',
+                    ring: 'ring-[var(--color-accent-teal)]',
+                };
+        }
     };
 
-    // Helper to brighten color (increase RGB values)
-    const brightenColor = (hex: string, amount: number = 80) => {
-        const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + amount);
-        const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + amount);
-        const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + amount);
-        return `rgb(${r}, ${g}, ${b})`;
-    };
-
-    const brightColor = isUploadTile || isConsultantsOrContractors ? '#aaaaaa' : brightenColor(tileColor);
+    const accentColors = getAccentColorClasses(category.id);
+    const textColorClass = isUploadTile || isConsultantsOrContractors ? 'text-[var(--color-text-secondary)]' : accentColors.text;
 
     return (
         <div
@@ -147,44 +188,33 @@ export function CategoryTile({
                 // Compact size
                 isSubcategory ? 'h-10 px-3 py-1' : 'h-11 px-3 py-1',
                 // Upload tile special styling - thinner border
-                isUploadTile && 'border-2 border-dashed border-[#555555] bg-[#252526] hover:border-[#0e639c] hover:bg-[#0e639c]/5',
+                isUploadTile && 'border-2 border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent-green)] hover:bg-[var(--color-accent-green)]/5',
                 // Consultants and Contractors category tiles - solid border, thinner (no bg hover)
-                isConsultantsOrContractors && !isSubcategory && 'border-2 border-solid border-[#555555] bg-[#252526] hover:border-[#0e639c]',
+                isConsultantsOrContractors && !isSubcategory && 'border-2 border-solid border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent-green)]',
                 // Consultants and Contractors subcategory tiles - solid border (no bg hover)
-                isConsultantsOrContractors && isSubcategory && 'border-2 border-solid border-[#555555] bg-[#252526] hover:border-[#0e639c]',
-                // Regular tiles - no border
-                !isUploadTile && !isConsultantsOrContractors && 'border-0'
+                isConsultantsOrContractors && isSubcategory && 'border-2 border-solid border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent-green)]',
+                // Regular category tiles - use accent colors
+                !isUploadTile && !isConsultantsOrContractors && accentColors.bg,
+                !isUploadTile && !isConsultantsOrContractors && accentColors.bgHover,
+                !isUploadTile && !isConsultantsOrContractors && 'border-0',
+                // Drag active state for regular tiles
+                isDragActive && !isUploadTile && !isConsultantsOrContractors && 'ring-2',
+                isDragActive && !isUploadTile && !isConsultantsOrContractors && accentColors.ring
             )}
             style={{
-                ...(!isUploadTile && !isConsultantsOrContractors && {
-                    backgroundColor: hexToRgba(tileColor, 0.3),
-                }),
-                ...(isDragActive && !isUploadTile && !isConsultantsOrContractors && {
-                    backgroundColor: hexToRgba(tileColor, 0.5),
-                    boxShadow: `0 0 0 2px ${tileColor}`,
-                }),
                 ...(isDragActive && (isUploadTile || isConsultantsOrContractors) && {
-                    borderColor: '#0e639c',
-                    backgroundColor: hexToRgba('#0e639c', 0.1),
+                    borderColor: 'var(--color-accent-green)',
+                    backgroundColor: 'var(--color-accent-green-10)',
                 }),
             }}
         >
             <input {...getInputProps()} />
 
-            {/* Subtle hover glow effect - not for upload, consultants, or contractors tiles */}
-            {!isUploadTile && !isConsultantsOrContractors && (
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-                    style={{
-                        background: `radial-gradient(circle at center, ${hexToRgba(tileColor, 0.3)} 0%, transparent 70%)`,
-                    }}
-                />
-            )}
-
             {/* Upload tile content */}
             {isUploadTile ? (
                 <div className="flex flex-col items-center justify-center gap-1">
                     <Upload
-                        className="w-6 h-6 text-[#aaaaaa] group-hover:text-[#0e639c] transition-colors"
+                        className="w-6 h-6 text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-green)] transition-colors"
                     />
                 </div>
             ) : isKnowledgeCategory ? (
@@ -196,7 +226,7 @@ export function CategoryTile({
                         viewBox="0 0 16 16"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="text-[#4fc1ff] group-hover:text-[#6fd1ff] transition-colors flex-shrink-0"
+                        className={cn('transition-colors flex-shrink-0', textColorClass)}
                     >
                         {/* Outer diamond (square rotated 45 degrees) */}
                         <path
@@ -211,10 +241,7 @@ export function CategoryTile({
                             fill="currentColor"
                         />
                     </svg>
-                    <span
-                        className="font-medium text-base transition-colors"
-                        style={{ color: brightColor }}
-                    >
+                    <span className={cn('font-medium text-base transition-colors', textColorClass)}>
                         {displayName}
                     </span>
                 </div>
@@ -225,17 +252,15 @@ export function CategoryTile({
                         <Upload
                             className={cn(
                                 'w-4 h-4 flex-shrink-0 transition-colors',
-                                isConsultantsOrContractors && 'text-[#aaaaaa] group-hover:text-[#0e639c]'
+                                isConsultantsOrContractors ? 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-green)]' : textColorClass
                             )}
-                            style={!isConsultantsOrContractors ? { color: brightColor } : undefined}
                         />
                         <span
                             className={cn(
                                 'font-medium truncate transition-colors',
                                 isSubcategory ? 'text-sm' : 'text-base',
-                                isConsultantsOrContractors && 'text-[#aaaaaa] group-hover:text-[#0e639c]'
+                                isConsultantsOrContractors ? 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-green)]' : textColorClass
                             )}
-                            style={!isConsultantsOrContractors ? { color: brightColor } : undefined}
                         >
                             {displayName}
                         </span>
@@ -245,9 +270,8 @@ export function CategoryTile({
                             className={cn(
                                 'w-4 h-4 flex-shrink-0 ml-2 transition-transform',
                                 isExpanded && 'rotate-90',
-                                isConsultantsOrContractors ? 'text-[#aaaaaa] group-hover:text-[#0e639c]' : ''
+                                isConsultantsOrContractors ? 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-green)]' : textColorClass
                             )}
-                            style={!isConsultantsOrContractors ? { color: brightColor } : undefined}
                             viewBox="0 0 12 12"
                             fill="currentColor"
                         >
@@ -258,8 +282,8 @@ export function CategoryTile({
             )}
 
             {isUploading && (
-                <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center rounded-lg z-10">
-                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                <div className="absolute inset-0 bg-[var(--color-bg-primary)]/80 flex items-center justify-center rounded-lg z-10">
+                    <Loader2 className="h-6 w-6 animate-spin text-[var(--color-text-primary)]" />
                 </div>
             )}
         </div>

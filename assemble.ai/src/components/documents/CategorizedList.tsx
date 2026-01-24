@@ -14,7 +14,33 @@ import { Trash2, Loader2, FileIcon, Folder, ChevronUp, ChevronDown, Trash } from
 import { Modal } from '@/components/ui/modal';
 import { useDocumentSyncStatus, useSyncStatus } from '@/lib/hooks/use-sync-status';
 import { cn } from '@/lib/utils';
-import { getCategoryById } from '@/lib/constants/categories';
+
+/**
+ * Maps category IDs to accent color CSS variables for consistent theming.
+ */
+function getCategoryAccentColor(categoryId: string | undefined): string {
+    if (!categoryId) return 'var(--color-text-muted)';
+
+    switch (categoryId) {
+        case 'planning':
+            return 'var(--color-accent-green)';
+        case 'scheme-design':
+            return 'var(--color-accent-yellow)';
+        case 'detail-design':
+            return 'var(--color-accent-purple)';
+        case 'meetings':
+        case 'knowledge':
+            return 'var(--color-accent-teal)';
+        case 'procurement':
+            return 'var(--color-accent-coral)';
+        case 'cost-planning':
+            return 'var(--color-accent-yellow)';
+        case 'administration':
+            return 'var(--color-text-secondary)';
+        default:
+            return 'var(--color-text-muted)';
+    }
+}
 
 /**
  * T032: Sync status dot indicator (compact version)
@@ -28,13 +54,13 @@ function SyncStatusDot({ documentId }: { documentId: string }) {
     }
 
     const colorMap = {
-        synced: 'bg-green-500',
-        pending: 'bg-amber-500',
-        processing: 'bg-amber-500',
-        failed: 'bg-red-500',
+        synced: 'bg-[var(--color-accent-green)]',
+        pending: 'bg-[var(--color-accent-yellow)]',
+        processing: 'bg-[var(--color-accent-yellow)]',
+        failed: 'bg-[var(--color-accent-coral)]',
     };
 
-    const color = colorMap[status.status] || 'bg-gray-500';
+    const color = colorMap[status.status] || 'bg-[var(--color-text-muted)]';
 
     return (
         <div
@@ -362,7 +388,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[#858585]" />
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-text-muted)]" />
             </div>
         );
     }
@@ -370,39 +396,39 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     return (
         <div className="space-y-4">
             {/* Table View */}
-            <div className="border border-[#3e3e42] rounded-md bg-[#1e1e1e] overflow-hidden @container">
+            <div className="border border-[var(--color-border)] rounded-md bg-[var(--color-bg-primary)] overflow-hidden @container">
                 <div className="relative w-full">
                     <table className="w-full caption-bottom text-sm table-fixed">
                         <TableHeader>
-                            <TableRow className="border-[#3e3e42] hover:bg-[#252526]">
+                            <TableRow className="border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)]">
                                 <TableHead
-                                    className="text-[#cccccc] cursor-pointer hover:text-white select-none w-[50%] @md:w-auto"
+                                    className="text-[var(--color-text-primary)] cursor-pointer hover:text-white select-none w-[50%] @md:w-auto"
                                     onClick={() => handleSort('name')}
                                 >
                                     <div className="flex items-center gap-2">
                                         <span>Name</span>
                                         {selectedIds.size > 0 ? (
-                                            <span className="text-[#4fc3f7] text-xs">({selectedIds.size} selected)</span>
+                                            <span className="text-[var(--color-accent-yellow)] text-xs">({selectedIds.size} selected)</span>
                                         ) : (
-                                            <span className="text-[#858585] text-xs">({documents.length})</span>
+                                            <span className="text-[var(--color-text-muted)] text-xs">({documents.length})</span>
                                         )}
                                         <SortIndicator column="name" />
                                     </div>
                                 </TableHead>
                                 <TableHead
-                                    className="text-[#cccccc] w-[35%] @md:w-36 cursor-pointer hover:text-white select-none"
+                                    className="text-[var(--color-text-primary)] w-[35%] @md:w-36 cursor-pointer hover:text-white select-none"
                                     onClick={() => handleSort('category')}
                                 >
                                     Category<SortIndicator column="category" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-[#cccccc] w-36 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
+                                    className="text-[var(--color-text-primary)] w-36 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
                                     onClick={() => handleSort('subcategory')}
                                 >
                                     Subcategory<SortIndicator column="subcategory" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-[#cccccc] w-14 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
+                                    className="text-[var(--color-text-primary)] w-14 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
                                     onClick={() => handleSort('version')}
                                 >
                                     Ver<SortIndicator column="version" />
@@ -411,19 +437,19 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     {selectedIds.size > 0 ? (
                                         <button
                                             onClick={() => setShowDeleteConfirm(true)}
-                                            className="p-1 hover:bg-[#3e3e42] rounded"
+                                            className="p-1 hover:bg-[var(--color-border)] rounded"
                                             title={`Delete ${selectedIds.size} selected document${selectedIds.size > 1 ? 's' : ''}`}
                                         >
-                                            <Trash className="w-4 h-4 text-red-400" />
+                                            <Trash className="w-4 h-4 text-[var(--color-accent-coral)]" />
                                         </button>
                                     ) : (
                                         <button
                                             onClick={() => setShowDeleteAllConfirm(true)}
                                             disabled={documents.length === 0}
-                                            className="p-1 hover:bg-[#3e3e42] rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                            className="p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-30 disabled:cursor-not-allowed"
                                             title="Delete all documents"
                                         >
-                                            <Trash className="w-4 h-4 text-[#858585]" />
+                                            <Trash className="w-4 h-4 text-[var(--color-text-muted)]" />
                                         </button>
                                     )}
                                 </TableHead>
@@ -432,7 +458,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                         <TableBody>
                             {documents.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-[#858585] h-24">
+                                    <TableCell colSpan={5} className="text-center text-[var(--color-text-muted)] h-24">
                                         No documents found.
                                     </TableCell>
                                 </TableRow>
@@ -441,8 +467,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     <TableRow
                                         key={doc.id}
                                         className={cn(
-                                            "border-[#3e3e42] hover:bg-[#2a2d2e] transition-colors cursor-pointer select-none h-12",
-                                            selectedIds.has(doc.id) && "bg-[#37373d]"
+                                            "border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors cursor-pointer select-none h-12",
+                                            selectedIds.has(doc.id) && "bg-[var(--color-bg-tertiary)]"
                                         )}
                                         onMouseEnter={() => setHoveredRowId(doc.id)}
                                         onMouseLeave={() => setHoveredRowId(null)}
@@ -453,13 +479,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         }}
                                         onClick={(e) => handleSelect(doc.id, e)}
                                     >
-                                        <TableCell className="font-medium text-[#cccccc] !py-2 w-[50%] @md:w-auto">
+                                        <TableCell className="font-medium text-[var(--color-text-primary)] !py-2 w-[50%] @md:w-auto">
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <div className="w-2 flex-shrink-0">
                                                     <SyncStatusDot documentId={doc.id} />
                                                 </div>
                                                 <span className="truncate flex-1" title={doc.originalName || 'Untitled'}>
-                                                    {doc.originalName || <span className="text-[#858585] italic">Untitled Document</span>}
+                                                    {doc.originalName || <span className="text-[var(--color-text-muted)] italic">Untitled Document</span>}
                                                 </span>
                                             </div>
                                         </TableCell>
@@ -470,21 +496,21 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                         <Folder
                                                             className="w-4 h-4 flex-shrink-0 fill-current"
                                                             style={{
-                                                                color: getCategoryById(doc.categoryId || '')?.color || '#858585'
+                                                                color: getCategoryAccentColor(doc.categoryId)
                                                             }}
                                                         />
                                                         <span
                                                             className="truncate"
                                                             title={doc.categoryName}
                                                             style={{
-                                                                color: getCategoryById(doc.categoryId || '')?.color || '#858585'
+                                                                color: getCategoryAccentColor(doc.categoryId)
                                                             }}
                                                         >
                                                             {doc.categoryName}
                                                         </span>
                                                     </>
                                                 ) : (
-                                                    <span className="text-[#858585] italic">—</span>
+                                                    <span className="text-[var(--color-text-muted)] italic">—</span>
                                                 )}
                                             </div>
                                         </TableCell>
@@ -493,13 +519,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 className="truncate"
                                                 title={doc.subcategoryName || ''}
                                                 style={{
-                                                    color: doc.categoryId ? getCategoryById(doc.categoryId)?.color || '#cccccc' : '#858585'
+                                                    color: doc.categoryId ? getCategoryAccentColor(doc.categoryId) : 'var(--color-text-muted)'
                                                 }}
                                             >
-                                                {doc.subcategoryName || <span className="text-[#858585]">—</span>}
+                                                {doc.subcategoryName || <span className="text-[var(--color-text-muted)]">—</span>}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="text-[#cccccc] w-14 @lg:table-cell hidden !py-2">v{doc.versionNumber}</TableCell>
+                                        <TableCell className="text-[var(--color-text-primary)] w-14 @lg:table-cell hidden !py-2">v{doc.versionNumber}</TableCell>
                                         <TableCell className="w-10 @sm:table-cell hidden !py-2">
                                             {(hoveredRowId === doc.id || deletingId === doc.id) && (
                                                 <button
@@ -508,13 +534,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                         handleDeleteSingle(doc.id);
                                                     }}
                                                     disabled={deletingId === doc.id}
-                                                    className="p-1 hover:bg-[#3e3e42] rounded disabled:opacity-50"
+                                                    className="p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50"
                                                     title="Delete document"
                                                 >
                                                     {deletingId === doc.id ? (
-                                                        <Loader2 className="w-4 h-4 text-[#858585] animate-spin" />
+                                                        <Loader2 className="w-4 h-4 text-[var(--color-text-muted)] animate-spin" />
                                                     ) : (
-                                                        <Trash className="w-4 h-4 text-[#858585] hover:text-red-400" />
+                                                        <Trash className="w-4 h-4 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)]" />
                                                     )}
                                                 </button>
                                             )}
@@ -534,8 +560,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 title="Delete Selected Documents"
             >
                 <div className="space-y-4">
-                    <p className="text-[#cccccc]">Are you sure you want to delete {selectedIds.size} selected document{selectedIds.size !== 1 ? 's' : ''}?</p>
-                    <p className="text-sm text-[#858585]">This action cannot be undone.</p>
+                    <p className="text-[var(--color-text-primary)]">Are you sure you want to delete {selectedIds.size} selected document{selectedIds.size !== 1 ? 's' : ''}?</p>
+                    <p className="text-sm text-[var(--color-text-muted)]">This action cannot be undone.</p>
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
                             Cancel
@@ -554,8 +580,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 title="Delete All Documents"
             >
                 <div className="space-y-4">
-                    <p className="text-[#cccccc]">Are you sure you want to delete all {documents.length} document{documents.length !== 1 ? 's' : ''}?</p>
-                    <p className="text-sm text-[#858585]">This action cannot be undone.</p>
+                    <p className="text-[var(--color-text-primary)]">Are you sure you want to delete all {documents.length} document{documents.length !== 1 ? 's' : ''}?</p>
+                    <p className="text-sm text-[var(--color-text-muted)]">This action cannot be undone.</p>
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={() => setShowDeleteAllConfirm(false)}>
                             Cancel

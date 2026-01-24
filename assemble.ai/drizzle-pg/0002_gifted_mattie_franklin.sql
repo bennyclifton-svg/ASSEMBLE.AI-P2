@@ -1,0 +1,1 @@
+ALTER TABLE "project_objectives" ADD COLUMN "question_answers" text;

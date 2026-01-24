@@ -3,6 +3,9 @@
  * GET: Fetch evaluation data (or create if not exists)
  * PUT: Update evaluation cell values
  * Feature 011 - Evaluation Report
+ *
+ * Now uses stakeholderId (contextId is the stakeholder ID)
+ * contextType is retained for URL compatibility but both map to stakeholder
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -12,10 +15,9 @@ import {
     evaluationRows,
     evaluationCells,
     costLines,
+    projectStakeholders,
     consultants,
     contractors,
-    consultantDisciplines,
-    contractorTrades,
 } from '@/lib/db';
 import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -36,27 +38,27 @@ export async function GET(
     try {
         const { projectId, contextType, contextId } = await params;
 
-        // Validate context type
-        if (contextType !== 'discipline' && contextType !== 'trade') {
+        // contextId is now the stakeholderId
+        const stakeholderId = contextId;
+
+        // Validate the stakeholder exists
+        const stakeholder = await db.query.projectStakeholders.findFirst({
+            where: eq(projectStakeholders.id, stakeholderId),
+        });
+
+        if (!stakeholder) {
             return NextResponse.json(
-                { error: 'Invalid context type. Must be "discipline" or "trade".' },
-                { status: 400 }
+                { error: 'Stakeholder not found' },
+                { status: 404 }
             );
         }
 
-        const isDiscipline = contextType === 'discipline';
-
-        // Try to find existing evaluation
+        // Try to find existing evaluation by stakeholderId
         let evaluation = await db.query.evaluations.findFirst({
-            where: isDiscipline
-                ? and(
-                    eq(evaluations.projectId, projectId),
-                    eq(evaluations.disciplineId, contextId)
-                )
-                : and(
-                    eq(evaluations.projectId, projectId),
-                    eq(evaluations.tradeId, contextId)
-                ),
+            where: and(
+                eq(evaluations.projectId, projectId),
+                eq(evaluations.stakeholderId, stakeholderId)
+            ),
         });
 
         // If no evaluation exists, create one
@@ -66,8 +68,7 @@ export async function GET(
             await db.insert(evaluations).values({
                 id: evalId,
                 projectId,
-                disciplineId: isDiscipline ? contextId : null,
-                tradeId: isDiscipline ? null : contextId,
+                stakeholderId,
             });
 
             evaluation = await db.query.evaluations.findFirst({
@@ -81,7 +82,7 @@ export async function GET(
                 tableType: 'adds_subs' as const,
                 description: '',
                 orderIndex: i,
-                source: 'manual' as const, // Default rows should always be visible
+                source: 'manual' as const,
             }));
 
             if (addSubsRowsData.length > 0) {
@@ -89,13 +90,12 @@ export async function GET(
             }
         }
 
-        // Always sync evaluation rows with current cost lines
-        const costLineQuery = isDiscipline
-            ? eq(costLines.disciplineId, contextId)
-            : eq(costLines.tradeId, contextId);
-
+        // Sync evaluation rows with current cost lines for this stakeholder
         const currentCostLines = await db.query.costLines.findMany({
-            where: and(eq(costLines.projectId, projectId), costLineQuery),
+            where: and(
+                eq(costLines.projectId, projectId),
+                eq(costLines.stakeholderId, stakeholderId)
+            ),
             orderBy: [asc(costLines.sortOrder)],
         });
 
@@ -136,7 +136,7 @@ export async function GET(
                     description: line.activity,
                     orderIndex: i,
                     costLineId: line.id,
-                    source: 'cost_plan' as const, // Explicitly set source for visibility filtering
+                    source: 'cost_plan' as const,
                 });
             } else {
                 // Existing cost line - check if description or order needs update
@@ -172,52 +172,41 @@ export async function GET(
             },
         });
 
-        // Fetch firms filtered by discipline or trade
-        let firms: Array<{ id: string; companyName: string; shortlisted: boolean; awarded: boolean }> = [];
-        if (isDiscipline) {
-            // Get the discipline name from consultantDisciplines
-            const discipline = await db.query.consultantDisciplines.findFirst({
-                where: eq(consultantDisciplines.id, contextId),
+        // Fetch firms from consultants/contractors tables based on stakeholder group
+        let firms: Array<{ id: string; companyName: string; shortlisted: boolean; awarded: boolean; firmType: 'consultant' | 'contractor' }> = [];
+
+        if (stakeholder.stakeholderGroup === 'consultant') {
+            // Query consultants table matching the stakeholder's discipline
+            const stakeholderConsultants = await db.query.consultants.findMany({
+                where: and(
+                    eq(consultants.projectId, projectId),
+                    eq(consultants.discipline, stakeholder.name)
+                ),
             });
 
-            if (discipline) {
-                // Get consultants that match this discipline name
-                const disciplineConsultants = await db.query.consultants.findMany({
-                    where: and(
-                        eq(consultants.projectId, projectId),
-                        eq(consultants.discipline, discipline.disciplineName)
-                    ),
-                });
-
-                firms = disciplineConsultants.map(c => ({
-                    id: c.id,
-                    companyName: c.companyName,
-                    shortlisted: c.shortlisted ?? false,
-                    awarded: c.awarded ?? false,
-                }));
-            }
+            firms = stakeholderConsultants.map(c => ({
+                id: c.id,
+                companyName: c.companyName,
+                shortlisted: c.shortlisted ?? false,
+                awarded: c.awarded ?? false,
+                firmType: 'consultant' as const,
+            }));
         } else {
-            // Get the trade name from contractorTrades
-            const trade = await db.query.contractorTrades.findFirst({
-                where: eq(contractorTrades.id, contextId),
+            // Query contractors table matching the stakeholder's trade
+            const stakeholderContractors = await db.query.contractors.findMany({
+                where: and(
+                    eq(contractors.projectId, projectId),
+                    eq(contractors.trade, stakeholder.name)
+                ),
             });
 
-            if (trade) {
-                // Get contractors that match this trade name
-                const tradeContractors = await db.query.contractors.findMany({
-                    where: and(
-                        eq(contractors.projectId, projectId),
-                        eq(contractors.trade, trade.tradeName)
-                    ),
-                });
-
-                firms = tradeContractors.map(c => ({
-                    id: c.id,
-                    companyName: c.companyName,
-                    shortlisted: c.shortlisted ?? false,
-                    awarded: c.awarded ?? false,
-                }));
-            }
+            firms = stakeholderContractors.map(c => ({
+                id: c.id,
+                companyName: c.companyName,
+                shortlisted: c.shortlisted ?? false,
+                awarded: c.awarded ?? false,
+                firmType: 'contractor' as const,
+            }));
         }
 
         return NextResponse.json({

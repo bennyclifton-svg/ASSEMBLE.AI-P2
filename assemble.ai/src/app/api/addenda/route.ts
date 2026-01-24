@@ -3,33 +3,29 @@ import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
 import { addenda, addendumTransmittals, documents, versions, fileAssets } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, isNull, desc, max } from 'drizzle-orm';
+import { eq, and, max } from 'drizzle-orm';
 
-// GET /api/addenda?projectId=X&disciplineId=Y or tradeId=Z
+// GET /api/addenda?projectId=X&stakeholderId=Y
 export async function GET(request: NextRequest) {
     return handleApiError(async () => {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
-        const disciplineId = searchParams.get('disciplineId');
-        const tradeId = searchParams.get('tradeId');
+        const stakeholderId = searchParams.get('stakeholderId');
 
         if (!projectId) {
             return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
         }
 
-        const conditions = [eq(addenda.projectId, projectId)];
-
-        if (disciplineId) {
-            conditions.push(eq(addenda.disciplineId, disciplineId));
-            conditions.push(isNull(addenda.tradeId));
-        } else if (tradeId) {
-            conditions.push(eq(addenda.tradeId, tradeId));
-            conditions.push(isNull(addenda.disciplineId));
-        } else {
-            return NextResponse.json({ error: 'disciplineId or tradeId is required' }, { status: 400 });
+        if (!stakeholderId) {
+            return NextResponse.json({ error: 'stakeholderId is required' }, { status: 400 });
         }
 
-        // Fetch all addenda for this discipline/trade
+        const conditions = [
+            eq(addenda.projectId, projectId),
+            eq(addenda.stakeholderId, stakeholderId),
+        ];
+
+        // Fetch all addenda for this stakeholder
         const list = await db
             .select()
             .from(addenda)
@@ -59,26 +55,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     return handleApiError(async () => {
         const body = await request.json();
-        const { projectId, disciplineId, tradeId } = body;
+        const { projectId, stakeholderId } = body;
 
         if (!projectId) {
             return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
         }
 
-        if (!disciplineId && !tradeId) {
-            return NextResponse.json({ error: 'disciplineId or tradeId is required' }, { status: 400 });
+        if (!stakeholderId) {
+            return NextResponse.json({ error: 'stakeholderId is required' }, { status: 400 });
         }
 
         // Determine next addendum number
-        const conditions = [eq(addenda.projectId, projectId)];
-
-        if (disciplineId) {
-            conditions.push(eq(addenda.disciplineId, disciplineId));
-            conditions.push(isNull(addenda.tradeId));
-        } else {
-            conditions.push(eq(addenda.tradeId, tradeId));
-            conditions.push(isNull(addenda.disciplineId));
-        }
+        const conditions = [
+            eq(addenda.projectId, projectId),
+            eq(addenda.stakeholderId, stakeholderId),
+        ];
 
         const [existing] = await db
             .select({ maxNum: max(addenda.addendumNumber) })
@@ -93,8 +84,7 @@ export async function POST(request: NextRequest) {
         await db.insert(addenda).values({
             id,
             projectId,
-            disciplineId: disciplineId || null,
-            tradeId: tradeId || null,
+            stakeholderId,
             addendumNumber: nextNumber,
             content: '',
         });

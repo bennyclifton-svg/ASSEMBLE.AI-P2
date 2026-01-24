@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { costLines, consultantDisciplines, contractorTrades } from '@/lib/db';
+import { costLines, projectStakeholders } from '@/lib/db';
 import { eq, isNull, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { CreateCostLineInput } from '@/types/cost-plan';
@@ -17,15 +17,15 @@ export async function GET(
         const { projectId } = await params;
 
         const { searchParams } = new URL(request.url);
-        const disciplineId = searchParams.get('disciplineId');
+        const stakeholderId = searchParams.get('stakeholderId');
 
         const filters = [
             eq(costLines.projectId, projectId),
             isNull(costLines.deletedAt),
         ];
 
-        if (disciplineId) {
-            filters.push(eq(costLines.disciplineId, disciplineId));
+        if (stakeholderId) {
+            filters.push(eq(costLines.stakeholderId, stakeholderId));
         }
 
         const projectCostLines = await db
@@ -34,26 +34,18 @@ export async function GET(
             .where(and(...filters))
             .orderBy(costLines.section, costLines.sortOrder);
 
-        // Fetch disciplines and trades for each cost line
+        // Fetch stakeholder for each cost line
         const result = await Promise.all(
             projectCostLines.map(async (cl) => {
-                let discipline = null;
-                let trade = null;
-                if (cl.disciplineId) {
-                    const [disc] = await db
+                let stakeholder = null;
+                if (cl.stakeholderId) {
+                    const [sh] = await db
                         .select()
-                        .from(consultantDisciplines)
-                        .where(eq(consultantDisciplines.id, cl.disciplineId));
-                    discipline = disc || null;
+                        .from(projectStakeholders)
+                        .where(eq(projectStakeholders.id, cl.stakeholderId));
+                    stakeholder = sh || null;
                 }
-                if (cl.tradeId) {
-                    const [tr] = await db
-                        .select()
-                        .from(contractorTrades)
-                        .where(eq(contractorTrades.id, cl.tradeId));
-                    trade = tr || null;
-                }
-                return { ...cl, discipline, trade };
+                return { ...cl, stakeholder };
             })
         );
 
@@ -112,8 +104,7 @@ export async function POST(
         await db.insert(costLines).values({
             id,
             projectId,
-            disciplineId: body.disciplineId || null,
-            tradeId: body.tradeId || null,
+            stakeholderId: body.stakeholderId || null,
             section: body.section,
             costCode: body.costCode || null,
             activity: body.activity,

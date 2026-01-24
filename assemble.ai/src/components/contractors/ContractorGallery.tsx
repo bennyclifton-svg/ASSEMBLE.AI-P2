@@ -445,8 +445,8 @@ export function ContractorGallery({
       {tradeId && (
         <RFTNewSection
           projectId={projectId}
-          tradeId={tradeId}
-          tradeName={trade}
+          stakeholderId={tradeId}
+          stakeholderName={trade}
           selectedDocumentIds={selectedDocumentIds}
           onLoadTransmittal={onSetSelectedDocumentIds}
           onSaveTransmittal={() => selectedDocumentIds}
@@ -457,8 +457,8 @@ export function ContractorGallery({
       {tradeId && (
         <AddendumSection
           projectId={projectId}
-          tradeId={tradeId}
-          tradeName={trade}
+          stakeholderId={tradeId}
+          stakeholderName={trade}
           selectedDocumentIds={selectedDocumentIds}
           onLoadTransmittal={onSetSelectedDocumentIds}
           onSaveTransmittal={() => selectedDocumentIds}
@@ -469,8 +469,8 @@ export function ContractorGallery({
       {tradeId && (
         <EvaluationSection
           projectId={projectId}
-          tradeId={tradeId}
-          tradeName={trade}
+          stakeholderId={tradeId}
+          stakeholderName={trade}
         />
       )}
 
@@ -478,8 +478,8 @@ export function ContractorGallery({
       {tradeId && (
         <TRRSection
           projectId={projectId}
-          tradeId={tradeId}
-          tradeName={trade}
+          stakeholderId={tradeId}
+          stakeholderName={trade}
           selectedDocumentIds={selectedDocumentIds}
           onLoadTransmittal={onSetSelectedDocumentIds}
           onSaveTransmittal={() => selectedDocumentIds}

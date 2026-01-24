@@ -231,13 +231,13 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
                         <div className="flex items-center gap-2">
                             <input
                                 type="text"
-                                className="flex-1 px-3 py-2 border rounded bg-[#3c3c3c] border-[#3e3e42] text-[#cccccc] focus:outline-none focus:border-[#3e3e42]"
+                                className="flex-1 px-3 py-2 border rounded bg-[#3c3c3c] border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-border)]"
                                 value={formData.title}
                                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                                 placeholder={`e.g., Request For Tender ${initialDiscipline || 'Fire Services'}`}
                             />
                             <button
-                                className="px-4 py-2 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] disabled:opacity-50 text-sm whitespace-nowrap"
+                                className="px-4 py-2 bg-[var(--color-accent-green)] text-white rounded hover:bg-[#1177bb] disabled:opacity-50 text-sm whitespace-nowrap"
                                 onClick={handleStart}
                                 disabled={!formData.title || isGenerating}
                             >
@@ -249,13 +249,13 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
                         <div className="flex items-center gap-2">
                             <input
                                 type="text"
-                                className="flex-1 px-3 py-2 border rounded bg-[#3c3c3c] border-[#3e3e42] text-[#858585]"
+                                className="flex-1 px-3 py-2 border rounded bg-[#3c3c3c] border-[var(--color-border)] text-[var(--color-text-muted)]"
                                 value={initialDiscipline ? `Tender Recommendation Report ${initialDiscipline}` : ''}
                                 disabled
                                 placeholder={`e.g., Tender Recommendation Report ${initialDiscipline || 'Fire Services'}`}
                             />
                             <button
-                                className="px-4 py-2 bg-[#3e3e42] text-[#858585] rounded text-sm whitespace-nowrap cursor-not-allowed"
+                                className="px-4 py-2 bg-[var(--color-border)] text-[var(--color-text-muted)] rounded text-sm whitespace-nowrap cursor-not-allowed"
                                 disabled
                                 title="Coming soon"
                             >
@@ -266,10 +266,10 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
                         {/* Show discipline field only if not pre-filled via inline */}
                         {!initialDiscipline && (
                             <div>
-                                <label className="block text-sm font-medium mb-1 text-[#cccccc]">Discipline</label>
+                                <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Discipline</label>
                                 <input
                                     type="text"
-                                    className="w-full px-3 py-2 border rounded bg-[#3c3c3c] border-[#3e3e42] text-[#cccccc]"
+                                    className="w-full px-3 py-2 border rounded bg-[#3c3c3c] border-[var(--color-border)] text-[var(--color-text-primary)]"
                                     value={formData.discipline ?? ''}
                                     onChange={e => setFormData({ ...formData, discipline: e.target.value })}
                                     placeholder="e.g., Fire Services"
@@ -433,34 +433,34 @@ function RepoCheckbox({ repo, isSelected, onToggle, variant }: RepoCheckboxProps
     const hasSyncedDocs = (repo.syncedCount || 0) > 0;
 
     // Visual styling based on variant
-    const borderColor = variant === 'project' ? 'border-[#0e639c]' : 'border-[#3e3e42]';
+    const borderColor = variant === 'project' ? 'border-[var(--color-accent-green)]' : 'border-[var(--color-border)]';
     const bgColor = isSelected
         ? variant === 'project'
             ? 'bg-[#1e3a5f]'
-            : 'bg-[#2a2a2a]'
-        : 'bg-[#1e1e1e]';
+            : 'bg-[var(--color-bg-tertiary)]'
+        : 'bg-[var(--color-bg-primary)]';
 
     return (
         <label
-            className={`flex items-center gap-2 p-2 rounded border ${borderColor} ${bgColor} cursor-pointer hover:bg-[#2a2a2a] transition-colors`}
+            className={`flex items-center gap-2 p-2 rounded border ${borderColor} ${bgColor} cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors`}
         >
             <input
                 type="checkbox"
                 checked={isSelected}
                 onChange={onToggle}
-                className="w-4 h-4 rounded border-[#3e3e42] bg-[#3c3c3c] accent-[#0e639c]"
+                className="w-4 h-4 rounded border-[var(--color-border)] bg-[#3c3c3c] accent-[var(--color-accent-green)]"
             />
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm text-[#cccccc] truncate">{repoLabel}</span>
+                    <span className="text-sm text-[var(--color-text-primary)] truncate">{repoLabel}</span>
                     {variant === 'project' && (
-                        <span className="text-xs px-1 py-0.5 bg-[#0e639c]/30 text-[#8bb8e8] rounded">
+                        <span className="text-xs px-1 py-0.5 bg-[var(--color-accent-green)]/30 text-[#8bb8e8] rounded">
                             Project
                         </span>
                     )}
                 </div>
             </div>
-            <div className="flex items-center gap-1 text-xs text-[#858585]">
+            <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
                 {hasSyncedDocs ? (
                     <>
                         <span className="w-2 h-2 rounded-full bg-green-500" />

@@ -45,7 +45,7 @@ export function StatusIndicator({ type, isActive, onClick, disabled = false }: S
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'flex items-center justify-center p-1.5 rounded hover:bg-[#3e3e42] transition-all',
+        'flex items-center justify-center p-1.5 rounded hover:bg-[var(--color-border)] transition-all',
         disabled && 'cursor-not-allowed opacity-50',
         !disabled && 'cursor-pointer'
       )}

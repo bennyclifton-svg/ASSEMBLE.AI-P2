@@ -1,0 +1,197 @@
+/**
+ * Report Attendees API Route
+ * Feature 021 - Notes, Meetings & Reports
+ *
+ * GET /api/project-reports/[id]/attendees - List report attendees (distribution list)
+ * POST /api/project-reports/[id]/attendees - Add attendee (stakeholder or ad-hoc)
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { handleApiError } from '@/lib/api-utils';
+import { db } from '@/lib/db';
+import { reports, reportAttendees, projectStakeholders } from '@/lib/db/schema';
+import { getCurrentUser } from '@/lib/auth/get-user';
+import { addAttendeeSchema } from '@/lib/validations/notes-meetings-reports-schema';
+import { v4 as uuidv4 } from 'uuid';
+import { eq, and, isNull } from 'drizzle-orm';
+
+interface RouteParams {
+    params: Promise<{ id: string }>;
+}
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
+    return handleApiError(async () => {
+        const { id } = await params;
+
+        // Get authenticated user
+        const authResult = await getCurrentUser();
+        if (!authResult.user) {
+            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+        }
+
+        if (!authResult.user.organizationId) {
+            return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
+        }
+
+        // Check if report exists and belongs to user's org
+        const [report] = await db
+            .select()
+            .from(reports)
+            .where(
+                and(
+                    eq(reports.id, id),
+                    eq(reports.organizationId, authResult.user.organizationId),
+                    isNull(reports.deletedAt)
+                )
+            )
+            .limit(1);
+
+        if (!report) {
+            return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+        }
+
+        // Fetch attendees with stakeholder info
+        const attendees = await db
+            .select({
+                id: reportAttendees.id,
+                reportId: reportAttendees.reportId,
+                stakeholderId: reportAttendees.stakeholderId,
+                adhocName: reportAttendees.adhocName,
+                adhocFirm: reportAttendees.adhocFirm,
+                adhocGroup: reportAttendees.adhocGroup,
+                isDistribution: reportAttendees.isDistribution,
+                createdAt: reportAttendees.createdAt,
+                stakeholderName: projectStakeholders.name,
+                stakeholderGroup: projectStakeholders.stakeholderGroup,
+                stakeholderOrganization: projectStakeholders.organization,
+                stakeholderContactEmail: projectStakeholders.contactEmail,
+            })
+            .from(reportAttendees)
+            .leftJoin(projectStakeholders, eq(reportAttendees.stakeholderId, projectStakeholders.id))
+            .where(eq(reportAttendees.reportId, id));
+
+        return NextResponse.json({
+            reportId: id,
+            attendees,
+            total: attendees.length,
+        });
+    });
+}
+
+export async function POST(request: NextRequest, { params }: RouteParams) {
+    return handleApiError(async () => {
+        const { id } = await params;
+
+        // Get authenticated user
+        const authResult = await getCurrentUser();
+        if (!authResult.user) {
+            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+        }
+
+        if (!authResult.user.organizationId) {
+            return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
+        }
+
+        // Check if report exists and belongs to user's org
+        const [report] = await db
+            .select()
+            .from(reports)
+            .where(
+                and(
+                    eq(reports.id, id),
+                    eq(reports.organizationId, authResult.user.organizationId),
+                    isNull(reports.deletedAt)
+                )
+            )
+            .limit(1);
+
+        if (!report) {
+            return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+        }
+
+        const body = await request.json();
+
+        // Validate request body
+        const validationResult = addAttendeeSchema.safeParse(body);
+        if (!validationResult.success) {
+            return NextResponse.json(
+                { error: 'Validation failed', details: validationResult.error.flatten() },
+                { status: 400 }
+            );
+        }
+
+        const { stakeholderId, adhocName, adhocFirm, adhocGroup } = validationResult.data;
+        const now = new Date().toISOString();
+
+        // If stakeholderId provided, verify it exists
+        if (stakeholderId) {
+            const [stakeholder] = await db
+                .select()
+                .from(projectStakeholders)
+                .where(
+                    and(
+                        eq(projectStakeholders.id, stakeholderId),
+                        eq(projectStakeholders.projectId, report.projectId),
+                        isNull(projectStakeholders.deletedAt)
+                    )
+                )
+                .limit(1);
+
+            if (!stakeholder) {
+                return NextResponse.json({ error: 'Stakeholder not found' }, { status: 404 });
+            }
+
+            // Check if stakeholder already added
+            const [existing] = await db
+                .select()
+                .from(reportAttendees)
+                .where(
+                    and(
+                        eq(reportAttendees.reportId, id),
+                        eq(reportAttendees.stakeholderId, stakeholderId)
+                    )
+                )
+                .limit(1);
+
+            if (existing) {
+                return NextResponse.json({ error: 'Stakeholder already added to report' }, { status: 409 });
+            }
+        }
+
+        // Create attendee
+        const attendeeId = uuidv4();
+
+        await db.insert(reportAttendees).values({
+            id: attendeeId,
+            reportId: id,
+            stakeholderId: stakeholderId || null,
+            adhocName: adhocName || null,
+            adhocFirm: adhocFirm || null,
+            adhocGroup: adhocGroup || null,
+            isDistribution: true,
+            createdAt: now,
+        });
+
+        // Fetch and return the created attendee with stakeholder info
+        const [created] = await db
+            .select({
+                id: reportAttendees.id,
+                reportId: reportAttendees.reportId,
+                stakeholderId: reportAttendees.stakeholderId,
+                adhocName: reportAttendees.adhocName,
+                adhocFirm: reportAttendees.adhocFirm,
+                adhocGroup: reportAttendees.adhocGroup,
+                isDistribution: reportAttendees.isDistribution,
+                createdAt: reportAttendees.createdAt,
+                stakeholderName: projectStakeholders.name,
+                stakeholderGroup: projectStakeholders.stakeholderGroup,
+                stakeholderOrganization: projectStakeholders.organization,
+            })
+            .from(reportAttendees)
+            .leftJoin(projectStakeholders, eq(reportAttendees.stakeholderId, projectStakeholders.id))
+            .where(eq(reportAttendees.id, attendeeId))
+            .limit(1);
+
+        return NextResponse.json(created, { status: 201 });
+    });
+}
