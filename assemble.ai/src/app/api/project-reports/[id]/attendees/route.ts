@@ -8,8 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
-import { db } from '@/lib/db';
-import { reports, reportAttendees, projectStakeholders } from '@/lib/db/schema';
+import { db, reports, reportAttendees, projectStakeholders } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { addAttendeeSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { v4 as uuidv4 } from 'uuid';
@@ -22,9 +21,11 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
     return handleApiError(async () => {
         const { id } = await params;
+        console.log('[DEBUG] GET /api/project-reports/[id]/attendees - Report ID:', id);
 
         // Get authenticated user
         const authResult = await getCurrentUser();
+        console.log('[DEBUG] Auth result:', authResult.user ? 'User authenticated' : authResult.error);
         if (!authResult.user) {
             return NextResponse.json({ error: authResult.error }, { status: authResult.status });
         }
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         // Fetch attendees with stakeholder info
-        const attendees = await db
+        const rawAttendees = await db
             .select({
                 id: reportAttendees.id,
                 reportId: reportAttendees.reportId,
@@ -59,16 +60,44 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 adhocName: reportAttendees.adhocName,
                 adhocFirm: reportAttendees.adhocFirm,
                 adhocGroup: reportAttendees.adhocGroup,
+                adhocSubGroup: reportAttendees.adhocSubGroup,
                 isDistribution: reportAttendees.isDistribution,
                 createdAt: reportAttendees.createdAt,
                 stakeholderName: projectStakeholders.name,
                 stakeholderGroup: projectStakeholders.stakeholderGroup,
                 stakeholderOrganization: projectStakeholders.organization,
+                stakeholderContactName: projectStakeholders.contactName,
                 stakeholderContactEmail: projectStakeholders.contactEmail,
+                stakeholderRole: projectStakeholders.role,
+                stakeholderDisciplineOrTrade: projectStakeholders.disciplineOrTrade,
             })
             .from(reportAttendees)
             .leftJoin(projectStakeholders, eq(reportAttendees.stakeholderId, projectStakeholders.id))
             .where(eq(reportAttendees.reportId, id));
+
+        // Transform to nested stakeholder structure expected by MeetingStakeholderTable
+        const attendees = rawAttendees.map(a => ({
+            id: a.id,
+            reportId: a.reportId,
+            stakeholderId: a.stakeholderId,
+            adhocName: a.adhocName,
+            adhocFirm: a.adhocFirm,
+            adhocGroup: a.adhocGroup,
+            adhocSubGroup: a.adhocSubGroup,
+            isDistribution: a.isDistribution,
+            isAttending: true, // Reports use isDistribution but we need this for the table
+            createdAt: a.createdAt,
+            stakeholder: a.stakeholderId ? {
+                id: a.stakeholderId,
+                name: a.stakeholderName,
+                stakeholderGroup: a.stakeholderGroup,
+                organization: a.stakeholderOrganization,
+                contactName: a.stakeholderContactName,
+                contactEmail: a.stakeholderContactEmail,
+                role: a.stakeholderRole,
+                disciplineOrTrade: a.stakeholderDisciplineOrTrade,
+            } : null,
+        }));
 
         return NextResponse.json({
             reportId: id,
@@ -81,9 +110,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
     return handleApiError(async () => {
         const { id } = await params;
+        console.log('[DEBUG] POST /api/project-reports/[id]/attendees - Report ID:', id);
 
         // Get authenticated user
         const authResult = await getCurrentUser();
+        console.log('[DEBUG] Auth result:', authResult.user ? 'User authenticated' : authResult.error);
         if (!authResult.user) {
             return NextResponse.json({ error: authResult.error }, { status: authResult.status });
         }
@@ -160,6 +191,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         // Create attendee
         const attendeeId = uuidv4();
+        const { adhocSubGroup } = validationResult.data;
 
         await db.insert(reportAttendees).values({
             id: attendeeId,
@@ -168,12 +200,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             adhocName: adhocName || null,
             adhocFirm: adhocFirm || null,
             adhocGroup: adhocGroup || null,
+            adhocSubGroup: adhocSubGroup || null,
             isDistribution: true,
             createdAt: now,
         });
 
         // Fetch and return the created attendee with stakeholder info
-        const [created] = await db
+        const [rawCreated] = await db
             .select({
                 id: reportAttendees.id,
                 reportId: reportAttendees.reportId,
@@ -181,16 +214,45 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 adhocName: reportAttendees.adhocName,
                 adhocFirm: reportAttendees.adhocFirm,
                 adhocGroup: reportAttendees.adhocGroup,
+                adhocSubGroup: reportAttendees.adhocSubGroup,
                 isDistribution: reportAttendees.isDistribution,
                 createdAt: reportAttendees.createdAt,
                 stakeholderName: projectStakeholders.name,
                 stakeholderGroup: projectStakeholders.stakeholderGroup,
                 stakeholderOrganization: projectStakeholders.organization,
+                stakeholderContactName: projectStakeholders.contactName,
+                stakeholderContactEmail: projectStakeholders.contactEmail,
+                stakeholderRole: projectStakeholders.role,
+                stakeholderDisciplineOrTrade: projectStakeholders.disciplineOrTrade,
             })
             .from(reportAttendees)
             .leftJoin(projectStakeholders, eq(reportAttendees.stakeholderId, projectStakeholders.id))
             .where(eq(reportAttendees.id, attendeeId))
             .limit(1);
+
+        // Transform to nested stakeholder structure
+        const created = {
+            id: rawCreated.id,
+            reportId: rawCreated.reportId,
+            stakeholderId: rawCreated.stakeholderId,
+            adhocName: rawCreated.adhocName,
+            adhocFirm: rawCreated.adhocFirm,
+            adhocGroup: rawCreated.adhocGroup,
+            adhocSubGroup: rawCreated.adhocSubGroup,
+            isDistribution: rawCreated.isDistribution,
+            isAttending: true,
+            createdAt: rawCreated.createdAt,
+            stakeholder: rawCreated.stakeholderId ? {
+                id: rawCreated.stakeholderId,
+                name: rawCreated.stakeholderName,
+                stakeholderGroup: rawCreated.stakeholderGroup,
+                organization: rawCreated.stakeholderOrganization,
+                contactName: rawCreated.stakeholderContactName,
+                contactEmail: rawCreated.stakeholderContactEmail,
+                role: rawCreated.stakeholderRole,
+                disciplineOrTrade: rawCreated.stakeholderDisciplineOrTrade,
+            } : null,
+        };
 
         return NextResponse.json(created, { status: 201 });
     });

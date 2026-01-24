@@ -44,7 +44,7 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
 
   if (isLoading) {
     return (
-      <div className="nav-panel p-3 relative overflow-hidden">
+      <div className="nav-panel py-3 pl-2 pr-3 relative overflow-hidden">
         <Skeleton className="h-5 w-24 mb-2" />
         <div className="space-y-1">
           {[1, 2, 3, 4].map((i) => (
@@ -59,7 +59,7 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
     <div className={`nav-panel relative overflow-hidden ${isActive ? 'nav-panel-active' : ''}`}>
       {/* Header */}
       <div
-        className="nav-panel-header px-3 py-2 border-b border-[var(--color-border)]"
+        className="nav-panel-header pl-2 pr-3 py-2 border-b border-[var(--color-border)]"
         onClick={onNavigate}
       >
         <div className="flex items-center gap-1.5">
@@ -82,7 +82,7 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
             <div
               key={group}
               className={cn(
-                'flex items-center justify-between px-2 py-1.5 rounded-md',
+                'flex items-center justify-between pl-1 pr-2 py-1.5 rounded-md',
                 'hover:bg-[var(--color-bg-secondary)] transition-colors cursor-pointer'
               )}
               onClick={onNavigate}

@@ -1508,6 +1508,7 @@ export const reportAttendees = sqliteTable('report_attendees', {
     adhocName: text('adhoc_name'),
     adhocFirm: text('adhoc_firm'),
     adhocGroup: text('adhoc_group'),
+    adhocSubGroup: text('adhoc_sub_group'),
     isDistribution: integer('is_distribution', { mode: 'boolean' }).default(true),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });

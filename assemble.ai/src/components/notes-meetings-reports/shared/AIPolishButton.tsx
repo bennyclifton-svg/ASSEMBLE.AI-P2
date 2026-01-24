@@ -2,22 +2,20 @@
  * AI Polish Button Component
  * Feature 021 - Notes, Meetings & Reports - Phase 6 (User Story 4)
  *
- * Filled diamond icon button that triggers AI content polishing.
- * Shows loading state while polishing.
+ * Filled diamond icon button with "Polish" text that triggers AI content polishing.
+ * Styled to match the objectives section polish button.
  */
 
 'use client';
 
 import React from 'react';
-import { Diamond, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { cn } from '@/lib/utils';
 
 interface AIPolishButtonProps {
     onClick: () => void;
     isLoading?: boolean;
     disabled?: boolean;
-    size?: 'sm' | 'md';
     className?: string;
     tooltip?: string;
 }
@@ -26,45 +24,31 @@ export function AIPolishButton({
     onClick,
     isLoading = false,
     disabled = false,
-    size = 'md',
     className,
     tooltip = 'Polish content with AI',
 }: AIPolishButtonProps) {
-    const sizeClasses = {
-        sm: 'h-6 w-6',
-        md: 'h-7 w-7',
-    };
-
-    const iconSizeClasses = {
-        sm: 'h-3.5 w-3.5',
-        md: 'h-4 w-4',
-    };
-
     return (
-        <Button
-            variant="ghost"
-            size="icon"
-            className={cn(sizeClasses[size], className)}
+        <button
             onClick={onClick}
             disabled={disabled || isLoading}
+            className={cn(
+                'flex items-center gap-1.5 text-sm font-medium transition-all',
+                disabled || isLoading
+                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                    : 'text-[var(--color-accent-copper)] hover:opacity-80',
+                className
+            )}
             title={tooltip}
         >
-            {isLoading ? (
-                <Loader2
-                    className={cn(
-                        iconSizeClasses[size],
-                        'animate-spin text-[var(--color-accent-primary)]'
-                    )}
-                />
-            ) : (
-                <Diamond
-                    className={cn(
-                        iconSizeClasses[size],
-                        'fill-current text-[var(--color-text-muted)] hover:text-[var(--color-accent-primary)] transition-colors'
-                    )}
-                />
-            )}
-        </Button>
+            <DiamondIcon
+                className={cn(
+                    'w-4 h-4',
+                    isLoading && 'animate-spin'
+                )}
+                variant="filled"
+            />
+            {isLoading ? 'Polishing...' : 'Polish'}
+        </button>
     );
 }
 

@@ -27,6 +27,7 @@ interface TRRSectionProps {
     projectId: string;
     stakeholderId?: string;
     stakeholderName?: string;
+    contextType: 'discipline' | 'trade';
     selectedDocumentIds?: string[];
     onLoadTransmittal?: (documentIds: string[]) => void;
     onSaveTransmittal?: () => string[];
@@ -36,6 +37,7 @@ export function TRRSection({
     projectId,
     stakeholderId,
     stakeholderName,
+    contextType,
     selectedDocumentIds = [],
     onLoadTransmittal,
     onSaveTransmittal,
@@ -341,6 +343,7 @@ export function TRRSection({
                                     projectId={projectId}
                                     trr={trr}
                                     stakeholderId={stakeholderId}
+                                    contextType={contextType}
                                     contextName={contextName}
                                     onUpdateTRR={updateTRR}
                                 />

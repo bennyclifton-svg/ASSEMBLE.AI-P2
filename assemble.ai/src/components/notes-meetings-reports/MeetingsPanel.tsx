@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MeetingCard } from './MeetingCard';
 import { DeleteConfirmDialog } from './shared/DeleteConfirmDialog';
 import { useMeetings, useMeetingMutations } from '@/lib/hooks/use-meetings';
-import { Plus, Loader2, Calendar, AlertCircle } from 'lucide-react';
+import { Plus, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UpdateMeetingRequest } from '@/types/notes-meetings-reports';
 
@@ -180,7 +180,6 @@ function PanelHeader({ meetingsCount, isCreating, onCreateMeeting }: PanelHeader
     return (
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
             <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-[var(--color-text-muted)]" />
                 <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                     Meetings
                 </h2>

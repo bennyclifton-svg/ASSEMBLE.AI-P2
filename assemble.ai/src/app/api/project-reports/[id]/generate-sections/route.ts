@@ -7,8 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
-import { db } from '@/lib/db';
-import { reports, reportSections } from '@/lib/db/schema';
+import { db, reports, reportSections } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { generateReportSectionsSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { eq, and, isNull } from 'drizzle-orm';
@@ -78,20 +77,44 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         // Insert new sections
         if (sectionsToCreate.length > 0) {
-            await db.insert(reportSections).values(
-                sectionsToCreate.map(s => ({
-                    id: s.id,
-                    reportId: s.reportId!,
-                    sectionKey: s.sectionKey,
-                    sectionLabel: s.sectionLabel,
-                    content: s.content,
-                    sortOrder: s.sortOrder,
-                    parentSectionId: s.parentSectionId,
-                    stakeholderId: s.stakeholderId,
-                    createdAt: s.createdAt,
-                    updatedAt: s.updatedAt,
-                }))
-            );
+            // First, insert all parent sections (those without parentSectionId)
+            const parentSections = sectionsToCreate.filter(s => !s.parentSectionId);
+            const childSections = sectionsToCreate.filter(s => s.parentSectionId);
+
+            if (parentSections.length > 0) {
+                await db.insert(reportSections).values(
+                    parentSections.map(s => ({
+                        id: s.id,
+                        reportId: s.reportId!,
+                        sectionKey: s.sectionKey,
+                        sectionLabel: s.sectionLabel,
+                        content: s.content ?? null,
+                        sortOrder: s.sortOrder,
+                        parentSectionId: null,
+                        stakeholderId: s.stakeholderId ?? null,
+                        createdAt: s.createdAt,
+                        updatedAt: s.updatedAt,
+                    }))
+                );
+            }
+
+            // Then insert child sections (those with parentSectionId)
+            if (childSections.length > 0) {
+                await db.insert(reportSections).values(
+                    childSections.map(s => ({
+                        id: s.id,
+                        reportId: s.reportId!,
+                        sectionKey: s.sectionKey,
+                        sectionLabel: s.sectionLabel,
+                        content: s.content ?? null,
+                        sortOrder: s.sortOrder,
+                        parentSectionId: s.parentSectionId,
+                        stakeholderId: s.stakeholderId ?? null,
+                        createdAt: s.createdAt,
+                        updatedAt: s.updatedAt,
+                    }))
+                );
+            }
         }
 
         // Update report's contentsType and updatedAt

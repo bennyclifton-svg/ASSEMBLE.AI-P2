@@ -97,7 +97,7 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
 
   return (
     <div
-      className={`nav-panel p-3 relative overflow-hidden ${isActive ? 'nav-panel-active' : ''} ${isClassTypeComplete ? 'cursor-pointer hover:bg-[var(--color-bg-tertiary)]/50' : ''}`}
+      className={`nav-panel py-3 pl-2 pr-3 relative overflow-hidden ${isActive ? 'nav-panel-active' : ''} ${isClassTypeComplete ? 'cursor-pointer hover:bg-[var(--color-bg-tertiary)]/50' : ''}`}
       onClick={isClassTypeComplete ? onShowProfiler : undefined}
     >
       <div className="nav-panel-header w-full mb-2">

@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ReportCard } from './ReportCard';
 import { DeleteConfirmDialog } from './shared/DeleteConfirmDialog';
 import { useReports, useReportMutations } from '@/lib/hooks/use-reports';
-import { Plus, Loader2, FileText, AlertCircle } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UpdateReportRequest } from '@/types/notes-meetings-reports';
 
@@ -180,7 +180,6 @@ function PanelHeader({ reportsCount, isCreating, onCreateReport }: PanelHeaderPr
     return (
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
             <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-[var(--color-text-muted)]" />
                 <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
                     Reports
                 </h2>

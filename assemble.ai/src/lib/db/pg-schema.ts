@@ -1423,6 +1423,7 @@ export const reportAttendees = pgTable('report_attendees', {
     adhocName: text('adhoc_name'),
     adhocFirm: text('adhoc_firm'),
     adhocGroup: text('adhoc_group'),
+    adhocSubGroup: text('adhoc_sub_group'),
     isDistribution: boolean('is_distribution').default(true),
     createdAt: text('created_at'),
 });

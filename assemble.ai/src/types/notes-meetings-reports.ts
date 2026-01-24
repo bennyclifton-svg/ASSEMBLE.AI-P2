@@ -239,6 +239,8 @@ export interface ReportAttendee {
   adhocName: string | null;
   adhocFirm: string | null;
   adhocGroup: string | null;
+  adhocSubGroup: string | null;
+  isAttending: boolean;
   isDistribution: boolean;
   createdAt: string;
   stakeholder?: Stakeholder;

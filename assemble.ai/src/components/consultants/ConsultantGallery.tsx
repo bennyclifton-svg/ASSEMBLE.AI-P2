@@ -489,6 +489,7 @@ export function ConsultantGallery({
           projectId={projectId}
           stakeholderId={disciplineId}
           stakeholderName={discipline}
+          contextType="discipline"
           selectedDocumentIds={selectedDocumentIds}
           onLoadTransmittal={onSetSelectedDocumentIds}
           onSaveTransmittal={() => selectedDocumentIds}

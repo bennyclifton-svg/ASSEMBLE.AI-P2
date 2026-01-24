@@ -292,20 +292,20 @@ export function MeetingEditor({
             {/* Project Info & Meeting Date */}
             {meeting?.project && (
                 <div className="px-4 py-3 bg-[var(--color-bg-secondary)]">
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
+                    <div className="grid grid-cols-[auto_1fr_auto] gap-6 text-sm">
+                        <div className="whitespace-nowrap">
                             <span className="text-[var(--color-text-muted)]">Project:</span>
                             <span className="ml-2 text-[var(--color-text-primary)]">
                                 {meeting.project.name}
                             </span>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <span className="text-[var(--color-text-muted)]">Address:</span>
                             <span className="ml-2 text-[var(--color-text-primary)]">
                                 {meeting.project.address || 'Not set'}
                             </span>
                         </div>
-                        <div className="flex items-center gap-2 ml-auto">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
                             <span className="text-[var(--color-text-muted)]">Meeting Date:</span>
                             <div
                                 className="relative cursor-pointer hover:bg-[var(--color-bg-tertiary)] px-2 py-0.5 rounded transition-colors"

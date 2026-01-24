@@ -16,7 +16,6 @@ import { NotesPanel } from './NotesPanel';
 import { MeetingsPanel } from './MeetingsPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { cn } from '@/lib/utils';
-import { StickyNote, Calendar, FileText } from 'lucide-react';
 
 // Sub-tab type
 type SubTab = 'notes' | 'meetings' | 'reports';
@@ -124,12 +123,12 @@ export function NotesMeetingsReportsContainer({
 
     // Sub-tab styling - matches the procurement sub-tabs style
     const subTabClassName = `
-        relative flex items-center gap-1.5 rounded-none px-4 py-2 text-[13px] font-medium transition-colors bg-transparent
+        relative flex items-center gap-1.5 rounded-none px-4 py-2 text-[13px] font-medium transition-all duration-200 bg-transparent
+        text-[var(--color-text-muted)]
         data-[state=active]:bg-[var(--color-bg-primary)]
         data-[state=active]:text-[var(--color-accent-primary)]
         data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent-primary)]
-        data-[state=inactive]:text-[var(--color-text-muted)]
-        hover:text-[var(--color-text-secondary)]
+        hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50
     `;
 
     return (
@@ -142,15 +141,12 @@ export function NotesMeetingsReportsContainer({
                 {/* Sub-tab navigation bar */}
                 <TabsList className="w-full justify-start bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2">
                     <TabsTrigger value="notes" className={subTabClassName}>
-                        <StickyNote className="h-4 w-4" />
                         Notes
                     </TabsTrigger>
                     <TabsTrigger value="meetings" className={subTabClassName}>
-                        <Calendar className="h-4 w-4" />
                         Meetings
                     </TabsTrigger>
                     <TabsTrigger value="reports" className={subTabClassName}>
-                        <FileText className="h-4 w-4" />
                         Reports
                     </TabsTrigger>
                 </TabsList>

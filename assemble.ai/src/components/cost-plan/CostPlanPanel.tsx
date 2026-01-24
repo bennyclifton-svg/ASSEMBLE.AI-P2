@@ -85,19 +85,19 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
                 <TabsList className="w-full justify-start bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2">
                     <TabsTrigger
                         value="cost-plan"
-                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium"
+                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
                     >
                         Cost Plan
                     </TabsTrigger>
                     <TabsTrigger
                         value="variations"
-                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium"
+                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
                     >
                         Variations
                     </TabsTrigger>
                     <TabsTrigger
                         value="invoices"
-                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium"
+                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
                     >
                         Invoices
                     </TabsTrigger>

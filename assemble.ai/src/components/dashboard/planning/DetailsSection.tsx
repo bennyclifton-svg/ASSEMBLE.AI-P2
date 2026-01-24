@@ -338,7 +338,7 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
             onMouseLeave={() => setIsHovered(false)}
         >
             {/* Label column - dynamic width, allows text wrap */}
-            <div className="w-[25%] min-w-[60px] max-w-[120px] shrink-0 pl-3 pr-2 py-1 flex items-center relative">
+            <div className="w-[25%] min-w-[60px] max-w-[100px] shrink-0 pl-1.5 pr-1.5 py-1 flex items-center relative">
                 <span className="text-xs font-medium text-[var(--color-text-muted)] break-words leading-tight">{label}</span>
 
                 {/* Copper vertical highlight bar at column separator - hover only */}
@@ -624,7 +624,7 @@ export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange 
 
     return (
         <div
-            className="nav-panel p-3 relative overflow-hidden"
+            className="nav-panel py-3 pl-2 pr-3 relative overflow-hidden"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -655,7 +655,7 @@ export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange 
 
             {/* Project Name - Prominent Header Field */}
             <div className="mb-3 pb-2 border-b border-[var(--color-border)]">
-                <div className="flex items-center justify-between mb-0.5 px-3">
+                <div className="flex items-center justify-between mb-0.5 pl-1.5 pr-2">
                     <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
                         Project Name
                     </span>
@@ -665,7 +665,7 @@ export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange 
                     value={data?.projectName || ''}
                     onSave={(v) => updateField('projectName', v)}
                     placeholder="Untitled Project"
-                    className="text-lg font-bold text-[var(--color-text-primary)] px-3"
+                    className="text-lg font-bold text-[var(--color-text-primary)] pl-1.5 pr-2"
                 />
             </div>
 

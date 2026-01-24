@@ -8,7 +8,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Save, FolderOpen, EyeOff, Eye, Paperclip } from 'lucide-react';
+import { Save, FolderOpen, EyeOff, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AttachmentTable, type AttachmentDocument } from './AttachmentTable';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,6 @@ export function AttachmentSection({
             {/* Section Header */}
             <div className="flex items-center justify-between px-4 py-2 bg-[var(--color-bg-tertiary)]">
                 <div className="flex items-center gap-2">
-                    <Paperclip className="h-4 w-4 text-[var(--color-text-muted)]" />
                     <span className="text-sm font-medium text-[var(--color-text-secondary)]">
                         Attachments
                     </span>

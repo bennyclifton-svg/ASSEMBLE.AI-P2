@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAddenda, type Addendum } from '@/lib/hooks/use-addenda';
 import { useAddendumSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { useAddendumTransmittal } from '@/lib/hooks/use-addendum-transmittal';
@@ -91,9 +91,11 @@ export function AddendumSection({
     });
 
     // Set active addendum to first one when loaded
-    if (!activeAddendumId && addenda.length > 0) {
-        setActiveAddendumId(addenda[0].id);
-    }
+    useEffect(() => {
+        if (!activeAddendumId && addenda.length > 0) {
+            setActiveAddendumId(addenda[0].id);
+        }
+    }, [activeAddendumId, addenda, setActiveAddendumId]);
 
     const activeAddendum = addenda.find(a => a.id === activeAddendumId);
 

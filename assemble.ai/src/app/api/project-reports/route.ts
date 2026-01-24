@@ -8,8 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
-import { db } from '@/lib/db';
-import { reports, reportSections, reportTransmittals } from '@/lib/db/schema';
+import { db, reports, reportSections, reportTransmittals } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { createReportSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { v4 as uuidv4 } from 'uuid';
@@ -125,16 +124,26 @@ export async function POST(request: NextRequest) {
             reportId: id,
             sectionKey: section.key,
             sectionLabel: section.label,
-            content: null,
             sortOrder: section.sortOrder,
-            parentSectionId: null,
-            stakeholderId: null,
             createdAt: now,
             updatedAt: now,
         }));
 
+        let actualSectionCount = 0;
         if (sectionsToCreate.length > 0) {
-            await db.insert(reportSections).values(sectionsToCreate);
+            try {
+                await db.insert(reportSections).values(sectionsToCreate);
+                actualSectionCount = sectionsToCreate.length;
+            } catch (sectionError: any) {
+                console.error('Failed to create report sections:', {
+                    message: sectionError.message,
+                    code: sectionError.code,
+                    detail: sectionError.detail,
+                    constraint: sectionError.constraint,
+                });
+                // Report was created, sections failed - we can continue
+                // Sections can be regenerated later via the Contents type buttons
+            }
         }
 
         // Fetch and return the created report with counts
@@ -146,7 +155,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             ...created,
-            sectionCount: sectionsToCreate.length,
+            sectionCount: actualSectionCount,
             transmittalCount: 0,
         }, { status: 201 });
     });

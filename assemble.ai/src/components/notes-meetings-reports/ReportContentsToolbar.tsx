@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, List, ListTree, Settings2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ReportContentsType } from '@/types/notes-meetings-reports';
 
@@ -24,25 +24,21 @@ interface ReportContentsToolbarProps {
 const CONTENTS_TYPES: Array<{
     key: ReportContentsType;
     label: string;
-    icon: React.ReactNode;
     description: string;
 }> = [
     {
         key: 'standard',
         label: 'Standard',
-        icon: <List className="h-4 w-4" />,
         description: '8 fixed report sections',
     },
     {
         key: 'detailed',
         label: 'Detailed',
-        icon: <ListTree className="h-4 w-4" />,
         description: 'Standard + stakeholder sub-sections',
     },
     {
         key: 'custom',
         label: 'Custom',
-        icon: <Settings2 className="h-4 w-4" />,
         description: 'Define your own structure',
     },
 ];
@@ -74,18 +70,19 @@ export function ReportContentsToolbar({
                 return (
                     <Button
                         key={type.key}
-                        variant={isSelected ? 'default' : 'outline'}
+                        variant="outline"
                         size="sm"
                         onClick={() => onSelectType(type.key)}
                         disabled={isLoading}
                         className={cn(
-                            'h-8 gap-1.5',
-                            isSelected && 'bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)]'
+                            'h-8',
+                            isSelected
+                                ? 'bg-[var(--color-accent-copper-tint)] border-[var(--color-accent-copper)] text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper-tint)]'
+                                : 'hover:bg-[var(--color-accent-copper-tint)] hover:border-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)]'
                         )}
                         title={type.description}
                     >
-                        {type.icon}
-                        <span>{type.label}</span>
+                        {type.label}
                     </Button>
                 );
             })}

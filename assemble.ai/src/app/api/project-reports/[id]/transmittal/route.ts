@@ -8,8 +8,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
-import { db } from '@/lib/db';
 import {
+    db,
     reports,
     reportTransmittals,
     documents,
@@ -17,7 +17,7 @@ import {
     fileAssets,
     categories,
     subcategories,
-} from '@/lib/db/schema';
+} from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { transmittalSaveSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { v4 as uuidv4 } from 'uuid';

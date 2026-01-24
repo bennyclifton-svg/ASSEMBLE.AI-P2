@@ -107,7 +107,7 @@ function ObjectiveEditor({ label, objective, onChange, isGenerating, isPolishing
                 e.target.style.height = Math.max(e.target.scrollHeight, 80) + 'px';
               }}
               onKeyDown={handleKeyDown}
-              className="w-full text-sm bg-transparent border border-[var(--color-accent-copper)]/40 rounded-sm shadow-none outline-none focus:outline-none focus:ring-0 focus:border-[var(--color-accent-copper)]/40 text-[var(--color-text-secondary)] resize-none"
+              className="w-full text-sm bg-transparent border-none shadow-none outline-none focus:outline-none focus:ring-0 text-[var(--color-text-secondary)] resize-none"
               style={{ minHeight: '80px', padding: '0', margin: '0' }}
               placeholder={`Enter ${label.toLowerCase()} objectives...`}
             />
@@ -156,7 +156,6 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
   const { toast } = useToast();
   const [generatingSection, setGeneratingSection] = useState<ObjectiveSection | null>(null);
   const [polishingSection, setPolishingSection] = useState<ObjectiveSection | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   // Local state for objectives
   const [functionalQuality, setFunctionalQuality] = useState<ObjectiveContent | null>(
@@ -309,55 +308,6 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
     }
   };
 
-  // Save objectives
-  const handleSave = async () => {
-    if (!functionalQuality?.content && !planningCompliance?.content) {
-      toast({
-        title: 'No Content',
-        description: 'Please add at least one objective before saving',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const response = await fetch(`/api/projects/${projectId}/objectives`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          functionalQuality,
-          planningCompliance,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to save objectives');
-      }
-
-      toast({
-        title: 'Objectives Saved',
-        description: 'Your project objectives have been updated',
-      });
-
-      onUpdate();
-    } catch (error) {
-      toast({
-        title: 'Save Failed',
-        description: error instanceof Error ? error.message : 'Failed to save objectives',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Check if there are unsaved changes
-  const hasChanges =
-    JSON.stringify(functionalQuality) !== JSON.stringify(objectivesData?.functionalQuality) ||
-    JSON.stringify(planningCompliance) !== JSON.stringify(objectivesData?.planningCompliance);
-
   // Helper to check if any operation is in progress
   const isAnyOperationInProgress = generatingSection !== null || polishingSection !== null;
 
@@ -425,33 +375,6 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
           isPolishing={polishingSection === 'planningCompliance'}
           headerActions={createActionButtons('planningCompliance')}
         />
-
-        {/* Save Button */}
-        <button
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges}
-          className={`
-            w-full py-2.5 text-sm font-medium transition-all flex items-center justify-center gap-2
-            ${hasChanges && !isSaving
-              ? 'bg-[var(--color-accent-primary)] text-[var(--color-bg-primary)] hover:opacity-90'
-              : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] cursor-not-allowed'
-            }
-          `}
-        >
-          {isSaving ? (
-            <>
-              <div className="w-4 h-4 border-2 border-[var(--color-bg-primary)]/30 border-t-[var(--color-bg-primary)] rounded-full animate-spin" />
-              Saving...
-            </>
-          ) : hasChanges ? (
-            <>
-              <Save className="w-4 h-4" />
-              Save Objectives
-            </>
-          ) : (
-            'No Changes'
-          )}
-        </button>
       </div>
     </div>
   );

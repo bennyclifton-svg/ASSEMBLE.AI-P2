@@ -9,8 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
-import { db } from '@/lib/db';
-import { reports, reportSections, reportAttendees, reportTransmittals, projects, projectStakeholders } from '@/lib/db/schema';
+import { db, reports, reportSections, reportAttendees, reportTransmittals, projects, projectDetails, projectStakeholders } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { updateReportSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { eq, and, isNull, asc } from 'drizzle-orm';
@@ -22,9 +21,11 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
     return handleApiError(async () => {
         const { id } = await params;
+        console.log('[DEBUG] GET /api/project-reports/[id] - Report ID:', id);
 
         // Get authenticated user
         const authResult = await getCurrentUser();
+        console.log('[DEBUG] Auth result:', authResult.user ? 'User authenticated' : authResult.error);
         if (!authResult.user) {
             return NextResponse.json({ error: authResult.error }, { status: authResult.status });
         }
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         // Fetch related data in parallel
-        const [sections, attendees, transmittals, project] = await Promise.all([
+        const [sections, attendees, transmittals, project, details] = await Promise.all([
             // Sections ordered by sortOrder
             db
                 .select()
@@ -68,11 +69,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                     adhocName: reportAttendees.adhocName,
                     adhocFirm: reportAttendees.adhocFirm,
                     adhocGroup: reportAttendees.adhocGroup,
+                    adhocSubGroup: reportAttendees.adhocSubGroup,
                     isDistribution: reportAttendees.isDistribution,
                     createdAt: reportAttendees.createdAt,
                     stakeholderName: projectStakeholders.name,
                     stakeholderGroup: projectStakeholders.stakeholderGroup,
                     stakeholderOrganization: projectStakeholders.organization,
+                    stakeholderContactName: projectStakeholders.contactName,
+                    stakeholderContactEmail: projectStakeholders.contactEmail,
+                    stakeholderRole: projectStakeholders.role,
+                    stakeholderDisciplineOrTrade: projectStakeholders.disciplineOrTrade,
                 })
                 .from(reportAttendees)
                 .leftJoin(projectStakeholders, eq(reportAttendees.stakeholderId, projectStakeholders.id))
@@ -86,12 +92,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
             // Project info
             db
-                .select({
-                    id: projects.id,
-                    name: projects.name,
-                })
+                .select()
                 .from(projects)
                 .where(eq(projects.id, report.projectId))
+                .limit(1),
+
+            // Project details (for address)
+            db
+                .select()
+                .from(projectDetails)
+                .where(eq(projectDetails.projectId, report.projectId))
                 .limit(1),
         ]);
 
@@ -117,12 +127,40 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             }
         }
 
+        // Transform attendees to nested stakeholder structure
+        const transformedAttendees = attendees.map(a => ({
+            id: a.id,
+            reportId: a.reportId,
+            stakeholderId: a.stakeholderId,
+            adhocName: a.adhocName,
+            adhocFirm: a.adhocFirm,
+            adhocGroup: a.adhocGroup,
+            adhocSubGroup: a.adhocSubGroup,
+            isDistribution: a.isDistribution,
+            isAttending: true,
+            createdAt: a.createdAt,
+            stakeholder: a.stakeholderId ? {
+                id: a.stakeholderId,
+                name: a.stakeholderName,
+                stakeholderGroup: a.stakeholderGroup,
+                organization: a.stakeholderOrganization,
+                contactName: a.stakeholderContactName,
+                contactEmail: a.stakeholderContactEmail,
+                role: a.stakeholderRole,
+                disciplineOrTrade: a.stakeholderDisciplineOrTrade,
+            } : null,
+        }));
+
         return NextResponse.json({
             ...report,
             sections: topLevelSections,
-            attendees,
+            attendees: transformedAttendees,
             transmittals,
-            project: project[0] || null,
+            project: project[0] ? {
+                id: project[0].id,
+                name: project[0].name,
+                address: details[0]?.address || null,
+            } : null,
         });
     });
 }

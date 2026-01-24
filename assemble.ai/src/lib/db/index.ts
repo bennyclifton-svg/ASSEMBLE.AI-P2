@@ -26,11 +26,18 @@ export const db = usePostgres
     })()
     : (() => {
         // SQLite for development
-        const { drizzle } = require('drizzle-orm/better-sqlite3');
-        const Database = require('better-sqlite3');
-        const sqlite = new Database('sqlite.db');
-        sqlite.pragma('foreign_keys = ON');
-        return drizzle(sqlite, { schema: sqliteSchema });
+        try {
+            const { drizzle } = require('drizzle-orm/better-sqlite3');
+            const Database = require('better-sqlite3');
+            console.log('[DB] Initializing SQLite database: sqlite.db');
+            const sqlite = new Database('sqlite.db');
+            sqlite.pragma('foreign_keys = ON');
+            console.log('[DB] SQLite database initialized successfully');
+            return drizzle(sqlite, { schema: sqliteSchema });
+        } catch (error) {
+            console.error('[DB] Failed to initialize SQLite database:', error);
+            throw error;
+        }
     })();
 
 // Export the database type for TypeScript

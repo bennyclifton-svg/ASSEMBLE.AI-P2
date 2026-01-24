@@ -62,8 +62,8 @@ export function PlanningCard({
     }
 
     return (
-        <div className="h-full overflow-y-auto p-6 section-planning" style={{ scrollbarGutter: 'stable both-edges' }}>
-            <div className="max-w-4xl mx-auto space-y-3">
+        <div className="h-full overflow-y-auto p-3 section-planning" style={{ scrollbarGutter: 'stable both-edges' }}>
+            <div className="space-y-3">
                 <DetailsSection
                     key={projectId}
                     projectId={projectId}

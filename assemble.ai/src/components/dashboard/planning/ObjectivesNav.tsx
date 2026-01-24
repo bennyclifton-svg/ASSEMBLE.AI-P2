@@ -36,7 +36,7 @@ export function ObjectivesNav({ projectId, data, profileData, onShowObjectives, 
                         data?.functionalQuality?.source === 'ai_polished';
 
   return (
-    <div className={`nav-panel p-3 relative overflow-hidden ${isActive ? 'nav-panel-active' : ''}`}>
+    <div className={`nav-panel py-3 pl-2 pr-3 relative overflow-hidden ${isActive ? 'nav-panel-active' : ''}`}>
       <button
         onClick={onShowObjectives}
         className="nav-panel-header w-full"

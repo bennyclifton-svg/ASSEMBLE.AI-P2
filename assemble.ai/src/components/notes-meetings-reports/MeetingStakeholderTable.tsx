@@ -12,10 +12,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { MeetingAttendee } from '@/types/notes-meetings-reports';
+import type { MeetingAttendee, ReportAttendee } from '@/types/notes-meetings-reports';
+
+// Union type to support both meeting and report attendees
+type Attendee = MeetingAttendee | ReportAttendee;
 
 interface MeetingStakeholderTableProps {
-    attendees: MeetingAttendee[];
+    attendees: Attendee[];
     onUpdateAttendee: (attendeeId: string, data: { isAttending?: boolean; isDistribution?: boolean }) => Promise<void>;
     onRemoveAttendee: (attendeeId: string) => Promise<void>;
     isLoading?: boolean;
@@ -31,7 +34,7 @@ export function MeetingStakeholderTable({
     showAttendingColumn = true,
     className,
 }: MeetingStakeholderTableProps) {
-    const getDisplayInfo = (attendee: MeetingAttendee) => {
+    const getDisplayInfo = (attendee: Attendee) => {
         if (attendee.stakeholder) {
             return {
                 group: attendee.stakeholder.stakeholderGroup || 'Unknown',
@@ -61,14 +64,14 @@ export function MeetingStakeholderTable({
             <table className="w-full text-sm">
                 <thead>
                     <tr className="border-b border-[var(--color-border)]">
-                        <th className="text-left py-2 px-2 font-medium text-[var(--color-text-muted)]">Group</th>
-                        <th className="text-left py-2 px-2 font-medium text-[var(--color-text-muted)]">Sub-Group</th>
-                        <th className="text-left py-2 px-2 font-medium text-[var(--color-text-muted)]">Firm</th>
-                        <th className="text-left py-2 px-2 font-medium text-[var(--color-text-muted)]">Person</th>
+                        <th className="text-left py-0.5 px-2 font-medium text-[var(--color-text-muted)]">Group</th>
+                        <th className="text-left py-0.5 px-2 font-medium text-[var(--color-text-muted)]">Sub-Group</th>
+                        <th className="text-left py-0.5 px-2 font-medium text-[var(--color-text-muted)]">Firm</th>
+                        <th className="text-left py-0.5 px-2 font-medium text-[var(--color-text-muted)]">Person</th>
                         {showAttendingColumn && (
-                            <th className="text-center py-2 px-2 font-medium text-[var(--color-text-muted)]">Attend</th>
+                            <th className="text-center py-0.5 px-2 font-medium text-[var(--color-text-muted)]">Attend</th>
                         )}
-                        <th className="text-center py-2 px-2 font-medium text-[var(--color-text-muted)]">Dist</th>
+                        <th className="text-center py-0.5 px-2 font-medium text-[var(--color-text-muted)]">Dist</th>
                         <th className="w-10"></th>
                     </tr>
                 </thead>
@@ -85,23 +88,23 @@ export function MeetingStakeholderTable({
                                     isAdhoc && 'bg-[var(--color-bg-secondary)]'
                                 )}
                             >
-                                <td className="py-2 px-2 capitalize text-[var(--color-text-primary)]">
+                                <td className="py-0.5 px-2 capitalize text-[var(--color-text-secondary)]">
                                     {info.group}
                                 </td>
-                                <td className="py-2 px-2 text-[var(--color-text-secondary)]">
+                                <td className="py-0.5 px-2 text-[var(--color-text-primary)]">
                                     {info.subGroup}
                                 </td>
-                                <td className="py-2 px-2 text-[var(--color-text-secondary)]">
+                                <td className="py-0.5 px-2 text-[var(--color-text-secondary)]">
                                     {info.firm}
                                 </td>
-                                <td className="py-2 px-2 text-[var(--color-text-primary)]">
+                                <td className="py-0.5 px-2 text-[var(--color-text-primary)]">
                                     {info.person}
                                     {isAdhoc && (
                                         <span className="ml-2 text-xs text-[var(--color-text-muted)]">(ad-hoc)</span>
                                     )}
                                 </td>
                                 {showAttendingColumn && (
-                                    <td className="py-2 px-2 text-center">
+                                    <td className="py-0.5 px-2 text-center">
                                         <Checkbox
                                             checked={attendee.isAttending}
                                             onCheckedChange={(checked) =>
@@ -111,7 +114,7 @@ export function MeetingStakeholderTable({
                                         />
                                     </td>
                                 )}
-                                <td className="py-2 px-2 text-center">
+                                <td className="py-0.5 px-2 text-center">
                                     <Checkbox
                                         checked={attendee.isDistribution}
                                         onCheckedChange={(checked) =>
@@ -120,7 +123,7 @@ export function MeetingStakeholderTable({
                                         disabled={isLoading}
                                     />
                                 </td>
-                                <td className="py-2 px-2 text-center">
+                                <td className="py-0.5 px-2 text-center">
                                     <Button
                                         variant="ghost"
                                         size="icon"

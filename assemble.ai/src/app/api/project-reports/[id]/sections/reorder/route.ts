@@ -7,8 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
-import { db } from '@/lib/db';
-import { reports, reportSections } from '@/lib/db/schema';
+import { db, reports, reportSections } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { reorderSectionsSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { eq, and, isNull } from 'drizzle-orm';

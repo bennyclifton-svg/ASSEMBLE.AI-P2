@@ -8,7 +8,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { MeetingStakeholderSelector } from './MeetingStakeholderSelector';
 import { MeetingStakeholderTable } from './MeetingStakeholderTable';
 import { ReportContentsToolbar } from './ReportContentsToolbar';
@@ -18,10 +18,16 @@ import { useReport, useReportSections, useReportAttendees } from '@/lib/hooks/us
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, Calendar, User, UserCircle, FileText, X } from 'lucide-react';
+import { Loader2, Plus, User, UserCircle, FileText, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ReportContentsType, GenerateContentResponse } from '@/types/notes-meetings-reports';
 import type { StakeholderGroup } from '@/types/stakeholder';
+
+function formatDisplayDate(dateString: string | null): string {
+    if (!dateString) return 'dd/mm/yyyy';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+}
 
 interface SourceInfo {
     notes: number;
@@ -89,6 +95,25 @@ export function ReportEditor({
     const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null);
     const [polishingSectionId, setPolishingSectionId] = useState<string | null>(null);
     const [lastSourceInfo, setLastSourceInfo] = useState<SourceInfo | null>(null);
+
+    // Date picker ref and handler
+    const dateInputRef = useRef<HTMLInputElement>(null);
+    const handleDateClick = useCallback(() => {
+        dateInputRef.current?.showPicker();
+    }, []);
+
+    // Calculate which stakeholder groups have attendees (for button highlighting)
+    const selectedGroups = useMemo<StakeholderGroup[]>(() => {
+        const groups = new Set<StakeholderGroup>();
+        for (const attendee of attendees) {
+            if (attendee.stakeholder?.stakeholderGroup) {
+                groups.add(attendee.stakeholder.stakeholderGroup as StakeholderGroup);
+            } else if (attendee.adhocGroup) {
+                groups.add(attendee.adhocGroup as StakeholderGroup);
+            }
+        }
+        return Array.from(groups);
+    }, [attendees]);
 
     // Handle contents type change
     const handleContentsTypeChange = async (type: ReportContentsType) => {
@@ -254,21 +279,40 @@ export function ReportEditor({
 
     return (
         <div className={cn('divide-y divide-[var(--color-border)]', className)}>
-            {/* Project Info */}
+            {/* Project Info & Report Date */}
             {report?.project && (
                 <div className="px-4 py-3 bg-[var(--color-bg-secondary)]">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
+                    <div className="grid grid-cols-[auto_1fr_auto] gap-6 text-sm">
+                        <div className="whitespace-nowrap">
                             <span className="text-[var(--color-text-muted)]">Project:</span>
                             <span className="ml-2 text-[var(--color-text-primary)]">
                                 {report.project.name}
                             </span>
                         </div>
-                        <div>
+                        <div className="min-w-0">
                             <span className="text-[var(--color-text-muted)]">Address:</span>
                             <span className="ml-2 text-[var(--color-text-primary)]">
                                 {report.project.address || 'Not set'}
                             </span>
+                        </div>
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                            <span className="text-[var(--color-text-muted)]">Report Date:</span>
+                            <div
+                                className="relative cursor-pointer hover:bg-[var(--color-bg-tertiary)] px-2 py-0.5 rounded transition-colors"
+                                onClick={handleDateClick}
+                            >
+                                <span className="text-[var(--color-text-primary)] select-none">
+                                    {formatDisplayDate(reportDate)}
+                                </span>
+                                <input
+                                    ref={dateInputRef}
+                                    type="date"
+                                    value={reportDate || ''}
+                                    onChange={(e) => onReportDateChange(e.target.value || null)}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    tabIndex={-1}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -276,20 +320,6 @@ export function ReportEditor({
 
             {/* Report Metadata */}
             <div className="px-4 py-3 space-y-3">
-                {/* Report Date */}
-                <div className="flex items-center gap-3">
-                    <Label className="text-sm text-[var(--color-text-muted)] min-w-[100px]">
-                        <Calendar className="h-4 w-4 inline mr-1.5" />
-                        Report Date:
-                    </Label>
-                    <Input
-                        type="date"
-                        value={reportDate || ''}
-                        onChange={(e) => onReportDateChange(e.target.value || null)}
-                        className="w-auto"
-                    />
-                </div>
-
                 {/* Reporting Period */}
                 <DateRangePicker
                     startDate={reportingPeriodStart}
@@ -337,6 +367,7 @@ export function ReportEditor({
                     <MeetingStakeholderSelector
                         onSelectGroup={handleSelectGroup}
                         onAddAdhoc={() => setIsAddingAdhoc(true)}
+                        selectedGroups={selectedGroups}
                     />
                 </div>
 
@@ -390,10 +421,7 @@ export function ReportEditor({
                 )}
 
                 <MeetingStakeholderTable
-                    attendees={attendees.map(a => ({
-                        ...a,
-                        isAttending: true, // Reports use isDistribution but reuse the same table component
-                    }))}
+                    attendees={attendees}
                     onUpdateAttendee={handleUpdateAttendee}
                     onRemoveAttendee={handleRemoveAttendee}
                     isLoading={attendeesLoading}

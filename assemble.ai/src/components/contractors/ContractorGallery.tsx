@@ -480,6 +480,7 @@ export function ContractorGallery({
           projectId={projectId}
           stakeholderId={tradeId}
           stakeholderName={trade}
+          contextType="trade"
           selectedDocumentIds={selectedDocumentIds}
           onLoadTransmittal={onSetSelectedDocumentIds}
           onSaveTransmittal={() => selectedDocumentIds}

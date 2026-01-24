@@ -427,7 +427,7 @@ export function ProfilerMiddlePanel({
                       placeholder={field.placeholder}
                       min={field.min}
                       max={field.max}
-                      step={field.key === 'gfa' ? 10 : 1}
+                      step={field.key.endsWith('_sqm') ? 20 : 1}
                     />
                   </div>
                 ))}

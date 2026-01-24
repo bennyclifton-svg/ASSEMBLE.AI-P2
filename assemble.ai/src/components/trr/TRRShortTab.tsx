@@ -21,6 +21,7 @@ interface TRRShortTabProps {
     projectId: string;
     trr: TRR & { transmittalCount?: number };
     stakeholderId?: string | null;
+    contextType: 'discipline' | 'trade';
     contextName: string;
     onUpdateTRR: (data: TRRUpdateData) => Promise<TRR>;
 }
@@ -34,6 +35,7 @@ export function TRRShortTab({
     projectId,
     trr,
     stakeholderId,
+    contextType,
     contextName,
     onUpdateTRR,
 }: TRRShortTabProps) {

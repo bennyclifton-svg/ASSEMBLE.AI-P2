@@ -8,8 +8,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Diamond } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { cn } from '@/lib/utils';
 import type { MeetingSection } from '@/types/notes-meetings-reports';
 
@@ -157,40 +157,44 @@ export function MeetingAgendaSection({
 
                 {/* AI Generate/Polish buttons */}
                 {!hasChildren && (
-                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                         {onGenerate && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
+                            <button
                                 onClick={() => onGenerate(section.id)}
                                 disabled={isGenerating || isPolishing}
+                                className={cn(
+                                    'flex items-center gap-1.5 text-sm font-medium transition-all',
+                                    isGenerating || isPolishing
+                                        ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                        : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                )}
                                 title="Generate content"
                             >
-                                <Diamond
-                                    className={cn(
-                                        'h-4 w-4',
-                                        isGenerating ? 'animate-pulse text-[var(--color-accent-primary)]' : 'text-[var(--color-text-muted)]'
-                                    )}
+                                <DiamondIcon
+                                    className={cn('w-4 h-4', isGenerating && 'animate-spin')}
+                                    variant="empty"
                                 />
-                            </Button>
+                                {isGenerating ? 'Generating...' : 'Generate'}
+                            </button>
                         )}
                         {onPolish && hasContent && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
+                            <button
                                 onClick={() => onPolish(section.id)}
                                 disabled={isGenerating || isPolishing}
+                                className={cn(
+                                    'flex items-center gap-1.5 text-sm font-medium transition-all',
+                                    isGenerating || isPolishing
+                                        ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                        : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                )}
                                 title="Polish content"
                             >
-                                <Diamond
-                                    className={cn(
-                                        'h-4 w-4 fill-current',
-                                        isPolishing ? 'animate-pulse text-[var(--color-accent-primary)]' : 'text-[var(--color-text-muted)]'
-                                    )}
+                                <DiamondIcon
+                                    className={cn('w-4 h-4', isPolishing && 'animate-spin')}
+                                    variant="filled"
                                 />
-                            </Button>
+                                {isPolishing ? 'Polishing...' : 'Polish'}
+                            </button>
                         )}
                     </div>
                 )}
@@ -204,7 +208,8 @@ export function MeetingAgendaSection({
                         value={localContent}
                         onChange={handleContentChange}
                         placeholder="Enter content..."
-                        className="w-full min-h-[80px] p-2 text-sm bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-md text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)] resize-none"
+                        className="w-full min-h-[80px] p-2 text-sm bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none"
+                        style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
                     />
                 </div>
             )}

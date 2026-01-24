@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Building2, HardHat, Briefcase } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { StakeholderGroup } from '@/types/stakeholder';
 
@@ -25,12 +25,11 @@ interface MeetingStakeholderSelectorProps {
 const STAKEHOLDER_GROUPS: Array<{
     key: StakeholderGroup;
     label: string;
-    icon: React.ReactNode;
 }> = [
-    { key: 'client', label: 'Client', icon: <Briefcase className="h-4 w-4" /> },
-    { key: 'authority', label: 'Authority', icon: <Building2 className="h-4 w-4" /> },
-    { key: 'consultant', label: 'Consultant', icon: <Users className="h-4 w-4" /> },
-    { key: 'contractor', label: 'Contractor', icon: <HardHat className="h-4 w-4" /> },
+    { key: 'client', label: 'Client' },
+    { key: 'authority', label: 'Authority' },
+    { key: 'consultant', label: 'Consultant' },
+    { key: 'contractor', label: 'Contractor' },
 ];
 
 export function MeetingStakeholderSelector({
@@ -60,17 +59,18 @@ export function MeetingStakeholderSelector({
                 return (
                     <Button
                         key={group.key}
-                        variant={isSelected ? 'default' : 'outline'}
+                        variant="outline"
                         size="sm"
                         onClick={() => onSelectGroup(group.key)}
                         disabled={disabled}
                         className={cn(
-                            'h-8 gap-1.5',
-                            isSelected && 'bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)]'
+                            'h-8',
+                            isSelected
+                                ? 'bg-[var(--color-accent-copper-tint)] border-[var(--color-accent-copper)] text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper-tint)]'
+                                : 'hover:bg-[var(--color-accent-copper-tint)] hover:border-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)]'
                         )}
                     >
-                        {group.icon}
-                        <span>{group.label}</span>
+                        {group.label}
                     </Button>
                 );
             })}
