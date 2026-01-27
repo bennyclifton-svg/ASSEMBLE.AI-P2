@@ -1,0 +1,390 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2026-01-27"
+  },
+
+  "objectives_functional_quality": [
+    {
+      "id": "ofq-001",
+      "description": "Bedroom count from scale",
+      "condition": { "profiler": { "building_class": "residential", "scale": { "bedrooms": { "min": 1 } } } },
+      "infer": [{ "text": "{{scale.bedrooms}} bedroom accommodation", "confidence": "high" }],
+      "priority": 100,
+      "source": "explicit"
+    },
+    {
+      "id": "ofq-002",
+      "description": "Multi-storey construction",
+      "condition": { "profiler": { "scale": { "storeys": { "min": 2 } } } },
+      "infer": [{ "text": "{{scale.storeys}}-storey construction", "confidence": "high" }],
+      "priority": 90,
+      "source": "explicit"
+    },
+    {
+      "id": "ofq-003",
+      "description": "Quality tier finishes",
+      "condition": { "profiler": { "complexity": { "quality_tier": ["medium", "high", "premium"] } } },
+      "infer": [{ "text": "{{complexity.quality_tier}} quality finishes", "confidence": "high" }],
+      "priority": 80,
+      "source": "explicit"
+    },
+    {
+      "id": "ofq-010",
+      "description": "Infill site considerations",
+      "condition": { "profiler": { "complexity": { "site_conditions": "infill" } } },
+      "infer": [
+        { "text": "Boundary setback compliance", "category": "Site", "confidence": "high" },
+        { "text": "Party wall considerations", "category": "Site", "confidence": "medium" },
+        { "text": "Overshadowing assessment", "category": "Site", "confidence": "medium" }
+      ],
+      "priority": 70,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-011",
+      "description": "Heritage facade considerations",
+      "condition": { "profiler": { "complexity": { "heritage": "heritage_overlay" } } },
+      "infer": [
+        { "text": "Heritage facade retention", "category": "Heritage", "confidence": "high" },
+        { "text": "Sympathetic material selection", "category": "Heritage", "confidence": "medium" }
+      ],
+      "priority": 75,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-020",
+      "description": "Premium residential amenities",
+      "condition": {
+        "and": [
+          { "profiler": { "building_class": "residential" } },
+          { "profiler": { "complexity": { "quality_tier": "premium" } } }
+        ]
+      },
+      "infer": [
+        { "text": "High-end fixtures and fittings", "category": "Finishes", "confidence": "high" },
+        { "text": "Engineered stone benchtops", "category": "Finishes", "confidence": "medium" },
+        { "text": "Custom joinery throughout", "category": "Finishes", "confidence": "medium" }
+      ],
+      "priority": 60,
+      "source": "inferred"
+    }
+  ],
+
+  "objectives_planning_compliance": [
+    {
+      "id": "opc-001",
+      "description": "Building code classification (AU)",
+      "condition": { "profiler": { "region": "AU" } },
+      "infer": [{ "text": "NCC {{buildingCodeLabel}} compliance", "confidence": "high" }],
+      "priority": 100,
+      "source": "explicit"
+    },
+    {
+      "id": "opc-002",
+      "description": "Approval pathway",
+      "condition": { "profiler": { "complexity": { "approval_pathway": ["standard_da", "regional_da", "state_significant", "complying_dev"] } } },
+      "infer": [{ "text": "{{complexity.approval_pathway}} approval", "confidence": "high" }],
+      "priority": 95,
+      "source": "explicit"
+    },
+    {
+      "id": "opc-010",
+      "description": "Heritage overlay requirements",
+      "condition": { "profiler": { "complexity": { "heritage": "heritage_overlay" } } },
+      "infer": [
+        { "text": "Heritage consultant certification", "category": "Heritage", "confidence": "high" },
+        { "text": "Conservation management plan", "category": "Heritage", "confidence": "high" },
+        { "text": "Heritage impact statement", "category": "Heritage", "confidence": "medium" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-011",
+      "description": "Bushfire overlay requirements (AU)",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "AU" } },
+          { "profiler": { "complexity": { "bushfire": ["bap", "fz"] } } }
+        ]
+      },
+      "infer": [
+        { "text": "AS 3959 bushfire compliance", "category": "Bushfire", "confidence": "high" },
+        { "text": "Bushfire attack level assessment", "category": "Bushfire", "confidence": "high" },
+        { "text": "Bushfire management plan", "category": "Bushfire", "confidence": "medium" }
+      ],
+      "priority": 80,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-012",
+      "description": "Contamination requirements",
+      "condition": { "profiler": { "complexity": { "contamination_level": ["minor", "significant", "heavily_contaminated"] } } },
+      "infer": [
+        { "text": "Detailed site investigation", "category": "Environmental", "confidence": "high" },
+        { "text": "Remediation action plan", "category": "Environmental", "confidence": "high" },
+        { "text": "Site auditor sign-off", "category": "Environmental", "confidence": "medium" }
+      ],
+      "priority": 75,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-020",
+      "description": "NSW BASIX requirement",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "AU" } },
+          { "profiler": { "building_class": ["residential", "mixed"] } }
+        ]
+      },
+      "infer": [{ "text": "BASIX certification", "category": "Sustainability", "confidence": "high" }],
+      "priority": 70,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-021",
+      "description": "State significant development",
+      "condition": { "profiler": { "complexity": { "approval_pathway": "state_significant" } } },
+      "infer": [
+        { "text": "Environmental Impact Statement", "category": "Planning", "confidence": "high" },
+        { "text": "Community consultation", "category": "Planning", "confidence": "high" },
+        { "text": "Response to submissions", "category": "Planning", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    }
+  ],
+
+  "stakeholders": {
+    "client": [
+      {
+        "id": "sc-001",
+        "description": "Default client stakeholders",
+        "condition": {},
+        "infer": [
+          { "name": "Owner Representative", "subgroup": "Owner", "reason": "Primary decision maker", "confidence": "high" },
+          { "name": "Project Manager", "subgroup": "Project Manager", "reason": "Project delivery lead", "confidence": "high" }
+        ],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sc-002",
+        "description": "Tenant representative for fitout",
+        "condition": { "profiler": { "project_type": ["refurb"] } },
+        "infer": [{ "name": "Tenant Representative", "subgroup": "Tenant", "reason": "End user requirements", "confidence": "high" }],
+        "priority": 80,
+        "source": "inferred"
+      },
+      {
+        "id": "sc-003",
+        "description": "Superintendent for traditional procurement",
+        "condition": { "profiler": { "complexity": { "procurement_route": "traditional" } } },
+        "infer": [{ "name": "Superintendent", "subgroup": "Superintendent", "reason": "Contract administration", "confidence": "high" }],
+        "priority": 70,
+        "source": "inferred"
+      }
+    ],
+
+    "authority": [
+      {
+        "id": "sa-001",
+        "description": "Council for DA projects",
+        "condition": { "profiler": { "complexity": { "approval_pathway": ["standard_da", "regional_da", "complying_dev"] } } },
+        "infer": [{ "name": "Local Council", "subgroup": "Council", "role": "DA Assessment", "reason": "Development consent authority", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-002",
+        "description": "Fire authority for Class 2+ buildings",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "AU" } },
+            { "or": [
+              { "profiler": { "building_class": ["residential", "commercial", "institution"] } },
+              { "profiler": { "scale": { "storeys": { "min": 2 } } } }
+            ]}
+          ]
+        },
+        "infer": [{ "name": "Fire & Rescue NSW", "subgroup": "FRNSW", "role": "Fire Safety Referral", "reason": "Fire safety compliance", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-003",
+        "description": "Heritage authority",
+        "condition": { "profiler": { "complexity": { "heritage": "heritage_overlay" } } },
+        "infer": [{ "name": "Heritage NSW", "subgroup": "Heritage NSW", "role": "Heritage Referral", "reason": "Heritage impact assessment", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-004",
+        "description": "Transport authority for large developments",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "car_spaces": { "min": 50 } } } },
+            { "profiler": { "scale": { "gfa_sqm": { "min": 5000 } } } }
+          ]
+        },
+        "infer": [{ "name": "Transport for NSW", "subgroup": "TfNSW", "role": "Traffic Referral", "reason": "Traffic impact assessment", "confidence": "medium" }],
+        "priority": 75,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-005",
+        "description": "EPA for contaminated sites",
+        "condition": { "profiler": { "complexity": { "contamination_level": ["significant", "heavily_contaminated"] } } },
+        "infer": [{ "name": "Environment Protection Authority", "subgroup": "EPA", "role": "Environmental Referral", "reason": "Environmental compliance", "confidence": "medium" }],
+        "priority": 70,
+        "source": "inferred"
+      }
+    ],
+
+    "consultant": [
+      {
+        "id": "sco-001",
+        "description": "Architect for all buildings",
+        "condition": { "profiler": { "building_class": ["residential", "commercial", "industrial", "institution", "mixed"] } },
+        "infer": [{ "name": "Architect", "subgroup": "Architecture", "reason": "Design documentation", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-002",
+        "description": "Structural engineer",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 2 } } } },
+            { "profiler": { "work_scope_includes": ["substructure", "superstructure", "steel_frame"] } }
+          ]
+        },
+        "infer": [{ "name": "Structural Engineer", "subgroup": "Structural", "reason": "Structural design", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-003",
+        "description": "Services engineers",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["commercial", "institution"] } },
+            { "profiler": { "scale": { "gfa_sqm": { "min": 500 } } } }
+          ]
+        },
+        "infer": [
+          { "name": "Mechanical Engineer", "subgroup": "Mechanical", "reason": "HVAC design", "confidence": "high" },
+          { "name": "Electrical Engineer", "subgroup": "Electrical", "reason": "Electrical design", "confidence": "high" },
+          { "name": "Hydraulic Engineer", "subgroup": "Hydraulic", "reason": "Plumbing design", "confidence": "high" }
+        ],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-004",
+        "description": "Fire engineer",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 4 } } } },
+            { "profiler": { "building_class": "institution" } }
+          ]
+        },
+        "infer": [{ "name": "Fire Engineer", "subgroup": "Fire", "reason": "Fire engineering design", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-010",
+        "description": "Heritage consultant",
+        "condition": { "profiler": { "complexity": { "heritage": "heritage_overlay" } } },
+        "infer": [{ "name": "Heritage Consultant", "subgroup": "Other", "reason": "Heritage impact assessment", "confidence": "high" }],
+        "priority": 80,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-011",
+        "description": "Geotechnical engineer",
+        "condition": {
+          "or": [
+            { "profiler": { "project_type": "new" } },
+            { "profiler": { "complexity": { "site_conditions": ["infill", "sloping"] } } }
+          ]
+        },
+        "infer": [{ "name": "Geotechnical Engineer", "subgroup": "Other", "reason": "Ground conditions", "confidence": "high" }],
+        "priority": 75,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-012",
+        "description": "Environmental consultant",
+        "condition": { "profiler": { "complexity": { "contamination_level": ["minor", "significant", "heavily_contaminated"] } } },
+        "infer": [{ "name": "Environmental Consultant", "subgroup": "Other", "reason": "Contamination assessment", "confidence": "high" }],
+        "priority": 75,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-020",
+        "description": "Access consultant",
+        "condition": { "profiler": { "building_class": ["commercial", "institution"] } },
+        "infer": [{ "name": "Access Consultant", "subgroup": "Access", "reason": "DDA compliance", "confidence": "medium" }],
+        "priority": 70,
+        "source": "inferred"
+      }
+    ],
+
+    "contractor": [
+      {
+        "id": "str-001",
+        "description": "Main contractor",
+        "condition": { "profiler": { "project_type": "new" } },
+        "infer": [{ "name": "Main Contractor", "subgroup": "Head Contractor", "reason": "Principal contractor", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "str-002",
+        "description": "Demolition contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "work_scope_includes": ["demolition"] } },
+            { "profiler": { "complexity": { "site_conditions": "infill" } } }
+          ]
+        },
+        "infer": [{ "name": "Demolition Contractor", "subgroup": "Demolition", "reason": "Site clearance", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "str-003",
+        "description": "Civil contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "work_scope_includes": ["bulk_earthworks", "site_drainage"] } },
+            { "profiler": { "scale": { "basement_levels": { "min": 1 } } } }
+          ]
+        },
+        "infer": [{ "name": "Civil Contractor", "subgroup": "Civil", "reason": "Site preparation", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "str-010",
+        "description": "Facade contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "work_scope_includes": ["facade_system", "curtain_wall"] } },
+            { "and": [
+              { "profiler": { "building_class": "commercial" } },
+              { "profiler": { "scale": { "storeys": { "min": 4 } } } }
+            ]}
+          ]
+        },
+        "infer": [{ "name": "Facade Contractor", "subgroup": "Facade", "reason": "Building envelope", "confidence": "high" }],
+        "priority": 75,
+        "source": "inferred"
+      }
+    ]
+  }
+}
