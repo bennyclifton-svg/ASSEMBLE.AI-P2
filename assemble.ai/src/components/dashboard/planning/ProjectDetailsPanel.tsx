@@ -125,6 +125,7 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
     const [isHovered, setIsHovered] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const autoResize = () => {
         const textarea = textareaRef.current;
@@ -142,7 +143,7 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
             setEditValue(value || '');
             setSavedValue(value || '');
         }
-    }, [value]);
+    }, [value, isFocused, isSaving, showSuccess]);
 
     useLayoutEffect(() => {
         autoResize();
@@ -165,6 +166,9 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current);
             }
+            if (successTimeoutRef.current) {
+                clearTimeout(successTimeoutRef.current);
+            }
         };
     }, []);
 
@@ -183,7 +187,10 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
         try {
             await onSave(editValue);
             setShowSuccess(true);
-            setTimeout(() => setShowSuccess(false), 2000);
+            if (successTimeoutRef.current) {
+                clearTimeout(successTimeoutRef.current);
+            }
+            successTimeoutRef.current = setTimeout(() => setShowSuccess(false), 2000);
         } catch (error) {
             console.error('Save failed:', error);
             setSavedValue(previousValue);
