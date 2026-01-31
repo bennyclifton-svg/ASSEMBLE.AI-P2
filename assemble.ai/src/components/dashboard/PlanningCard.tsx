@@ -15,6 +15,7 @@ interface PlanningCardProps {
     onStakeholderNavigate?: () => void;
     onShowProfiler?: () => void;
     onShowObjectives?: () => void;
+    onShowProjectDetails?: () => void;
     activeMainTab?: string;
     refreshKey?: number;
 }
@@ -28,6 +29,7 @@ export function PlanningCard({
     onStakeholderNavigate,
     onShowProfiler,
     onShowObjectives,
+    onShowProjectDetails,
     activeMainTab,
     refreshKey,
 }: PlanningCardProps) {
@@ -63,13 +65,15 @@ export function PlanningCard({
 
     return (
         <div className="h-full overflow-y-auto p-3 section-planning" style={{ scrollbarGutter: 'stable both-edges' }}>
-            <div className="space-y-3">
+            <div className="nav-panel-unified">
                 <DetailsSection
                     key={projectId}
                     projectId={projectId}
                     data={data?.details}
                     onUpdate={fetchPlanningData}
                     onProjectNameChange={onProjectNameChange}
+                    isActive={activeMainTab === 'project-details'}
+                    onToggle={onShowProjectDetails}
                 />
 
                 <ProfileSection
