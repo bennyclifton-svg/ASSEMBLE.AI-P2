@@ -397,9 +397,11 @@ interface DetailsSectionProps {
     data: any;
     onUpdate: () => void;
     onProjectNameChange?: () => void;
+    isActive?: boolean;
+    onToggle?: () => void;
 }
 
-export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange }: DetailsSectionProps) {
+export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange, isActive = false, onToggle }: DetailsSectionProps) {
     const { toast } = useToast();
     const [isDragging, setIsDragging] = useState(false);
     const [isExtracting, setIsExtracting] = useState(false);
@@ -624,7 +626,7 @@ export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange 
 
     return (
         <div
-            className="nav-panel py-3 pl-2 pr-3 relative overflow-hidden"
+            className="nav-panel-section py-3 pl-2 pr-3"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
