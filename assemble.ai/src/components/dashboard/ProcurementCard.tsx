@@ -12,8 +12,9 @@ import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
 import { ObjectivesProfilerSection } from '@/components/profiler/ObjectivesProfilerSection';
 import { StakeholderPanel } from '@/components/stakeholders/StakeholderPanel';
 import { NotesMeetingsReportsContainer } from '@/components/notes-meetings-reports/NotesMeetingsReportsContainer';
+import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
 import { AlertCircle } from 'lucide-react';
-import type { BuildingClass, ProjectType } from '@/types/profiler';
+import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
 import type { StakeholderWithStatus } from '@/types/stakeholder';
 
 interface ProcurementCardProps {
@@ -22,10 +23,15 @@ interface ProcurementCardProps {
     onSetSelectedDocumentIds?: (ids: string[]) => void;
     buildingClass?: BuildingClass | null;
     projectType?: ProjectType | null;
+    region?: Region;
+    onRegionChange?: (region: Region) => void;
     onProfileComplete?: () => void;
     onProfileLoad?: (buildingClass: BuildingClass, projectType: ProjectType) => void;
     activeMainTab?: string;
     onMainTabChange?: (tab: string) => void;
+    detailsData?: any;
+    onDetailsUpdate?: () => void;
+    onProjectNameChange?: () => void;
 }
 
 
@@ -74,11 +80,19 @@ export function ProcurementCard({
     onSetSelectedDocumentIds,
     buildingClass,
     projectType,
+    region = 'AU',
+    onRegionChange,
     onProfileComplete,
     onProfileLoad,
     activeMainTab: externalActiveMainTab,
     onMainTabChange,
+    detailsData,
+    onDetailsUpdate,
+    onProjectNameChange,
 }: ProcurementCardProps) {
+    // Debug logging
+    console.log('[ProcurementCard] Rendering - projectId:', projectId, 'buildingClass:', buildingClass, 'projectType:', projectType);
+
     // Use unified stakeholders hook instead of separate consultant/contractor hooks
     const { stakeholders, isLoading: isLoadingStakeholders, updateStakeholder } = useStakeholders({ projectId });
 
@@ -130,11 +144,16 @@ export function ProcurementCard({
     // Full profile data for editing
     const [profileData, setProfileData] = useState<ProfileData | null>(null);
 
+    // Debug: Log when profileData changes
+    useEffect(() => {
+        console.log('[ProcurementCard] profileData state changed:', profileData);
+    }, [profileData]);
+
     // Objectives data for ObjectivesProfilerSection
     const [objectivesData, setObjectivesData] = useState<any>(null);
 
-    // Fetch profile status and data
-    const fetchProfileStatus = useCallback(async () => {
+    // Fetch profile status only (for tab enabling)
+    const fetchProfileStatusOnly = useCallback(async () => {
         try {
             const res = await fetch(`/api/projects/${projectId}/profile`);
             if (res.ok) {
@@ -146,14 +165,41 @@ export function ProcurementCard({
                         projectType: json.data.projectType,
                         complexityScore: json.data.complexityScore,
                     });
+                }
+            }
+        } catch (error) {
+            console.error('[ProcurementCard] Failed to fetch profile status:', error);
+        }
+    }, [projectId]);
+
+    // Fetch profile status and data (for initial load)
+    const fetchProfileStatus = useCallback(async () => {
+        console.log('[ProcurementCard] fetchProfileStatus called for project:', projectId);
+        try {
+            const res = await fetch(`/api/projects/${projectId}/profile`);
+            console.log('[ProcurementCard] Profile fetch response status:', res.status);
+            if (res.ok) {
+                const json = await res.json();
+                console.log('[ProcurementCard] Profile data received:', json);
+                if (json.success && json.data) {
+                    setProfileStatus({
+                        hasProfile: true,
+                        buildingClass: json.data.buildingClass,
+                        projectType: json.data.projectType,
+                        complexityScore: json.data.complexityScore,
+                    });
                     // Store full profile data for editing
-                    setProfileData({
+                    const newProfileData = {
                         subclass: json.data.subclass || [],
                         subclassOther: json.data.subclassOther || null,
                         scaleData: json.data.scaleData || {},
                         complexity: json.data.complexity || {},
                         workScope: json.data.workScope || [],
-                    });
+                    };
+                    console.log('[ProcurementCard] Setting profileData:', newProfileData);
+                    setProfileData(newProfileData);
+                } else {
+                    console.log('[ProcurementCard] No profile data found in response');
                 }
             }
         } catch (error) {
@@ -177,9 +223,10 @@ export function ProcurementCard({
     }, [projectId]);
 
     useEffect(() => {
+        console.log('[ProcurementCard] Mount effect running, projectId:', projectId);
         fetchProfileStatus();
         fetchObjectivesData();
-    }, [fetchProfileStatus, fetchObjectivesData]);
+    }, [fetchProfileStatus, fetchObjectivesData, projectId]);
 
     // Check if profile is complete enough for Cost/Program tabs
     const isProfileComplete = profileStatus.hasProfile && profileStatus.buildingClass && profileStatus.projectType;
@@ -208,7 +255,7 @@ export function ProcurementCard({
 
     // Tab styling helper with sophisticated hover effect
     const tabClassName = `
-        relative rounded-none px-4 py-1.5 text-[13px] font-medium bg-transparent
+        relative rounded-none px-4 py-1.5 text-[15px] font-medium bg-transparent
         transition-all duration-200 ease-out
         before:absolute before:bottom-[-15px] before:left-1/2 before:-translate-x-1/2
         before:w-0 before:h-[3px] before:rounded-full
@@ -246,7 +293,7 @@ export function ProcurementCard({
                         Procurement
                     </TabsTrigger>
                     <TabsTrigger value="notes-meetings-reports" className={tabClassName}>
-                        Notes
+                        Notes Meetings Reports
                     </TabsTrigger>
                 </TabsList>
 
@@ -256,10 +303,12 @@ export function ProcurementCard({
                         projectId={projectId}
                         buildingClass={buildingClass}
                         projectType={projectType}
+                        region={region}
+                        onRegionChange={onRegionChange}
                         initialData={profileData || undefined}
                         onProfileComplete={() => {
                             onProfileComplete?.();
-                            fetchProfileStatus(); // Refresh profile status after save
+                            fetchProfileStatusOnly(); // Only refresh status (for tab enabling), not data
                             // Stay on profiler tab - don't auto-switch
                         }}
                         onProfileLoad={(loadedClass, loadedType) => {
@@ -271,7 +320,7 @@ export function ProcurementCard({
 
                 {/* Objectives Tab Content - AI generation from profile */}
                 <TabsContent value="objectives" className="flex-1 mt-0 min-h-0 overflow-y-auto">
-                    <div className="max-w-3xl mx-auto py-4">
+                    <div className="py-4">
                         <ObjectivesProfilerSection
                             projectId={projectId}
                             profileData={{
@@ -285,6 +334,16 @@ export function ProcurementCard({
                             }}
                         />
                     </div>
+                </TabsContent>
+
+                {/* Project Details Tab Content */}
+                <TabsContent value="project-details" className="flex-1 mt-0 min-h-0 overflow-hidden">
+                    <ProjectDetailsPanel
+                        projectId={projectId}
+                        data={detailsData}
+                        onUpdate={onDetailsUpdate || (() => {})}
+                        onProjectNameChange={onProjectNameChange}
+                    />
                 </TabsContent>
 
                 <TabsContent value="procurement" className="flex-1 mt-0 min-h-0 flex flex-col section-procurement">
