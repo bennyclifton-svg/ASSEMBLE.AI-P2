@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useRef, useLayoutEffect, useEffect } from 'react';
-import { useToast } from '@/lib/hooks/use-toast';
-import { Upload } from 'lucide-react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 
 // Props for InlineEditField component
 interface InlineEditFieldProps {
@@ -402,308 +401,26 @@ interface DetailsSectionProps {
 }
 
 export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange, isActive = false, onToggle }: DetailsSectionProps) {
-    const { toast } = useToast();
-    const [isDragging, setIsDragging] = useState(false);
-    const [isExtracting, setIsExtracting] = useState(false);
-
-    const updateField = async (field: string, value: string) => {
-        // Prepare payload with defaults for required fields
-        // Convert null to empty string for string fields, undefined for optional fields
-        const payload = {
-            projectName: data?.projectName || '',
-            address: data?.address || '',
-            legalAddress: data?.legalAddress || '',
-            zoning: data?.zoning || '',
-            jurisdiction: data?.jurisdiction || '',
-            lotArea: data?.lotArea || '',
-            [field]: value, // Override with new value
-        };
-
-        console.log('Sending payload:', payload);
-
-        const res = await fetch(`/api/planning/${projectId}/details`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-            const errorText = await res.text();
-            console.error('Save failed:', res.status, errorText);
-            throw new Error(`Save failed: ${errorText}`);
-        }
-
-        console.log('Save successful');
-        onUpdate();
-
-        // Notify parent if project name was changed
-        if (field === 'projectName' && onProjectNameChange) {
-            onProjectNameChange();
-        }
-    };
-
-    const updateMultipleFields = async (extractedData: any) => {
-        // Build payload with existing data + extracted data
-        const payload = {
-            projectName: extractedData.projectName || data?.projectName || '',
-            address: extractedData.address || data?.address || '',
-            legalAddress: extractedData.legalAddress || data?.legalAddress || '',
-            zoning: extractedData.zoning || data?.zoning || '',
-            jurisdiction: extractedData.jurisdiction || data?.jurisdiction || '',
-            lotArea: extractedData.lotArea?.toString() || data?.lotArea?.toString() || '',
-        };
-
-        const res = await fetch(`/api/planning/${projectId}/details`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-
-        if (!res.ok) {
-            throw new Error('Failed to update fields');
-        }
-
-        onUpdate();
-
-        // Notify parent if project name was changed
-        if (extractedData.projectName && onProjectNameChange) {
-            onProjectNameChange();
-        }
-    };
-
-    const handleExtraction = async (input: File | string) => {
-        setIsExtracting(true);
-        try {
-            let response: Response;
-
-            if (input instanceof File) {
-                const formData = new FormData();
-                formData.append('file', input);
-
-                response = await fetch('/api/planning/extract', {
-                    method: 'POST',
-                    body: formData,
-                });
-            } else {
-                response = await fetch('/api/planning/extract', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: input }),
-                });
-            }
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || 'Failed to extract data');
-            }
-
-            const result = await response.json();
-            const { data: extractedData, confidence } = result;
-
-            // Update fields with extracted data
-            await updateMultipleFields(extractedData);
-
-            // Show appropriate toast based on confidence
-            if (confidence < 70) {
-                toast({
-                    title: 'Low Confidence Extraction',
-                    description: `Extracted with ${confidence}% confidence. Please review the data.`,
-                    variant: 'destructive',
-                });
-            } else {
-                toast({
-                    title: 'Data Extracted',
-                    description: `Successfully extracted project details (${confidence}% confidence)`,
-                });
-            }
-        } catch (error) {
-            toast({
-                title: 'Extraction Failed',
-                description: error instanceof Error ? error.message : 'Failed to extract data',
-                variant: 'destructive',
-            });
-        } finally {
-            setIsExtracting(false);
-        }
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        // Only clear if leaving the container entirely
-        const relatedTarget = e.relatedTarget as Element | null;
-        if (!relatedTarget || !e.currentTarget.contains(relatedTarget)) {
-            setIsDragging(false);
-        }
-    };
-
-    const handleDrop = async (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsDragging(false);
-
-        // Check for text content first (Outlook emails drag as text)
-        const textContent = e.dataTransfer.getData('text/plain');
-        if (textContent && textContent.length > 20) {
-            await handleExtraction(textContent);
-            return;
-        }
-
-        // Check for files
-        const files = Array.from(e.dataTransfer.files);
-        if (files.length === 0) {
-            toast({
-                title: 'No Content',
-                description: 'No file or text content found',
-                variant: 'destructive',
-            });
-            return;
-        }
-
-        const file = files[0];
-        const validTypes = [
-            'application/pdf',
-            'image/jpeg',
-            'image/jpg',
-            'image/png',
-            'text/plain',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ];
-        const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.txt', '.docx'];
-        const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-
-        if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
-            toast({
-                title: 'Invalid File Type',
-                description: 'Please upload a PDF, Word document, image (JPG/PNG), or text file',
-                variant: 'destructive',
-            });
-            return;
-        }
-
-        await handleExtraction(file);
-    };
-
-    const handlePaste = async (e: React.ClipboardEvent) => {
-        // Don't intercept if user is typing in an input field
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-            return;
-        }
-
-        e.preventDefault();
-
-        // Try to get HTML content first (Outlook emails paste as HTML)
-        let content = e.clipboardData.getData('text/html');
-
-        // If no HTML, try plain text
-        if (!content) {
-            content = e.clipboardData.getData('text/plain');
-        } else {
-            // Strip HTML tags but keep text content
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = content;
-            content = tempDiv.textContent || tempDiv.innerText || '';
-        }
-
-        if (!content || content.length < 20) {
-            toast({
-                title: 'No Content',
-                description: 'Paste some text content to extract project details',
-                variant: 'destructive',
-            });
-            return;
-        }
-
-        await handleExtraction(content);
-    };
-
     return (
-        <div
-            className="nav-panel-section py-3 pl-2 pr-3"
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onPaste={handlePaste}
-            tabIndex={0}
-        >
-            {/* Extraction Progress Overlay */}
-            {isExtracting && (
-                <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 rounded-xl flex items-center justify-center">
-                    <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-copper)]"></div>
-                        <p className="text-[var(--color-text-primary)] font-semibold">Extracting project details...</p>
-                        <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
-                    </div>
-                </div>
-            )}
+        <div className={`nav-panel-section py-3 pl-2 pr-3 ${isActive ? 'nav-panel-active' : ''}`}>
+            {/* Project Name Header with expand arrows */}
+            <button
+                onClick={onToggle}
+                className="nav-panel-header w-full mb-2"
+            >
+                <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
+                    Project Name
+                </span>
+                {isActive ? (
+                    <Minimize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+                ) : (
+                    <Maximize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-text-muted)] transition-colors" />
+                )}
+            </button>
 
-            {/* Drag & Drop Overlay */}
-            {isDragging && !isExtracting && (
-                <div className="absolute inset-0 z-50 bg-[var(--color-accent-copper)]/20 border-2 border-dashed border-[var(--color-accent-copper)] rounded-xl flex items-center justify-center">
-                    <div className="bg-[var(--color-bg-primary)] border border-[var(--color-accent-copper)] rounded-lg p-6 flex flex-col items-center gap-3">
-                        <Upload className="w-10 h-10 text-[var(--color-accent-copper)]" />
-                        <p className="text-[var(--color-text-primary)] font-semibold">Drop to extract project details</p>
-                        <p className="text-xs text-[var(--color-text-muted)]">PDF, Word, Image, or Text</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Project Name - Prominent Header Field */}
-            <div className="mb-3 pb-2 border-b border-[var(--color-border)]">
-                <div className="flex items-center justify-between mb-0.5 pl-1.5 pr-2">
-                    <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
-                        Project Name
-                    </span>
-                    <Upload className="w-4 h-4 text-[var(--color-text-muted)]" />
-                </div>
-                <InlineEditField
-                    value={data?.projectName || ''}
-                    onSave={(v) => updateField('projectName', v)}
-                    placeholder="Untitled Project"
-                    className="text-lg font-bold text-[var(--color-text-primary)] pl-1.5 pr-2"
-                />
-            </div>
-
-            {/* Project Attributes - Single Column Layout */}
-            <div className="space-y-0">
-                <DetailRow
-                    label="Address"
-                    value={data?.address || ''}
-                    onSave={(v) => updateField('address', v)}
-                    placeholder="No address provided"
-                />
-                <DetailRow
-                    label="Lot Area"
-                    value={data?.lotArea?.toString() || ''}
-                    onSave={(v) => updateField('lotArea', v)}
-                    placeholder="0 m²"
-                />
-                <DetailRow
-                    label="Zoning"
-                    value={data?.zoning || ''}
-                    onSave={(v) => updateField('zoning', v)}
-                    placeholder="Enter zoning"
-                />
-                <DetailRow
-                    label="Legal Address"
-                    value={data?.legalAddress || ''}
-                    onSave={(v) => updateField('legalAddress', v)}
-                    placeholder="Enter legal address"
-                />
-                <DetailRow
-                    label="Jurisdiction"
-                    value={data?.jurisdiction || ''}
-                    onSave={(v) => updateField('jurisdiction', v)}
-                    placeholder="Enter jurisdiction"
-                    isLast
-                />
+            {/* Project Name Value - read-only display */}
+            <div className="text-lg font-bold text-[var(--color-text-primary)] pl-1.5 pr-2 truncate">
+                {data?.projectName || 'Untitled Project'}
             </div>
         </div>
     );
