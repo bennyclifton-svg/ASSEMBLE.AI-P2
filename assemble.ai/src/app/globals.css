@@ -191,6 +191,9 @@
   --color-accent-magenta-tint: rgba(255, 20, 147, 0.12);
   --color-accent-violet-tint: rgba(139, 92, 246, 0.12);
 
+  /* Document schedule header - teal in dark theme */
+  --color-document-header: var(--color-accent-teal);
+
   /* Semantic States - Earth tones */
   --color-success: #7A9E7E;
   --color-warning: #E8B931;
@@ -309,6 +312,9 @@
   --color-accent-blue-tint: rgba(0, 102, 204, 0.1);
   --color-accent-magenta-tint: rgba(199, 21, 133, 0.1);
   --color-accent-violet-tint: rgba(109, 40, 217, 0.1);
+
+  /* Document schedule header - blue in light theme */
+  --color-document-header: var(--color-accent-blue);
 
   /* Semantic States */
   --color-success: #15803d;
