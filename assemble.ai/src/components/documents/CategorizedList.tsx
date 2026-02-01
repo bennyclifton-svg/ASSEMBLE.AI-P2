@@ -498,13 +498,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                         <TableHeader>
                             <TableRow className="border-[var(--color-border)] bg-[var(--color-accent-copper-tint)]">
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-accent-blue)] uppercase tracking-wider w-16 !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-16 !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('drawingNumber')}
                                 >
                                     #<SortIndicator column="drawingNumber" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-accent-blue)] uppercase tracking-wider !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('name')}
                                 >
                                     <div className="flex items-center gap-1.5">
@@ -513,19 +513,19 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         {selectedIds.size > 0 ? (
                                             <span className="text-[var(--color-accent-yellow)]">({selectedIds.size})</span>
                                         ) : (
-                                            <span className="text-[var(--color-accent-blue)]">({filteredDocuments.length})</span>
+                                            <span className="text-[var(--color-document-header)]">({filteredDocuments.length})</span>
                                         )}
                                         <SortIndicator column="name" />
                                     </div>
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-accent-blue)] uppercase tracking-wider w-10 !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-10 !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('drawingRevision')}
                                 >
                                     Rev<SortIndicator column="drawingRevision" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-accent-blue)] uppercase tracking-wider w-14 @2xl:w-20 @3xl:w-auto !px-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-14 @2xl:w-20 @3xl:w-auto !px-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('category')}
                                 >
                                     <span className="@3xl:hidden">Cat</span>
@@ -533,7 +533,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     <SortIndicator column="category" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-accent-blue)] uppercase tracking-wider w-28 @2xl:w-36 @3xl:w-auto !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-28 @2xl:w-36 @3xl:w-auto !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('subcategory')}
                                 >
                                     <span className="@3xl:hidden">Subcat</span>
@@ -541,13 +541,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     <SortIndicator column="subcategory" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-accent-blue)] uppercase tracking-wider w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('fileName')}
                                 >
                                     File Name<SortIndicator column="fileName" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-accent-blue)] uppercase tracking-wider w-8 !px-1 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-8 !px-1 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('version')}
                                 >
                                     V<SortIndicator column="version" />
