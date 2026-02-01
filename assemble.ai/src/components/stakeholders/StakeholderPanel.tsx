@@ -157,86 +157,36 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
     <div className="h-full flex flex-col overflow-hidden">
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarGutter: 'stable both-edges' }}>
-        <div>
-          {/* Unified Table - always shown with group sections */}
-          <div className="rounded-lg border border-[var(--color-border)] overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]">
-                  <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-28">
-                    Group
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-56">
-                    <div className="flex items-center gap-2">
-                      <span>SubGroup</span>
-                      {selectedIds.size > 0 && (
-                        <span className="text-[var(--color-accent-yellow)] text-xs normal-case">
-                          ({selectedIds.size} selected)
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-36">
-                    Firm
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-32">
-                    Phone
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-44">
-                    Email
-                  </th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-28">
-                    Status
-                  </th>
-                  <th className="px-3 py-2 w-10">
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className={cn(
-                        'p-1 hover:bg-[var(--color-border)] rounded transition-opacity',
-                        selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'
-                      )}
-                      title={`Delete ${selectedIds.size} selected`}
-                    >
-                      <Trash className="w-4 h-4 text-[var(--color-accent-coral)]" />
-                    </button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {GROUP_ORDER.map((group) => {
-                  const groupStakeholders = stakeholdersByGroup[group];
+        <div className="space-y-4">
+          {/* Group Cards - styled like Objectives cards */}
+          {GROUP_ORDER.map((group) => {
+            const groupStakeholders = stakeholdersByGroup[group];
 
-                  return (
-                    <GroupSection
-                      key={group}
-                      group={group}
-                      stakeholders={groupStakeholders}
-                      onUpdate={updateStakeholder}
-                      onUpdateTenderStatus={updateTenderStatus}
-                      onUpdateSubmissionStatus={updateSubmissionStatus}
-                      onDelete={deleteStakeholder}
-                      onDeleteGroup={setGroupToDelete}
-                      onDeleteSelected={() => setShowDeleteConfirm(true)}
-                      onGenerate={() => handleGenerateForGroup(group)}
-                      isGenerating={isGenerating === group}
-                      quickAddGroup={quickAddGroup}
-                      onQuickAdd={setQuickAddGroup}
-                      onQuickAddSubmit={handleQuickAddSubmit}
-                      onQuickAddCancel={() => setQuickAddGroup(null)}
-                      selectedIds={selectedIds}
-                      onSelect={handleSelect}
-                    />
-                  );
-                })}
-              </tbody>
-            </table>
+            return (
+              <GroupCard
+                key={group}
+                group={group}
+                stakeholders={groupStakeholders}
+                onUpdate={updateStakeholder}
+                onUpdateTenderStatus={updateTenderStatus}
+                onUpdateSubmissionStatus={updateSubmissionStatus}
+                onDelete={deleteStakeholder}
+                onDeleteGroup={setGroupToDelete}
+                onDeleteSelected={() => setShowDeleteConfirm(true)}
+                onGenerate={() => handleGenerateForGroup(group)}
+                isGenerating={isGenerating === group}
+                quickAddGroup={quickAddGroup}
+                onQuickAdd={setQuickAddGroup}
+                onQuickAddSubmit={handleQuickAddSubmit}
+                onQuickAddCancel={() => setQuickAddGroup(null)}
+                selectedIds={selectedIds}
+                onSelect={handleSelect}
+              />
+            );
+          })}
 
-            {/* Add Row */}
-            <AddStakeholderRow onAdd={createStakeholder} />
-          </div>
+          {/* Add Row */}
+          <AddStakeholderRow onAdd={createStakeholder} />
         </div>
       </div>
 
@@ -290,8 +240,8 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
   );
 }
 
-// Group section component with stakeholder rows and generate button
-interface GroupSectionProps {
+// Group card component styled like Objectives cards
+interface GroupCardProps {
   group: StakeholderGroup;
   stakeholders: StakeholderWithStatus[];
   onUpdate: (id: string, data: any) => Promise<StakeholderWithStatus | null>;
@@ -310,7 +260,7 @@ interface GroupSectionProps {
   onSelect: (id: string, event: React.MouseEvent) => void;
 }
 
-function GroupSection({
+function GroupCard({
   group,
   stakeholders,
   onUpdate,
@@ -327,7 +277,7 @@ function GroupSection({
   onQuickAddCancel,
   selectedIds,
   onSelect,
-}: GroupSectionProps) {
+}: GroupCardProps) {
   // Count how many selected items are in this group
   const selectedInGroup = stakeholders.filter(s => selectedIds.has(s.id)).length;
   const hasSelectedInGroup = selectedInGroup > 0;
@@ -347,139 +297,182 @@ function GroupSection({
     : `Delete all ${GROUP_LABELS[group]} stakeholders`;
 
   return (
-    <>
-      {/* Group header: [+] Label ... [Diamond Generate] [Trash] */}
-      <tr className="bg-[var(--color-bg-secondary)]/50 border-b border-[var(--color-border)]">
-        <td colSpan={8} className="px-3 py-1.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onQuickAdd(group)}
-                className={cn(
-                  'p-1 rounded transition-colors',
-                  'text-[var(--color-text-muted)] hover:text-[var(--color-accent-green)] hover:bg-[var(--color-accent-green)]/10'
-                )}
-                title={`Add ${GROUP_LABELS[group]}`}
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              <span className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                {GROUP_LABELS[group]} ({stakeholders.length})
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={onGenerate}
-                disabled={isGenerating}
-                className={cn(
-                  'flex items-center gap-1 px-2 py-1 rounded transition-colors',
-                  isGenerating
-                    ? 'text-[var(--color-text-muted)] cursor-wait'
-                    : 'text-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary-hover)] hover:bg-[var(--color-accent-primary-tint)]'
-                )}
-                title={isGenerating ? 'Generating...' : `Generate ${GROUP_LABELS[group]}`}
-              >
-                <DiamondIcon className={cn('w-4 h-4', isGenerating && 'animate-pulse')} variant="empty" />
-                <span className="text-xs">{isGenerating ? 'Generating...' : 'Generate'}</span>
-              </button>
-              <button
-                onClick={handleTrashClick}
-                className={cn(
-                  'p-1 rounded transition-colors',
-                  stakeholders.length > 0 || hasSelectedInGroup
-                    ? 'text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] hover:bg-[var(--color-accent-coral)]/10'
-                    : 'text-[var(--color-text-muted)]/30 cursor-not-allowed'
-                )}
-                title={trashTitle}
-                disabled={stakeholders.length === 0 && !hasSelectedInGroup}
-              >
-                <Trash className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </td>
-      </tr>
+    <div className="border border-[var(--color-border)] rounded overflow-hidden flex flex-col">
+      {/* Header with copper tint background - matches Objectives section */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onQuickAdd(group)}
+            className={cn(
+              'p-1 rounded transition-colors',
+              'text-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/10'
+            )}
+            title={`Add ${GROUP_LABELS[group]}`}
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          <span className="text-[var(--color-accent-copper)] font-medium text-sm uppercase tracking-wide">
+            {GROUP_LABELS[group]} ({stakeholders.length})
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onGenerate}
+            disabled={isGenerating}
+            className={cn(
+              'flex items-center gap-1.5 text-sm font-medium transition-all',
+              isGenerating
+                ? 'text-[var(--color-accent-copper)] cursor-wait'
+                : 'text-[var(--color-accent-copper)] hover:opacity-80'
+            )}
+            title={isGenerating ? 'Generating...' : `Generate ${GROUP_LABELS[group]}`}
+          >
+            <DiamondIcon
+              className={cn('w-4 h-4', isGenerating && 'animate-spin [animation-duration:2.5s]')}
+              variant="empty"
+            />
+            <span className={isGenerating ? 'animate-text-aurora' : ''}>
+              {isGenerating ? 'Generating...' : 'Generate'}
+            </span>
+          </button>
+          <button
+            onClick={handleTrashClick}
+            className={cn(
+              'p-1 rounded transition-colors',
+              stakeholders.length > 0 || hasSelectedInGroup
+                ? 'text-[var(--color-accent-copper)] hover:text-[var(--color-accent-coral)] hover:bg-[var(--color-accent-coral)]/10'
+                : 'text-[var(--color-accent-copper)]/30 cursor-not-allowed'
+            )}
+            title={trashTitle}
+            disabled={stakeholders.length === 0 && !hasSelectedInGroup}
+          >
+            <Trash className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
-      {/* Quick Add Row */}
-      {quickAddGroup === group && (
-        <tr className="bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
-          <td className="px-3 py-2 text-sm text-[var(--color-text-muted)]">
-            {GROUP_LABELS[group]}
-          </td>
-          <td className="px-3 py-2" colSpan={5}>
-            <select
-              autoFocus
-              className={cn(
-                'px-2 py-1 text-sm rounded bg-[var(--color-bg-primary)] border border-[var(--color-border)]',
-                'focus:outline-none focus:border-[var(--color-accent-green)]'
-              )}
-              onChange={(e) => e.target.value && onQuickAddSubmit(e.target.value)}
-              onBlur={onQuickAddCancel}
-              onKeyDown={(e) => e.key === 'Escape' && onQuickAddCancel()}
-            >
-              <option value="">Select SubGroup...</option>
-              {getSubgroupsForGroup(group).map((sg) => (
-                <option key={sg} value={sg}>{sg}</option>
-              ))}
-            </select>
-          </td>
-          <td className="px-3 py-2 text-[var(--color-text-muted)]">—</td>
-          <td className="px-3 py-2 w-10">
-            <button
-              onClick={onQuickAddCancel}
-              className="p-1 text-[var(--color-text-muted)] hover:text-red-500"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </td>
-        </tr>
-      )}
-
-      {/* Stakeholder rows */}
-      {stakeholders.map((stakeholder) => (
-        <StakeholderRow
-          key={stakeholder.id}
-          stakeholder={stakeholder}
-          onUpdate={onUpdate}
-          onUpdateTenderStatus={onUpdateTenderStatus}
-          onUpdateSubmissionStatus={onUpdateSubmissionStatus}
-          onDelete={onDelete}
-          isSelected={selectedIds.has(stakeholder.id)}
-          onSelect={onSelect}
-        />
-      ))}
-
-      {/* Loading skeleton rows when generating for this group */}
-      {isGenerating && (
-        <>
-          {[1, 2, 3].map((i) => (
-            <tr key={`skeleton-${i}`} className="border-b border-[var(--color-border)]">
-              <td className="px-3 py-2">
-                <Skeleton className="h-4 w-16" />
-              </td>
-              <td className="px-3 py-2">
-                <Skeleton className="h-4 w-32" />
-              </td>
-              <td className="px-3 py-2">
-                <Skeleton className="h-4 w-24" />
-              </td>
-              <td className="px-3 py-2">
-                <Skeleton className="h-4 w-28" />
-              </td>
-              <td className="px-3 py-2">
-                <Skeleton className="h-4 w-20" />
-              </td>
-              <td className="px-3 py-2">
-                <Skeleton className="h-4 w-36" />
-              </td>
-              <td className="px-3 py-2">
-                <Skeleton className="h-4 w-16" />
-              </td>
-              <td className="px-3 py-2 w-10" />
+      {/* Content area */}
+      <div className="flex-1 bg-[var(--color-bg-secondary)]">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-[var(--color-border)]">
+              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-28">
+                Group
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-48">
+                SubGroup
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-32">
+                Firm
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+                Name
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-28">
+                Phone
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-40">
+                Email
+              </th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-24">
+                Status
+              </th>
+              <th className="px-3 py-2 w-10" />
             </tr>
-          ))}
-        </>
-      )}
-    </>
+          </thead>
+          <tbody>
+            {/* Quick Add Row */}
+            {quickAddGroup === group && (
+              <tr className="bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
+                <td className="px-3 py-2 text-sm text-[var(--color-text-muted)]">
+                  {GROUP_LABELS[group]}
+                </td>
+                <td className="px-3 py-2" colSpan={5}>
+                  <select
+                    autoFocus
+                    className={cn(
+                      'px-2 py-1 text-sm rounded bg-[var(--color-bg-primary)] border border-[var(--color-border)]',
+                      'focus:outline-none focus:border-[var(--color-accent-copper)]'
+                    )}
+                    onChange={(e) => e.target.value && onQuickAddSubmit(e.target.value)}
+                    onBlur={onQuickAddCancel}
+                    onKeyDown={(e) => e.key === 'Escape' && onQuickAddCancel()}
+                  >
+                    <option value="">Select SubGroup...</option>
+                    {getSubgroupsForGroup(group).map((sg) => (
+                      <option key={sg} value={sg}>{sg}</option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-3 py-2 text-[var(--color-text-muted)]">—</td>
+                <td className="px-3 py-2 w-10">
+                  <button
+                    onClick={onQuickAddCancel}
+                    className="p-1 text-[var(--color-text-muted)] hover:text-red-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </td>
+              </tr>
+            )}
+
+            {/* Stakeholder rows */}
+            {stakeholders.map((stakeholder) => (
+              <StakeholderRow
+                key={stakeholder.id}
+                stakeholder={stakeholder}
+                onUpdate={onUpdate}
+                onUpdateTenderStatus={onUpdateTenderStatus}
+                onUpdateSubmissionStatus={onUpdateSubmissionStatus}
+                onDelete={onDelete}
+                isSelected={selectedIds.has(stakeholder.id)}
+                onSelect={onSelect}
+              />
+            ))}
+
+            {/* Loading skeleton rows when generating for this group */}
+            {isGenerating && (
+              <>
+                {[1, 2, 3].map((i) => (
+                  <tr key={`skeleton-${i}`} className="border-b border-[var(--color-border)]">
+                    <td className="px-3 py-2">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Skeleton className="h-4 w-32" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Skeleton className="h-4 w-24" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Skeleton className="h-4 w-28" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Skeleton className="h-4 w-20" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Skeleton className="h-4 w-36" />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    <td className="px-3 py-2 w-10" />
+                  </tr>
+                ))}
+              </>
+            )}
+
+            {/* Empty state */}
+            {stakeholders.length === 0 && !isGenerating && quickAddGroup !== group && (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-sm text-[var(--color-text-muted)]">
+                  No {GROUP_LABELS[group].toLowerCase()} stakeholders yet. Click + or Generate to add.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

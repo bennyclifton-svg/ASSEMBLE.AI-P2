@@ -32,7 +32,7 @@ import { ProgramActivitySelector } from './ProgramActivitySelector';
 import type { CostLineSection, CostLineWithCalculations, GroupedLine, GroupedLineTotals } from '@/types/cost-plan';
 import type { ProgramActivity } from '@/types/program';
 
-// App color palette - consistent with global styles
+// App color palette - Aurora theme with explicit colors
 const COLORS = {
     bg: {
         primary: 'var(--color-bg-primary)',
@@ -50,10 +50,12 @@ const COLORS = {
         secondary: 'var(--color-border)',
     },
     accent: {
-        blue: 'var(--color-accent-green)',
-        costPlan: 'var(--primitive-copper)',    // copper - unified accent
-        variation: 'var(--primitive-copper)',   // copper - unified accent
-        invoice: 'var(--primitive-copper)',     // copper - unified accent
+        blue: '#0080FF',           // Aurora Blue
+        cyan: '#00FFFF',           // Aurora Cyan (primary accent)
+        teal: '#14B8A6',           // Aurora Teal
+        costPlan: '#00FFFF',       // Aurora Cyan - unified accent
+        variation: '#00FFFF',      // Aurora Cyan - unified accent
+        invoice: '#00FFFF',        // Aurora Cyan - unified accent
     },
     status: {
         positive: '#4ade80',
@@ -87,19 +89,19 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
                 <TabsList className="w-full justify-start bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2">
                     <TabsTrigger
                         value="cost-plan"
-                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
                     >
                         Cost Plan
                     </TabsTrigger>
                     <TabsTrigger
                         value="variations"
-                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
                     >
                         Variations
                     </TabsTrigger>
                     <TabsTrigger
                         value="invoices"
-                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
                     >
                         Invoices
                     </TabsTrigger>
@@ -1073,7 +1075,7 @@ function SectionBlock({
                             className="p-0.5 text-[var(--color-accent-copper)] hover:opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             title={isGeneratingSection ? 'Generating...' : `Populate ${SECTION_NAMES[section]} from stakeholders`}
                         >
-                            <DiamondIcon variant="empty" className="w-3.5 h-3.5" />
+                            <DiamondIcon variant="empty" className={`w-3.5 h-3.5 ${isGeneratingSection ? 'animate-spin-generate' : ''}`} />
                         </button>
                     )}
                 </td>

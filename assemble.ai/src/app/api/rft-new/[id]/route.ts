@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { rftNew } from '@/lib/db';
+import { rftNew, rftNewTransmittals } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
 /**
  * GET /api/rft-new/[id] - Get a single RFT NEW report
- *
- * Note: RFT NEW reports are not deletable as there is one per discipline/trade.
  */
 export async function GET(
     request: NextRequest,
@@ -67,5 +65,37 @@ export async function PUT(
             .limit(1);
 
         return NextResponse.json(updated);
+    });
+}
+
+/**
+ * DELETE /api/rft-new/[id] - Delete RFT (cascades to transmittals)
+ */
+export async function DELETE(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    return handleApiError(async () => {
+        const { id } = await params;
+
+        const [existing] = await db
+            .select()
+            .from(rftNew)
+            .where(eq(rftNew.id, id))
+            .limit(1);
+
+        if (!existing) {
+            return NextResponse.json({ error: 'RFT not found' }, { status: 404 });
+        }
+
+        // Delete transmittal links first (cascade should handle this, but be explicit)
+        await db
+            .delete(rftNewTransmittals)
+            .where(eq(rftNewTransmittals.rftNewId, id));
+
+        // Delete the RFT
+        await db.delete(rftNew).where(eq(rftNew.id, id));
+
+        return NextResponse.json({ success: true, id });
     });
 }

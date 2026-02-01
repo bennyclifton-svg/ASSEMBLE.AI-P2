@@ -253,24 +253,13 @@ export function ProcurementCard({
         );
     }
 
-    // Tab styling helper with sophisticated hover effect
+    // Tab styling - uses CSS class for theme-aware styling (dark: gradient, light: solid)
+    // Increased py-4 for taller parent tabs so blue indicator aligns with bottom
     const tabClassName = `
-        relative rounded-none px-4 py-1.5 text-[15px] font-medium bg-transparent
+        relative rounded-none px-4 py-4 text-[15px] font-medium bg-transparent
+        tab-aurora-main
         transition-all duration-200 ease-out
-        before:absolute before:bottom-[-15px] before:left-1/2 before:-translate-x-1/2
-        before:w-0 before:h-[3px] before:rounded-full
-        before:bg-[var(--color-accent-primary)] before:opacity-40
-        before:transition-all before:duration-200 before:ease-out
         hover:text-[var(--color-text-primary)]
-        hover:before:w-8 hover:before:opacity-60
-        data-[state=active]:shadow-none
-        data-[state=active]:after:absolute data-[state=active]:after:bottom-[-15px]
-        data-[state=active]:after:left-1/2 data-[state=active]:after:-translate-x-1/2 data-[state=active]:after:w-14
-        data-[state=active]:after:h-[3px] data-[state=active]:after:bg-gradient-to-r
-        data-[state=active]:after:from-[var(--color-accent-primary)] data-[state=active]:after:to-[var(--color-accent-primary-hover)]
-        data-[state=active]:after:rounded-full
-        data-[state=active]:text-[var(--color-text-primary)]
-        data-[state=active]:before:w-0 data-[state=active]:before:opacity-0
         data-[state=inactive]:text-[var(--color-text-muted)]
     `;
 
@@ -282,7 +271,7 @@ export function ProcurementCard({
                 onValueChange={setActiveMainTab}
                 className="flex-1 flex flex-col px-6 min-h-0"
             >
-                <TabsList className="w-full justify-start bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 pt-3.5 pb-3.5 mb-4 gap-1.5">
+                <TabsList className="w-full justify-start items-end bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 gap-1.5">
                     <TabsTrigger value="cost-planning" className={tabClassName}>
                         Cost Planning
                     </TabsTrigger>
@@ -292,8 +281,11 @@ export function ProcurementCard({
                     <TabsTrigger value="procurement" className={tabClassName}>
                         Procurement
                     </TabsTrigger>
-                    <TabsTrigger value="notes-meetings-reports" className={tabClassName}>
-                        Notes Meetings Reports
+                    <TabsTrigger value="notes-meetings-reports" className={`${tabClassName} text-center !px-2 !py-2`}>
+                        <span className="flex flex-col leading-none gap-0.5">
+                            <span>Notes Meetings</span>
+                            <span>Reports</span>
+                        </span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -367,7 +359,7 @@ export function ProcurementCard({
                                     <TabsTrigger
                                         key={`consultant-${s.id}`}
                                         value={`consultant-${s.id}`}
-                                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
                                     >
                                         {s.disciplineOrTrade || s.name}
                                     </TabsTrigger>
@@ -378,7 +370,7 @@ export function ProcurementCard({
                                     <TabsTrigger
                                         key={`contractor-${s.id}`}
                                         value={`contractor-${s.id}`}
-                                        className="data-[state=active]:bg-[var(--color-bg-primary)] data-[state=active]:text-[var(--primitive-copper)] data-[state=active]:border-b-2 data-[state=active]:border-[var(--primitive-copper)] rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
                                     >
                                         {s.disciplineOrTrade || s.name}
                                     </TabsTrigger>

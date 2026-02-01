@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, Spectral } from "next/font/google";
+import { DM_Sans, Spectral, Exo_2 } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -17,9 +17,19 @@ const spectral = Spectral({
   weight: ["400", "600"],
 });
 
+const exo2 = Exo_2({
+  subsets: ["latin"],
+  variable: "--font-exo-2",
+  display: "swap",
+  weight: ["700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "Foundry",
   description: "Architectural Precision in Procurement - AI-powered tender management platform",
+  icons: {
+    icon: "/logo-foundry.svg",
+  },
 };
 
 // Theme initialization script - runs before React hydration to prevent flash
@@ -63,7 +73,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body
-        className={`${dmSans.variable} ${spectral.variable} antialiased`}
+        className={`${dmSans.variable} ${spectral.variable} ${exo2.variable} antialiased`}
       >
         {children}
         <Toaster />

@@ -7,6 +7,7 @@ import { User, LogOut, ChevronDown, Loader2 } from 'lucide-react';
 import { ProjectRegister } from './ProjectRegister';
 import { SettingsPanel } from './SettingsPanel';
 import { KnowledgeLibraryRepository } from '../libraries/KnowledgeLibraryRepository';
+import { Logo } from '../brand/Logo';
 
 interface UserData {
   id: string;
@@ -113,12 +114,7 @@ export function LandingLayout() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 border-b border-[#3e3e42] bg-[#252526] flex-shrink-0">
         {/* Logo */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#0e639c] flex items-center justify-center">
-            <span className="text-white font-bold text-sm">A</span>
-          </div>
-          <h1 className="text-lg font-semibold text-[#cccccc]">assemble.ai</h1>
-        </div>
+        <Logo size="md" className="ml-2" />
 
         {/* User Menu */}
         <div className="relative">

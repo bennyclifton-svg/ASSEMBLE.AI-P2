@@ -6,8 +6,8 @@
 export interface TRR {
     id: string;
     projectId: string;
-    disciplineId?: string | null;
-    tradeId?: string | null;
+    stakeholderId?: string | null;
+    trrNumber: number;
     executiveSummary?: string | null;
     clarifications?: string | null;
     recommendation?: string | null;

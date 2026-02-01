@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Star, Upload, Trash } from 'lucide-react';
+import { Star, Upload, Trash, ChevronUp } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { FirmData, FirmType } from './types';
@@ -16,6 +16,7 @@ interface FirmCardExpandedProps {
   onFileUpload: () => void;
   isDragOver: boolean;
   isNew?: boolean;
+  onToggleExpand: () => void;
 }
 
 interface InlineFieldProps {
@@ -83,19 +84,17 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
   };
 
   const baseStyles = `
-    w-full px-2 py-1 rounded text-[var(--color-text-primary)] text-sm
-    bg-transparent border border-transparent
+    w-full px-1 py-0.5 text-[var(--color-text-primary)] text-xs
+    bg-transparent border-none outline-none
     transition-colors duration-150
-    focus:outline-none focus:bg-[var(--color-bg-tertiary)] focus:border-[var(--color-accent-primary)] focus:text-[var(--color-text-primary)]
-    hover:border-[var(--color-border)]
     disabled:opacity-50
     resize-none
     selection:bg-[var(--color-accent-primary-tint)] selection:text-[var(--color-text-primary)]
   `;
 
   return (
-    <div className="space-y-0.5">
-      <label className="text-[11px] text-[var(--color-text-muted)]">
+    <div className="space-y-0">
+      <label className="text-[10px] text-[var(--color-text-secondary)] leading-tight">
         {label} {required && <span className="text-[var(--color-accent-coral)]">*</span>}
       </label>
       {multiline ? (
@@ -107,8 +106,8 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isSaving}
-          className={baseStyles + ' min-h-[60px]'}
-          rows={3}
+          className={baseStyles + ' min-h-[40px]'}
+          rows={2}
         />
       ) : (
         <input
@@ -120,7 +119,7 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isSaving}
-          className={baseStyles + ' h-7'}
+          className={baseStyles + ' h-5'}
         />
       )}
     </div>
@@ -137,6 +136,7 @@ export function FirmCardExpanded({
   onFileUpload,
   isDragOver,
   isNew = false,
+  onToggleExpand,
 }: FirmCardExpandedProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [editName, setEditName] = useState(firm.companyName);
@@ -217,20 +217,19 @@ export function FirmCardExpanded({
   return (
     <div
       className={`
-        bg-[var(--color-bg-secondary)] transition-colors duration-150
+        bg-[var(--color-card-firm)] border border-[var(--color-card-firm-border)] transition-colors duration-150 shadow-md
         ${isDragOver ? 'ring-2 ring-[var(--color-accent-teal)] ring-inset' : ''}
-        ${isHovered && !isDragOver ? 'bg-[var(--color-bg-tertiary)]' : ''}
+        ${isHovered && !isDragOver ? 'bg-[var(--color-card-firm-hover)]' : ''}
         ${firm.awarded ? 'border-l-[3px] border-l-[var(--color-accent-green)]' : ''}
         w-[220px] flex-shrink-0
-        border-r border-[var(--color-border)]
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header */}
-      <div className="flex flex-col px-3 py-2 border-b border-[var(--color-border)]">
+      <div className="flex flex-col px-3 py-1.5 border-b border-[var(--color-border)]">
         {/* Row 1: Company name - full width */}
-        <div className="w-full h-7 flex items-center">
+        <div className="w-full h-6 flex items-center">
           <input
             ref={nameInputRef}
             type="text"
@@ -246,53 +245,63 @@ export function FirmCardExpanded({
             disabled={isSaving}
             placeholder="Enter company name"
             className={`
-              w-full h-7 px-2 py-1 rounded text-[var(--color-text-primary)] text-sm
-              bg-transparent border border-transparent
+              w-full h-6 px-1 py-0.5 text-[var(--color-text-primary)] text-sm font-medium
+              bg-transparent border-none outline-none
               transition-colors duration-150
-              focus:outline-none focus:bg-[var(--color-bg-tertiary)] focus:border-[var(--color-accent-primary)] focus:text-[var(--color-text-primary)]
-              hover:border-[var(--color-border)]
               disabled:opacity-50
               selection:bg-[var(--color-accent-primary-tint)] selection:text-[var(--color-text-primary)]
             `}
           />
         </div>
 
-        {/* Row 2: Action icons - distributed equally (same as compact) */}
+        {/* Row 2: Action icons */}
         <div className="flex items-center justify-between mt-1">
-          {/* Star toggle */}
+          {/* Star toggle with label */}
           <button
             onClick={handleStarClick}
             className={`
-              p-0.5 rounded transition-colors
+              flex items-center gap-1 p-0.5 rounded transition-colors
               ${firm.shortlisted ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
             `}
             title={firm.shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
           >
             <Star className={`w-3.5 h-3.5 ${firm.shortlisted ? 'fill-current' : ''}`} />
+            <span className="text-[10px]">Shortlisted</span>
           </button>
 
-          {/* Folder upload */}
-          <button
-            onClick={handleUploadClick}
-            className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-            title="Upload file to extract data"
-          >
-            <Upload className="w-3.5 h-3.5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Folder upload */}
+            <button
+              onClick={handleUploadClick}
+              className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+              title="Upload file to extract data"
+            >
+              <Upload className="w-3.5 h-3.5" />
+            </button>
 
-          {/* Delete button */}
-          <button
-            onClick={onDelete}
-            className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-colors"
-            title="Delete firm"
-          >
-            <Trash className="w-3.5 h-3.5" />
-          </button>
+            {/* Delete button */}
+            <button
+              onClick={onDelete}
+              className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-colors"
+              title="Delete firm"
+            >
+              <Trash className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Collapse chevron */}
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+              className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-black/10 transition-colors"
+              title="Collapse card"
+            >
+              <ChevronUp className="w-7 h-7" />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Fields */}
-      <div className="px-3 py-2 space-y-2">
+      <div className="px-3 py-1.5 space-y-1">
         <InlineField
           label="Contact Person"
           value={firm.contactPerson}
@@ -338,17 +347,17 @@ export function FirmCardExpanded({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center px-3 py-2 border-t border-[var(--color-border)]">
+      <div className="flex items-center px-3 py-1.5 border-t border-[var(--color-border)]">
         <div className="flex items-center gap-1">
-          <Label className="text-[var(--color-text-muted)] text-xs">Award</Label>
+          <Label className="text-[var(--color-text-secondary)] text-[10px]">Award</Label>
           <Switch
             checked={firm.awarded}
             onCheckedChange={handleAwardToggle}
             disabled={!firm.id || isAwarding}
-            className="scale-75"
+            className="scale-[0.6]"
           />
           {firm.awarded && (
-            <span className="text-[10px] text-[var(--color-accent-green)] ml-1">Awarded</span>
+            <span className="text-[10px] text-[var(--color-accent-green)]">Awarded</span>
           )}
         </div>
       </div>

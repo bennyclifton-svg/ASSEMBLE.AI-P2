@@ -308,6 +308,11 @@ export function generateCostPlan(params: CostPlanGenerationParams): CostPlanLine
       return types.includes('all') || types.includes(projectType);
     });
 
+    // Sort consultants alphabetically by name
+    applicableConsultants.sort(([, a], [, b]) =>
+      ((a as any).name as string).localeCompare((b as any).name as string)
+    );
+
     applicableConsultants.forEach(([key, consultant]: [string, any]) => {
       // Calculate total consultant fee
       let totalFee = 0;

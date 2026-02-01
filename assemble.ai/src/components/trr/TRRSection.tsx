@@ -1,27 +1,22 @@
 /**
  * TRRSection Component
  * Main container for TRR (Tender Recommendation Report) within discipline/trade tabs
- * Positioned BELOW Evaluation section
- *
- * Contains two tabs: SHORT and LONG
- * Only one TRR per discipline/trade (auto-created)
+ * Supports multiple TRRs per stakeholder with numbered tabs (01, 02, etc.)
  */
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useTRR } from '@/lib/hooks/use-trr';
 import { useTRRSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { TRRShortTab } from './TRRShortTab';
-import { TRRLongTab } from './TRRLongTab';
-import { FileText, Save, RotateCcw, Download, Loader2 } from 'lucide-react';
+import { TRRTabs } from './TRRTabs';
+import { FileText, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
 // Procurement section accent color (copper from design system)
-const SECTION_ACCENT = 'var(--primitive-copper-darker)'; // Warm bronze for icons
-const SECTION_TINT = 'var(--color-accent-copper-tint)';
-const SECTION_TEXT = 'var(--primitive-copper-darker)'; // Bronze text on copper-tint bg
+const SECTION_ACCENT = 'var(--primitive-copper-darker)';
 
 interface TRRSectionProps {
     projectId: string;
@@ -44,23 +39,65 @@ export function TRRSection({
 }: TRRSectionProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
 
     // Use context for expanded state persistence across tab navigation
-    const { isExpanded, activeTab, setExpanded: setIsExpanded, setActiveTab } = useTRRSectionUI(stakeholderId);
+    const { isExpanded, activeTrrId, setExpanded: setIsExpanded, setActiveTrrId } = useTRRSectionUI(stakeholderId);
 
-    // Get or create the TRR for this stakeholder
+    // Get all TRRs for this stakeholder
     const {
-        trr,
+        trrs,
         isLoading,
+        createTrr,
         updateTRR,
+        deleteTrr,
         refetch,
     } = useTRR({
         projectId,
         stakeholderId,
     });
 
+    // Find the active TRR
+    const activeTrr = trrs.find(t => t.id === activeTrrId) || trrs[0] || null;
+
+    // Auto-select first TRR when loaded
+    useEffect(() => {
+        if (trrs.length > 0 && !activeTrrId) {
+            setActiveTrrId(trrs[0].id);
+        }
+    }, [trrs, activeTrrId, setActiveTrrId]);
+
+    const handleCreateTrr = useCallback(async () => {
+        setIsCreating(true);
+        try {
+            const newTrr = await createTrr();
+            if (newTrr) {
+                setActiveTrrId(newTrr.id);
+                setIsExpanded(true);
+            }
+        } finally {
+            setIsCreating(false);
+        }
+    }, [createTrr, setActiveTrrId, setIsExpanded]);
+
+    const handleDeleteTrr = useCallback(async (trrId: string) => {
+        const success = await deleteTrr(trrId);
+        if (success && trrId === activeTrrId) {
+            // Select the first remaining TRR or null
+            const remaining = trrs.filter(t => t.id !== trrId);
+            setActiveTrrId(remaining[0]?.id || null);
+        }
+    }, [deleteTrr, activeTrrId, trrs, setActiveTrrId]);
+
+    const handleSelectTrr = useCallback((trrId: string) => {
+        setActiveTrrId(trrId);
+        if (!isExpanded) {
+            setIsExpanded(true);
+        }
+    }, [setActiveTrrId, isExpanded, setIsExpanded]);
+
     const handleSaveTransmittal = useCallback(async () => {
-        if (!trr) return;
+        if (!activeTrr) return;
 
         let documentIds: string[] = [];
         if (onSaveTransmittal) {
@@ -72,25 +109,24 @@ export function TRRSection({
         if (documentIds.length === 0) return;
 
         try {
-            const response = await fetch(`/api/trr/${trr.id}/transmittal`, {
+            const response = await fetch(`/api/trr/${activeTrr.id}/transmittal`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ documentIds }),
             });
             if (response.ok) {
-                // Refetch TRR to update transmittal count
                 refetch();
             }
         } catch (error) {
             console.error('Failed to save attachments:', error);
         }
-    }, [trr, selectedDocumentIds, onSaveTransmittal, refetch]);
+    }, [activeTrr, selectedDocumentIds, onSaveTransmittal, refetch]);
 
     const handleLoadTransmittal = useCallback(async () => {
-        if (!trr) return;
+        if (!activeTrr) return;
 
         try {
-            const response = await fetch(`/api/trr/${trr.id}/transmittal`);
+            const response = await fetch(`/api/trr/${activeTrr.id}/transmittal`);
             if (response.ok) {
                 const data = await response.json();
                 const documentIds = data.documents?.map((d: { documentId: string }) => d.documentId) || [];
@@ -101,14 +137,14 @@ export function TRRSection({
         } catch (error) {
             console.error('Failed to load transmittal:', error);
         }
-    }, [trr, onLoadTransmittal]);
+    }, [activeTrr, onLoadTransmittal]);
 
     const handleDownloadTransmittal = useCallback(async () => {
-        if (!trr) return;
+        if (!activeTrr) return;
 
         setIsDownloading(true);
         try {
-            const response = await fetch(`/api/trr/${trr.id}/transmittal/download`);
+            const response = await fetch(`/api/trr/${activeTrr.id}/transmittal/download`);
 
             if (!response.ok) {
                 throw new Error('Download failed');
@@ -136,14 +172,14 @@ export function TRRSection({
         } finally {
             setIsDownloading(false);
         }
-    }, [trr, stakeholderName]);
+    }, [activeTrr, stakeholderName]);
 
     const handleExport = useCallback(async (format: 'pdf' | 'docx') => {
-        if (!trr) return;
+        if (!activeTrr) return;
 
         setIsExporting(true);
         try {
-            const response = await fetch(`/api/trr/${trr.id}/export`, {
+            const response = await fetch(`/api/trr/${activeTrr.id}/export`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ format }),
@@ -158,7 +194,6 @@ export function TRRSection({
                 throw new Error('Export failed');
             }
 
-            // Download the file
             const blob = await response.blob();
             const contentDisposition = response.headers.get('Content-Disposition');
             const contextName = stakeholderName || 'Unknown';
@@ -181,20 +216,18 @@ export function TRRSection({
         } finally {
             setIsExporting(false);
         }
-    }, [trr, stakeholderName]);
+    }, [activeTrr, stakeholderName]);
 
-    const handleTabClick = (tab: 'short' | 'long') => {
-        if (activeTab === tab) {
-            setIsExpanded(!isExpanded);
-        } else {
-            setActiveTab(tab);
-            if (!isExpanded) setIsExpanded(true);
+    const handleUpdateTRR = useCallback(async (data: Parameters<typeof updateTRR>[1]) => {
+        if (activeTrr) {
+            return updateTRR(activeTrr.id, data);
         }
-    };
+        return null;
+    }, [activeTrr, updateTRR]);
 
     const contextName = stakeholderName || 'Unknown';
 
-    // Solid triangle icons - matching Firm Cards style
+    // Solid triangle icons
     const TriangleRight = () => (
         <svg
             className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
@@ -229,77 +262,21 @@ export function TRRSection({
                     </span>
                     {isExpanded ? <TriangleDown /> : <TriangleRight />}
                 </button>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleSaveTransmittal}
-                        disabled={!trr || selectedDocumentIds.length === 0}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <Save className="w-3 h-3 mr-1" />
-                        Save Attachments
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleLoadTransmittal}
-                        disabled={!trr || (trr.transmittalCount ?? 0) === 0}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <RotateCcw className="w-3 h-3 mr-1" />
-                        Recall {(trr?.transmittalCount ?? 0) > 0 && `(${trr?.transmittalCount})`}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleDownloadTransmittal}
-                        disabled={!trr || (trr.transmittalCount ?? 0) === 0 || isDownloading}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                    </Button>
-                </div>
             </div>
 
             {/* Content Area */}
             <div className="bg-[var(--color-bg-secondary)]">
                 {/* Tabs and Export Actions Row */}
-                <div className="flex items-center justify-between px-4 pt-2 border-b border-[var(--color-border)]">
-                    {/* SHORT/LONG Tabs */}
-                    <div className="flex items-center">
-                        <div
-                            className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'short'
-                                ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
-                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                }`}
-                            onClick={() => handleTabClick('short')}
-                        >
-                            <span>SHORT</span>
-                        </div>
-                        <div
-                            className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'long'
-                                ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
-                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                }`}
-                            onClick={() => handleTabClick('long')}
-                        >
-                            <span>LONG</span>
-                        </div>
-                    </div>
+                <div className="flex items-center justify-between px-4 pt-2">
+                    {/* TRR Tabs (01, 02, etc. with + button) */}
+                    <TRRTabs
+                        trrs={trrs}
+                        activeTrrId={activeTrr?.id || null}
+                        onSelectTrr={handleSelectTrr}
+                        onCreateTrr={handleCreateTrr}
+                        onDeleteTrr={handleDeleteTrr}
+                        isLoading={isCreating}
+                    />
 
                     {/* Export Buttons - Icon Only */}
                     <div className="flex items-center gap-2 pb-2">
@@ -307,7 +284,7 @@ export function TRRSection({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleExport('pdf')}
-                            disabled={!trr || isExporting}
+                            disabled={!activeTrr || isExporting}
                             className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export PDF"
                         >
@@ -321,7 +298,7 @@ export function TRRSection({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleExport('docx')}
-                            disabled={!trr || isExporting}
+                            disabled={!activeTrr || isExporting}
                             className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export Word"
                         >
@@ -333,27 +310,32 @@ export function TRRSection({
                 {/* Tab Content - only shown when expanded */}
                 {isExpanded && (
                     <div className="p-4 bg-[var(--color-bg-primary)]">
-                        {activeTab === 'short' ? (
-                            isLoading ? (
-                                <div className="p-8 text-center text-[var(--color-text-muted)]">
-                                    <p>Loading TRR...</p>
-                                </div>
-                            ) : trr ? (
-                                <TRRShortTab
-                                    projectId={projectId}
-                                    trr={trr}
-                                    stakeholderId={stakeholderId}
-                                    contextType={contextType}
-                                    contextName={contextName}
-                                    onUpdateTRR={updateTRR}
-                                />
-                            ) : (
-                                <div className="p-8 text-center text-[var(--color-text-muted)]">
-                                    <p>Unable to load TRR</p>
-                                </div>
-                            )
+                        {isLoading ? (
+                            <div className="p-8 text-center text-[var(--color-text-muted)]">
+                                <p>Loading TRRs...</p>
+                            </div>
+                        ) : trrs.length === 0 ? (
+                            <div className="p-8 text-center text-[var(--color-text-muted)]">
+                                <p>No TRRs yet. Click + to create one.</p>
+                            </div>
+                        ) : activeTrr ? (
+                            <TRRShortTab
+                                projectId={projectId}
+                                trr={activeTrr}
+                                stakeholderId={stakeholderId}
+                                contextType={contextType}
+                                contextName={contextName}
+                                onUpdateTRR={handleUpdateTRR}
+                                onSaveTransmittal={handleSaveTransmittal}
+                                onLoadTransmittal={handleLoadTransmittal}
+                                onDownloadTransmittal={handleDownloadTransmittal}
+                                canSaveTransmittal={!!activeTrr && selectedDocumentIds.length > 0}
+                                isDownloading={isDownloading}
+                            />
                         ) : (
-                            <TRRLongTab />
+                            <div className="p-8 text-center text-[var(--color-text-muted)]">
+                                <p>Unable to load TRR</p>
+                            </div>
                         )}
                     </div>
                 )}

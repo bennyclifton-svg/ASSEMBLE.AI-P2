@@ -99,7 +99,7 @@ export function TRREditableSection({
                     />
                 )}
                 {isGenerating && (
-                    <span className="text-xs text-[var(--color-accent-copper)]">Generating...</span>
+                    <span className="text-xs animate-text-aurora">Generating...</span>
                 )}
             </div>
             <div className="border border-[var(--color-border)] rounded overflow-hidden">

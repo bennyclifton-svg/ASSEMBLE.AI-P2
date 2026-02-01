@@ -1,7 +1,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-type CardVariant = 'default' | 'translucent' | 'elevated';
+type CardVariant = 'default' | 'translucent' | 'elevated' | 'aurora' | 'aurora-glow' | 'soft' | 'soft-elevated' | 'soft-interactive';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
     variant?: CardVariant;
@@ -13,6 +13,12 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
             default: "rounded-lg border bg-card text-card-foreground shadow-sm",
             translucent: "rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-card-foreground backdrop-blur-sm",
             elevated: "rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-card-foreground backdrop-blur-sm overflow-hidden",
+            aurora: "rounded-xl card-aurora text-card-foreground overflow-hidden",
+            "aurora-glow": "rounded-xl card-aurora-glow text-card-foreground overflow-hidden",
+            // Soft UI Evolution variants
+            soft: "rounded-xl card-soft text-card-foreground",
+            "soft-elevated": "rounded-xl card-soft-elevated text-card-foreground",
+            "soft-interactive": "rounded-xl card-soft-interactive text-card-foreground cursor-pointer",
         };
 
         return (

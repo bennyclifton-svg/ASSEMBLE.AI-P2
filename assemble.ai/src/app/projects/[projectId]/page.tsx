@@ -174,12 +174,11 @@ export default function ProjectWorkspace() {
       <div className="h-screen w-full bg-background">
         {/* Full-height resizable layout - columns extend to top */}
         <ResizableLayout
-          selectedProject={project}
-          onSelectProject={handleSelectProject}
-          refreshTrigger={refreshTrigger}
           leftContent={
             <PlanningCard
               projectId={project.id}
+              selectedProject={project}
+              onSelectProject={handleSelectProject}
               selectedDocumentIds={Array.from(selectedDocumentIds)}
               onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
               onProjectNameChange={handleProjectNameChange}

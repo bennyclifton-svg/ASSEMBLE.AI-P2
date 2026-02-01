@@ -59,13 +59,13 @@ export function AttachmentTable({
         <div className={cn('border border-[var(--color-border)] rounded overflow-hidden', className)}>
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
-                        <th className="text-left px-4 py-2.5 font-medium w-10">#</th>
-                        <th className="text-left px-4 py-2.5 font-medium w-24">DWG #</th>
-                        <th className="text-left px-4 py-2.5 font-medium">Name</th>
-                        <th className="text-center px-4 py-2.5 font-medium w-16">Rev</th>
-                        <th className="text-left px-4 py-2.5 font-medium w-36">Category</th>
-                        <th className="text-left px-4 py-2.5 font-medium w-40">Subcategory</th>
+                    <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                        <th className="text-left px-4 py-1.5 font-medium w-10">#</th>
+                        <th className="text-left px-4 py-1.5 font-medium w-24">DWG #</th>
+                        <th className="text-left px-4 py-1.5 font-medium">Name</th>
+                        <th className="text-center px-4 py-1.5 font-medium w-16">Rev</th>
+                        <th className="text-left px-4 py-1.5 font-medium w-36">Category</th>
+                        <th className="text-left px-4 py-1.5 font-medium w-40">Subcategory</th>
                         {showRemove && (
                             <th className="w-10"></th>
                         )}
@@ -77,10 +77,10 @@ export function AttachmentTable({
                                 key={doc.id}
                                 className="border-t border-[var(--color-border)] hover:bg-[#2d2d30]/50"
                             >
-                                <td className="px-4 py-2.5 text-[var(--color-text-muted)]">
+                                <td className="px-4 py-1.5 text-[var(--color-text-muted)]">
                                     {index + 1}
                                 </td>
-                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
+                                <td className="px-4 py-1.5 text-[var(--color-text-primary)]">
                                     {doc.drawingNumber ? (
                                         <span title={doc.drawingNumber}>
                                             {doc.drawingNumber}
@@ -89,13 +89,13 @@ export function AttachmentTable({
                                         <span className="text-[var(--color-text-muted)]">-</span>
                                     )}
                                 </td>
-                                <td className="px-4 py-2.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
+                                <td className="px-4 py-1.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
                                     {doc.drawingName || doc.documentName}
                                 </td>
-                                <td className="px-4 py-2.5 text-center text-[var(--color-text-primary)]">
+                                <td className="px-4 py-1.5 text-center text-[var(--color-text-primary)]">
                                     {doc.drawingRevision || <span className="text-[var(--color-text-muted)]">-</span>}
                                 </td>
-                                <td className="px-4 py-2.5">
+                                <td className="px-4 py-1.5">
                                     {doc.categoryName ? (
                                         <div className="flex items-center gap-1.5">
                                             <Folder
@@ -111,7 +111,7 @@ export function AttachmentTable({
                                         <span className="text-[var(--color-text-muted)]">-</span>
                                     )}
                                 </td>
-                                <td className="px-4 py-2.5">
+                                <td className="px-4 py-1.5">
                                     {doc.subcategoryName ? (
                                         <div className="flex items-center gap-1.5">
                                             <Folder

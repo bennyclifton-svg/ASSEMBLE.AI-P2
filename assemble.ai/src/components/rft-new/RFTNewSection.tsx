@@ -1,29 +1,23 @@
 /**
  * RFTNewSection Component
- * Main container for RFT NEW report within discipline/trade tabs
- * Positioned ABOVE Addendum section
- *
- * Contains two tabs: SHORT and LONG
- * Only one RFT NEW per discipline/trade (auto-created)
+ * Main container for RFT NEW reports within discipline/trade tabs
+ * Supports multiple RFTs per stakeholder with numbered tabs (01, 02, etc.)
  */
 
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRftNew } from '@/lib/hooks/use-rft-new';
+import { useState, useCallback, useEffect } from 'react';
+import { useRftNew, type RftNew } from '@/lib/hooks/use-rft-new';
 import { useRftNewTransmittal } from '@/lib/hooks/use-rft-new-transmittal';
 import { useRFTSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { RFTNewShortTab } from './RFTNewShortTab';
-import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
-import { FileText, Save, RotateCcw, Download } from 'lucide-react';
+import { RFTTabs } from './RFTTabs';
+import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Procurement section accent color (copper from design system)
-const SECTION_ACCENT = 'var(--color-accent-copper)'; // Copper for icons (better contrast)
-const SECTION_TINT = 'var(--color-accent-copper-tint)';
-const SECTION_TEXT = 'var(--color-accent-copper)'; // Copper text for better contrast on dark bg
+const SECTION_ACCENT = 'var(--color-accent-copper)';
 
 interface RFTNewSectionProps {
     projectId: string;
@@ -44,30 +38,71 @@ export function RFTNewSection({
 }: RFTNewSectionProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
 
     // Use context for expanded state persistence across tab navigation
-    const { isExpanded, activeTab, setExpanded: setIsExpanded, setActiveTab } = useRFTSectionUI(stakeholderId);
+    const { isExpanded, activeRftId, setExpanded: setIsExpanded, setActiveRftId } = useRFTSectionUI(stakeholderId);
 
-    // Get or create the RFT NEW for this stakeholder
+    // Get all RFTs for this stakeholder
     const {
-        rftNew,
+        rfts,
         isLoading,
+        createRft,
         updateRftDate,
+        deleteRft,
     } = useRftNew({
         projectId,
         stakeholderId,
     });
 
-    // Get transmittal for the RFT NEW
+    // Find the active RFT
+    const activeRft = rfts.find(r => r.id === activeRftId) || rfts[0] || null;
+
+    // Auto-select first RFT when loaded
+    useEffect(() => {
+        if (rfts.length > 0 && !activeRftId) {
+            setActiveRftId(rfts[0].id);
+        }
+    }, [rfts, activeRftId, setActiveRftId]);
+
+    // Get transmittal for the active RFT
     const {
-        transmittal,
         saveTransmittal,
         loadTransmittal,
         hasTransmittal,
         documentCount,
     } = useRftNewTransmittal({
-        rftNewId: rftNew?.id || null,
+        rftNewId: activeRft?.id || null,
     });
+
+    const handleCreateRft = useCallback(async () => {
+        setIsCreating(true);
+        try {
+            const newRft = await createRft();
+            if (newRft) {
+                setActiveRftId(newRft.id);
+                setIsExpanded(true);
+            }
+        } finally {
+            setIsCreating(false);
+        }
+    }, [createRft, setActiveRftId, setIsExpanded]);
+
+    const handleDeleteRft = useCallback(async (rftId: string) => {
+        const success = await deleteRft(rftId);
+        if (success && rftId === activeRftId) {
+            // Select the first remaining RFT or null
+            const remaining = rfts.filter(r => r.id !== rftId);
+            setActiveRftId(remaining[0]?.id || null);
+        }
+    }, [deleteRft, activeRftId, rfts, setActiveRftId]);
+
+    const handleSelectRft = useCallback((rftId: string) => {
+        setActiveRftId(rftId);
+        if (!isExpanded) {
+            setIsExpanded(true);
+        }
+    }, [setActiveRftId, isExpanded, setIsExpanded]);
 
     const handleSaveTransmittal = useCallback(async () => {
         if (onSaveTransmittal) {
@@ -86,11 +121,11 @@ export function RFTNewSection({
     }, [loadTransmittal, onLoadTransmittal]);
 
     const handleDownloadTransmittal = useCallback(async () => {
-        if (!rftNew) return;
+        if (!activeRft) return;
 
         setIsDownloading(true);
         try {
-            const response = await fetch(`/api/rft-new/${rftNew.id}/transmittal/download`);
+            const response = await fetch(`/api/rft-new/${activeRft.id}/transmittal/download`);
 
             if (!response.ok) {
                 throw new Error('Download failed');
@@ -118,33 +153,30 @@ export function RFTNewSection({
         } finally {
             setIsDownloading(false);
         }
-    }, [rftNew, stakeholderName]);
+    }, [activeRft, stakeholderName]);
 
     const handleExport = useCallback(async (format: 'pdf' | 'docx') => {
-        if (!rftNew) return;
+        if (!activeRft) return;
 
         setIsExporting(true);
         try {
-            const response = await fetch(`/api/rft-new/${rftNew.id}/export`, {
+            const response = await fetch(`/api/rft-new/${activeRft.id}/export`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ format }),
             });
 
             if (!response.ok) {
-                // For now, export is not implemented (501 status)
                 if (response.status === 501) {
                     const data = await response.json();
-                    alert(data.message || 'Export functionality coming soon in Phase 3');
+                    alert(data.message || 'Export functionality coming soon');
                     return;
                 }
-                // Get detailed error from server
                 const errorData = await response.json().catch(() => ({}));
                 console.error('Export error details:', errorData);
                 throw new Error(errorData.details || errorData.error || 'Export failed');
             }
 
-            // Download the file
             const blob = await response.blob();
             const contentDisposition = response.headers.get('Content-Disposition');
             let filename = `RFT.${format}`;
@@ -167,20 +199,17 @@ export function RFTNewSection({
         } finally {
             setIsExporting(false);
         }
-    }, [rftNew]);
+    }, [activeRft]);
 
-    const handleTabClick = (tab: 'short' | 'long') => {
-        if (activeTab === tab) {
-            setIsExpanded(!isExpanded);
-        } else {
-            setActiveTab(tab);
-            if (!isExpanded) setIsExpanded(true);
+    const handleDateChange = useCallback(async (date: string) => {
+        if (activeRft) {
+            await updateRftDate(activeRft.id, date);
         }
-    };
+    }, [activeRft, updateRftDate]);
 
     const contextName = stakeholderName || 'Unknown';
 
-    // Solid triangle icons - matching Firm Cards style
+    // Solid triangle icons
     const TriangleRight = () => (
         <svg
             className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
@@ -215,77 +244,21 @@ export function RFTNewSection({
                     </span>
                     {isExpanded ? <TriangleDown /> : <TriangleRight />}
                 </button>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleSaveTransmittal}
-                        disabled={!rftNew || selectedDocumentIds.length === 0}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <Save className="w-3 h-3 mr-1" />
-                        Save Transmittal
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleLoadTransmittal}
-                        disabled={!rftNew || !hasTransmittal}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <RotateCcw className="w-3 h-3 mr-1" />
-                        Recall {documentCount > 0 && `(${documentCount})`}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleDownloadTransmittal}
-                        disabled={!rftNew || !hasTransmittal || isDownloading}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                    </Button>
-                </div>
             </div>
 
             {/* Content Area */}
             <div className="bg-[var(--color-bg-secondary)]">
                 {/* Tabs and Export Actions Row */}
-                <div className="flex items-center justify-between px-4 pt-2 border-b border-[var(--color-border)]">
-                    {/* SHORT/LONG Tabs - Custom consistency with AddendumTabs */}
-                    <div className="flex items-center">
-                        <div
-                            className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'short'
-                                ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
-                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                }`}
-                            onClick={() => handleTabClick('short')}
-                        >
-                            <span>SHORT</span>
-                        </div>
-                        <div
-                            className={`relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer ${activeTab === 'long'
-                                ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
-                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                }`}
-                            onClick={() => handleTabClick('long')}
-                        >
-                            <span>LONG</span>
-                        </div>
-                    </div>
+                <div className="flex items-center justify-between px-4 pt-2">
+                    {/* RFT Tabs (01, 02, etc. with + button) */}
+                    <RFTTabs
+                        rfts={rfts}
+                        activeRftId={activeRft?.id || null}
+                        onSelectRft={handleSelectRft}
+                        onCreateRft={handleCreateRft}
+                        onDeleteRft={handleDeleteRft}
+                        isLoading={isCreating}
+                    />
 
                     {/* Export Buttons - Icon Only */}
                     <div className="flex items-center gap-2 pb-2">
@@ -293,7 +266,7 @@ export function RFTNewSection({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleExport('pdf')}
-                            disabled={!rftNew || isExporting}
+                            disabled={!activeRft || isExporting}
                             className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export PDF"
                         >
@@ -303,7 +276,7 @@ export function RFTNewSection({
                             variant="ghost"
                             size="sm"
                             onClick={() => handleExport('docx')}
-                            disabled={!rftNew || isExporting}
+                            disabled={!activeRft || isExporting}
                             className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
                             title="Export Word"
                         >
@@ -315,27 +288,32 @@ export function RFTNewSection({
                 {/* Tab Content - only shown when expanded */}
                 {isExpanded && (
                     <div className="p-4 bg-[var(--color-bg-primary)]">
-                        {activeTab === 'short' ? (
-                            isLoading ? (
-                                <div className="p-8 text-center text-[var(--color-text-muted)]">
-                                    <p>Loading RFT...</p>
-                                </div>
-                            ) : rftNew ? (
-                                <RFTNewShortTab
-                                    projectId={projectId}
-                                    rftNew={rftNew}
-                                    stakeholderId={stakeholderId}
-                                    contextName={contextName}
-                                    onDateChange={updateRftDate}
-                                />
-                            ) : (
-                                <div className="p-8 text-center text-[var(--color-text-muted)]">
-                                    <p>Unable to load RFT</p>
-                                </div>
-                            )
+                        {isLoading ? (
+                            <div className="p-8 text-center text-[var(--color-text-muted)]">
+                                <p>Loading RFTs...</p>
+                            </div>
+                        ) : rfts.length === 0 ? (
+                            <div className="p-8 text-center text-[var(--color-text-muted)]">
+                                <p>No RFTs yet. Click + to create one.</p>
+                            </div>
+                        ) : activeRft ? (
+                            <RFTNewShortTab
+                                projectId={projectId}
+                                rftNew={activeRft}
+                                stakeholderId={stakeholderId}
+                                contextName={contextName}
+                                onDateChange={handleDateChange}
+                                onSaveTransmittal={handleSaveTransmittal}
+                                onLoadTransmittal={handleLoadTransmittal}
+                                onDownloadTransmittal={handleDownloadTransmittal}
+                                canSaveTransmittal={!!activeRft && selectedDocumentIds.length > 0}
+                                hasTransmittal={hasTransmittal}
+                                documentCount={documentCount}
+                                isDownloading={isDownloading}
+                            />
                         ) : (
                             <div className="p-8 text-center text-[var(--color-text-muted)]">
-                                <p>LONG tab content coming in future release</p>
+                                <p>Unable to load RFT</p>
                             </div>
                         )}
                     </div>

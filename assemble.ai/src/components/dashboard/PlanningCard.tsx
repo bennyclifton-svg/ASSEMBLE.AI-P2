@@ -6,8 +6,17 @@ import { ObjectivesNav } from './planning/ObjectivesNav';
 import { ProfileSection } from '@/components/profiler/ProfileSection';
 import { StakeholderNav } from '@/components/stakeholders/StakeholderNav';
 
+interface Project {
+    id: string;
+    name: string;
+    code: string;
+    status: string;
+}
+
 interface PlanningCardProps {
     projectId: string;
+    selectedProject?: Project | null;
+    onSelectProject?: (project: Project | null) => void;
     selectedDocumentIds?: string[];
     onSetSelectedDocumentIds?: (ids: string[]) => void;
     onProjectNameChange?: () => void;
@@ -22,6 +31,8 @@ interface PlanningCardProps {
 
 export function PlanningCard({
     projectId,
+    selectedProject,
+    onSelectProject,
     selectedDocumentIds = [],
     onSetSelectedDocumentIds,
     onProjectNameChange,
@@ -74,6 +85,9 @@ export function PlanningCard({
                     onProjectNameChange={onProjectNameChange}
                     isActive={activeMainTab === 'project-details'}
                     onToggle={onShowProjectDetails}
+                    selectedProject={selectedProject}
+                    onSelectProject={onSelectProject}
+                    refreshTrigger={refreshKey}
                 />
 
                 <ProfileSection

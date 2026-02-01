@@ -368,10 +368,10 @@ export function ProgramTable({
     return (
         <div className="flex h-full flex-col">
             {/* Header */}
-            <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+            <div className="flex border-b border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)]">
                 {/* Activity column header */}
                 <div
-                    className="shrink-0 border-r border-[var(--color-border)] px-3 py-2 text-xs font-medium text-[var(--color-text-muted)]"
+                    className="shrink-0 border-r border-[var(--color-accent-copper)] px-4 py-1.5 text-xs font-medium text-[var(--color-accent-copper)] uppercase tracking-wide flex items-center"
                     style={{ width: activityColumnWidth }}
                 >
                     Activity
@@ -379,7 +379,7 @@ export function ProgramTable({
 
                 {/* Start date column header */}
                 <div
-                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-2 text-xs font-medium text-[var(--color-text-muted)] text-center"
+                    className="shrink-0 border-r border-[var(--color-accent-copper)] px-2 py-1.5 text-xs font-medium text-[var(--color-accent-copper)] text-center uppercase tracking-wide flex items-center justify-center"
                     style={{ width: startDateColumnWidth }}
                 >
                     Start
@@ -387,7 +387,7 @@ export function ProgramTable({
 
                 {/* End date column header */}
                 <div
-                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-2 text-xs font-medium text-[var(--color-text-muted)] text-center"
+                    className="shrink-0 border-r border-[var(--color-accent-copper)] px-2 py-1.5 text-xs font-medium text-[var(--color-accent-copper)] text-center uppercase tracking-wide flex items-center justify-center"
                     style={{ width: endDateColumnWidth }}
                 >
                     End
@@ -397,11 +397,11 @@ export function ProgramTable({
                 <div className="flex-1 overflow-hidden" ref={scrollContainerRef}>
                     <div className="flex flex-col" style={{ minWidth: columns.length * columnWidth }}>
                         {/* Month row */}
-                        <div className="flex border-b border-[var(--color-border)]">
+                        <div className="flex border-b border-[var(--color-accent-copper)]">
                             {monthGroups.map((group, i) => (
                                 <div
                                     key={i}
-                                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-1 text-center text-xs font-medium text-[var(--color-text-secondary)]"
+                                    className="shrink-0 border-r border-[var(--color-accent-copper)] px-2 py-1 text-center text-xs font-medium text-[var(--color-accent-copper)] uppercase tracking-wide"
                                     style={{ width: columnWidth * group.span }}
                                 >
                                     {group.month}
@@ -415,8 +415,8 @@ export function ProgramTable({
                                 {columns.map((col, i) => (
                                     <div
                                         key={i}
-                                        className={`shrink-0 border-r border-[var(--color-border)] px-1 py-1 text-center text-xs text-[var(--color-text-muted)] ${
-                                            i === todayIndex ? 'bg-[var(--color-accent-teal)]/20' : ''
+                                        className={`shrink-0 border-r border-[var(--color-accent-copper)] px-1 py-1 text-center text-xs text-[var(--color-accent-copper)] ${
+                                            i === todayIndex ? 'bg-[var(--color-accent-copper)]/20' : ''
                                         }`}
                                         style={{ width: columnWidth }}
                                     >

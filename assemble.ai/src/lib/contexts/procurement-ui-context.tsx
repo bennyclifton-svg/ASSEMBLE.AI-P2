@@ -14,12 +14,12 @@ type SectionType = 'rft' | 'trr' | 'addendum' | 'evaluation';
 // State for each section type
 interface RFTState {
     isExpanded: boolean;
-    activeTab: 'short' | 'long';
+    activeRftId: string | null;
 }
 
 interface TRRState {
     isExpanded: boolean;
-    activeTab: 'short' | 'long';
+    activeTrrId: string | null;
 }
 
 interface AddendumState {
@@ -42,8 +42,8 @@ interface StakeholderUIState {
 
 // Default state for a new stakeholder
 const defaultStakeholderState: StakeholderUIState = {
-    rft: { isExpanded: false, activeTab: 'short' },
-    trr: { isExpanded: false, activeTab: 'short' },
+    rft: { isExpanded: false, activeRftId: null },
+    trr: { isExpanded: false, activeTrrId: null },
     addendum: { isExpanded: false, activeAddendumId: null },
     evaluation: { isExpanded: false, activeTab: 'price' },
 };
@@ -53,12 +53,12 @@ interface ProcurementUIContextValue {
     // RFT section
     getRFTState: (stakeholderId: string) => RFTState;
     setRFTExpanded: (stakeholderId: string, expanded: boolean) => void;
-    setRFTActiveTab: (stakeholderId: string, tab: 'short' | 'long') => void;
+    setRFTActiveId: (stakeholderId: string, id: string | null) => void;
 
     // TRR section
     getTRRState: (stakeholderId: string) => TRRState;
     setTRRExpanded: (stakeholderId: string, expanded: boolean) => void;
-    setTRRActiveTab: (stakeholderId: string, tab: 'short' | 'long') => void;
+    setTRRActiveId: (stakeholderId: string, id: string | null) => void;
 
     // Addendum section
     getAddendumState: (stakeholderId: string) => AddendumState;
@@ -105,10 +105,10 @@ export function ProcurementUIProvider({ children }: { children: ReactNode }) {
         }));
     }, [updateStakeholderState]);
 
-    const setRFTActiveTab = useCallback((stakeholderId: string, tab: 'short' | 'long') => {
+    const setRFTActiveId = useCallback((stakeholderId: string, id: string | null) => {
         updateStakeholderState(stakeholderId, prev => ({
             ...prev,
-            rft: { ...prev.rft, activeTab: tab },
+            rft: { ...prev.rft, activeRftId: id },
         }));
     }, [updateStakeholderState]);
 
@@ -124,10 +124,10 @@ export function ProcurementUIProvider({ children }: { children: ReactNode }) {
         }));
     }, [updateStakeholderState]);
 
-    const setTRRActiveTab = useCallback((stakeholderId: string, tab: 'short' | 'long') => {
+    const setTRRActiveId = useCallback((stakeholderId: string, id: string | null) => {
         updateStakeholderState(stakeholderId, prev => ({
             ...prev,
-            trr: { ...prev.trr, activeTab: tab },
+            trr: { ...prev.trr, activeTrrId: id },
         }));
     }, [updateStakeholderState]);
 
@@ -172,10 +172,10 @@ export function ProcurementUIProvider({ children }: { children: ReactNode }) {
     const value: ProcurementUIContextValue = {
         getRFTState,
         setRFTExpanded,
-        setRFTActiveTab,
+        setRFTActiveId,
         getTRRState,
         setTRRExpanded,
-        setTRRActiveTab,
+        setTRRActiveId,
         getAddendumState,
         setAddendumExpanded,
         setAddendumActiveId,
@@ -207,9 +207,9 @@ export function useRFTSectionUI(stakeholderId: string | undefined) {
 
     return {
         isExpanded: state.isExpanded,
-        activeTab: state.activeTab,
+        activeRftId: state.activeRftId,
         setExpanded: (expanded: boolean) => ctx.setRFTExpanded(id, expanded),
-        setActiveTab: (tab: 'short' | 'long') => ctx.setRFTActiveTab(id, tab),
+        setActiveRftId: (rftId: string | null) => ctx.setRFTActiveId(id, rftId),
     };
 }
 
@@ -220,9 +220,9 @@ export function useTRRSectionUI(stakeholderId: string | undefined) {
 
     return {
         isExpanded: state.isExpanded,
-        activeTab: state.activeTab,
+        activeTrrId: state.activeTrrId,
         setExpanded: (expanded: boolean) => ctx.setTRRExpanded(id, expanded),
-        setActiveTab: (tab: 'short' | 'long') => ctx.setTRRActiveTab(id, tab),
+        setActiveTrrId: (trrId: string | null) => ctx.setTRRActiveId(id, trrId),
     };
 }
 

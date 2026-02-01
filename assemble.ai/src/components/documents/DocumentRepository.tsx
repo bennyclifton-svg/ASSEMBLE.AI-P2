@@ -475,6 +475,8 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     scrollContainerRef={scrollContainerRef}
                     filterCategoryId={filterCategoryId}
                     filterSubcategoryId={filterSubcategoryId}
+                    isProcessing={uploading}
+                    processingCount={uploadFiles.length}
                 />
             </div>
         </div>

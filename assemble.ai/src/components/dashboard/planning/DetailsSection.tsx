@@ -1,6 +1,14 @@
 'use client';
 
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
+import { ProjectSwitcher } from '@/components/dashboard/ProjectSwitcher';
+
+interface Project {
+    id: string;
+    name: string;
+    code: string;
+    status: string;
+}
 
 interface DetailsSectionProps {
     projectId: string;
@@ -9,27 +17,54 @@ interface DetailsSectionProps {
     onProjectNameChange?: () => void;
     isActive?: boolean;
     onToggle?: () => void;
+    selectedProject?: Project | null;
+    onSelectProject?: (project: Project | null) => void;
+    refreshTrigger?: number;
 }
 
-export function DetailsSection({ projectId, data, onUpdate, onProjectNameChange, isActive = false, onToggle }: DetailsSectionProps) {
+export function DetailsSection({
+    projectId,
+    data,
+    onUpdate,
+    onProjectNameChange,
+    isActive = false,
+    onToggle,
+    selectedProject,
+    onSelectProject,
+    refreshTrigger,
+}: DetailsSectionProps) {
     return (
         <div className={`nav-panel-section py-3 pl-2 pr-3 ${isActive ? 'nav-panel-active' : ''}`}>
             <button
                 onClick={onToggle}
                 className="nav-panel-header w-full mb-2"
             >
-                <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] font-semibold">
-                    Project Name
-                </span>
-                {isActive ? (
-                    <Minimize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
-                ) : (
-                    <Maximize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-text-muted)] transition-colors" />
-                )}
+                <h3 className="nav-panel-title text-sm font-semibold text-[var(--color-text-primary)] transition-colors">
+                    Details
+                </h3>
+                <CornerBracketIcon
+                    direction={isActive ? 'right' : 'left'}
+                    gradient={isActive}
+                    className={`nav-panel-chevron w-3.5 h-3.5 ${!isActive ? 'text-[var(--color-text-muted)]' : ''} transition-colors`}
+                />
             </button>
 
-            <div className="text-lg font-bold text-[var(--color-text-primary)] pl-1.5 pr-2 truncate">
-                {data?.projectName || 'Untitled Project'}
+            <div className="pl-1.5 pr-1">
+                {onSelectProject ? (
+                    <ProjectSwitcher
+                        selectedProject={selectedProject ?? null}
+                        onSelectProject={onSelectProject}
+                        refreshTrigger={refreshTrigger}
+                    >
+                        <span className="text-lg font-bold text-[var(--color-text-primary)] truncate">
+                            {data?.projectName || 'Untitled Project'}
+                        </span>
+                    </ProjectSwitcher>
+                ) : (
+                    <div className="text-lg font-bold text-[var(--color-text-primary)] truncate">
+                        {data?.projectName || 'Untitled Project'}
+                    </div>
+                )}
             </div>
         </div>
     );

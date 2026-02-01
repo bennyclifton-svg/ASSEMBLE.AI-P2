@@ -81,14 +81,15 @@ export async function POST(request: Request) {
             updatedAt: new Date().toISOString(),
         });
 
-        // 4. Create consultant disciplines
-        for (let i = 0; i < typeConfig.disciplines.length; i++) {
+        // 4. Create consultant disciplines (sorted alphabetically)
+        const sortedDisciplines = [...typeConfig.disciplines].sort((a, b) => a.localeCompare(b));
+        for (let i = 0; i < sortedDisciplines.length; i++) {
             const disciplineId = `cd_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
 
             await db.insert(consultantDisciplines).values({
                 id: disciplineId,
                 projectId,
-                disciplineName: typeConfig.disciplines[i],
+                disciplineName: sortedDisciplines[i],
                 isEnabled: false,
                 order: i,
                 updatedAt: new Date().toISOString(),
@@ -106,14 +107,15 @@ export async function POST(request: Request) {
             }
         }
 
-        // 5. Create contractor trades
-        for (let i = 0; i < typeConfig.trades.length; i++) {
+        // 5. Create contractor trades (sorted alphabetically)
+        const sortedTrades = [...typeConfig.trades].sort((a, b) => a.localeCompare(b));
+        for (let i = 0; i < sortedTrades.length; i++) {
             const tradeId = `ct_${Date.now()}_${i}_${Math.random().toString(36).substr(2, 9)}`;
 
             await db.insert(contractorTrades).values({
                 id: tradeId,
                 projectId,
-                tradeName: typeConfig.trades[i],
+                tradeName: sortedTrades[i],
                 isEnabled: false,
                 order: i,
                 updatedAt: new Date().toISOString(),

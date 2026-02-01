@@ -6,19 +6,100 @@
 'use client';
 
 import { useRftNewTransmittal } from '@/lib/hooks/use-rft-new-transmittal';
-import { FileText, Loader2, Folder } from 'lucide-react';
+import { FileText, Loader2, Folder, Save, RotateCcw, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+// Aurora accent button styling - consistent across procurement components
+const BUTTON_BG = 'var(--color-accent-copper-tint)';
+const BUTTON_TEXT = 'var(--color-accent-copper)';
+const BUTTON_BORDER = 'rgba(0, 255, 255, 0.3)';
 
 interface RFTNewTransmittalScheduleProps {
     rftNewId: string;
+    onSaveTransmittal?: () => void;
+    onLoadTransmittal?: () => void;
+    onDownloadTransmittal?: () => void;
+    canSaveTransmittal?: boolean;
+    hasTransmittal?: boolean;
+    documentCount?: number;
+    isDownloading?: boolean;
 }
 
-export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalScheduleProps) {
-    const { transmittal, isLoading, hasTransmittal, documentCount } = useRftNewTransmittal({
+export function RFTNewTransmittalSchedule({
+    rftNewId,
+    onSaveTransmittal,
+    onLoadTransmittal,
+    onDownloadTransmittal,
+    canSaveTransmittal,
+    hasTransmittal: hasTransmittalProp,
+    documentCount: documentCountProp,
+    isDownloading,
+}: RFTNewTransmittalScheduleProps) {
+    const { transmittal, isLoading, hasTransmittal: hasTransmittalHook, documentCount: documentCountHook } = useRftNewTransmittal({
         rftNewId,
     });
 
+    // Use props if provided, otherwise fall back to hook values
+    const hasTransmittal = hasTransmittalProp !== undefined ? hasTransmittalProp : hasTransmittalHook;
+    const documentCount = documentCountProp !== undefined ? documentCountProp : documentCountHook;
+
     return (
-        <div className="border border-[var(--color-border)] rounded overflow-hidden">
+        <div className="space-y-2">
+            {/* Transmittal Header with Buttons */}
+            <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+                    Transmittal
+                </h3>
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onSaveTransmittal}
+                        disabled={!canSaveTransmittal}
+                        className="h-7 px-2 text-xs font-medium"
+                        style={{
+                            backgroundColor: BUTTON_BG,
+                            color: BUTTON_TEXT,
+                            border: `1px solid ${BUTTON_BORDER}`,
+                        }}
+                    >
+                        <Save className="w-3 h-3 mr-1" />
+                        Save Transmittal
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onLoadTransmittal}
+                        disabled={!hasTransmittal}
+                        className="h-7 px-2 text-xs font-medium"
+                        style={{
+                            backgroundColor: BUTTON_BG,
+                            color: BUTTON_TEXT,
+                            border: `1px solid ${BUTTON_BORDER}`,
+                        }}
+                    >
+                        <RotateCcw className="w-3 h-3 mr-1" />
+                        Recall {documentCount > 0 && `(${documentCount})`}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onDownloadTransmittal}
+                        disabled={!hasTransmittal || isDownloading}
+                        className="h-7 px-2 text-xs font-medium"
+                        style={{
+                            backgroundColor: BUTTON_BG,
+                            color: BUTTON_TEXT,
+                            border: `1px solid ${BUTTON_BORDER}`,
+                        }}
+                    >
+                        <Download className="w-3 h-3 mr-1" />
+                        Download
+                    </Button>
+                </div>
+            </div>
+
+            <div className="border border-[var(--color-border)] rounded overflow-hidden">
             {isLoading ? (
                 <div className="flex items-center justify-center py-8 text-[var(--color-text-muted)]">
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -35,13 +116,13 @@ export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalSchedul
             ) : (
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
-                            <th className="text-left px-4 py-2.5 font-medium w-10">#</th>
-                            <th className="text-left px-4 py-2.5 font-medium w-24">DWG #</th>
-                            <th className="text-left px-4 py-2.5 font-medium">Name</th>
-                            <th className="text-center px-4 py-2.5 font-medium w-16">Rev</th>
-                            <th className="text-left px-4 py-2.5 font-medium w-36">Category</th>
-                            <th className="text-left px-4 py-2.5 font-medium w-40">Subcategory</th>
+                        <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                            <th className="text-left px-4 py-1.5 font-medium w-10">#</th>
+                            <th className="text-left px-4 py-1.5 font-medium w-24">DWG #</th>
+                            <th className="text-left px-4 py-1.5 font-medium">Name</th>
+                            <th className="text-center px-4 py-1.5 font-medium w-16">Rev</th>
+                            <th className="text-left px-4 py-1.5 font-medium w-36">Category</th>
+                            <th className="text-left px-4 py-1.5 font-medium w-40">Subcategory</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -50,10 +131,10 @@ export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalSchedul
                                     key={doc.id}
                                     className="border-t border-[var(--color-border)] hover:bg-[#2d2d30]/50"
                                 >
-                                    <td className="px-4 py-2.5 text-[#6e6e6e]">
+                                    <td className="px-4 py-1.5 text-[#6e6e6e]">
                                         {index + 1}
                                     </td>
-                                    <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
+                                    <td className="px-4 py-1.5 text-[var(--color-text-primary)]">
                                         {doc.drawingNumber ? (
                                             <span title={doc.drawingNumber}>
                                                 {doc.drawingNumber}
@@ -62,13 +143,13 @@ export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalSchedul
                                             <span className="text-[#6e6e6e]">-</span>
                                         )}
                                     </td>
-                                    <td className="px-4 py-2.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
+                                    <td className="px-4 py-1.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
                                         {doc.drawingName || doc.fileName}
                                     </td>
-                                    <td className="px-4 py-2.5 text-center text-[var(--color-text-primary)]">
+                                    <td className="px-4 py-1.5 text-center text-[var(--color-text-primary)]">
                                         {doc.drawingRevision || <span className="text-[#6e6e6e]">-</span>}
                                     </td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-4 py-1.5">
                                         {doc.categoryName ? (
                                             <div className="flex items-center gap-1.5">
                                                 <Folder
@@ -84,7 +165,7 @@ export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalSchedul
                                             <span className="text-[#6e6e6e]">-</span>
                                         )}
                                     </td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-4 py-1.5">
                                         {doc.subcategoryName ? (
                                             <div className="flex items-center gap-1.5">
                                                 <Folder
@@ -105,6 +186,7 @@ export function RFTNewTransmittalSchedule({ rftNewId }: RFTNewTransmittalSchedul
                     </tbody>
                 </table>
             )}
+            </div>
         </div>
     );
 }

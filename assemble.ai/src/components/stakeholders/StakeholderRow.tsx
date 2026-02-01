@@ -218,7 +218,7 @@ export function StakeholderRow({
           onSave={handleSaveSubgroup}
           placeholder="SubGroup"
           disabled={!onUpdate}
-          className="text-[var(--color-text-primary)]"
+          className="text-[var(--color-accent-copper)] font-medium"
         />
       </td>
 

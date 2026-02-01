@@ -8,9 +8,8 @@ import {
   Building2,
   Shield,
   HardHat,
-  Maximize2,
-  Minimize2,
 } from 'lucide-react';
+import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import type { StakeholderGroup } from '@/types/stakeholder';
 
 interface StakeholderNavProps {
@@ -60,11 +59,11 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
           </h3>
           <span className="text-xs text-[var(--color-text-muted)]">({counts.total})</span>
         </div>
-        {isActive ? (
-          <Minimize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
-        ) : (
-          <Maximize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-text-muted)] transition-colors" />
-        )}
+        <CornerBracketIcon
+          direction={isActive ? 'right' : 'left'}
+          gradient={isActive}
+          className={`nav-panel-chevron w-3.5 h-3.5 ${!isActive ? 'text-[var(--color-text-muted)]' : ''} transition-colors`}
+        />
       </div>
 
       {/* Compact Group List */}

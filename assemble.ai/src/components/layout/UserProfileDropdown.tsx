@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { CreditCard, LogOut, Settings, Sun, Ruler } from 'lucide-react';
+import { CreditCard, ExternalLink, LogOut, Moon, Settings, Sun } from 'lucide-react';
 import { useSession, signOut } from '@/lib/auth-client';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { UserAvatar } from './UserAvatar';
@@ -96,6 +96,11 @@ export function UserProfileDropdown() {
         <DropdownMenuSeparator />
 
         {/* Navigation Items */}
+        <DropdownMenuItem onClick={() => handleNavigation('/')}>
+          <ExternalLink className="mr-2 h-4 w-4" />
+          <span>Visit Website</span>
+        </DropdownMenuItem>
+
         <DropdownMenuItem onClick={() => handleNavigation('/billing')}>
           <CreditCard className="mr-2 h-4 w-4" />
           <span>Billing</span>
@@ -111,7 +116,7 @@ export function UserProfileDropdown() {
           {isPrecisionDark ? (
             <Sun className="mr-2 h-4 w-4" />
           ) : (
-            <Ruler className="mr-2 h-4 w-4" />
+            <Moon className="mr-2 h-4 w-4" />
           )}
           <span>{isPrecisionDark ? 'Light Mode' : 'Dark Mode'}</span>
         </DropdownMenuItem>

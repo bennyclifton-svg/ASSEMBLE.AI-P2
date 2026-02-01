@@ -22,6 +22,7 @@ import { Loader2, Plus, User, UserCircle, FileText, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ReportContentsType, GenerateContentResponse } from '@/types/notes-meetings-reports';
 import type { StakeholderGroup } from '@/types/stakeholder';
+import { markdownToHTML } from '@/lib/utils/report-formatting';
 
 function formatDisplayDate(dateString: string | null): string {
     if (!dateString) return 'dd/mm/yyyy';
@@ -217,8 +218,11 @@ export function ReportEditor({
 
             const result: GenerateContentResponse = await response.json();
 
+            // Convert markdown to HTML for rich text editor
+            const htmlContent = markdownToHTML(result.content);
+
             // Update the section content
-            await updateSection(sectionId, { content: result.content });
+            await updateSection(sectionId, { content: htmlContent });
 
             // Show source info
             setLastSourceInfo(result.sourcesUsed);
@@ -255,8 +259,11 @@ export function ReportEditor({
 
             const result = await response.json();
 
+            // Convert markdown to HTML for rich text editor
+            const htmlContent = markdownToHTML(result.content);
+
             // Update the section content
-            await updateSection(sectionId, { content: result.content });
+            await updateSection(sectionId, { content: htmlContent });
 
         } catch (error) {
             console.error('Failed to polish content:', error);

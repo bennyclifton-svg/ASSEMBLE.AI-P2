@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr } from '@/lib/db';
+import { trr, trrTransmittals } from '@/lib/db';
 import { eq, sql } from 'drizzle-orm';
 
 interface RouteContext {
@@ -87,5 +87,37 @@ export async function PUT(
             .limit(1);
 
         return NextResponse.json(updated);
+    });
+}
+
+/**
+ * DELETE /api/trr/[id] - Delete TRR (cascades to transmittals)
+ */
+export async function DELETE(
+    request: NextRequest,
+    context: RouteContext
+) {
+    return handleApiError(async () => {
+        const { id } = await context.params;
+
+        const [existing] = await db
+            .select()
+            .from(trr)
+            .where(eq(trr.id, id))
+            .limit(1);
+
+        if (!existing) {
+            return NextResponse.json({ error: 'TRR not found' }, { status: 404 });
+        }
+
+        // Delete transmittal links first (cascade should handle this, but be explicit)
+        await db
+            .delete(trrTransmittals)
+            .where(eq(trrTransmittals.trrId, id));
+
+        // Delete the TRR
+        await db.delete(trr).where(eq(trr.id, id));
+
+        return NextResponse.json({ success: true, id });
     });
 }

@@ -282,6 +282,29 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
     const isGenerating = generatingSection === section;
     const isPolishing = polishingSection === section;
 
+    // Determine button styling - active generating/polishing buttons stay vibrant
+    const getGenerateButtonClasses = () => {
+      if (isGenerating) {
+        // Active generating state - vibrant color, no opacity reduction
+        return 'text-[var(--color-accent-copper)] cursor-wait';
+      }
+      if (!canGenerate || isAnyOperationInProgress) {
+        return 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50';
+      }
+      return 'text-[var(--color-accent-copper)] hover:opacity-80';
+    };
+
+    const getPolishButtonClasses = () => {
+      if (isPolishing) {
+        // Active polishing state - vibrant color, no opacity reduction
+        return 'text-[var(--color-accent-copper)] cursor-wait';
+      }
+      if (!canPolish || isAnyOperationInProgress) {
+        return 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50';
+      }
+      return 'text-[var(--color-accent-copper)] hover:opacity-80';
+    };
+
     return (
       <>
         <button
@@ -289,30 +312,28 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
           disabled={!canGenerate || isAnyOperationInProgress}
           className={`
             flex items-center gap-1.5 text-sm font-medium transition-all
-            ${canGenerate && !isAnyOperationInProgress
-              ? 'text-[var(--color-accent-copper)] hover:opacity-80'
-              : 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-            }
+            ${getGenerateButtonClasses()}
           `}
           title={canGenerate ? 'Generate objectives from profile' : 'Complete profile to enable'}
         >
-          <DiamondIcon className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} variant="empty" />
-          {isGenerating ? 'Generating...' : 'Generate'}
+          <DiamondIcon className={`w-4 h-4 ${isGenerating ? 'animate-spin [animation-duration:2.5s]' : ''}`} variant="empty" />
+          <span className={isGenerating ? 'animate-text-aurora' : ''}>
+            {isGenerating ? 'Generating...' : 'Generate'}
+          </span>
         </button>
         <button
           onClick={() => handlePolish(section)}
           disabled={!canPolish || isAnyOperationInProgress}
           className={`
             flex items-center gap-1.5 text-sm font-medium transition-all
-            ${canPolish && !isAnyOperationInProgress
-              ? 'text-[var(--color-accent-copper)] hover:opacity-80'
-              : 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-            }
+            ${getPolishButtonClasses()}
           `}
           title={canPolish ? 'Polish existing objectives' : 'Add content to enable'}
         >
-          <DiamondIcon className={`w-4 h-4 ${isPolishing ? 'animate-spin' : ''}`} variant="filled" />
-          {isPolishing ? 'Polishing...' : 'Polish'}
+          <DiamondIcon className={`w-4 h-4 ${isPolishing ? 'animate-spin [animation-duration:2.5s]' : ''}`} variant="filled" />
+          <span className={isPolishing ? 'animate-text-aurora' : ''}>
+            {isPolishing ? 'Polishing...' : 'Polish'}
+          </span>
         </button>
       </>
     );

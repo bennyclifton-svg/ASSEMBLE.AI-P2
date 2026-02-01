@@ -24,6 +24,11 @@ interface TRRShortTabProps {
     contextType: 'discipline' | 'trade';
     contextName: string;
     onUpdateTRR: (data: TRRUpdateData) => Promise<TRR>;
+    onSaveTransmittal?: () => void;
+    onLoadTransmittal?: () => void;
+    onDownloadTransmittal?: () => void;
+    canSaveTransmittal?: boolean;
+    isDownloading?: boolean;
 }
 
 interface ProjectDetails {
@@ -38,6 +43,11 @@ export function TRRShortTab({
     contextType,
     contextName,
     onUpdateTRR,
+    onSaveTransmittal,
+    onLoadTransmittal,
+    onDownloadTransmittal,
+    canSaveTransmittal,
+    isDownloading,
 }: TRRShortTabProps) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
     const [firms, setFirms] = useState<TenderProcessFirm[]>([]);
@@ -252,7 +262,15 @@ export function TRRShortTab({
             />
 
             {/* 9. Attachments */}
-            <TRRAttachments trrId={trr.id} transmittalCount={trr.transmittalCount} />
+            <TRRAttachments
+                trrId={trr.id}
+                transmittalCount={trr.transmittalCount}
+                onSaveTransmittal={onSaveTransmittal}
+                onLoadTransmittal={onLoadTransmittal}
+                onDownloadTransmittal={onDownloadTransmittal}
+                canSaveTransmittal={canSaveTransmittal}
+                isDownloading={isDownloading}
+            />
         </div>
     );
 }

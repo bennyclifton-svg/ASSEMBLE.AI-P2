@@ -5,11 +5,12 @@
  * Wraps the useFieldGeneration hook and AIGenerateIcon for consistent UX.
  *
  * Features:
- * - Textarea with AI generate button
+ * - Textarea with AI generate button (or rich text editor)
  * - Loading spinner during generation
  * - Error state handling with toast notifications
  * - Field-type-specific placeholder text
  * - Source visibility (optional)
+ * - Rich text editor mode with formatting toolbar
  */
 
 'use client';
@@ -17,10 +18,12 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import { Textarea } from './textarea';
+import { RichTextEditor, type RichTextEditorVariant, type RichTextToolbarVariant } from './RichTextEditor';
 import { AIGenerateIcon } from './ai-generate-icon';
 import { useToast } from '@/components/ui/use-toast';
 import { useFieldGeneration, type GenerateFieldResponse } from '@/lib/hooks/use-field-generation';
 import { type FieldType, getFieldPlaceholder, getFieldDisplayName } from '@/lib/constants/field-types';
+import { markdownToHTML } from '@/lib/utils/report-formatting';
 
 export interface GenerativeFieldContext {
     projectId: string;
@@ -109,6 +112,24 @@ export interface GenerativeFieldProps {
         evaluationData?: object;
         sectionTitle?: string;
     };
+
+    /**
+     * Editor mode: 'textarea' for plain text, 'richtext' for formatted editor
+     * @default 'richtext'
+     */
+    editorMode?: 'textarea' | 'richtext';
+
+    /**
+     * Rich text editor size variant (only applies when editorMode is 'richtext')
+     * @default 'compact'
+     */
+    richTextVariant?: RichTextEditorVariant;
+
+    /**
+     * Rich text toolbar variant (only applies when editorMode is 'richtext')
+     * @default 'mini'
+     */
+    richTextToolbarVariant?: RichTextToolbarVariant;
 }
 
 /**
@@ -142,6 +163,9 @@ export function GenerativeField({
     onGenerate,
     onBlur,
     additionalContext,
+    editorMode = 'richtext',
+    richTextVariant = 'compact',
+    richTextToolbarVariant = 'mini',
 }: GenerativeFieldProps) {
     const { toast } = useToast();
     const [lastSources, setLastSources] = React.useState<GenerateFieldResponse['sources'] | null>(null);
@@ -157,7 +181,11 @@ export function GenerativeField({
     const handleGenerate = React.useCallback(async () => {
         try {
             const result = await generate(value);
-            onChange(result.content);
+            // Convert to HTML if using rich text editor
+            const content = editorMode === 'richtext'
+                ? markdownToHTML(result.content)
+                : result.content;
+            onChange(content);
             setLastSources(result.sources);
 
             toast({
@@ -174,11 +202,22 @@ export function GenerativeField({
                 variant: 'destructive',
             });
         }
-    }, [generate, value, onChange, toast, onGenerate]);
+    }, [generate, value, onChange, toast, onGenerate, editorMode]);
 
-    const handleChange = React.useCallback(
+    const handleTextareaChange = React.useCallback(
         (e: React.ChangeEvent<HTMLTextAreaElement>) => {
             onChange(e.target.value);
+            // Clear sources when user manually edits
+            if (lastSources) {
+                setLastSources(null);
+            }
+        },
+        [onChange, lastSources]
+    );
+
+    const handleRichTextChange = React.useCallback(
+        (content: string) => {
+            onChange(content);
             // Clear sources when user manually edits
             if (lastSources) {
                 setLastSources(null);
@@ -208,17 +247,48 @@ export function GenerativeField({
                         />
                     )}
                     {isGenerating && (
-                        <span className="text-xs text-[#4fc1ff]">Generating...</span>
+                        <span className="text-xs text-[#4fc1ff] animate-text-aurora">Generating...</span>
                     )}
                 </div>
             )}
 
-            {/* Textarea without label (icon alongside field) */}
-            {!label && showGenerateIcon && (
+            {/* Rich Text Editor mode */}
+            {editorMode === 'richtext' && (
+                <div className="relative">
+                    <RichTextEditor
+                        content={value}
+                        onChange={handleRichTextChange}
+                        onBlur={onBlur}
+                        placeholder={fieldPlaceholder}
+                        variant={richTextVariant}
+                        toolbarVariant={richTextToolbarVariant}
+                        disabled={disabled || isGenerating}
+                        className={cn(
+                            isGenerating && 'opacity-70',
+                            className
+                        )}
+                    />
+                    {!label && showGenerateIcon && (
+                        <div className="absolute top-2 right-2 z-10">
+                            <AIGenerateIcon
+                                size={16}
+                                className="text-[#4fc1ff] hover:text-[#6fd1ff]"
+                                onClick={handleGenerate}
+                                isLoading={isGenerating}
+                                disabled={disabled || isGenerating}
+                                title="Generate with AI"
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Textarea mode: without label (icon alongside field) */}
+            {editorMode === 'textarea' && !label && showGenerateIcon && (
                 <div className="relative">
                     <Textarea
                         value={value}
-                        onChange={handleChange}
+                        onChange={handleTextareaChange}
                         onBlur={onBlur}
                         placeholder={fieldPlaceholder}
                         rows={rows}
@@ -245,11 +315,11 @@ export function GenerativeField({
                 </div>
             )}
 
-            {/* Textarea with label (icon is in label row) */}
-            {label && (
+            {/* Textarea mode: with label (icon is in label row) */}
+            {editorMode === 'textarea' && label && (
                 <Textarea
                     value={value}
-                    onChange={handleChange}
+                    onChange={handleTextareaChange}
                     onBlur={onBlur}
                     placeholder={fieldPlaceholder}
                     rows={rows}
@@ -264,11 +334,11 @@ export function GenerativeField({
                 />
             )}
 
-            {/* Textarea without label and without icon */}
-            {!label && !showGenerateIcon && (
+            {/* Textarea mode: without label and without icon */}
+            {editorMode === 'textarea' && !label && !showGenerateIcon && (
                 <Textarea
                     value={value}
-                    onChange={handleChange}
+                    onChange={handleTextareaChange}
                     onBlur={onBlur}
                     placeholder={fieldPlaceholder}
                     rows={rows}

@@ -46,9 +46,6 @@ export function ConsultantGallery({
   const { consultants, isLoading, addConsultant, updateConsultant, deleteConsultant, toggleShortlist, toggleAward } = useConsultants(projectId, discipline);
   const { toast } = useToast();
 
-  // Global firms expansion state - all firms expand/collapse together
-  const [isFirmsExpanded, setIsFirmsExpanded] = useState<boolean>(false);
-
   // New firm state - for creating a new firm
   const [newFirm, setNewFirm] = useState<FirmData | null>(null);
 
@@ -363,92 +360,68 @@ export function ConsultantGallery({
 
   return (
     <div className="space-y-6">
-      {/* Firms Section - Unified Panel */}
-      <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-        {/* Header with master toggle */}
-        <button
-          onClick={() => setIsFirmsExpanded(prev => !prev)}
-          className="w-full flex items-center gap-2 px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] transition-colors"
-        >
-          <svg
-            className={`w-3.5 h-3.5 text-[var(--color-text-muted)] transition-transform ${isFirmsExpanded ? 'rotate-90' : ''}`}
-            viewBox="0 0 12 12"
-            fill="currentColor"
-          >
-            <polygon points="2,0 12,6 2,12" />
-          </svg>
-          <span className="text-lg font-semibold text-[var(--color-text-primary)]">Firms</span>
-          <span className="text-sm text-[var(--color-text-muted)]">
-            ({consultants.length + (newFirm ? 1 : 0)})
-          </span>
-        </button>
-
-        {/* Content */}
-        <div className="relative bg-[var(--color-bg-primary)]">
-          {/* Extraction Progress Overlay */}
-          {isExtracting && (
-            <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 flex items-center justify-center">
-              <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
-                <p className="text-[var(--color-text-primary)] font-semibold">Extracting consultant data...</p>
-                <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
-              </div>
+      {/* Firms Section */}
+      <div className="relative">
+        {/* Extraction Progress Overlay */}
+        {isExtracting && (
+          <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 flex items-center justify-center rounded-lg">
+            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
+              <p className="text-[var(--color-text-primary)] font-semibold">Extracting consultant data...</p>
+              <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
             </div>
+          </div>
+        )}
+
+        <div className="flex overflow-x-auto py-3 px-1 items-stretch gap-4" style={{ scrollbarWidth: 'thin' }}>
+          {/* Existing consultants */}
+          {consultants.map((consultant) => (
+            <FirmCard
+              key={consultant.id}
+              type="consultant"
+              firm={{
+                id: consultant.id,
+                companyName: consultant.companyName,
+                contactPerson: consultant.contactPerson,
+                email: consultant.email,
+                mobile: consultant.mobile,
+                address: consultant.address,
+                abn: consultant.abn,
+                notes: consultant.notes,
+                shortlisted: consultant.shortlisted,
+                awarded: consultant.awarded,
+                companyId: consultant.companyId,
+                discipline: consultant.discipline,
+              }}
+              category={discipline}
+              onSave={(data) => handleSave(consultant.id, data)}
+              onDelete={() => openDeleteDialog(consultant.id, consultant.companyName)}
+              onShortlistToggle={(shortlisted) => handleShortlistToggle(consultant.id, shortlisted)}
+              onAwardToggle={(awarded) => handleAwardToggle(consultant.id, awarded)}
+              onFileDrop={(file, action) => handleFileDrop(consultant.id, file, action)}
+            />
+          ))}
+
+          {/* New firm (if adding) */}
+          {newFirm && (
+            <FirmCard
+              key="new"
+              type="consultant"
+              firm={newFirm}
+              category={discipline}
+              onSave={(data) => handleSave('new', data)}
+              onDelete={() => handleDelete('new')}
+              onShortlistToggle={(shortlisted) => handleShortlistToggle('new', shortlisted)}
+              onAwardToggle={() => Promise.resolve()}
+              onFileDrop={(file, action) => handleFileDrop('new', file, action)}
+            />
           )}
 
-          <div className="flex overflow-x-auto py-3 px-1 items-stretch" style={{ scrollbarWidth: 'thin' }}>
-            {/* Existing consultants */}
-            {consultants.map((consultant) => (
-              <FirmCard
-                key={consultant.id}
-                type="consultant"
-                firm={{
-                  id: consultant.id,
-                  companyName: consultant.companyName,
-                  contactPerson: consultant.contactPerson,
-                  email: consultant.email,
-                  mobile: consultant.mobile,
-                  address: consultant.address,
-                  abn: consultant.abn,
-                  notes: consultant.notes,
-                  shortlisted: consultant.shortlisted,
-                  awarded: consultant.awarded,
-                  companyId: consultant.companyId,
-                  discipline: consultant.discipline,
-                }}
-                category={discipline}
-                isExpanded={isFirmsExpanded}
-                onSave={(data) => handleSave(consultant.id, data)}
-                onDelete={() => openDeleteDialog(consultant.id, consultant.companyName)}
-                onShortlistToggle={(shortlisted) => handleShortlistToggle(consultant.id, shortlisted)}
-                onAwardToggle={(awarded) => handleAwardToggle(consultant.id, awarded)}
-                onFileDrop={(file, action) => handleFileDrop(consultant.id, file, action)}
-              />
-            ))}
-
-            {/* New firm (if adding) */}
-            {newFirm && (
-              <FirmCard
-                key="new"
-                type="consultant"
-                firm={newFirm}
-                category={discipline}
-                isExpanded={isFirmsExpanded}
-                onSave={(data) => handleSave('new', data)}
-                onDelete={() => handleDelete('new')}
-                onShortlistToggle={(shortlisted) => handleShortlistToggle('new', shortlisted)}
-                onAwardToggle={() => Promise.resolve()}
-                onFileDrop={(file, action) => handleFileDrop('new', file, action)}
-              />
-            )}
-
-            {/* Add button - always visible */}
-            <AddFirmButton
-              onAdd={handleAddNew}
-              onFileDrop={handleAddNewFileDrop}
-              isExpanded={isFirmsExpanded}
-            />
-          </div>
+          {/* Add button - always visible */}
+          <AddFirmButton
+            onAdd={handleAddNew}
+            onFileDrop={handleAddNewFileDrop}
+          />
         </div>
       </div>
 

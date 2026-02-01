@@ -17,13 +17,20 @@ const buttonVariants = cva(
                     "bg-secondary text-secondary-foreground hover:bg-secondary/80",
                 ghost: "hover:bg-accent hover:text-accent-foreground",
                 link: "text-primary underline-offset-4 hover:underline",
-                // Copper variants for Precision themes
+                // Aurora variants - vibrant gradients with glow
+                aurora:
+                    "btn-aurora text-[var(--color-bg-primary)] font-semibold rounded-md",
+                "aurora-ghost":
+                    "btn-aurora-ghost rounded-md",
+                "aurora-outline":
+                    "btn-aurora-outline rounded-md",
+                // Legacy copper aliases (now use Aurora styling)
                 copper:
-                    "bg-gradient-to-br from-[var(--color-accent-primary)] to-[var(--color-accent-primary-hover)] text-[var(--color-bg-primary)] hover:brightness-110 font-semibold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all",
+                    "btn-copper text-[var(--color-bg-primary)] font-semibold rounded-md",
                 "copper-ghost":
-                    "bg-transparent text-[var(--color-text-primary)] border border-[var(--color-border-strong)] hover:bg-[var(--color-accent-primary-tint)] hover:border-[var(--color-accent-primary)]",
+                    "btn-copper-ghost rounded-md",
                 "copper-outline":
-                    "bg-transparent text-[var(--color-accent-primary)] border border-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-tint)]",
+                    "btn-copper-outline rounded-md",
             },
             size: {
                 default: "h-10 px-4 py-2",

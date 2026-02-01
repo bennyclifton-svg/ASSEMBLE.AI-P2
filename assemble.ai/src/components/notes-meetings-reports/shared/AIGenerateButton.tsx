@@ -33,9 +33,11 @@ export function AIGenerateButton({
             disabled={disabled || isLoading}
             className={cn(
                 'flex items-center gap-1.5 text-sm font-medium transition-all',
-                disabled || isLoading
-                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                    : 'text-[var(--color-accent-copper)] hover:opacity-80',
+                isLoading
+                    ? 'text-[var(--color-accent-copper)] cursor-wait'
+                    : disabled
+                        ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                        : 'text-[var(--color-accent-copper)] hover:opacity-80',
                 className
             )}
             title={tooltip}
@@ -43,11 +45,13 @@ export function AIGenerateButton({
             <DiamondIcon
                 className={cn(
                     'w-4 h-4',
-                    isLoading && 'animate-spin'
+                    isLoading && 'animate-spin [animation-duration:2.5s]'
                 )}
                 variant="empty"
             />
-            {isLoading ? 'Generating...' : 'Generate'}
+            <span className={isLoading ? 'animate-text-aurora' : ''}>
+                {isLoading ? 'Generating...' : 'Generate'}
+            </span>
         </button>
     );
 }

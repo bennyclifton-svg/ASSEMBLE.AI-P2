@@ -46,9 +46,6 @@ export function ContractorGallery({
   const { contractors, isLoading, addContractor, updateContractor, deleteContractor, toggleShortlist, toggleAward } = useContractors(projectId, trade);
   const { toast } = useToast();
 
-  // Global firms expansion state - all firms expand/collapse together
-  const [isFirmsExpanded, setIsFirmsExpanded] = useState<boolean>(false);
-
   // New firm state - for creating a new firm
   const [newFirm, setNewFirm] = useState<FirmData | null>(null);
 
@@ -355,91 +352,67 @@ export function ContractorGallery({
 
   return (
     <div className="space-y-6">
-      {/* Firms Section - Unified Panel */}
-      <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-        {/* Header with master toggle */}
-        <button
-          onClick={() => setIsFirmsExpanded(prev => !prev)}
-          className="w-full flex items-center gap-2 px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] transition-colors"
-        >
-          <svg
-            className={`w-3.5 h-3.5 text-[var(--color-text-muted)] transition-transform ${isFirmsExpanded ? 'rotate-90' : ''}`}
-            viewBox="0 0 12 12"
-            fill="currentColor"
-          >
-            <polygon points="2,0 12,6 2,12" />
-          </svg>
-          <span className="text-lg font-semibold text-[var(--color-text-primary)]">Firms</span>
-          <span className="text-sm text-[var(--color-text-muted)]">
-            ({contractors.length + (newFirm ? 1 : 0)})
-          </span>
-        </button>
-
-        {/* Content */}
-        <div className="relative bg-[var(--color-bg-primary)]">
-          {/* Extraction Progress Overlay */}
-          {isExtracting && (
-            <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 flex items-center justify-center">
-              <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
-                <p className="text-[var(--color-text-primary)] font-semibold">Extracting contractor data...</p>
-                <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
-              </div>
+      {/* Firms Section */}
+      <div className="relative">
+        {/* Extraction Progress Overlay */}
+        {isExtracting && (
+          <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 flex items-center justify-center rounded-lg">
+            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
+              <p className="text-[var(--color-text-primary)] font-semibold">Extracting contractor data...</p>
+              <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
             </div>
+          </div>
+        )}
+
+        <div className="flex overflow-x-auto py-3 px-1 items-stretch gap-4" style={{ scrollbarWidth: 'thin' }}>
+          {/* Existing contractors */}
+          {contractors.map((contractor) => (
+            <FirmCard
+              key={contractor.id}
+              type="contractor"
+              firm={{
+                id: contractor.id,
+                companyName: contractor.companyName,
+                contactPerson: contractor.contactPerson,
+                email: contractor.email,
+                address: contractor.address,
+                abn: contractor.abn,
+                notes: contractor.notes,
+                shortlisted: contractor.shortlisted,
+                awarded: contractor.awarded,
+                companyId: contractor.companyId,
+                trade: contractor.trade,
+              }}
+              category={trade}
+              onSave={(data) => handleSave(contractor.id, data)}
+              onDelete={() => openDeleteDialog(contractor.id, contractor.companyName)}
+              onShortlistToggle={(shortlisted) => handleShortlistToggle(contractor.id, shortlisted)}
+              onAwardToggle={(awarded) => handleAwardToggle(contractor.id, awarded)}
+              onFileDrop={(file, action) => handleFileDrop(contractor.id, file, action)}
+            />
+          ))}
+
+          {/* New firm (if adding) */}
+          {newFirm && (
+            <FirmCard
+              key="new"
+              type="contractor"
+              firm={newFirm}
+              category={trade}
+              onSave={(data) => handleSave('new', data)}
+              onDelete={() => handleDelete('new')}
+              onShortlistToggle={(shortlisted) => handleShortlistToggle('new', shortlisted)}
+              onAwardToggle={() => Promise.resolve()}
+              onFileDrop={(file, action) => handleFileDrop('new', file, action)}
+            />
           )}
 
-          <div className="flex overflow-x-auto py-3 px-1 items-stretch" style={{ scrollbarWidth: 'thin' }}>
-            {/* Existing contractors */}
-            {contractors.map((contractor) => (
-              <FirmCard
-                key={contractor.id}
-                type="contractor"
-                firm={{
-                  id: contractor.id,
-                  companyName: contractor.companyName,
-                  contactPerson: contractor.contactPerson,
-                  email: contractor.email,
-                  address: contractor.address,
-                  abn: contractor.abn,
-                  notes: contractor.notes,
-                  shortlisted: contractor.shortlisted,
-                  awarded: contractor.awarded,
-                  companyId: contractor.companyId,
-                  trade: contractor.trade,
-                }}
-                category={trade}
-                isExpanded={isFirmsExpanded}
-                onSave={(data) => handleSave(contractor.id, data)}
-                onDelete={() => openDeleteDialog(contractor.id, contractor.companyName)}
-                onShortlistToggle={(shortlisted) => handleShortlistToggle(contractor.id, shortlisted)}
-                onAwardToggle={(awarded) => handleAwardToggle(contractor.id, awarded)}
-                onFileDrop={(file, action) => handleFileDrop(contractor.id, file, action)}
-              />
-            ))}
-
-            {/* New firm (if adding) */}
-            {newFirm && (
-              <FirmCard
-                key="new"
-                type="contractor"
-                firm={newFirm}
-                category={trade}
-                isExpanded={isFirmsExpanded}
-                onSave={(data) => handleSave('new', data)}
-                onDelete={() => handleDelete('new')}
-                onShortlistToggle={(shortlisted) => handleShortlistToggle('new', shortlisted)}
-                onAwardToggle={() => Promise.resolve()}
-                onFileDrop={(file, action) => handleFileDrop('new', file, action)}
-              />
-            )}
-
-            {/* Add button - always visible */}
-            <AddFirmButton
-              onAdd={handleAddNew}
-              onFileDrop={handleAddNewFileDrop}
-              isExpanded={isFirmsExpanded}
-            />
-          </div>
+          {/* Add button - always visible */}
+          <AddFirmButton
+            onAdd={handleAddNew}
+            onFileDrop={handleAddNewFileDrop}
+          />
         </div>
       </div>
 

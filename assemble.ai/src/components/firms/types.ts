@@ -22,9 +22,8 @@ export interface FirmCardProps {
   type: FirmType;
   firm: FirmData;
   category: string;  // discipline or trade value
-  isExpanded: boolean;
   onSave: (data: Partial<FirmData>) => Promise<void>;
-  onDelete: () => Promise<void>;
+  onDelete: () => void | Promise<void>;
   onShortlistToggle: (shortlisted: boolean) => Promise<void>;
   onAwardToggle: (awarded: boolean) => Promise<void>;
   onFileDrop: (file: File, action: 'replace' | 'add') => Promise<void>;
@@ -33,7 +32,6 @@ export interface FirmCardProps {
 export interface AddFirmButtonProps {
   onAdd: () => void;
   onFileDrop: (file: File) => Promise<void>;
-  isExpanded?: boolean;
 }
 
 export interface DropActionDialogProps {

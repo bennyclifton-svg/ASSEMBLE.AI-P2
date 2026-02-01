@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Plus, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -16,13 +17,58 @@ interface ProjectSwitcherProps {
     selectedProject: Project | null;
     onSelectProject: (project: Project | null) => void;
     refreshTrigger?: number;
+    children?: React.ReactNode;
 }
 
-export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigger }: ProjectSwitcherProps) {
+export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigger, children }: ProjectSwitcherProps) {
     const router = useRouter();
     const [projects, setProjects] = useState<Project[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+
+    // Update dropdown position when opened
+    useEffect(() => {
+        if (isOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            const dropdownWidth = 256; // w-64
+            const padding = 8; // viewport edge padding
+
+            // Calculate ideal left position (right-aligned with button)
+            let left = rect.right - dropdownWidth;
+
+            // Ensure dropdown doesn't go off the left edge
+            if (left < padding) {
+                left = padding;
+            }
+
+            // Ensure dropdown doesn't go off the right edge
+            const maxLeft = window.innerWidth - dropdownWidth - padding;
+            if (left > maxLeft) {
+                left = maxLeft;
+            }
+
+            setDropdownPosition({
+                top: rect.bottom + 4,
+                left,
+            });
+        }
+    }, [isOpen]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleClickOutside = (e: MouseEvent) => {
+            if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isOpen]);
 
     const refreshProjects = async () => {
         try {
@@ -109,16 +155,57 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
         }
     };
 
+    const dropdown = isOpen && typeof document !== 'undefined' ? createPortal(
+        <div
+            className="fixed w-64 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg z-[9999]"
+            style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+        >
+            {/* Home option */}
+            <button
+                onClick={() => {
+                    setIsOpen(false);
+                    router.push('/');
+                }}
+                className="w-full px-4 py-2 text-left hover:bg-[var(--color-bg-tertiary)] flex items-center gap-2 border-b border-[var(--color-border)]"
+            >
+                <Home className="w-4 h-4 text-[var(--color-text-muted)]" />
+                <span className="text-sm text-[var(--color-text-primary)]">Home</span>
+            </button>
+            {projects.map(project => (
+                <button
+                    key={project.id}
+                    onClick={() => handleSelectProject(project)}
+                    className={cn(
+                        "w-full px-4 py-2 text-left hover:bg-[var(--color-bg-tertiary)] flex flex-col border-b border-[var(--color-border)]",
+                        selectedProject?.id === project.id && "bg-[var(--color-bg-tertiary)]"
+                    )}
+                >
+                    <span className="font-medium text-[var(--color-text-primary)] text-sm">{project.name}</span>
+                    <span className="text-xs text-[var(--color-text-muted)]">{project.code}</span>
+                </button>
+            ))}
+            <button
+                onClick={handleAddProjectClick}
+                className="w-full px-4 py-3 flex items-center gap-2 hover:bg-[var(--color-bg-tertiary)] border-t border-[var(--color-border)]"
+            >
+                <Plus className="w-4 h-4 text-[var(--color-text-primary)]" />
+                <span className="text-sm text-[var(--color-text-primary)]">Add New Project</span>
+            </button>
+        </div>,
+        document.body
+    ) : null;
+
     return (
         <div className="relative">
             <button
+                ref={buttonRef}
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center justify-center w-8 h-8 hover:bg-[var(--color-bg-tertiary)] rounded transition-colors"
-                title={selectedProject ? selectedProject.name : 'Select Project'}
+                className="flex items-center gap-1.5 hover:bg-[var(--color-bg-tertiary)] rounded transition-colors"
             >
+                {children}
                 <svg
                     className={cn(
-                        'w-4 h-4 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-transform',
+                        'w-2.5 h-2.5 text-[var(--color-text-primary)] transition-transform flex-shrink-0',
                         isOpen && 'rotate-90'
                     )}
                     viewBox="0 0 12 12"
@@ -127,40 +214,7 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
                     <polygon points="2,0 12,6 2,12" />
                 </svg>
             </button>
-
-            {isOpen && (
-                <div className="absolute top-full right-0 mt-1 w-64 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg z-10">
-                    {/* Home option */}
-                    <button
-                        onClick={() => {
-                            setIsOpen(false);
-                            router.push('/');
-                        }}
-                        className="w-full px-4 py-2 text-left hover:bg-[var(--color-bg-tertiary)] flex items-center gap-2 border-b border-[var(--color-border)]"
-                    >
-                        <Home className="w-4 h-4 text-[var(--color-text-muted)]" />
-                        <span className="text-sm text-[var(--color-text-primary)]">Home</span>
-                    </button>
-                    {projects.map(project => (
-                        <button
-                            key={project.id}
-                            onClick={() => handleSelectProject(project)}
-                            className="w-full px-4 py-2 text-left hover:bg-[var(--color-bg-tertiary)] flex flex-col border-b border-[var(--color-border)]"
-                        >
-                            <span className="font-medium text-[var(--color-text-primary)] text-sm">{project.name}</span>
-                            <span className="text-xs text-[var(--color-text-muted)]">{project.code}</span>
-                        </button>
-                    ))}
-                    <button
-                        onClick={handleAddProjectClick}
-                        className="w-full px-4 py-3 flex items-center gap-2 hover:bg-[var(--color-bg-tertiary)] border-t border-[var(--color-border)]"
-                    >
-                        <Plus className="w-4 h-4 text-[var(--color-text-primary)]" />
-                        <span className="text-sm text-[var(--color-text-primary)]">Add New Project</span>
-                    </button>
-                </div>
-            )}
-
+            {dropdown}
         </div>
     );
 }

@@ -31,7 +31,8 @@ export function AIGenerateIcon({
                 'inline-flex items-center justify-center',
                 'hover:opacity-80 transition-opacity cursor-pointer',
                 'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#0e639c] rounded',
-                (disabled || isLoading) && 'opacity-50 cursor-not-allowed',
+                isLoading && 'cursor-wait',
+                disabled && !isLoading && 'opacity-50 cursor-not-allowed',
                 className
             )}
             title={isLoading ? 'Generating...' : title}
@@ -43,7 +44,7 @@ export function AIGenerateIcon({
                 viewBox="0 0 16 16"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className={isLoading ? 'animate-spin' : ''}
+                className={isLoading ? 'animate-spin [animation-duration:2.5s]' : ''}
             >
                 {/* Outer diamond (square rotated 45°) */}
                 <path

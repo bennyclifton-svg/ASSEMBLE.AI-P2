@@ -2,38 +2,24 @@
 
 import { ReactNode, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle, ImperativePanelHandle } from 'react-resizable-panels';
-import { ProjectSwitcher } from '@/components/dashboard/ProjectSwitcher';
 import { Logo } from '@/components/brand/Logo';
 import { UserProfileDropdown } from './UserProfileDropdown';
 
-interface Project {
-  id: string;
-  name: string;
-  code: string;
-  status: string;
-}
-
 interface ResizableLayoutProps {
-    selectedProject: Project | null;
-    onSelectProject: (project: Project | null) => void;
     leftContent: ReactNode;
     centerContent: ReactNode;
     rightContent: ReactNode;
-    refreshTrigger?: number;
 }
 
 const RIGHT_PANEL_DEFAULT_SIZE = 25;
 const RIGHT_PANEL_EXPANDED_SIZE = 50;
 
 export function ResizableLayout({
-    selectedProject,
-    onSelectProject,
     leftContent,
     centerContent,
     rightContent,
-    refreshTrigger
 }: ResizableLayoutProps) {
     const rightPanelRef = useRef<ImperativePanelHandle>(null);
     const [isRightPanelExpanded, setIsRightPanelExpanded] = useState(false);
@@ -56,15 +42,10 @@ export function ResizableLayout({
                 <Panel defaultSize={17} minSize={12} className="border-r border-[var(--color-border-accent)]">
                 <div className="h-full flex flex-col animate-slide-in-up">
                     {/* Left Panel Header */}
-                    <header className="flex items-center justify-between px-6 py-3 flex-shrink-0 min-h-[57px]">
+                    <header className="flex items-center px-6 py-3 flex-shrink-0 min-h-[57px]">
                         <Link href="/" className="hover:opacity-80 transition-opacity">
                             <Logo size="md" />
                         </Link>
-                        <ProjectSwitcher
-                            selectedProject={selectedProject}
-                            onSelectProject={onSelectProject}
-                            refreshTrigger={refreshTrigger}
-                        />
                     </header>
                     {/* Left Panel Content */}
                     <div className="flex-1 overflow-hidden">
@@ -91,11 +72,21 @@ export function ResizableLayout({
                             onClick={handleRightPanelExpandToggle}
                             title={isRightPanelExpanded ? 'Collapse panel' : 'Expand panel'}
                         >
-                            {isRightPanelExpanded ? (
-                                <ChevronsRight className="w-7 h-7 text-[var(--color-accent-yellow)]" />
-                            ) : (
-                                <ChevronsLeft className="w-7 h-7 text-[var(--color-accent-yellow)]" />
-                            )}
+                            <span className="flex items-center translate-y-[1px]" style={{ marginRight: '-4px' }}>
+                                {isRightPanelExpanded ? (
+                                    <>
+                                        <ChevronRight className="w-6 h-6 text-[#DC2626]" style={{ marginRight: '-16px' }} />
+                                        <ChevronRight className="w-6 h-6 text-[#EA580C]" style={{ marginRight: '-16px' }} />
+                                        <ChevronRight className="w-6 h-6 text-[#EAB308]" />
+                                    </>
+                                ) : (
+                                    <>
+                                        <ChevronLeft className="w-6 h-6 text-[#EAB308]" style={{ marginRight: '-16px' }} />
+                                        <ChevronLeft className="w-6 h-6 text-[#EA580C]" style={{ marginRight: '-16px' }} />
+                                        <ChevronLeft className="w-6 h-6 text-[#DC2626]" />
+                                    </>
+                                )}
+                            </span>
                             Documents
                         </h2>
                         <UserProfileDropdown />

@@ -2,12 +2,13 @@
  * Note Editor Component
  * Feature 021 - Notes, Meetings & Reports
  *
- * A simple text editor for note content with auto-save.
+ * A rich text editor for note content with auto-save.
  */
 
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { cn } from '@/lib/utils';
 
 interface NoteEditorProps {
@@ -70,14 +71,13 @@ export function NoteEditor({
         };
     }, []);
 
-    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newContent = e.target.value;
+    const handleChange = useCallback((newContent: string) => {
         setLocalContent(newContent);
         debouncedSave(newContent);
-    };
+    }, [debouncedSave]);
 
     // Save immediately on blur
-    const handleBlur = () => {
+    const handleBlur = useCallback(() => {
         if (debounceTimerRef.current) {
             clearTimeout(debounceTimerRef.current);
         }
@@ -87,31 +87,22 @@ export function NoteEditor({
             lastSavedRef.current = localContent;
             setIsSaving(false);
         }
-    };
+    }, [localContent, onContentChange]);
 
     return (
         <div className={cn('relative', className)}>
-            <textarea
-                value={localContent}
+            <RichTextEditor
+                content={localContent}
                 onChange={handleChange}
                 onBlur={handleBlur}
                 placeholder={placeholder}
-                className={cn(
-                    'w-full min-h-[200px] p-4 bg-transparent',
-                    'text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]',
-                    'resize-y focus:outline-none',
-                    'border-none'
-                )}
-                style={{
-                    fontFamily: 'inherit',
-                    fontSize: '0.875rem',
-                    lineHeight: '1.5',
-                }}
+                variant="compact"
+                toolbarVariant="full"
             />
 
             {/* Saving indicator */}
             {isSaving && (
-                <div className="absolute bottom-2 right-2 text-xs text-[var(--color-text-muted)] flex items-center gap-1">
+                <div className="absolute bottom-2 right-2 text-xs text-[var(--color-text-muted)] flex items-center gap-1 z-10">
                     <div className="animate-spin rounded-full h-3 w-3 border-b border-[var(--color-accent-primary)]" />
                     Saving...
                 </div>

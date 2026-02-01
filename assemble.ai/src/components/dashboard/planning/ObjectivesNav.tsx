@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, Maximize2, Minimize2 } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 
 interface ObjectivesNavProps {
@@ -40,11 +41,11 @@ export function ObjectivesNav({ projectId, data, profileData, onShowObjectives, 
               <Check className="w-3 h-3" /> {isAiGenerated ? 'AI' : 'Set'}
             </span>
           )}
-          {isActive ? (
-            <Minimize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
-          ) : (
-            <Maximize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-text-muted)] transition-colors" />
-          )}
+          <CornerBracketIcon
+            direction={isActive ? 'right' : 'left'}
+            gradient={isActive}
+            className={`nav-panel-chevron w-3.5 h-3.5 ${!isActive ? 'text-[var(--color-text-muted)]' : ''} transition-colors`}
+          />
         </div>
       </button>
 

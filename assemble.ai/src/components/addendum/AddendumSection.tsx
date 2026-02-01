@@ -12,7 +12,7 @@ import { useAddendumTransmittal } from '@/lib/hooks/use-addendum-transmittal';
 import { AddendumTabs } from './AddendumTabs';
 import { AddendumContent } from './AddendumContent';
 import { AddendumTransmittalSchedule } from './AddendumTransmittalSchedule';
-import { FileText, Save, RotateCcw, Download, Loader2 } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
@@ -238,50 +238,6 @@ export function AddendumSection({
                     </span>
                     {isExpanded ? <TriangleDown /> : <TriangleRight />}
                 </button>
-                <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleSaveTransmittal}
-                        disabled={!activeAddendumId || selectedDocumentIds.length === 0}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <Save className="w-3 h-3 mr-1" />
-                        Save Transmittal
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleLoadTransmittal}
-                        disabled={!activeAddendumId || !hasTransmittal}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <RotateCcw className="w-3 h-3 mr-1" />
-                        Recall {documentCount > 0 && `(${documentCount})`}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleDownloadTransmittal}
-                        disabled={!activeAddendumId || !hasTransmittal || isDownloading}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: SECTION_TINT,
-                            color: SECTION_TEXT,
-                        }}
-                    >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                    </Button>
-                </div>
             </div>
 
             {/* Tabs - always visible */}
@@ -334,6 +290,13 @@ export function AddendumSection({
 
                             <AddendumTransmittalSchedule
                                 addendumId={activeAddendum.id}
+                                onSaveTransmittal={handleSaveTransmittal}
+                                onLoadTransmittal={handleLoadTransmittal}
+                                onDownloadTransmittal={handleDownloadTransmittal}
+                                canSaveTransmittal={!!activeAddendumId && selectedDocumentIds.length > 0}
+                                hasTransmittal={hasTransmittal}
+                                documentCount={documentCount}
+                                isDownloading={isDownloading}
                             />
                         </div>
                     ) : (

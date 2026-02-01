@@ -121,14 +121,9 @@ export function NotesMeetingsReportsContainer({
         }
     }, [onSetSelectedDocumentIds]);
 
-    // Sub-tab styling - matches the procurement sub-tabs style
+    // Sub-tab styling - matches the Cost Planning sub-tabs style
     const subTabClassName = `
-        relative flex items-center gap-1.5 rounded-none px-4 py-2 text-[13px] font-medium transition-all duration-200 bg-transparent
-        text-[var(--color-text-muted)]
-        data-[state=active]:bg-[var(--color-bg-primary)]
-        data-[state=active]:text-[var(--color-accent-primary)]
-        data-[state=active]:border-b-2 data-[state=active]:border-[var(--color-accent-primary)]
-        hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50
+        tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50
     `;
 
     return (

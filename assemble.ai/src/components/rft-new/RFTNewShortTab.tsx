@@ -60,6 +60,13 @@ interface RFTNewShortTabProps {
     contextName: string;
     stakeholderId?: string | null;
     onDateChange?: (date: string) => void;
+    onSaveTransmittal?: () => void;
+    onLoadTransmittal?: () => void;
+    onDownloadTransmittal?: () => void;
+    canSaveTransmittal?: boolean;
+    hasTransmittal?: boolean;
+    documentCount?: number;
+    isDownloading?: boolean;
 }
 
 // Helper to get week start (Monday) for a date
@@ -371,6 +378,13 @@ export function RFTNewShortTab({
     contextName,
     stakeholderId,
     onDateChange,
+    onSaveTransmittal,
+    onLoadTransmittal,
+    onDownloadTransmittal,
+    canSaveTransmittal,
+    hasTransmittal,
+    documentCount,
+    isDownloading,
 }: RFTNewShortTabProps) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
     const [objectives, setObjectives] = useState<ProfilerObjectives>({});
@@ -815,30 +829,34 @@ export function RFTNewShortTab({
                                     disabled={isGeneratingService || isPolishingService}
                                     className={`
                                         flex items-center gap-1.5 text-sm font-medium transition-all
-                                        ${isGeneratingService || isPolishingService
-                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                        ${isGeneratingService
+                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                            : isPolishingService
+                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                         }
                                     `}
                                     title="Generate short bullet points (2-5 words each)"
                                 >
-                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingService && 'animate-spin')} variant="empty" />
-                                    <span>{isGeneratingService ? 'Generating...' : 'Generate'}</span>
+                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingService && 'animate-spin [animation-duration:2.5s]')} variant="empty" />
+                                    <span className={isGeneratingService ? 'animate-text-aurora' : ''}>{isGeneratingService ? 'Generating...' : 'Generate'}</span>
                                 </button>
                                 <button
                                     onClick={handlePolishService}
                                     disabled={isGeneratingService || isPolishingService || !briefData.service.trim()}
                                     className={`
                                         flex items-center gap-1.5 text-sm font-medium transition-all
-                                        ${(isGeneratingService || isPolishingService || !briefData.service.trim())
-                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                        ${isPolishingService
+                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                            : (isGeneratingService || !briefData.service.trim())
+                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                         }
                                     `}
                                     title="Expand bullets to full descriptions (10-15 words)"
                                 >
-                                    <DiamondIcon className={cn('w-4 h-4', isPolishingService && 'animate-spin')} variant="filled" />
-                                    <span>{isPolishingService ? 'Polishing...' : 'Polish'}</span>
+                                    <DiamondIcon className={cn('w-4 h-4', isPolishingService && 'animate-spin [animation-duration:2.5s]')} variant="filled" />
+                                    <span className={isPolishingService ? 'animate-text-aurora' : ''}>{isPolishingService ? 'Polishing...' : 'Polish'}</span>
                                 </button>
                             </div>
                         </div>
@@ -862,30 +880,34 @@ export function RFTNewShortTab({
                                     disabled={isGeneratingDeliverables || isPolishingDeliverables}
                                     className={`
                                         flex items-center gap-1.5 text-sm font-medium transition-all
-                                        ${isGeneratingDeliverables || isPolishingDeliverables
-                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                        ${isGeneratingDeliverables
+                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                            : isPolishingDeliverables
+                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                         }
                                     `}
                                     title="Generate short bullet points (2-5 words each)"
                                 >
-                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingDeliverables && 'animate-spin')} variant="empty" />
-                                    <span>{isGeneratingDeliverables ? 'Generating...' : 'Generate'}</span>
+                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingDeliverables && 'animate-spin [animation-duration:2.5s]')} variant="empty" />
+                                    <span className={isGeneratingDeliverables ? 'animate-text-aurora' : ''}>{isGeneratingDeliverables ? 'Generating...' : 'Generate'}</span>
                                 </button>
                                 <button
                                     onClick={handlePolishDeliverables}
                                     disabled={isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim()}
                                     className={`
                                         flex items-center gap-1.5 text-sm font-medium transition-all
-                                        ${(isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim())
-                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                        ${isPolishingDeliverables
+                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                            : (isGeneratingDeliverables || !briefData.deliverables.trim())
+                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                         }
                                     `}
                                     title="Expand bullets to full descriptions (10-15 words)"
                                 >
-                                    <DiamondIcon className={cn('w-4 h-4', isPolishingDeliverables && 'animate-spin')} variant="filled" />
-                                    <span>{isPolishingDeliverables ? 'Polishing...' : 'Polish'}</span>
+                                    <DiamondIcon className={cn('w-4 h-4', isPolishingDeliverables && 'animate-spin [animation-duration:2.5s]')} variant="filled" />
+                                    <span className={isPolishingDeliverables ? 'animate-text-aurora' : ''}>{isPolishingDeliverables ? 'Polishing...' : 'Polish'}</span>
                                 </button>
                             </div>
                         </div>
@@ -915,21 +937,18 @@ export function RFTNewShortTab({
                 </h3>
                 <div className="border border-[var(--color-border)] rounded overflow-hidden">
                     {costLines.length > 0 ? (
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm table-fixed">
                             <thead className="bg-[var(--color-accent-copper-tint)]">
                                 <tr className="border-b border-[var(--color-border)]">
-                                    <th className="px-4 py-2.5 text-left text-[var(--color-accent-copper)] font-medium w-[70%]">Description</th>
-                                    <th className="px-4 py-2.5 text-left text-[var(--color-accent-copper)] font-medium w-[30%]">Amount (Excl. GST)</th>
+                                    <th className="px-4 py-2.5 text-left text-[var(--color-accent-copper)] font-medium" style={{ width: '66%' }}>Description</th>
+                                    <th className="px-4 py-2.5 text-left text-[var(--color-accent-copper)] font-medium" style={{ width: '34%' }}>Amount (Excl. GST)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {/* Existing Cost Lines */}
                                 {costLines.map((line) => (
-                                    <tr key={line.id} className="border-b border-[var(--color-border)]">
+                                    <tr key={line.id} className="border-b border-[var(--color-border)] last:border-b-0">
                                         <td className="px-4 py-2.5 text-[var(--color-text-primary)]">{line.activity}</td>
-                                        <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
-                                            {/* Amount left empty for consultant to nominate */}
-                                        </td>
+                                        <td className="px-4 py-2.5 text-[var(--color-text-muted)] text-left">$</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -944,10 +963,16 @@ export function RFTNewShortTab({
 
             {/* 6. Transmittal Section */}
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                    Transmittal
-                </h3>
-                <RFTNewTransmittalSchedule rftNewId={rftNew.id} />
+                <RFTNewTransmittalSchedule
+                    rftNewId={rftNew.id}
+                    onSaveTransmittal={onSaveTransmittal}
+                    onLoadTransmittal={onLoadTransmittal}
+                    onDownloadTransmittal={onDownloadTransmittal}
+                    canSaveTransmittal={canSaveTransmittal}
+                    hasTransmittal={hasTransmittal}
+                    documentCount={documentCount}
+                    isDownloading={isDownloading}
+                />
             </div>
         </div>
     );

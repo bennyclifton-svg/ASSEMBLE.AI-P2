@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 type LogoSize = 'sm' | 'md' | 'lg';
@@ -7,58 +8,72 @@ type LogoSize = 'sm' | 'md' | 'lg';
 interface LogoProps {
   size?: LogoSize;
   className?: string;
+  showText?: boolean;
 }
 
 const sizeConfig = {
   sm: {
-    fontSize: 'text-2xl',
+    fontSize: 'text-xl',
+    iconSize: 32,
   },
   md: {
-    fontSize: 'text-3xl',
+    fontSize: 'text-2xl',
+    iconSize: 42,
   },
   lg: {
-    fontSize: 'text-4xl',
+    fontSize: 'text-3xl',
+    iconSize: 55,
   },
 };
 
 /**
  * Foundry Logo Component
  *
- * Displays the Foundry brand logo with gradient text effect.
- * Gradient flows from warm peach/orange to green/teal.
+ * Displays the Foundry brand logo with SVG icon and Aurora-colored text.
+ * Uses Aurora palette: Cyan (#00FFFF) for dark theme, Azure (#0066CC) for light theme.
  *
  * @param size - Logo size variant (sm, md, lg)
  * @param className - Additional CSS classes
+ * @param showText - Whether to show "Foundry" text (default: true)
  */
-export function Logo({ size = 'md', className }: LogoProps) {
+export function Logo({ size = 'md', className, showText = true }: LogoProps) {
   const config = sizeConfig[size];
 
   return (
     <div
       className={cn(
-        'flex items-center',
+        'flex items-center gap-2',
         'select-none cursor-pointer',
         'hover:scale-[1.02] transition-transform duration-200',
         className
       )}
     >
-      <span
-        className={cn(
-          config.fontSize,
-          'font-bold tracking-tight ml-2',
-          'bg-gradient-to-br from-[#e8a878] via-[#a8b078] to-[#48a878]',
-          'bg-clip-text text-transparent'
-        )}
-      >
-        Foundry
-      </span>
+      <Image
+        src="/logo-foundry.svg"
+        alt="Foundry Logo"
+        width={config.iconSize}
+        height={config.iconSize}
+        className="flex-shrink-0"
+        priority
+      />
+      {showText && (
+        <span
+          className={cn(
+            config.fontSize,
+            'font-[family-name:var(--font-exo-2)] font-bold tracking-normal',
+            'text-[var(--color-accent-primary)]'
+          )}
+        >
+          Foundry
+        </span>
+      )}
     </div>
   );
 }
 
 /**
- * Compact logo variant - same as full logo at small size
+ * Compact logo variant - icon only at small size
  */
 export function LogoIcon({ size = 'sm', className }: LogoProps) {
-  return <Logo size={size} className={className} />;
+  return <Logo size={size} className={className} showText={false} />;
 }

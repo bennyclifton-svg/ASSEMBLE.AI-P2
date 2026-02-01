@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import { AddFirmButtonProps } from './types';
 
-export function AddFirmButton({ onAdd, onFileDrop, isExpanded = false }: AddFirmButtonProps) {
+export function AddFirmButton({ onAdd, onFileDrop }: Omit<AddFirmButtonProps, 'isExpanded'>) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,29 +46,13 @@ export function AddFirmButton({ onAdd, onFileDrop, isExpanded = false }: AddFirm
     onAdd();
   };
 
-  // Match firm tile height: py-2 (8px) + h-7 (28px) + mt-1 (4px) + icons (~18px) + py-2 (8px) = ~66px
-  // Using h-[53px] for inner content (28 + 4 + 18 = 50px, plus some flex)
-  // Border style matches Document upload tile (CategoryTile with isUploadTile)
-  const getBorderColor = () => {
-    if (isDragOver || isHovered) return 'border-[var(--color-accent-teal)]';
-    return 'border-[var(--color-border-strong)]';
-  };
-
-  const getBackgroundStyle = () => {
-    if (isDragOver) return 'bg-[var(--color-accent-teal)]/10';
-    if (isHovered) return 'bg-[var(--color-accent-teal)]/5';
-    return 'bg-[var(--color-bg-secondary)]';
-  };
-
   return (
     <div
       className={`
         flex items-center justify-center px-3 py-2 cursor-pointer
-        border-l border-dashed transition-all duration-150
-        ${isDragOver || isHovered ? 'border-[var(--color-accent-teal)]' : 'border-[var(--color-border-strong)]'}
-        ${getBackgroundStyle()}
-        w-[220px] flex-shrink-0
-        ${isExpanded ? 'min-h-[300px]' : 'min-h-[66px]'}
+        border-2 border-dashed transition-all duration-150 shadow-md
+        ${isDragOver || isHovered ? 'border-[var(--color-accent-teal)] bg-[var(--color-card-firm-hover)]' : 'border-[var(--color-border-strong)] bg-[var(--color-card-firm)]'}
+        w-[220px] flex-shrink-0 min-h-[66px]
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

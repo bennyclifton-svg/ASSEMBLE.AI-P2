@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { ChevronRight, ChevronDown, Trash2, GripVertical, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronRight, ChevronDown, Trash, GripVertical, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useUpdateActivity, useDeleteActivity, useCreateMilestone } from '@/lib/hooks/use-program';
@@ -391,7 +391,7 @@ export function ProgramRow({
                     onClick={handleDelete}
                     className="invisible mr-2 p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] group-hover:visible"
                 >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash className="h-3.5 w-3.5" />
                 </button>
             </div>
         );

@@ -384,10 +384,13 @@ export function ProfilerMiddlePanel({
           {/* Column 2: Complexity */}
           <div className="flex flex-col">
             <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">Complexity</h3>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {Object.entries(complexityOptions).map(([dimension, options]) => (
-                <div key={dimension}>
-                  <label className="block text-xs text-[var(--color-text-muted)] mb-2 capitalize">
+                <div
+                  key={dimension}
+                  className="bg-[var(--color-card-firm)] border border-[var(--color-card-firm-border)] px-3 py-2 shadow-sm transition-colors duration-150"
+                >
+                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2 capitalize">
                     {dimension.replace(/_/g, ' ')}
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -396,11 +399,11 @@ export function ProfilerMiddlePanel({
                         key={option.value}
                         onClick={() => handleComplexitySelect(dimension, option.value)}
                         className={`
-                          px-2.5 py-2 rounded-lg text-xs font-medium transition-all
+                          px-2.5 py-1.5 rounded text-xs font-medium transition-all
                           ${
                             complexity[dimension] === option.value
                               ? 'bg-[var(--color-accent-copper)] text-[var(--color-text-inverse)]'
-                              : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-accent-copper-tint)]'
+                              : 'bg-[var(--color-card-firm-field)] text-[var(--color-text-secondary)] hover:bg-[var(--color-card-firm-hover)]'
                           }
                         `}
                       >

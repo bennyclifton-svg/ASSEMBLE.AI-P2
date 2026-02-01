@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Home, Factory, Landmark, Layers, Route, Tractor, Shield, Maximize2, Minimize2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Building2, Home, Factory, Landmark, Layers, Route, Tractor, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import type {
   BuildingClass,
@@ -80,13 +81,13 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
     >
       <div className="nav-panel-header w-full mb-2">
         <h3 className="nav-panel-title text-sm font-semibold text-[var(--color-text-primary)] transition-colors">
-          Project Profile
+          Profile
         </h3>
-        {isActive ? (
-          <Minimize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
-        ) : (
-          <Maximize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-text-muted)] transition-colors" />
-        )}
+        <CornerBracketIcon
+          direction={isActive ? 'right' : 'left'}
+          gradient={isActive}
+          className={`nav-panel-chevron w-3.5 h-3.5 ${!isActive ? 'text-[var(--color-text-muted)]' : ''} transition-colors`}
+        />
       </div>
 
       {/* Building Class and Project Type side by side */}
@@ -157,11 +158,11 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
                 key={type.value}
                 onClick={(e) => { e.stopPropagation(); handleTypeSelect(type.value as ProjectType); }}
                 className={`
-                  w-full px-2.5 py-2 rounded-lg text-xs font-medium transition-all text-left
+                  w-full px-2.5 py-2 rounded-lg text-xs font-medium transition-all text-left border
                   ${
                     projectType === type.value
-                      ? 'bg-[var(--color-accent-copper)] text-[var(--color-text-inverse)]'
-                      : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-accent-copper-tint)]'
+                      ? 'bg-[var(--color-accent-copper)] text-[var(--color-text-inverse)] border-[var(--color-accent-copper)]'
+                      : 'bg-[var(--color-bg-secondary)] border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:bg-[var(--color-accent-copper-tint)] hover:border-[var(--color-accent-copper)]/50'
                   }
                 `}
               >

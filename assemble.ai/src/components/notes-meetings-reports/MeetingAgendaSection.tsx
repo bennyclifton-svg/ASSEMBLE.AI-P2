@@ -2,7 +2,7 @@
  * Meeting Agenda Section Component
  * Feature 021 - Notes, Meetings & Reports
  *
- * A single agenda section with content editor and AI generation buttons.
+ * A single agenda section with rich text editor and AI generation buttons.
  */
 
 'use client';
@@ -10,6 +10,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { cn } from '@/lib/utils';
 import type { MeetingSection } from '@/types/notes-meetings-reports';
 
@@ -42,7 +43,6 @@ export function MeetingAgendaSection({
     const [localContent, setLocalContent] = useState(section.content || '');
     const [isEditingLabel, setIsEditingLabel] = useState(false);
     const [editLabel, setEditLabel] = useState(section.sectionLabel);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
     const labelInputRef = useRef<HTMLInputElement>(null);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -61,19 +61,10 @@ export function MeetingAgendaSection({
         }, 500);
     }, [section.id, onUpdateContent]);
 
-    const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        const newContent = e.target.value;
+    const handleContentChange = useCallback((newContent: string) => {
         setLocalContent(newContent);
         debouncedSave(newContent);
-    };
-
-    // Auto-resize textarea
-    useEffect(() => {
-        if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = `${Math.max(80, textareaRef.current.scrollHeight)}px`;
-        }
-    }, [localContent]);
+    }, [debouncedSave]);
 
     // Focus label input when editing starts
     useEffect(() => {
@@ -164,17 +155,21 @@ export function MeetingAgendaSection({
                                 disabled={isGenerating || isPolishing}
                                 className={cn(
                                     'flex items-center gap-1.5 text-sm font-medium transition-all',
-                                    isGenerating || isPolishing
-                                        ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                        : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                    isGenerating
+                                        ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                        : isPolishing
+                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                 )}
                                 title="Generate content"
                             >
                                 <DiamondIcon
-                                    className={cn('w-4 h-4', isGenerating && 'animate-spin')}
+                                    className={cn('w-4 h-4', isGenerating && 'animate-spin [animation-duration:2.5s]')}
                                     variant="empty"
                                 />
-                                {isGenerating ? 'Generating...' : 'Generate'}
+                                <span className={isGenerating ? 'animate-text-aurora' : ''}>
+                                    {isGenerating ? 'Generating...' : 'Generate'}
+                                </span>
                             </button>
                         )}
                         {onPolish && hasContent && (
@@ -183,17 +178,21 @@ export function MeetingAgendaSection({
                                 disabled={isGenerating || isPolishing}
                                 className={cn(
                                     'flex items-center gap-1.5 text-sm font-medium transition-all',
-                                    isGenerating || isPolishing
-                                        ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                        : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                    isPolishing
+                                        ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                        : isGenerating
+                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                 )}
                                 title="Polish content"
                             >
                                 <DiamondIcon
-                                    className={cn('w-4 h-4', isPolishing && 'animate-spin')}
+                                    className={cn('w-4 h-4', isPolishing && 'animate-spin [animation-duration:2.5s]')}
                                     variant="filled"
                                 />
-                                {isPolishing ? 'Polishing...' : 'Polish'}
+                                <span className={isPolishing ? 'animate-text-aurora' : ''}>
+                                    {isPolishing ? 'Polishing...' : 'Polish'}
+                                </span>
                             </button>
                         )}
                     </div>
@@ -203,13 +202,13 @@ export function MeetingAgendaSection({
             {/* Section Content */}
             {isExpanded && !hasChildren && (
                 <div className="px-3 pb-3" style={{ paddingLeft: `${12 + level * 16}px` }}>
-                    <textarea
-                        ref={textareaRef}
-                        value={localContent}
+                    <RichTextEditor
+                        content={localContent}
                         onChange={handleContentChange}
                         placeholder="Enter content..."
-                        className="w-full min-h-[80px] p-2 text-sm bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none"
-                        style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
+                        variant="mini"
+                        toolbarVariant="mini"
+                        className="bg-[var(--color-bg-primary)]"
                     />
                 </div>
             )}

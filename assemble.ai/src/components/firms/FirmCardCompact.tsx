@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Star, Upload, Trash } from 'lucide-react';
+import { Star, Upload, Trash, ChevronDown } from 'lucide-react';
 import { FirmData } from './types';
 
 interface FirmCardCompactProps {
@@ -11,6 +11,7 @@ interface FirmCardCompactProps {
   onShortlistToggle: (shortlisted: boolean) => Promise<void>;
   onFileUpload: () => void;
   isDragOver: boolean;
+  onToggleExpand: () => void;
 }
 
 export function FirmCardCompact({
@@ -20,6 +21,7 @@ export function FirmCardCompact({
   onShortlistToggle,
   onFileUpload,
   isDragOver,
+  onToggleExpand,
 }: FirmCardCompactProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editName, setEditName] = useState(firm.companyName);
@@ -90,12 +92,11 @@ export function FirmCardCompact({
     <div
       className={`
         flex flex-col px-3 py-2
-        bg-[var(--color-bg-secondary)] transition-colors duration-150
+        bg-[var(--color-card-firm)] border border-[var(--color-card-firm-border)] transition-colors duration-150 shadow-md
         ${isDragOver ? 'ring-2 ring-[var(--color-accent-teal)] ring-inset' : ''}
-        ${isHovered && !isDragOver ? 'bg-[var(--color-bg-tertiary)]' : ''}
+        ${isHovered && !isDragOver ? 'bg-[var(--color-card-firm-hover)]' : ''}
         ${firm.awarded ? 'border-l-[3px] border-l-[var(--color-accent-green)]' : ''}
         w-[220px] flex-shrink-0 group
-        border-r border-[var(--color-border)]
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -117,48 +118,58 @@ export function FirmCardCompact({
           disabled={isSaving}
           placeholder="Enter company name"
           className={`
-            w-full h-7 px-2 py-1 rounded text-[var(--color-text-primary)] text-sm
-            bg-transparent border border-transparent
+            w-full h-7 px-1 py-1 text-[var(--color-text-primary)] text-sm font-medium
+            bg-transparent border-none outline-none
             transition-colors duration-150
-            focus:outline-none focus:bg-[var(--color-bg-tertiary)] focus:border-[var(--color-accent-primary)] focus:text-[var(--color-text-primary)]
-            hover:border-[var(--color-border)]
             disabled:opacity-50
             selection:bg-[var(--color-accent-primary-tint)] selection:text-[var(--color-text-primary)]
           `}
         />
       </div>
 
-      {/* Row 2: Action icons - distributed equally */}
+      {/* Row 2: Action icons */}
       <div className="flex items-center justify-between mt-1">
-        {/* Star toggle */}
+        {/* Star toggle with label */}
         <button
           onClick={handleStarClick}
           className={`
-            p-0.5 rounded transition-colors
+            flex items-center gap-1 p-0.5 rounded transition-colors
             ${firm.shortlisted ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
           `}
           title={firm.shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
         >
           <Star className={`w-3.5 h-3.5 ${firm.shortlisted ? 'fill-current' : ''}`} />
+          <span className="text-[10px]">Shortlisted</span>
         </button>
 
-        {/* Folder upload */}
-        <button
-          onClick={handleUploadClick}
-          className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-          title="Upload file to extract data"
-        >
-          <Upload className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Folder upload */}
+          <button
+            onClick={handleUploadClick}
+            className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+            title="Upload file to extract data"
+          >
+            <Upload className="w-3.5 h-3.5" />
+          </button>
 
-        {/* Delete button */}
-        <button
-          onClick={handleDeleteClick}
-          className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-colors"
-          title="Delete firm"
-        >
-          <Trash className="w-3.5 h-3.5" />
-        </button>
+          {/* Delete button */}
+          <button
+            onClick={handleDeleteClick}
+            className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-colors"
+            title="Delete firm"
+          >
+            <Trash className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Expand chevron */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+            className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-black/10 transition-colors"
+            title="Expand card"
+          >
+            <ChevronDown className="w-7 h-7" />
+          </button>
+        </div>
       </div>
 
       {/* Drag overlay */}

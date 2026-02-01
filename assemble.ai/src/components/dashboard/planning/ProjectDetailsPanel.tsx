@@ -518,59 +518,67 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
                 </div>
             )}
 
-            {/* Header with title and upload icon */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Project Details</h2>
-                <Upload className="w-4 h-4 text-[var(--color-text-muted)]" />
-            </div>
-
             {/* Form content */}
-            <div className="flex-1 overflow-y-auto py-4">
-                <div className="max-w-2xl mx-auto px-4">
-                    {/* Project Name */}
-                    <div className="mb-6 pb-4 border-b border-[var(--color-border)]">
-                        <div className="text-sm font-medium text-[var(--color-text-muted)] mb-2">Project Name</div>
-                        <InlineEditField
-                            value={data?.projectName || ''}
-                            onSave={(v) => updateField('projectName', v)}
-                            placeholder="Untitled Project"
-                            className="text-xl font-bold text-[var(--color-text-primary)]"
-                        />
+            <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarGutter: 'stable both-edges' }}>
+                <div className="space-y-4">
+                    {/* Project Name Card */}
+                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
+                            <span className="text-[var(--color-accent-copper)] font-medium text-sm uppercase tracking-wide">
+                                Project Name
+                            </span>
+                            <Upload className="w-4 h-4 text-[var(--color-accent-copper)]" />
+                        </div>
+                        <div className="bg-[var(--color-bg-secondary)] p-4">
+                            <InlineEditField
+                                value={data?.projectName || ''}
+                                onSave={(v) => updateField('projectName', v)}
+                                placeholder="Untitled Project"
+                                className="text-xl font-bold text-[var(--color-text-primary)]"
+                            />
+                        </div>
                     </div>
 
-                    {/* Detail rows */}
-                    <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-                        <DetailRow
-                            label="Address"
-                            value={data?.address || ''}
-                            onSave={(v) => updateField('address', v)}
-                            placeholder="Enter address"
-                        />
-                        <DetailRow
-                            label="Lot Area"
-                            value={data?.lotArea?.toString() || ''}
-                            onSave={(v) => updateField('lotArea', v)}
-                            placeholder="0 m²"
-                        />
-                        <DetailRow
-                            label="Zoning"
-                            value={data?.zoning || ''}
-                            onSave={(v) => updateField('zoning', v)}
-                            placeholder="Enter zoning"
-                        />
-                        <DetailRow
-                            label="Legal Address"
-                            value={data?.legalAddress || ''}
-                            onSave={(v) => updateField('legalAddress', v)}
-                            placeholder="Enter legal address"
-                        />
-                        <DetailRow
-                            label="Jurisdiction"
-                            value={data?.jurisdiction || ''}
-                            onSave={(v) => updateField('jurisdiction', v)}
-                            placeholder="Enter jurisdiction"
-                            isLast
-                        />
+                    {/* Details Card */}
+                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
+                            <span className="text-[var(--color-accent-copper)] font-medium text-sm uppercase tracking-wide">
+                                Site Details
+                            </span>
+                        </div>
+                        <div className="bg-[var(--color-bg-secondary)]">
+                            <DetailRow
+                                label="Address"
+                                value={data?.address || ''}
+                                onSave={(v) => updateField('address', v)}
+                                placeholder="Enter address"
+                            />
+                            <DetailRow
+                                label="Lot Area"
+                                value={data?.lotArea?.toString() || ''}
+                                onSave={(v) => updateField('lotArea', v)}
+                                placeholder="0 m²"
+                            />
+                            <DetailRow
+                                label="Zoning"
+                                value={data?.zoning || ''}
+                                onSave={(v) => updateField('zoning', v)}
+                                placeholder="Enter zoning"
+                            />
+                            <DetailRow
+                                label="Legal Address"
+                                value={data?.legalAddress || ''}
+                                onSave={(v) => updateField('legalAddress', v)}
+                                placeholder="Enter legal address"
+                            />
+                            <DetailRow
+                                label="Jurisdiction"
+                                value={data?.jurisdiction || ''}
+                                onSave={(v) => updateField('jurisdiction', v)}
+                                placeholder="Enter jurisdiction"
+                                isLast
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

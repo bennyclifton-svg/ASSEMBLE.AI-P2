@@ -10,17 +10,21 @@ export function FirmCard({
   type,
   firm,
   category,
-  isExpanded,
   onSave,
   onDelete,
   onShortlistToggle,
   onAwardToggle,
   onFileDrop,
 }: FirmCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [showDropDialog, setShowDropDialog] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleToggleExpand = () => {
+    setIsExpanded((prev) => !prev);
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -115,6 +119,7 @@ export function FirmCard({
           onAwardToggle={onAwardToggle}
           onFileUpload={handleFileUpload}
           isDragOver={isDragOver}
+          onToggleExpand={handleToggleExpand}
         />
       ) : (
         <FirmCardCompact
@@ -124,6 +129,7 @@ export function FirmCard({
           onShortlistToggle={onShortlistToggle}
           onFileUpload={handleFileUpload}
           isDragOver={isDragOver}
+          onToggleExpand={handleToggleExpand}
         />
       )}
 

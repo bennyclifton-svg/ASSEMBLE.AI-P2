@@ -37,12 +37,25 @@
   --primitive-purple-dark: #9333EA;
   --primitive-purple-on-dark: #C084FC;
 
-  /* Copper/Bronze Palette (Architectural Precision) */
-  --primitive-copper: #D4A574;
-  --primitive-copper-light: #E8C4A0;
-  --primitive-copper-lighter: #F5E6D3;
-  --primitive-copper-dark: #C49464;
-  --primitive-copper-darker: #8B7355;
+  /* Aurora Palette (Northern Lights - Replaces Copper) */
+  --primitive-aurora-blue: #0080FF;
+  --primitive-aurora-cyan: #00FFFF;
+  --primitive-aurora-magenta: #FF1493;
+  --primitive-aurora-violet: #8B5CF6;
+  --primitive-aurora-teal: #14B8A6;
+
+  /* Aurora Gradients */
+  --aurora-gradient-1: linear-gradient(135deg, #0080FF 0%, #00FFFF 50%, #14B8A6 100%);
+  --aurora-gradient-2: linear-gradient(135deg, #8B5CF6 0%, #FF1493 50%, #0080FF 100%);
+  --aurora-gradient-3: linear-gradient(135deg, #00FFFF 0%, #8B5CF6 100%);
+  --aurora-gradient-subtle: linear-gradient(135deg, rgba(0, 128, 255, 0.1) 0%, rgba(0, 255, 255, 0.05) 100%);
+
+  /* Legacy Copper Alias (for backwards compatibility) */
+  --primitive-copper: var(--primitive-aurora-cyan);
+  --primitive-copper-light: #66FFFF;
+  --primitive-copper-lighter: #E0FFFF;
+  --primitive-copper-dark: #00CCCC;
+  --primitive-copper-darker: #008B8B;
 
   /* Slate Palette (Deep neutrals for Precision dark theme) */
   --primitive-slate-950: #0F1115;
@@ -144,30 +157,39 @@
   --color-border-strong: rgba(107, 114, 128, 0.4);
   --color-border-accent: rgba(212, 165, 116, 0.18);
 
-  /* Primary accent is Silver/Titanium (Architecture Metal) */
-  --color-accent-primary: #E2E8F0;
-  /* Slate-200 (Bright Silver) */
-  --color-accent-primary-hover: #F8FAFC;
-  /* Slate-50 (Near White Silver) */
-  --color-accent-primary-muted: #94A3B8;
-  /* Slate-400 (Muted Silver) */
-  --color-accent-primary-tint: rgba(226, 232, 240, 0.12);
+  /* Primary accent is Aurora Cyan (Northern Lights) */
+  --color-accent-primary: #00FFFF;
+  /* Aurora Cyan */
+  --color-accent-primary-hover: #66FFFF;
+  /* Lighter Cyan */
+  --color-accent-primary-muted: #00CCCC;
+  /* Muted Cyan */
+  --color-accent-primary-tint: rgba(0, 255, 255, 0.12);
 
-  /* Secondary accents (for status, etc.) */
+  /* Aurora Secondary Accents */
+  --color-accent-blue: #0080FF;
+  --color-accent-magenta: #FF1493;
+  --color-accent-violet: #8B5CF6;
+
+  /* Status accents (unchanged for clarity) */
   --color-accent-green: #7A9E7E;
   --color-accent-yellow: #E8B931;
   --color-accent-coral: #CC7070;
-  --color-accent-teal: #6EDED6;
-  --color-accent-purple: #C084FC;
-  --color-accent-copper: var(--primitive-copper);
+  --color-accent-teal: #14B8A6;
+  --color-accent-purple: #8B5CF6;
+  --color-accent-copper: var(--primitive-aurora-cyan);
 
   /* Accent Tints */
   --color-accent-green-tint: rgba(122, 158, 126, 0.15);
   --color-accent-yellow-tint: rgba(232, 185, 49, 0.15);
   --color-accent-coral-tint: rgba(204, 112, 112, 0.15);
-  --color-accent-teal-tint: rgba(110, 222, 214, 0.15);
-  --color-accent-purple-tint: rgba(192, 132, 252, 0.15);
-  --color-accent-copper-tint: rgba(212, 165, 116, 0.12);
+  --color-accent-teal-tint: rgba(20, 184, 166, 0.15);
+  --color-accent-purple-tint: rgba(139, 92, 246, 0.15);
+  --color-accent-copper-tint: rgba(0, 255, 255, 0.12);
+  --color-accent-cyan-tint: rgba(0, 255, 255, 0.08);
+  --color-accent-blue-tint: rgba(0, 128, 255, 0.12);
+  --color-accent-magenta-tint: rgba(255, 20, 147, 0.12);
+  --color-accent-violet-tint: rgba(139, 92, 246, 0.12);
 
   /* Semantic States - Earth tones */
   --color-success: #7A9E7E;
@@ -175,17 +197,33 @@
   --color-error: #CC7070;
   --color-info: var(--primitive-copper);
 
-  /* Shadows - Deep with optional glow */
+  /* Shadows - Deep with Aurora glow */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(212, 165, 116, 0.15);
+  --shadow-glow: 0 0 20px rgba(0, 255, 255, 0.2);
+  --shadow-aurora: 0 0 30px rgba(0, 255, 255, 0.15), 0 0 60px rgba(0, 128, 255, 0.1);
+  --shadow-aurora-intense: 0 0 20px rgba(0, 255, 255, 0.3), 0 0 40px rgba(139, 92, 246, 0.2), 0 0 60px rgba(255, 20, 147, 0.1);
+
+  /* Soft UI Evolution Shadows - Dark */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15);
+  --shadow-soft-elevated: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.2);
+  --shadow-soft-hover: 0 8px 24px rgba(0, 0, 0, 0.35), 0 4px 8px rgba(0, 0, 0, 0.25);
+  --shadow-soft-inner: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --shadow-soft-inner-highlight: inset 0 1px 0 rgba(0, 255, 255, 0.08);
+  --shadow-soft-pressed: inset 0 2px 4px rgba(0, 0, 0, 0.15);
 
   /* Scrollbar */
   --scrollbar-track: var(--primitive-slate-900);
   --scrollbar-thumb: var(--primitive-slate-700);
   --scrollbar-thumb-hover: var(--primitive-slate-600);
+
+  /* Firm Card Colors - subtle yellow tint for dark mode */
+  --color-card-firm: rgba(232, 185, 49, 0.08);
+  --color-card-firm-hover: rgba(232, 185, 49, 0.12);
+  --color-card-firm-border: rgba(232, 185, 49, 0.18);
+  --color-card-firm-field: rgba(232, 185, 49, 0.15);
 
   /* Tailwind CSS Theme Integration */
   --background: var(--color-bg-primary);
@@ -233,16 +271,21 @@
   --color-border-strong: var(--primitive-cool-gray-300);
   --color-border-accent: rgba(184, 137, 90, 0.4);
 
-  /* Primary accent - Darker Statuary Bronze (Premium Look) */
-  --color-accent-primary: #8C5E3C;
-  /* Darker Bronze */
-  --color-accent-primary-hover: #6D482F;
-  /* Even Darker on Hover */
-  --color-accent-primary-muted: #A67C5D;
-  /* Muted Bronze */
-  --color-accent-primary-tint: rgba(140, 94, 60, 0.1);
+  /* Primary accent - Deep Aurora Blue (High contrast on light) */
+  --color-accent-primary: #0066CC;
+  /* Deep Azure */
+  --color-accent-primary-hover: #004D99;
+  /* Darker on Hover */
+  --color-accent-primary-muted: #3399FF;
+  /* Muted Blue */
+  --color-accent-primary-tint: rgba(0, 102, 204, 0.1);
 
-  /* Secondary accents - Adjusted for cool background */
+  /* Aurora Secondary Accents for Light Theme */
+  --color-accent-blue: #0066CC;
+  --color-accent-magenta: #C71585;
+  --color-accent-violet: #6D28D9;
+
+  /* Status accents - Adjusted for light background */
   --color-accent-green: #15803d;
   /* emerald-700 */
   --color-accent-yellow: #ca8a04;
@@ -251,17 +294,21 @@
   /* red-700 */
   --color-accent-teal: #0f766e;
   /* teal-700 */
-  --color-accent-purple: #7e22ce;
-  /* purple-700 */
-  --color-accent-copper: #B8895A;
+  --color-accent-purple: #6D28D9;
+  /* violet-700 */
+  --color-accent-copper: #0066CC;
 
-  /* Accent Tints - Cleaner */
+  /* Accent Tints - Aurora-styled */
   --color-accent-green-tint: rgba(21, 128, 61, 0.1);
   --color-accent-yellow-tint: rgba(202, 138, 4, 0.1);
   --color-accent-coral-tint: rgba(185, 28, 28, 0.1);
   --color-accent-teal-tint: rgba(15, 118, 110, 0.1);
-  --color-accent-purple-tint: rgba(126, 34, 206, 0.1);
-  --color-accent-copper-tint: rgba(184, 137, 90, 0.12);
+  --color-accent-purple-tint: rgba(109, 40, 217, 0.1);
+  --color-accent-copper-tint: rgba(0, 102, 204, 0.1);
+  --color-accent-cyan-tint: rgba(0, 102, 204, 0.06);
+  --color-accent-blue-tint: rgba(0, 102, 204, 0.1);
+  --color-accent-magenta-tint: rgba(199, 21, 133, 0.1);
+  --color-accent-violet-tint: rgba(109, 40, 217, 0.1);
 
   /* Semantic States */
   --color-success: #15803d;
@@ -269,17 +316,33 @@
   --color-error: #b91c1c;
   --color-info: #B8895A;
 
-  /* Shadows - Crisp, not muddy */
+  /* Shadows - Crisp with Aurora accent */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 15px rgba(184, 137, 90, 0.15);
+  --shadow-glow: 0 0 15px rgba(0, 102, 204, 0.2);
+  --shadow-aurora: 0 0 20px rgba(0, 102, 204, 0.15), 0 0 40px rgba(109, 40, 217, 0.08);
+  --shadow-aurora-intense: 0 0 15px rgba(0, 102, 204, 0.25), 0 0 30px rgba(109, 40, 217, 0.15);
+
+  /* Soft UI Evolution Shadows - Light */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-soft-elevated: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-soft-hover: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
+  --shadow-soft-inner: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --shadow-soft-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 1);
+  --shadow-soft-pressed: inset 0 2px 4px rgba(0, 0, 0, 0.04);
 
   /* Scrollbar */
   --scrollbar-track: var(--primitive-cool-gray-50);
   --scrollbar-thumb: var(--primitive-cool-gray-300);
   --scrollbar-thumb-hover: var(--primitive-cool-gray-400);
+
+  /* Firm Card Colors - warm yellow for light mode */
+  --color-card-firm: #FEF9C3;
+  --color-card-firm-hover: #FEF08A;
+  --color-card-firm-border: transparent;
+  --color-card-firm-field: #FEF3C7;
 
   /* Tailwind CSS Theme Integration */
   --background: var(--color-bg-primary);
@@ -437,7 +500,7 @@ textarea:-webkit-autofill:active {
 }
 
 /* ============================================
-   PRECISION THEME UTILITIES - DARK
+   AURORA THEME UTILITIES - DARK
    ============================================ */
 /* Translucent card style */
 [data-theme="precision"] .card-translucent {
@@ -446,34 +509,158 @@ textarea:-webkit-autofill:active {
   backdrop-filter: blur(8px);
 }
 
-/* Copper accent card */
-[data-theme="precision"] .card-copper {
-  background: rgba(212, 165, 116, 0.06);
-  border: 1px solid rgba(212, 165, 116, 0.18);
+/* Aurora glass card - gradient border with glow */
+[data-theme="precision"] .card-aurora {
+  background: rgba(20, 22, 24, 0.8);
+  border: 1px solid transparent;
+  background-image: linear-gradient(rgba(20, 22, 24, 0.9), rgba(20, 22, 24, 0.9)),
+                    linear-gradient(135deg, rgba(0, 128, 255, 0.3), rgba(0, 255, 255, 0.2), rgba(139, 92, 246, 0.3));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.08), inset 0 1px 0 rgba(0, 255, 255, 0.1);
+  transition: all 0.3s ease;
 }
 
-/* Divider with gradient */
+[data-theme="precision"] .card-aurora:hover {
+  box-shadow: 0 0 30px rgba(0, 255, 255, 0.15), 0 0 60px rgba(0, 128, 255, 0.08), inset 0 1px 0 rgba(0, 255, 255, 0.15);
+}
+
+/* Aurora glow card - intense glow effect */
+[data-theme="precision"] .card-aurora-glow {
+  background: rgba(20, 22, 24, 0.85);
+  border: 1px solid rgba(0, 255, 255, 0.2);
+  box-shadow: var(--shadow-aurora);
+  transition: all 0.3s ease;
+}
+
+[data-theme="precision"] .card-aurora-glow:hover {
+  border-color: rgba(0, 255, 255, 0.4);
+  box-shadow: var(--shadow-aurora-intense);
+}
+
+/* Legacy copper card alias - now uses Aurora */
+[data-theme="precision"] .card-copper {
+  background: rgba(0, 128, 255, 0.06);
+  border: 1px solid rgba(0, 255, 255, 0.18);
+}
+
+/* ============================================
+   SOFT UI EVOLUTION CARDS - DARK
+   Modern soft shadows with improved depth & contrast
+   ============================================ */
+
+/* Base soft card - subtle depth with inner highlight */
+[data-theme="precision"] .card-soft {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+[data-theme="precision"] .card-soft:hover {
+  border-color: var(--color-border-strong);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Elevated soft card - stronger lift effect */
+[data-theme="precision"] .card-soft-elevated {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(0, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+[data-theme="precision"] .card-soft-elevated:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 255, 255, 0.15);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.35),
+    0 4px 8px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(0, 255, 255, 0.08),
+    0 0 20px rgba(0, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Interactive soft card - for clickable cards */
+[data-theme="precision"] .card-soft-interactive {
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: all 0.2s ease;
+}
+
+[data-theme="precision"] .card-soft-interactive:hover {
+  background: linear-gradient(145deg, var(--color-bg-tertiary) 0%, rgba(0, 255, 255, 0.02) 100%);
+  border-color: rgba(0, 255, 255, 0.2);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    0 0 15px rgba(0, 255, 255, 0.06),
+    inset 0 1px 0 rgba(0, 255, 255, 0.08);
+}
+
+[data-theme="precision"] .card-soft-interactive:active {
+  transform: scale(0.99);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Divider with Aurora gradient */
 [data-theme="precision"] .divider-gradient {
   height: 1px;
-  background: linear-gradient(90deg, rgba(212, 165, 116, 0.4), transparent);
+  background: linear-gradient(90deg, rgba(0, 255, 255, 0.4), rgba(139, 92, 246, 0.2), transparent);
 }
 
-/* Copper glow effect */
+/* Aurora glow effect */
+[data-theme="precision"] .glow-aurora {
+  box-shadow: var(--shadow-aurora);
+}
+
+[data-theme="precision"] .glow-aurora-intense {
+  box-shadow: var(--shadow-aurora-intense);
+}
+
+/* Legacy copper glow alias */
 [data-theme="precision"] .glow-copper {
   box-shadow: var(--shadow-glow);
 }
 
 /* Border utilities */
+[data-theme="precision"] .border-aurora {
+  border-color: rgba(0, 255, 255, 0.25);
+}
+
+[data-theme="precision"] .border-aurora-strong {
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
+/* Legacy copper border alias */
 [data-theme="precision"] .border-copper {
-  border-color: rgba(212, 165, 116, 0.25);
+  border-color: rgba(0, 255, 255, 0.25);
 }
 
 [data-theme="precision"] .border-copper-strong {
-  border-color: rgba(212, 165, 116, 0.4);
+  border-color: rgba(0, 255, 255, 0.4);
 }
 
 /* ============================================
-   PRECISION THEME UTILITIES - LIGHT
+   AURORA THEME UTILITIES - LIGHT
    ============================================ */
 /* Card styles */
 [data-theme="precision-light"] .card-translucent {
@@ -482,29 +669,153 @@ textarea:-webkit-autofill:active {
   box-shadow: var(--shadow);
 }
 
-[data-theme="precision-light"] .card-copper {
-  background: linear-gradient(135deg, rgba(184, 137, 90, 0.08), rgba(184, 137, 90, 0.03));
-  border: 1px solid rgba(180, 140, 100, 0.25);
+/* Aurora glass card - gradient border with subtle glow */
+[data-theme="precision-light"] .card-aurora {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid transparent;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)),
+                    linear-gradient(135deg, rgba(0, 102, 204, 0.3), rgba(8, 145, 178, 0.2), rgba(109, 40, 217, 0.3));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: 0 2px 12px rgba(0, 102, 204, 0.08);
+  transition: all 0.3s ease;
 }
 
-/* Divider gradient */
+[data-theme="precision-light"] .card-aurora:hover {
+  box-shadow: 0 4px 20px rgba(0, 102, 204, 0.12), 0 0 30px rgba(109, 40, 217, 0.06);
+}
+
+/* Aurora glow card */
+[data-theme="precision-light"] .card-aurora-glow {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 102, 204, 0.2);
+  box-shadow: var(--shadow-aurora);
+  transition: all 0.3s ease;
+}
+
+[data-theme="precision-light"] .card-aurora-glow:hover {
+  border-color: rgba(0, 102, 204, 0.35);
+  box-shadow: var(--shadow-aurora-intense);
+}
+
+/* Legacy copper card alias */
+[data-theme="precision-light"] .card-copper {
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.06), rgba(0, 102, 204, 0.02));
+  border: 1px solid rgba(0, 102, 204, 0.2);
+}
+
+/* ============================================
+   SOFT UI EVOLUTION CARDS - LIGHT
+   Modern soft shadows with improved depth & contrast
+   ============================================ */
+
+/* Base soft card - subtle depth with inner highlight */
+[data-theme="precision-light"] .card-soft {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+[data-theme="precision-light"] .card-soft:hover {
+  border-color: var(--color-border-strong);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* Elevated soft card - stronger lift effect */
+[data-theme="precision-light"] .card-soft-elevated {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(0, 102, 204, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+}
+
+[data-theme="precision-light"] .card-soft-elevated:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0, 102, 204, 0.15);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.1),
+    0 4px 8px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 102, 204, 0.08),
+    0 0 20px rgba(0, 102, 204, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+/* Interactive soft card - for clickable cards */
+[data-theme="precision-light"] .card-soft-interactive {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+[data-theme="precision-light"] .card-soft-interactive:hover {
+  background: linear-gradient(145deg, var(--color-bg-secondary) 0%, rgba(0, 102, 204, 0.02) 100%);
+  border-color: rgba(0, 102, 204, 0.2);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.08),
+    0 2px 6px rgba(0, 0, 0, 0.05),
+    0 0 15px rgba(0, 102, 204, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+[data-theme="precision-light"] .card-soft-interactive:active {
+  transform: scale(0.99);
+  box-shadow:
+    0 1px 4px rgba(0, 0, 0, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    inset 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+/* Divider gradient - Aurora */
 [data-theme="precision-light"] .divider-gradient {
   height: 1px;
-  background: linear-gradient(90deg, rgba(180, 140, 100, 0.5), transparent);
+  background: linear-gradient(90deg, rgba(0, 102, 204, 0.4), rgba(109, 40, 217, 0.2), transparent);
 }
 
-/* Copper glow */
+/* Aurora glow */
+[data-theme="precision-light"] .glow-aurora {
+  box-shadow: var(--shadow-aurora);
+}
+
+[data-theme="precision-light"] .glow-aurora-intense {
+  box-shadow: var(--shadow-aurora-intense);
+}
+
+/* Legacy copper glow alias */
 [data-theme="precision-light"] .glow-copper {
   box-shadow: var(--shadow-glow);
 }
 
 /* Border utilities */
+[data-theme="precision-light"] .border-aurora {
+  border-color: rgba(0, 102, 204, 0.25);
+}
+
+[data-theme="precision-light"] .border-aurora-strong {
+  border-color: rgba(0, 102, 204, 0.4);
+}
+
+/* Legacy copper border alias */
 [data-theme="precision-light"] .border-copper {
-  border-color: rgba(180, 140, 100, 0.25);
+  border-color: rgba(0, 102, 204, 0.25);
 }
 
 [data-theme="precision-light"] .border-copper-strong {
-  border-color: rgba(180, 140, 100, 0.4);
+  border-color: rgba(0, 102, 204, 0.4);
 }
 
 /* ============================================
@@ -562,123 +873,377 @@ textarea:-webkit-autofill:active {
 }
 
 /* ============================================
-   PRECISION BUTTONS - DARK
+   AURORA BUTTONS - DARK
    ============================================ */
 [data-theme="precision"] {
-  .btn-copper {
-    background: linear-gradient(135deg, var(--primitive-copper), var(--primitive-copper-dark));
+  /* Aurora gradient button - primary action */
+  .btn-aurora {
+    background: linear-gradient(135deg, #0080FF 0%, #00CCCC 50%, #14B8A6 100%);
     color: var(--primitive-slate-900);
     font-weight: 600;
-    transition: all 0.15s ease;
-    box-shadow: 0 2px 8px rgba(212, 165, 116, 0.2);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 128, 255, 0.25), 0 0 20px rgba(0, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-aurora::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #00FFFF 0%, #8B5CF6 50%, #FF1493 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .btn-aurora:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 128, 255, 0.35), 0 0 30px rgba(0, 255, 255, 0.2);
+  }
+
+  .btn-aurora:hover::before {
+    opacity: 1;
+  }
+
+  .btn-aurora span {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Legacy copper alias - now uses Aurora */
+  .btn-copper {
+    background: linear-gradient(135deg, #0080FF 0%, #00CCCC 100%);
+    color: var(--primitive-slate-900);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 128, 255, 0.25);
   }
 
   .btn-copper:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 255, 255, 0.3);
   }
 
-  .btn-copper-ghost {
+  .btn-copper-ghost,
+  .btn-aurora-ghost {
     background: transparent;
     color: var(--color-text-primary);
     border: 1px solid var(--color-border-strong);
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
   }
 
-  .btn-copper-ghost:hover {
-    background: rgba(212, 165, 116, 0.08);
-    border-color: rgba(212, 165, 116, 0.4);
+  .btn-copper-ghost:hover,
+  .btn-aurora-ghost:hover {
+    background: rgba(0, 255, 255, 0.08);
+    border-color: rgba(0, 255, 255, 0.4);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
   }
 
-  .btn-copper-outline {
+  .btn-copper-outline,
+  .btn-aurora-outline {
     background: transparent;
-    color: var(--primitive-copper);
-    border: 1px solid rgba(212, 165, 116, 0.4);
-    transition: all 0.15s ease;
+    color: #00FFFF;
+    border: 1px solid rgba(0, 255, 255, 0.4);
+    transition: all 0.2s ease;
   }
 
-  .btn-copper-outline:hover {
-    background: rgba(212, 165, 116, 0.1);
-    border-color: rgba(212, 165, 116, 0.6);
+  .btn-copper-outline:hover,
+  .btn-aurora-outline:hover {
+    background: rgba(0, 255, 255, 0.1);
+    border-color: rgba(0, 255, 255, 0.6);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
   }
 }
 
 /* ============================================
-   PRECISION BUTTONS - LIGHT
+   AURORA BUTTONS - LIGHT
    ============================================ */
 [data-theme="precision-light"] {
-  .btn-copper {
-    background: linear-gradient(135deg, #B8895A, #9A7348);
+  /* Aurora gradient button - primary action */
+  .btn-aurora {
+    background: linear-gradient(135deg, #0066CC 0%, #0891B2 50%, #0F766E 100%);
     color: var(--primitive-white);
     font-weight: 600;
-    transition: all 0.15s ease;
-    box-shadow: 0 2px 8px rgba(184, 137, 90, 0.25);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-aurora::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #0891B2 0%, #6D28D9 50%, #C71585 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .btn-aurora:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.35), 0 0 20px rgba(109, 40, 217, 0.15);
+  }
+
+  .btn-aurora:hover::before {
+    opacity: 1;
+  }
+
+  .btn-aurora span {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Legacy copper alias - now uses Aurora */
+  .btn-copper {
+    background: linear-gradient(135deg, #0066CC 0%, #0891B2 100%);
+    color: var(--primitive-white);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
   }
 
   .btn-copper:hover {
     filter: brightness(1.08);
-    box-shadow: 0 4px 12px rgba(184, 137, 90, 0.35);
+    box-shadow: 0 4px 12px rgba(0, 102, 204, 0.35);
     transform: translateY(-1px);
   }
 
-  .btn-copper-ghost {
+  .btn-copper-ghost,
+  .btn-aurora-ghost {
     background: transparent;
     color: var(--color-text-primary);
     border: 1px solid var(--color-border-strong);
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
   }
 
-  .btn-copper-ghost:hover {
-    background: rgba(184, 137, 90, 0.08);
-    border-color: rgba(184, 137, 90, 0.5);
+  .btn-copper-ghost:hover,
+  .btn-aurora-ghost:hover {
+    background: rgba(0, 102, 204, 0.08);
+    border-color: rgba(0, 102, 204, 0.5);
   }
 
-  .btn-copper-outline {
+  .btn-copper-outline,
+  .btn-aurora-outline {
     background: transparent;
-    color: #856038;
-    border: 1px solid rgba(184, 137, 90, 0.6);
-    transition: all 0.15s ease;
+    color: #0066CC;
+    border: 1px solid rgba(0, 102, 204, 0.5);
+    transition: all 0.2s ease;
   }
 
-  .btn-copper-outline:hover {
-    background: rgba(184, 137, 90, 0.1);
-    border-color: rgba(184, 137, 90, 0.8);
+  .btn-copper-outline:hover,
+  .btn-aurora-outline:hover {
+    background: rgba(0, 102, 204, 0.1);
+    border-color: rgba(0, 102, 204, 0.7);
   }
 }
 
 
 /* ============================================
-   PRECISION INTERACTIVE STATES
+   AURORA INTERACTIVE STATES
    ============================================ */
 [data-theme="precision"] {
   .interactive-row:hover {
-    background-color: rgba(212, 165, 116, 0.04);
-    border-color: rgba(212, 165, 116, 0.25);
+    background-color: rgba(0, 255, 255, 0.04);
+    border-color: rgba(0, 255, 255, 0.25);
   }
 
   .hover-lift:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 255, 0.08);
   }
 
   .hover-glow:hover {
-    box-shadow: 0 0 16px rgba(212, 165, 116, 0.2);
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
   }
 }
 
 [data-theme="precision-light"] {
   .interactive-row:hover {
-    background-color: rgba(184, 137, 90, 0.06);
-    border-color: rgba(184, 137, 90, 0.3);
+    background-color: rgba(0, 102, 204, 0.04);
+    border-color: rgba(0, 102, 204, 0.25);
   }
 
   .hover-lift:hover {
-    box-shadow: 0 4px 12px rgba(180, 140, 100, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 102, 204, 0.12);
   }
 
   .hover-glow:hover {
-    box-shadow: 0 0 16px rgba(184, 137, 90, 0.12);
+    box-shadow: 0 0 16px rgba(0, 102, 204, 0.15);
   }
+}
+
+/* ============================================
+   AURORA TAB STYLES
+   Dark theme: Aurora gradient with glow
+   Light theme: Solid color (matches left nav)
+   ============================================ */
+
+/* === MAIN TABS (Cost Planning, Program, etc.) === */
+
+/* Dark theme - Main tabs with Aurora gradient */
+[data-theme="precision"] .tab-aurora-main {
+  position: relative;
+}
+
+[data-theme="precision"] .tab-aurora-main::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: #00FFFF;
+  opacity: 0.4;
+  border-radius: 2px 2px 0 0;
+  transition: all 0.2s ease;
+}
+
+[data-theme="precision"] .tab-aurora-main:hover::before {
+  width: 2rem;
+  opacity: 0.6;
+}
+
+[data-theme="precision"] .tab-aurora-main[data-state="active"] {
+  color: #00FFFF;
+}
+
+[data-theme="precision"] .tab-aurora-main[data-state="active"]::before {
+  display: none;
+}
+
+[data-theme="precision"] .tab-aurora-main[data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0080FF 0%, #00FFFF 50%, #14B8A6 100%);
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+}
+
+/* Light theme - Main tabs with solid color (matches left nav) */
+[data-theme="precision-light"] .tab-aurora-main {
+  position: relative;
+}
+
+[data-theme="precision-light"] .tab-aurora-main::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: #0066CC;
+  opacity: 0.4;
+  border-radius: 2px 2px 0 0;
+  transition: all 0.2s ease;
+}
+
+[data-theme="precision-light"] .tab-aurora-main:hover::before {
+  width: 2rem;
+  opacity: 0.6;
+}
+
+[data-theme="precision-light"] .tab-aurora-main[data-state="active"] {
+  color: #0066CC;
+}
+
+[data-theme="precision-light"] .tab-aurora-main[data-state="active"]::before {
+  display: none;
+}
+
+[data-theme="precision-light"] .tab-aurora-main[data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #0066CC;
+  border-radius: 2px 2px 0 0;
+}
+
+/* === SUB TABS (Cost Plan, Variations, Invoices) === */
+
+/* Dark theme - Sub tabs with Aurora gradient */
+[data-theme="precision"] .tab-aurora-sub {
+  position: relative;
+}
+
+[data-theme="precision"] .tab-aurora-sub[data-state="active"] {
+  color: #00FFFF;
+  background: transparent;
+}
+
+[data-theme="precision"] .tab-aurora-sub[data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0080FF 0%, #00FFFF 50%, #14B8A6 100%);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+/* Light theme - Sub tabs with solid color */
+[data-theme="precision-light"] .tab-aurora-sub {
+  position: relative;
+}
+
+[data-theme="precision-light"] .tab-aurora-sub[data-state="active"] {
+  color: #0066CC;
+  background: transparent;
+}
+
+[data-theme="precision-light"] .tab-aurora-sub[data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #0066CC;
+}
+
+/* === LEGACY: tab-aurora-indicator (keep for backwards compatibility) === */
+[data-theme="precision"] .tab-aurora-indicator {
+  position: relative;
+}
+
+[data-theme="precision"] .tab-aurora-indicator[data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0080FF 0%, #00FFFF 50%, #14B8A6 100%);
+  border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
+[data-theme="precision"] .tab-aurora-indicator[data-state="active"] {
+  color: #00FFFF;
+}
+
+[data-theme="precision-light"] .tab-aurora-indicator[data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #0066CC;
+  border-radius: 2px 2px 0 0;
+}
+
+[data-theme="precision-light"] .tab-aurora-indicator[data-state="active"] {
+  color: #0066CC;
 }
 
 /* ============================================
@@ -907,43 +1472,68 @@ textarea:-webkit-autofill:active {
   border-bottom: 1px solid var(--color-border);
 }
 
-/* Section hover state - very transparent to show grid */
+/* Section hover state - very transparent Aurora tint */
 .nav-panel-section:hover {
-  background: rgba(212, 165, 116, 0.03);
+  background: rgba(0, 255, 255, 0.03);
 }
 
-/* Section active state - very transparent with subtle copper tint */
+/* Section active state - Aurora cyan tint */
 .nav-panel-section.nav-panel-active {
-  background: rgba(212, 165, 116, 0.04);
+  background: rgba(0, 255, 255, 0.05);
 }
 
-/* Active section header accent line */
+/* Active section header accent line - Aurora gradient (top) */
 .nav-panel-section.nav-panel-active::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 12px;
-  right: 12px;
+  left: 0;
+  right: 0;
   height: 2px;
   background: linear-gradient(90deg,
-      transparent 0%,
-      var(--primitive-copper) 20%,
-      var(--primitive-copper-light) 50%,
-      var(--primitive-copper) 80%,
-      transparent 100%);
-  border-radius: 0 0 2px 2px;
-  opacity: 0.8;
+      #0080FF 0%,
+      #00FFFF 50%,
+      #8B5CF6 100%);
+  border-radius: 0;
+  opacity: 0.9;
 }
 
-/* Active section title color */
+/* Active section bottom accent line - Aurora gradient */
+.nav-panel-section.nav-panel-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+      #0080FF 0%,
+      #00FFFF 50%,
+      #8B5CF6 100%);
+  border-radius: 0;
+  opacity: 0.6;
+}
+
+/* Active section title color - gradient effect matching top/bottom lines */
 .nav-panel-section.nav-panel-active .nav-panel-title {
-  color: var(--primitive-copper);
+  background: linear-gradient(90deg, #0080FF 0%, #00FFFF 50%, #8B5CF6 100%) !important;
+  background-size: 100vw 100% !important;
+  background-position: left center !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+/* Active section chevron/icon - gradient applied via SVG prop */
+.nav-panel-section.nav-panel-active .nav-panel-chevron {
+  /* Gradient is applied via SVG gradient prop, no CSS needed */
 }
 
 /* Light theme adjustments for unified sections */
 [data-theme="precision-light"] .nav-panel-unified {
-  background: rgba(245, 242, 237, 0.85);
-  /* More opaque base */
+  background: rgba(248, 250, 252, 0.9);
+  /* Cool gray base */
 }
 
 [data-theme="precision-light"] .nav-panel-section {
@@ -951,24 +1541,39 @@ textarea:-webkit-autofill:active {
 }
 
 [data-theme="precision-light"] .nav-panel-section:hover {
-  background: rgba(184, 137, 90, 0.04);
+  background: rgba(0, 102, 204, 0.04);
 }
 
 [data-theme="precision-light"] .nav-panel-section.nav-panel-active {
-  background: rgba(184, 137, 90, 0.06);
+  background: rgba(0, 102, 204, 0.06);
 }
 
 [data-theme="precision-light"] .nav-panel-section.nav-panel-active::before {
   background: linear-gradient(90deg,
-      transparent 0%,
-      #B8895A 20%,
-      #C4A070 50%,
-      #B8895A 80%,
-      transparent 100%);
+      #0066CC 0%,
+      #0891B2 50%,
+      #6D28D9 100%);
+}
+
+[data-theme="precision-light"] .nav-panel-section.nav-panel-active::after {
+  background: linear-gradient(90deg,
+      #0066CC 0%,
+      #0891B2 50%,
+      #6D28D9 100%);
 }
 
 [data-theme="precision-light"] .nav-panel-section.nav-panel-active .nav-panel-title {
-  color: #9A7348;
+  background: linear-gradient(90deg, #0066CC 0%, #0891B2 50%, #6D28D9 100%) !important;
+  background-size: 100vw 100% !important;
+  background-position: left center !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+[data-theme="precision-light"] .nav-panel-section.nav-panel-active .nav-panel-chevron {
+  /* Gradient is applied via SVG gradient prop, no CSS needed */
 }
 
 /* Base nav panel - default state */
@@ -982,49 +1587,47 @@ textarea:-webkit-autofill:active {
     box-shadow 0.2s ease;
 }
 
-/* Hover state - subtle copper warmth */
+/* Hover state - subtle Aurora glow */
 .nav-panel:hover {
-  border-color: rgba(212, 165, 116, 0.3);
+  border-color: rgba(0, 255, 255, 0.3);
   background: linear-gradient(135deg,
       var(--color-bg-primary) 0%,
-      rgba(212, 165, 116, 0.03) 100%);
+      rgba(0, 255, 255, 0.03) 100%);
 }
 
-/* Active/Selected state - full copper highlight */
+/* Active/Selected state - Aurora highlight */
 .nav-panel-active,
 .nav-panel.nav-panel-active {
-  border-color: var(--primitive-copper);
+  border-color: #00CCCC;
   background: linear-gradient(135deg,
-      rgba(212, 165, 116, 0.08) 0%,
-      rgba(212, 165, 116, 0.04) 50%,
+      rgba(0, 255, 255, 0.08) 0%,
+      rgba(0, 128, 255, 0.04) 50%,
       var(--color-bg-primary) 100%);
   box-shadow:
-    0 0 0 1px rgba(212, 165, 116, 0.15),
-    0 0 20px rgba(212, 165, 116, 0.08),
-    inset 0 1px 0 rgba(212, 165, 116, 0.1);
+    0 0 0 1px rgba(0, 255, 255, 0.15),
+    0 0 20px rgba(0, 255, 255, 0.1),
+    inset 0 1px 0 rgba(0, 255, 255, 0.1);
 }
 
-/* Active state header accent line */
+/* Active state header accent line - Aurora gradient */
 .nav-panel-active::before {
   content: '';
   position: absolute;
   top: 0;
-  left: 12px;
-  right: 12px;
+  left: 0;
+  right: 0;
   height: 2px;
   background: linear-gradient(90deg,
-      transparent 0%,
-      var(--primitive-copper) 20%,
-      var(--primitive-copper-light) 50%,
-      var(--primitive-copper) 80%,
-      transparent 100%);
-  border-radius: 0 0 2px 2px;
-  opacity: 0.8;
+      #0080FF 0%,
+      #00FFFF 50%,
+      #8B5CF6 100%);
+  border-radius: 0;
+  opacity: 0.9;
 }
 
-/* Nav panel header title - active state copper text */
+/* Nav panel header title - active state Aurora text */
 .nav-panel-active .nav-panel-title {
-  color: var(--primitive-copper);
+  color: #00FFFF;
 }
 
 /* Nav panel header with interactive behavior */
@@ -1037,21 +1640,21 @@ textarea:-webkit-autofill:active {
 }
 
 .nav-panel-header:hover .nav-panel-title {
-  color: var(--primitive-copper);
+  color: #00FFFF;
 }
 
 .nav-panel-header:hover .nav-panel-chevron {
-  color: var(--primitive-copper);
+  color: #00FFFF;
   transform: translateX(2px);
 }
 
 /* Section hover highlights both title and chevron */
 .nav-panel-section:hover .nav-panel-title {
-  color: var(--primitive-copper);
+  color: #00FFFF;
 }
 
 .nav-panel-section:hover .nav-panel-chevron {
-  color: var(--primitive-copper);
+  color: #00FFFF;
 }
 
 /* Nav panel chevron icon */
@@ -1061,54 +1664,52 @@ textarea:-webkit-autofill:active {
     transform 0.15s ease;
 }
 
-/* Light theme adjustments */
+/* Light theme adjustments - Aurora */
 [data-theme="precision-light"] .nav-panel:hover {
-  border-color: rgba(184, 137, 90, 0.35);
+  border-color: rgba(0, 102, 204, 0.3);
   background: linear-gradient(135deg,
       var(--color-bg-primary) 0%,
-      rgba(184, 137, 90, 0.04) 100%);
+      rgba(0, 102, 204, 0.04) 100%);
 }
 
 [data-theme="precision-light"] .nav-panel-active,
 [data-theme="precision-light"] .nav-panel.nav-panel-active {
-  border-color: #B8895A;
+  border-color: #0066CC;
   background: linear-gradient(135deg,
-      rgba(184, 137, 90, 0.1) 0%,
-      rgba(184, 137, 90, 0.05) 50%,
+      rgba(0, 102, 204, 0.08) 0%,
+      rgba(0, 102, 204, 0.04) 50%,
       var(--color-bg-primary) 100%);
   box-shadow:
-    0 0 0 1px rgba(184, 137, 90, 0.2),
-    0 0 20px rgba(184, 137, 90, 0.06),
-    inset 0 1px 0 rgba(184, 137, 90, 0.12);
+    0 0 0 1px rgba(0, 102, 204, 0.15),
+    0 0 20px rgba(0, 102, 204, 0.08),
+    inset 0 1px 0 rgba(0, 102, 204, 0.1);
 }
 
 [data-theme="precision-light"] .nav-panel-active::before {
   background: linear-gradient(90deg,
-      transparent 0%,
-      #B8895A 20%,
-      #C4A070 50%,
-      #B8895A 80%,
-      transparent 100%);
+      #0066CC 0%,
+      #0891B2 50%,
+      #6D28D9 100%);
 }
 
 [data-theme="precision-light"] .nav-panel-active .nav-panel-title {
-  color: #9A7348;
+  color: #0066CC;
 }
 
 [data-theme="precision-light"] .nav-panel-header:hover .nav-panel-title {
-  color: #9A7348;
+  color: #0066CC;
 }
 
 [data-theme="precision-light"] .nav-panel-header:hover .nav-panel-chevron {
-  color: #9A7348;
+  color: #0066CC;
 }
 
 [data-theme="precision-light"] .nav-panel-section:hover .nav-panel-title {
-  color: #9A7348;
+  color: #0066CC;
 }
 
 [data-theme="precision-light"] .nav-panel-section:hover .nav-panel-chevron {
-  color: #9A7348;
+  color: #0066CC;
 }
 
 /* ============================================
@@ -1172,6 +1773,42 @@ textarea:-webkit-autofill:active {
   }
 }
 
+/* Aurora flowing gradient animation */
+@keyframes auroraFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Aurora pulse glow */
+@keyframes auroraPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.15), 0 0 40px rgba(0, 128, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.25), 0 0 60px rgba(139, 92, 246, 0.15);
+  }
+}
+
+/* Aurora border glow animation */
+@keyframes auroraBorderGlow {
+  0%, 100% {
+    border-color: rgba(0, 255, 255, 0.3);
+  }
+  33% {
+    border-color: rgba(0, 128, 255, 0.4);
+  }
+  66% {
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+}
+
 @keyframes spin-ease {
   0% {
     transform: rotate(0deg);
@@ -1184,6 +1821,62 @@ textarea:-webkit-autofill:active {
 
 .animate-spin-ease {
   animation: spin-ease 1.5s ease-in-out infinite;
+}
+
+/* AI Generation button animations */
+@keyframes spin-generate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes text-shimmer {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes text-aurora-shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-spin-generate {
+  animation: spin-generate 2.5s linear infinite !important;
+  transform-origin: center center;
+  will-change: transform;
+  display: inline-block;
+}
+
+.animate-text-shimmer {
+  animation: text-shimmer 1.5s ease-in-out infinite;
+}
+
+/* Aurora text shimmer - subtle gradient moving through text */
+.animate-text-aurora {
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-copper) 0%,
+    var(--color-accent-copper) 40%,
+    #66FFFF 50%,
+    var(--color-accent-copper) 60%,
+    var(--color-accent-copper) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-aurora-shimmer 2s ease-in-out infinite;
 }
 
 /* Animation Utilities */
@@ -1207,9 +1900,38 @@ textarea:-webkit-autofill:active {
   animation: shimmer 2s linear infinite;
   background: linear-gradient(90deg,
       transparent 0%,
-      rgba(212, 165, 116, 0.1) 50%,
+      rgba(0, 255, 255, 0.1) 50%,
       transparent 100%);
   background-size: 1000px 100%;
+}
+
+/* Aurora-specific animations */
+.animate-aurora-flow {
+  animation: auroraFlow 8s ease infinite;
+  background-size: 200% 200%;
+}
+
+.animate-aurora-pulse {
+  animation: auroraPulse 3s ease-in-out infinite;
+}
+
+.animate-aurora-border {
+  animation: auroraBorderGlow 4s ease-in-out infinite;
+}
+
+/* Aurora gradient background utility */
+.bg-aurora-gradient {
+  background: linear-gradient(135deg, #0080FF 0%, #00FFFF 25%, #14B8A6 50%, #8B5CF6 75%, #FF1493 100%);
+  background-size: 200% 200%;
+}
+
+.bg-aurora-gradient-subtle {
+  background: linear-gradient(135deg, rgba(0, 128, 255, 0.1) 0%, rgba(0, 255, 255, 0.05) 50%, rgba(139, 92, 246, 0.1) 100%);
+}
+
+/* Light theme Aurora gradient utilities */
+[data-theme="precision-light"] .bg-aurora-gradient-subtle {
+  background: linear-gradient(135deg, rgba(0, 102, 204, 0.08) 0%, rgba(8, 145, 178, 0.04) 50%, rgba(109, 40, 217, 0.08) 100%);
 }
 
 /* Animation Delay Utilities */
@@ -1249,8 +1971,19 @@ textarea:-webkit-autofill:active {
 
 .hover-glow:hover {
   box-shadow: 0 0 0 1px var(--color-accent-primary),
-    0 0 12px rgba(212, 165, 116, 0.3);
+    0 0 15px rgba(0, 255, 255, 0.25);
   border-color: var(--color-accent-primary);
+}
+
+/* Aurora-specific hover effect */
+.hover-aurora:hover {
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.2), 0 0 40px rgba(0, 128, 255, 0.1);
+  border-color: rgba(0, 255, 255, 0.4);
+}
+
+[data-theme="precision-light"] .hover-aurora:hover {
+  box-shadow: 0 0 15px rgba(0, 102, 204, 0.15), 0 0 30px rgba(109, 40, 217, 0.08);
+  border-color: rgba(0, 102, 204, 0.35);
 }
 
 .active-press:active {
