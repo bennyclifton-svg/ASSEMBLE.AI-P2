@@ -10,10 +10,10 @@ export const navLinks = [
 
 export const heroContent = {
     headline: {
-        gray: 'Build faster.',
-        white: 'Save time. Stand out.',
+        gray: 'Upload. Extract.',
+        white: 'Generate. Done.',
     },
-    subtitle: "You're busier than ever. ASSEMBLE.AI is the AI platform that turns project chaos into an ongoing way of working, connecting strategy to execution and driving results in one shared workspace.",
+    subtitle: 'From brief to tender to invoice to report — automated.',
     cta: 'Get started free',
     terms: 'By signing up, you agree to our Terms and Privacy Policy',
 };
@@ -24,8 +24,8 @@ export const logoBarContent = {
 };
 
 export const statsContent = {
-    label: "We don't just talk about results, we show them",
-    headline: 'Seeing is how ASSEMBLE.AI gets you to faster outcomes',
+    label: 'Results speak',
+    headline: 'Less admin. More delivery.',
     stats: [
         { value: '80%', label: 'Reduction in bid review time' },
         { value: '10+', label: 'Hours saved per week on documents' },
@@ -34,9 +34,9 @@ export const statsContent = {
 };
 
 export const aiSectionContent = {
-    label: 'AI by your side',
-    headline: 'AI-powered workflows that move teams forward',
-    description: 'Let intelligent automation handle the repetitive tasks while you focus on what matters. From document analysis to bid comparison, ASSEMBLE.AI works alongside your team.',
+    label: 'Built-in intelligence',
+    headline: "Your expertise. AI's speed.",
+    description: 'What took hours now takes clicks.',
     cta: 'Learn more about ASSEMBLE AI',
 };
 
@@ -62,39 +62,29 @@ export const featuresContent = {
     headline: 'Everything you need to deliver projects on time',
     features: [
         {
-            title: 'Project Dashboard',
-            description: 'See everything at a glance. Track progress, deadlines, and team activity in one view. No more digging through emails or spreadsheets.',
-            benefit: 'Stop chasing status updates. Get answers instantly.',
-        },
-        {
-            title: 'Document Control',
-            description: 'Upload once, access anywhere. Automatic version control keeps everyone on the same page. Find any document in seconds.',
-            benefit: 'Never lose a document again.',
-        },
-        {
-            title: 'AI-Powered Bid Analysis',
-            description: 'Upload tender submissions and let AI extract the key data. Compare bids side-by-side. Spot discrepancies automatically.',
-            benefit: 'Cut bid review time by 80%.',
+            title: 'Project Setup',
+            description: 'Evolve your project. Not your spreadsheet. Start with what you know, fill gaps as you go. AI generates objectives and stakeholders from your profiler data.',
+            benefit: 'Organic growth. Define what you know, when you know it.',
         },
         {
             title: 'Cost Planning',
-            description: 'Track budgets in real-time. See where money is going. Get alerts before costs spiral out of control.',
-            benefit: 'Stay on budget. Spot problems early.',
+            description: 'Cost planning. Automated. Drop invoices and AI extracts the data, matches to cost lines, and updates forecasts. Variations tracked and recalculated automatically.',
+            benefit: 'Human in the loop when it matters.',
         },
         {
-            title: 'Contractor & Consultant Hub',
-            description: 'Manage your network of contractors and consultants. Track performance, certifications, and availability all in one place.',
-            benefit: 'Hire the right people. Onboard faster.',
+            title: 'Procurement',
+            description: 'From tender to award. AI-enabled and integrated. Generate briefs, assemble transmittals, evaluate submissions, and produce recommendation reports — all in one workflow.',
+            benefit: 'Transmittals in clicks, not hours.',
         },
         {
-            title: 'One-Click Reports',
-            description: 'Generate professional reports instantly. Progress updates, cost summaries, risk registers—all formatted and ready to share.',
-            benefit: 'Create reports in seconds, not hours.',
+            title: 'Reporting',
+            description: 'AI writes. You review. Capture notes and meetings as you go. Project context is live — AI summarises progress and generates monthly reports that reflect reality.',
+            benefit: 'Human in the loop. Custom, flexible, automated.',
         },
         {
-            title: 'Smart Knowledge Base',
-            description: 'Ask questions about your project and get instant answers. AI searches across all your documents to find what you need.',
-            benefit: 'Get insights without digging through folders.',
+            title: 'Documents',
+            description: 'Drag. Drop. Organised. Bulk upload files and AI generates document schedules automatically — IDs, names, revisions extracted and categorised.',
+            benefit: 'Project knowledge integrated with AI RAG.',
         },
     ],
 };
@@ -192,9 +182,9 @@ export const faqContent = {
 export const finalCtaContent = {
     headline: {
         gray: 'Ready to',
-        green: 'build smarter?',
+        green: 'evolve your workflow?',
     },
-    subtitle: 'Join hundreds of AEC firms who deliver projects faster with ASSEMBLE.AI.',
+    subtitle: 'Join AEC firms who let AI handle the busywork.',
     cta: 'Start my free trial',
     note: 'No credit card required. Set up in minutes.',
 };

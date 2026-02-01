@@ -24,7 +24,7 @@ export async function GET(
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
         }
 
-        // Fetch transmittal items with document details including category/subcategory
+        // Fetch transmittal items with document details including category/subcategory and drawing info
         const transmittalItems = await db
             .select({
                 id: rftNewTransmittals.id,
@@ -37,6 +37,11 @@ export async function GET(
                 versionNumber: versions.versionNumber,
                 uploadedAt: versions.createdAt,
                 addedAt: rftNewTransmittals.addedAt,
+                // Drawing extraction fields
+                drawingNumber: fileAssets.drawingNumber,
+                drawingName: fileAssets.drawingName,
+                drawingRevision: fileAssets.drawingRevision,
+                drawingExtractionStatus: fileAssets.drawingExtractionStatus,
             })
             .from(rftNewTransmittals)
             .innerJoin(documents, eq(rftNewTransmittals.documentId, documents.id))

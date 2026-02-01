@@ -7,11 +7,9 @@
 
 'use client';
 
-import React from 'react';
 import { FileText, Trash2, Folder } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { getCategoryById } from '@/lib/constants/categories';
 
 export interface AttachmentDocument {
     id: string;
@@ -23,20 +21,11 @@ export interface AttachmentDocument {
     documentName: string;
     revision: number;
     addedAt: string;
-}
-
-/**
- * Get category color by ID - falls back to constants if not in database
- */
-function getCategoryColor(categoryId: string | null | undefined): string {
-    if (!categoryId) return 'var(--color-text-muted)';
-
-    // Try to get from constants first (for color)
-    const category = getCategoryById(categoryId);
-    if (category) return category.color;
-
-    // Default gray
-    return 'var(--color-text-muted)';
+    // Drawing extraction fields
+    drawingNumber?: string | null;
+    drawingName?: string | null;
+    drawingRevision?: string | null;
+    drawingExtractionStatus?: string | null;
 }
 
 interface AttachmentTableProps {
@@ -72,7 +61,8 @@ export function AttachmentTable({
                 <thead>
                     <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
                         <th className="text-left px-4 py-2.5 font-medium w-10">#</th>
-                        <th className="text-left px-4 py-2.5 font-medium">Document</th>
+                        <th className="text-left px-4 py-2.5 font-medium w-24">DWG #</th>
+                        <th className="text-left px-4 py-2.5 font-medium">Name</th>
                         <th className="text-center px-4 py-2.5 font-medium w-16">Rev</th>
                         <th className="text-left px-4 py-2.5 font-medium w-36">Category</th>
                         <th className="text-left px-4 py-2.5 font-medium w-40">Subcategory</th>
@@ -82,10 +72,7 @@ export function AttachmentTable({
                     </tr>
                 </thead>
                 <tbody>
-                    {documents.map((doc, index) => {
-                        const categoryColor = getCategoryColor(doc.categoryId);
-
-                        return (
+                    {documents.map((doc, index) => (
                             <tr
                                 key={doc.id}
                                 className="border-t border-[var(--color-border)] hover:bg-[#2d2d30]/50"
@@ -93,22 +80,29 @@ export function AttachmentTable({
                                 <td className="px-4 py-2.5 text-[var(--color-text-muted)]">
                                     {index + 1}
                                 </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
+                                    {doc.drawingNumber ? (
+                                        <span title={doc.drawingNumber}>
+                                            {doc.drawingNumber}
+                                        </span>
+                                    ) : (
+                                        <span className="text-[var(--color-text-muted)]">-</span>
+                                    )}
+                                </td>
                                 <td className="px-4 py-2.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
-                                    {doc.documentName}
+                                    {doc.drawingName || doc.documentName}
                                 </td>
                                 <td className="px-4 py-2.5 text-center text-[var(--color-text-primary)]">
-                                    {String(doc.revision).padStart(2, '0')}
+                                    {doc.drawingRevision || <span className="text-[var(--color-text-muted)]">-</span>}
                                 </td>
                                 <td className="px-4 py-2.5">
                                     {doc.categoryName ? (
                                         <div className="flex items-center gap-1.5">
                                             <Folder
-                                                className="w-3.5 h-3.5 flex-shrink-0"
-                                                style={{ color: categoryColor }}
+                                                className="w-3.5 h-3.5 flex-shrink-0 text-[var(--color-text-primary)]"
                                             />
                                             <span
-                                                className="text-sm truncate"
-                                                style={{ color: categoryColor }}
+                                                className="text-sm truncate text-[var(--color-text-primary)]"
                                             >
                                                 {doc.categoryName}
                                             </span>
@@ -121,12 +115,10 @@ export function AttachmentTable({
                                     {doc.subcategoryName ? (
                                         <div className="flex items-center gap-1.5">
                                             <Folder
-                                                className="w-3.5 h-3.5 flex-shrink-0"
-                                                style={{ color: categoryColor }}
+                                                className="w-3.5 h-3.5 flex-shrink-0 text-[var(--color-text-primary)]"
                                             />
                                             <span
-                                                className="text-sm truncate"
-                                                style={{ color: categoryColor }}
+                                                className="text-sm truncate text-[var(--color-text-primary)]"
                                             >
                                                 {doc.subcategoryName}
                                             </span>
@@ -149,8 +141,7 @@ export function AttachmentTable({
                                     </td>
                                 )}
                             </tr>
-                        );
-                    })}
+                    ))}
                 </tbody>
             </table>
         </div>

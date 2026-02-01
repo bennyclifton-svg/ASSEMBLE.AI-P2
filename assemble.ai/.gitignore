@@ -50,6 +50,8 @@ sqlite.db-*
 local.db
 assemble.db
 *.db-journal
+*.sqlite
+*.sqlite3
 uploads/
 
 # Windows artifacts

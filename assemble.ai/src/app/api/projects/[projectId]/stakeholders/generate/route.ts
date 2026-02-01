@@ -11,6 +11,7 @@ import {
   applyGeneratedStakeholders,
   previewGeneratedStakeholders,
 } from '@/lib/services/stakeholder-generation';
+import { getStakeholders } from '@/lib/services/stakeholder-service';
 import type { StakeholderGroup, GenerateStakeholdersRequest } from '@/types/stakeholder';
 
 interface RouteParams {
@@ -26,6 +27,7 @@ interface RouteParams {
  * - groups: StakeholderGroup[] (default: all)
  * - includeAuthorities: boolean (default: true)
  * - includeContractors: boolean (default: true)
+ * - smartMerge: boolean (if true, only add stakeholders that don't already exist)
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -70,12 +72,29 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Generate and apply
+    const smartMerge = body.smartMerge === true;
+    console.log('[Stakeholder Generate] Mode:', generateRequest.mode, 'Groups:', generateRequest.groups, 'SmartMerge:', smartMerge);
+
     const generationResult = await generateStakeholders(projectId, generateRequest);
+    console.log('[Stakeholder Generate] Generated:', generationResult.generated.length, 'stakeholders');
+
+    // For smart merge, fetch existing stakeholders to pass to apply function
+    let existingStakeholders = undefined;
+    if (smartMerge) {
+      const existingResult = await getStakeholders(projectId);
+      existingStakeholders = existingResult.stakeholders;
+      console.log('[Stakeholder Generate] SmartMerge - fetched', existingStakeholders.length, 'existing stakeholders');
+    }
+
     const applyResult = await applyGeneratedStakeholders(
       projectId,
       generationResult.generated,
-      generateRequest.mode || 'merge'
+      generateRequest.mode || 'merge',
+      generateRequest.groups,
+      existingStakeholders
     );
+
+    console.log('[Stakeholder Generate] Result - Created:', applyResult.created, 'Deleted:', applyResult.deleted, 'Skipped:', applyResult.skipped);
 
     return NextResponse.json({
       success: true,
@@ -83,6 +102,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       profileContext: generationResult.profileContext,
       created: applyResult.created,
       deleted: applyResult.deleted,
+      skipped: applyResult.skipped,
       mode: generateRequest.mode,
     });
   } catch (error) {

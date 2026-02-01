@@ -107,23 +107,31 @@ Project Context:
   "polished": "polished planning and compliance objectives"
 }`;
 
-    // Use AI to polish the content
-    const prompt = `You are an expert construction project manager and technical writer in Australia. Polish and improve the following project objectives while preserving the original intent and key information.
+    // ITERATION 2: Expand short bullets to 10-15 words
+    const prompt = `You are an expert construction project manager and technical writer in Australia.
 
 ${profileContext}
 
-CURRENT OBJECTIVES TO POLISH:
+SHORT BULLET OBJECTIVES TO EXPAND:
 
 ${contentToPolish}
 
-INSTRUCTIONS:
-1. Convert content to clear headings with concise bullet points
-2. Improve clarity and professional tone while keeping text brief
-3. Add relevant technical details and standards references as specific bullets (NCC/BCA, Australian Standards)
-4. Make objectives specific and measurable
-5. Preserve all original key information and intent
-6. Use formal but concise language suitable for tender documentation
-7. Remove redundant words and combine related points
+INSTRUCTIONS - ITERATION 2:
+Expand each short bullet point to 10-15 words.
+1. Add specific Australian standards references where relevant (NCC 2022, BCA, AS standards)
+2. Make objectives measurable where possible (quantities, percentages, ratings, timeframes)
+3. PRESERVE the user's structure - keep ALL headers and bullet order exactly as provided
+4. PRESERVE any user edits - do NOT change, remove, or reorder user-modified items
+5. Keep language professional, formal, and concise - suitable for tender documentation
+6. Do NOT add new categories or bullet points not present in the input
+7. Do NOT remove any items - every input bullet must have a corresponding expanded output
+
+Example transformation:
+Input: "- NCC 2022 compliance"
+Output: "- Deliver design documentation compliant with NCC 2022 Volume One requirements"
+
+Input: "- Fire safety provisions"
+Output: "- Incorporate fire safety provisions per AS 1530.4 and AS 1668.1 standards"
 
 Respond in JSON format:
 ${responseFormat}`;

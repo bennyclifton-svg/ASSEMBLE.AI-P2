@@ -66,6 +66,11 @@ export async function GET(
                 versionNumber: versions.versionNumber,
                 uploadedAt: versions.createdAt,
                 addedAt: noteTransmittals.addedAt,
+                // Drawing extraction fields
+                drawingNumber: fileAssets.drawingNumber,
+                drawingName: fileAssets.drawingName,
+                drawingRevision: fileAssets.drawingRevision,
+                drawingExtractionStatus: fileAssets.drawingExtractionStatus,
             })
             .from(noteTransmittals)
             .innerJoin(documents, eq(noteTransmittals.documentId, documents.id))
@@ -79,7 +84,7 @@ export async function GET(
         // Transform result to handle potential nulls from left joins
         const result = transmittalItems.map((item) => ({
             ...item,
-            documentName: item.fileName || 'Unknown',
+            documentName: item.drawingName || item.fileName || 'Unknown',
             revision: item.versionNumber || 0,
         }));
 

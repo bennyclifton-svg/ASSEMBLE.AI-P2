@@ -16,6 +16,20 @@ import { toast } from '@/lib/hooks/use-toast';
 // TYPES
 // ============================================================================
 
+interface CostLineMatchDetails {
+  costLineId: string;
+  activity: string;
+  section: string;
+  matchConfidence: number;
+  matchType: 'stakeholder_single' | 'ai_description' | 'fuzzy_fallback';
+  matchReason: string;
+  alternatives?: Array<{
+    costLineId: string;
+    activity: string;
+    confidence: number;
+  }>;
+}
+
 interface ExtractionDetails {
   confidence: {
     overall: number;
@@ -31,6 +45,9 @@ interface ExtractionDetails {
     discipline?: string;
     trade?: string;
   } | null;
+  costLineMatched?: boolean;
+  costLineAutoAssigned?: boolean;
+  costLineMatchDetails?: CostLineMatchDetails | null;
 }
 
 interface UploadResult {
@@ -120,14 +137,22 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
         const extraction = result.extraction;
 
         let toastMessage = `Invoice ${invoice?.invoiceNumber} created`;
-        if (extraction?.companyMatched && extraction.companyMatchDetails) {
+        if (extraction?.costLineAutoAssigned && extraction.costLineMatchDetails) {
+          toastMessage += ` → ${extraction.costLineMatchDetails.activity}`;
+        } else if (extraction?.companyMatched && extraction.companyMatchDetails) {
           toastMessage += ` (matched to ${extraction.companyMatchDetails.matchedName})`;
         }
+
+        let toastDescription = extraction?.confidence.overall
+          ? `Extraction confidence: ${Math.round(extraction.confidence.overall * 100)}%`
+          : undefined;
+        if (extraction?.costLineAutoAssigned && extraction.costLineMatchDetails) {
+          toastDescription = `Auto-assigned to cost line (${Math.round(extraction.costLineMatchDetails.matchConfidence * 100)}% match)`;
+        }
+
         toast({
           title: toastMessage,
-          description: extraction?.confidence.overall
-            ? `Extraction confidence: ${Math.round(extraction.confidence.overall * 100)}%`
-            : undefined,
+          description: toastDescription,
         });
 
         // Notify parent
@@ -318,7 +343,29 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
                         )}
                       </div>
                     )}
-                    {lastResult.extraction?.confidence.overall && (
+                    {/* Cost Line Match Info */}
+                    {lastResult.extraction?.costLineMatchDetails && (
+                      <div className="text-xs mt-2 pt-2 border-t border-[var(--color-border)]">
+                        {lastResult.extraction.costLineAutoAssigned ? (
+                          <div className="text-green-400">
+                            <span className="font-medium">Auto-assigned: </span>
+                            {lastResult.extraction.costLineMatchDetails.activity}
+                            <span className="ml-1 text-[var(--color-text-muted)]">
+                              ({Math.round(lastResult.extraction.costLineMatchDetails.matchConfidence * 100)}% confidence)
+                            </span>
+                          </div>
+                        ) : lastResult.extraction.costLineMatched ? (
+                          <div className="text-yellow-400">
+                            <span className="font-medium">Suggested: </span>
+                            {lastResult.extraction.costLineMatchDetails.activity}
+                            <span className="ml-1 text-[var(--color-text-muted)]">
+                              ({Math.round(lastResult.extraction.costLineMatchDetails.matchConfidence * 100)}% - review needed)
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+                    {lastResult.extraction?.confidence.overall && !lastResult.extraction?.costLineMatchDetails && (
                       <div className="text-xs text-[var(--color-text-muted)] mt-1">
                         Confidence: {Math.round(lastResult.extraction.confidence.overall * 100)}%
                       </div>

@@ -7,9 +7,8 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { db } from '@/lib/db';
-import { eq, and, isNull, gte, lte, or, sql } from 'drizzle-orm';
 import {
+    db,
     notes,
     rftNew,
     addenda,
@@ -20,7 +19,8 @@ import {
     projectStakeholders,
     meetingSections,
     reportSections,
-} from '@/lib/db/schema';
+} from '@/lib/db';
+import { eq, and, isNull, gte, lte, or, sql } from 'drizzle-orm';
 import type {
     GenerateContentRequest,
     GenerateContentResponse,

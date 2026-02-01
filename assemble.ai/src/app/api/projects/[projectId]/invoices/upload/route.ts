@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { invoices, fileAssets, documents, versions, categories, subcategories, projectStakeholders, costLines } from '@/lib/db';
-import { eq, and, isNull } from 'drizzle-orm';
+import { invoices, fileAssets, documents, versions, categories, subcategories, projectStakeholders } from '@/lib/db';
+import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';
 import { extractInvoiceFromPdf } from '@/lib/invoice/extract';
 import { matchCompany } from '@/lib/invoice/company-matcher';
+import { matchInvoiceToCostLine } from '@/lib/invoice/cost-line-matcher';
 import { getCategoryById } from '@/lib/constants/categories';
 
 /**
@@ -162,10 +163,9 @@ export async function POST(
     const periodYear = invoiceDate.getFullYear();
     const periodMonth = invoiceDate.getMonth() + 1; // 1-12
 
-    // Step 6.5: Match to cost line based on stakeholder
-    let matchedCostLineId: string | null = null;
-
-    // Find stakeholder by name (discipline or trade name)
+    // Step 6.5: Enhanced cost line matching with AI
+    // First, find the stakeholder ID if we have a company match
+    let stakeholderId: string | null = null;
     const stakeholderName = companyMatch.discipline?.disciplineName || companyMatch.trade?.tradeName;
     if (stakeholderName) {
       const stakeholder = await db.query.projectStakeholders.findFirst({
@@ -174,21 +174,29 @@ export async function POST(
           eq(projectStakeholders.name, stakeholderName)
         ),
       });
-
       if (stakeholder) {
-        // Find cost line with matching stakeholderId
-        const matchedCostLine = await db.query.costLines.findFirst({
-          where: and(
-            eq(costLines.projectId, projectId),
-            eq(costLines.stakeholderId, stakeholder.id),
-            isNull(costLines.deletedAt)
-          ),
-        });
-        if (matchedCostLine) {
-          matchedCostLineId = matchedCostLine.id;
-          console.log(`[invoice-upload] Matched to cost line by stakeholder: ${matchedCostLine.id}`);
-        }
+        stakeholderId = stakeholder.id;
       }
+    }
+
+    // Use the intelligent cost line matcher
+    const costLineMatch = await matchInvoiceToCostLine({
+      companyName: extractedData.companyName,
+      description: extractedData.description,
+      poNumber: extractedData.poNumber,
+      stakeholderId,
+    }, projectId);
+
+    // Auto-assign only if confidence >= 80%
+    const matchedCostLineId = costLineMatch.matchConfidence >= 0.80
+      ? costLineMatch.costLineId
+      : null;
+
+    console.log(`[invoice-upload] Cost line match: ${costLineMatch.found ? costLineMatch.costLine?.activity : 'Not found'} (confidence: ${(costLineMatch.matchConfidence * 100).toFixed(0)}%, type: ${costLineMatch.matchType})`);
+    if (matchedCostLineId) {
+      console.log(`[invoice-upload] Auto-assigned to cost line: ${matchedCostLineId}`);
+    } else if (costLineMatch.found) {
+      console.log(`[invoice-upload] Suggested cost line (below auto-assign threshold): ${costLineMatch.costLineId}`);
     }
 
     // Step 7: Create Invoice record
@@ -238,8 +246,19 @@ export async function POST(
               trade: companyMatch.trade?.tradeName,
             }
           : null,
-        costLineMatched: !!matchedCostLineId,
-        costLineId: matchedCostLineId,
+        costLineMatched: costLineMatch.found,
+        costLineAutoAssigned: !!matchedCostLineId,
+        costLineMatchDetails: costLineMatch.found
+          ? {
+              costLineId: costLineMatch.costLineId,
+              activity: costLineMatch.costLine?.activity,
+              section: costLineMatch.costLine?.section,
+              matchConfidence: costLineMatch.matchConfidence,
+              matchType: costLineMatch.matchType,
+              matchReason: costLineMatch.matchReason,
+              alternatives: costLineMatch.alternatives,
+            }
+          : null,
       },
       document: {
         documentId,

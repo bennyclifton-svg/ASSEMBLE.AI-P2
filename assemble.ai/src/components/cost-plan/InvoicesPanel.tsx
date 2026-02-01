@@ -333,10 +333,10 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
     const periodDate = new Date(invoice.periodYear, invoice.periodMonth - 1);
     const periodLabel = periodDate.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
 
-    // Sort cost lines alphabetically by cost code or description
+    // Sort cost lines alphabetically by discipline or description
     const sortedCostLines = [...costLines].sort((a, b) => {
-        const aKey = a.costCode || a.activity;
-        const bKey = b.costCode || b.activity;
+        const aKey = a.stakeholder?.name || a.activity;
+        const bKey = b.stakeholder?.name || b.activity;
         return aKey.localeCompare(bKey, undefined, { numeric: true });
     });
 
@@ -456,13 +456,9 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                     <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
                     {sortedCostLines.map((line) => {
                         const stakeholderName = line.stakeholder?.name || '';
-                        const label = line.costCode
-                            ? stakeholderName
-                                ? `${line.costCode} - ${stakeholderName} - ${line.activity}`
-                                : `${line.costCode} - ${line.activity}`
-                            : stakeholderName
-                                ? `${stakeholderName} - ${line.activity}`
-                                : line.activity;
+                        const label = stakeholderName
+                            ? `${stakeholderName} - ${line.activity}`
+                            : line.activity;
                         return (
                             <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                                 {label}
@@ -574,10 +570,10 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
         paidStatus: 'unpaid' as PaidStatus,
     });
 
-    // Sort cost lines alphabetically by cost code or description
+    // Sort cost lines alphabetically by discipline or description
     const sortedCostLines = [...costLines].sort((a, b) => {
-        const aKey = a.costCode || a.activity;
-        const bKey = b.costCode || b.activity;
+        const aKey = a.stakeholder?.name || a.activity;
+        const bKey = b.stakeholder?.name || b.activity;
         return aKey.localeCompare(bKey, undefined, { numeric: true });
     });
 
@@ -645,13 +641,9 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
                     {sortedCostLines.map((line) => {
                         const stakeholderName = line.stakeholder?.name || '';
-                        const label = line.costCode
-                            ? stakeholderName
-                                ? `${line.costCode} - ${stakeholderName} - ${line.activity}`
-                                : `${line.costCode} - ${line.activity}`
-                            : stakeholderName
-                                ? `${stakeholderName} - ${line.activity}`
-                                : line.activity;
+                        const label = stakeholderName
+                            ? `${stakeholderName} - ${line.activity}`
+                            : line.activity;
                         return (
                             <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                                 {label}

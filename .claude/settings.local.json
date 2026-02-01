@@ -1,6 +1,11 @@
 {
   "permissions": {
     "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Bash(npm run:*)",
+      "Bash(git:*)",
       "Bash(npx drizzle-kit:*)",
       "Bash(exit 0)",
       "Bash(node scripts/run-migration.js:*)",
@@ -79,9 +84,6 @@
       "Bash(cmd /c \"taskkill /F /PID 72720 2>nul & del /F \"\"d:\\assemble.ai P2\\assemble.ai\\.next\\dev\\lock\"\" 2>nul & echo Done\")",
       "Bash(cmd /c \"taskkill /F /IM node.exe 2>nul & echo Killed all node processes\")",
       "Bash(npx next build:*)",
-      "Bash(if not exist \"d:\\assemble.ai P2\\assemble.ai\\src\\app\\(public)\" mkdir \"d:\\assemble.ai P2\\assemble.ai\\src\\app\\(public)\")",
-      "Bash(if not exist \"d:\\assemble.ai P2\\assemble.ai\\src\\app\\(public)\\pricing\" mkdir \"d:\\assemble.ai P2\\assemble.ai\\src\\app\\(public)\\pricing\")",
-      "Bash(if not exist \"d:\\assemble.ai P2\\assemble.ai\\src\\app\\(dashboard)\\billing\" mkdir \"d:\\assemble.ai P2\\assemble.ai\\src\\app\\(dashboard)\\billing\")",
       "Bash(if not exist \"d:\\assemble.ai P2\\assemble.ai\\src\\components\\landing\" mkdir \"d:\\assemble.ai P2\\assemble.ai\\src\\components\\landing\")",
       "Bash(if not exist \"d:\\assemble.ai P2\\assemble.ai\\src\\components\\billing\" mkdir \"d:\\assemble.ai P2\\assemble.ai\\src\\components\\billing\")",
       "Bash(if not exist \"d:\\assemble.ai P2\\assemble.ai\\src\\lib\\polar\" mkdir \"d:\\assemble.ai P2\\assemble.ai\\src\\lib\\polar\")",
@@ -206,7 +208,11 @@
       "Bash(xargs:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nBackup before codebase reorganization\n\nSaving current state before cleanup and reorganization.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nRemove exposed credentials from .gitignore\n\nSECURITY: Removed accidentally committed VPS login credentials.\nAlso cleaned up malformed entries and added proper ignore rules for:\n- Log files \\(*.log, dev-server.log\\)\n- Database files \\(local.db, assemble.db\\)\n- Test artifacts \\(test-*.docx\\)\n- Windows artifacts \\(NUL\\)\n\nIMPORTANT: The exposed credentials should be rotated immediately.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nRemove temporary and large files\n\nDeleted:\n- dev-server.log \\(210MB log file\\)\n- NUL files \\(Windows artifacts / accidental search output\\)\n- full_test_results.txt \\(old test output\\)\n- test-export.docx \\(test artifact\\)\n- assemble.db \\(old unused database\\)\n- COST PLAN - OPTUS MECH PLANT [B].pdf \\(sample file\\)\n\nThese files are now properly gitignored.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nRemove temporary and large files\n\nDeleted:\n- dev-server.log \\(210MB log file\\)\n- NUL files \\(Windows artifacts / accidental search output\\)\n- full_test_results.txt \\(old test output\\)\n- test-export.docx \\(test artifact\\)\n- assemble.db \\(old unused database\\)\n- COST PLAN - OPTUS MECH PLANT [B].pdf \\(sample file\\)\n\nThese files are now properly gitignored.\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(pnpm add:*)",
+      "Bash(npx @better-auth/cli generate:*)",
+      "Bash(npx tsx:*)",
+      "WebFetch(domain:www.better-auth.com)"
     ],
     "deny": [],
     "ask": []

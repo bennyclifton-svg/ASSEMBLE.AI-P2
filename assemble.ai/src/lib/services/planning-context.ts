@@ -7,8 +7,8 @@
  * is authoritative and should not be approximated or summarized.
  */
 
-import { db } from '../db';
 import {
+    db,
     projects,
     projectDetails,
     projectObjectives,
@@ -27,8 +27,9 @@ import {
     disciplineFeeItems,
     tradePriceItems,
     costLines,
-} from '../db/schema';
-import { projectProfiles, profilerObjectives } from '../db/pg-schema';
+    projectProfiles,
+    profilerObjectives,
+} from '../db';
 import { eq, and, asc, isNull } from 'drizzle-orm';
 import { getCategoryById, getCategoryByName } from '../constants/categories';
 

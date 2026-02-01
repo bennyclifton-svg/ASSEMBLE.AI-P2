@@ -10,16 +10,16 @@
  * - Embedded inline with contentEditable="false"
  */
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { getAllCategories } from '@/lib/constants/categories';
-import type { Category } from '@/lib/constants/categories';
 
 export interface TransmittalDocument {
   id: string;
+  drawingNumber?: string;
   name: string;
-  version: string;
+  revision: string;
   categoryId: string;
 }
 
@@ -33,7 +33,7 @@ export default function TransmittalTableEditor({
   onUpdate,
 }: TransmittalTableEditorProps) {
   const categories = getAllCategories();
-  const [editingCell, setEditingCell] = useState<{ id: string; field: 'name' | 'version' } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ id: string; field: 'drawingNumber' | 'name' | 'revision' } | null>(null);
 
   /**
    * Add new row
@@ -41,8 +41,9 @@ export default function TransmittalTableEditor({
   const handleAddRow = useCallback(() => {
     const newDoc: TransmittalDocument = {
       id: `doc-${Date.now()}`,
+      drawingNumber: '',
       name: 'New Document',
-      version: 'Rev 1',
+      revision: 'A',
       categoryId: 'planning', // Default category
     };
     onUpdate([...documents, newDoc]);
@@ -72,19 +73,6 @@ export default function TransmittalTableEditor({
     [documents, onUpdate]
   );
 
-  /**
-   * Get category by ID
-   */
-  const getCategoryColor = (categoryId: string): string => {
-    const category = categories.find(cat => cat.id === categoryId);
-    return category?.color || 'var(--color-text-primary)';
-  };
-
-  const getCategoryName = (categoryId: string): string => {
-    const category = categories.find(cat => cat.id === categoryId);
-    return category?.name || categoryId;
-  };
-
   return (
     <div
       className="transmittal-table-wrapper border border-gray-700 rounded-lg overflow-hidden my-4"
@@ -109,22 +97,53 @@ export default function TransmittalTableEditor({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#2d2d2d] border-b border-gray-700">
-              <th className="text-left px-4 py-2 text-gray-400 font-medium">Document Name</th>
-              <th className="text-left px-4 py-2 text-gray-400 font-medium w-32">Version</th>
-              <th className="text-left px-4 py-2 text-gray-400 font-medium w-48">Category</th>
+              <th className="text-left px-4 py-2 text-gray-400 font-medium w-10">#</th>
+              <th className="text-left px-4 py-2 text-gray-400 font-medium w-24">DWG #</th>
+              <th className="text-left px-4 py-2 text-gray-400 font-medium">Name</th>
+              <th className="text-center px-4 py-2 text-gray-400 font-medium w-16">Rev</th>
+              <th className="text-left px-4 py-2 text-gray-400 font-medium w-36">Category</th>
               <th className="w-12"></th>
             </tr>
           </thead>
           <tbody>
             {documents.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                   No documents in transmittal. Click "Add Row" to add documents.
                 </td>
               </tr>
             ) : (
-              documents.map((doc) => (
+              documents.map((doc, index) => (
                 <tr key={doc.id} className="border-b border-gray-800 hover:bg-[var(--color-bg-tertiary)]">
+                  {/* Row Number */}
+                  <td className="px-4 py-2 text-gray-500">
+                    {index + 1}
+                  </td>
+                  {/* Drawing Number */}
+                  <td className="px-4 py-2">
+                    {editingCell?.id === doc.id && editingCell.field === 'drawingNumber' ? (
+                      <input
+                        type="text"
+                        value={doc.drawingNumber || ''}
+                        onChange={(e) => handleUpdateField(doc.id, 'drawingNumber', e.target.value)}
+                        onBlur={() => setEditingCell(null)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') setEditingCell(null);
+                        }}
+                        autoFocus
+                        placeholder="e.g. A-101"
+                        className="w-full bg-[var(--color-bg-primary)] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    ) : (
+                      <div
+                        onClick={() => setEditingCell({ id: doc.id, field: 'drawingNumber' })}
+                        className="cursor-text px-2 py-1 rounded hover:bg-[var(--color-bg-primary)]"
+                      >
+                        {doc.drawingNumber || <span className="text-gray-500">-</span>}
+                      </div>
+                    )}
+                  </td>
+
                   {/* Document Name */}
                   <td className="px-4 py-2">
                     {editingCell?.id === doc.id && editingCell.field === 'name' ? (
@@ -149,26 +168,27 @@ export default function TransmittalTableEditor({
                     )}
                   </td>
 
-                  {/* Version */}
-                  <td className="px-4 py-2">
-                    {editingCell?.id === doc.id && editingCell.field === 'version' ? (
+                  {/* Revision */}
+                  <td className="px-4 py-2 text-center">
+                    {editingCell?.id === doc.id && editingCell.field === 'revision' ? (
                       <input
                         type="text"
-                        value={doc.version}
-                        onChange={(e) => handleUpdateField(doc.id, 'version', e.target.value)}
+                        value={doc.revision}
+                        onChange={(e) => handleUpdateField(doc.id, 'revision', e.target.value)}
                         onBlur={() => setEditingCell(null)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') setEditingCell(null);
                         }}
                         autoFocus
-                        className="w-full bg-[var(--color-bg-primary)] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g. A"
+                        className="w-full bg-[var(--color-bg-primary)] border border-gray-600 rounded px-2 py-1 text-gray-100 text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     ) : (
                       <div
-                        onClick={() => setEditingCell({ id: doc.id, field: 'version' })}
+                        onClick={() => setEditingCell({ id: doc.id, field: 'revision' })}
                         className="cursor-text px-2 py-1 rounded hover:bg-[var(--color-bg-primary)]"
                       >
-                        {doc.version}
+                        {doc.revision || <span className="text-gray-500">-</span>}
                       </div>
                     )}
                   </td>
@@ -179,13 +199,11 @@ export default function TransmittalTableEditor({
                       value={doc.categoryId}
                       onChange={(e) => handleUpdateField(doc.id, 'categoryId', e.target.value)}
                       className="w-full bg-[var(--color-bg-primary)] border border-gray-600 rounded px-2 py-1 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      style={{ color: getCategoryColor(doc.categoryId) }}
                     >
                       {categories.map((category) => (
                         <option
                           key={category.id}
                           value={category.id}
-                          style={{ color: category.color }}
                         >
                           {category.name}
                         </option>

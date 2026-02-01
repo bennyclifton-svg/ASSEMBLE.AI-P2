@@ -8,14 +8,38 @@ import { v4 as uuidv4 } from 'uuid';
 import { eq, sql } from 'drizzle-orm';
 import { getCategoryById } from '@/lib/constants/categories';
 
+// Configure maximum body size for file uploads (100MB)
+export const maxDuration = 60; // 60 seconds timeout for large file processing
+
 export async function POST(request: NextRequest) {
     return handleApiError(async () => {
         try {
-            const formData = await request.formData();
+            console.log('[documents POST] Starting file upload processing...');
+
+            let formData;
+            try {
+                formData = await request.formData();
+            } catch (formDataError) {
+                console.error('[documents POST] Failed to parse formData:', formDataError);
+                return NextResponse.json({
+                    error: 'Failed to parse form data',
+                    details: formDataError instanceof Error ? formDataError.message : String(formDataError)
+                }, { status: 400 });
+            }
+
             const file = formData.get('file') as File | null;
             const projectId = formData.get('projectId') as string | null;
             const categoryId = formData.get('categoryId') as string | null;
             const subcategoryId = formData.get('subcategoryId') as string | null;
+
+            console.log('[documents POST] Received upload request:', {
+                filename: file?.name,
+                fileSize: file?.size,
+                fileType: file?.type,
+                projectId,
+                categoryId,
+                subcategoryId,
+            });
 
         if (!file) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -37,7 +61,19 @@ export async function POST(request: NextRequest) {
         }
 
         // 1. Save file to storage (T016)
-        const buffer = Buffer.from(await file.arrayBuffer());
+        console.log('[documents POST] Converting file to buffer...');
+        let buffer: Buffer;
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            buffer = Buffer.from(arrayBuffer);
+            console.log('[documents POST] Buffer created, size:', buffer.length);
+        } catch (bufferError) {
+            console.error('[documents POST] Failed to create buffer from file:', bufferError);
+            return NextResponse.json({
+                error: 'Failed to process file',
+                details: bufferError instanceof Error ? bufferError.message : String(bufferError)
+            }, { status: 500 });
+        }
 
         // T042: Validate Excel files
         if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
@@ -156,12 +192,30 @@ export async function POST(request: NextRequest) {
                 .where(eq(documents.id, documentId!));
         }
 
+        // Queue drawing extraction job (non-blocking)
+        let drawingExtractionQueued = false;
+        try {
+            const { addDrawingForExtraction } = await import('@/lib/queue/client');
+            await addDrawingForExtraction(
+                fileAssetId,
+                storagePath,
+                file.name,
+                file.type || 'application/octet-stream'
+            );
+            drawingExtractionQueued = true;
+            console.log(`[documents POST] Queued drawing extraction for ${file.name}`);
+        } catch (queueError) {
+            // Don't fail upload if queue fails - extraction can be retried
+            console.warn('[documents POST] Failed to queue drawing extraction:', queueError);
+        }
+
         return NextResponse.json({
             success: true,
             documentId,
             versionId,
             versionNumber,
             fileAssetId,
+            drawingExtractionQueued,
         });
         } catch (error) {
             console.error("API /documents ERROR:", error);
@@ -197,6 +251,12 @@ export async function GET(request: NextRequest) {
             sizeBytes: fileAssets.sizeBytes,
             versionNumber: versions.versionNumber,
             ocrStatus: fileAssets.ocrStatus,
+            // Drawing extraction fields
+            drawingNumber: fileAssets.drawingNumber,
+            drawingName: fileAssets.drawingName,
+            drawingRevision: fileAssets.drawingRevision,
+            drawingExtractionStatus: fileAssets.drawingExtractionStatus,
+            drawingExtractionConfidence: fileAssets.drawingExtractionConfidence,
         })
             .from(documents)
             .leftJoin(versions, eq(documents.latestVersionId, versions.id))

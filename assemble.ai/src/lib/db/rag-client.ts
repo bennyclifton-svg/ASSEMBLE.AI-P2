@@ -4,11 +4,12 @@ import * as schema from './rag-schema';
 
 // Determine if we need SSL (production/Supabase) or not (local Docker)
 const isProduction = process.env.NODE_ENV === 'production';
-const isSupabase = process.env.SUPABASE_POSTGRES_URL?.includes('supabase');
+const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_POSTGRES_URL;
+const isSupabase = connectionString?.includes('supabase');
 
 // Create PostgreSQL pool
 const pool = new Pool({
-    connectionString: process.env.SUPABASE_POSTGRES_URL,
+    connectionString,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,

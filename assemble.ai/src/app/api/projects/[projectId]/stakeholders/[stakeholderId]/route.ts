@@ -148,6 +148,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body.contactPhone !== undefined) updateRequest.contactPhone = body.contactPhone;
     if (body.isEnabled !== undefined) updateRequest.isEnabled = body.isEnabled;
     if (body.briefServices !== undefined) updateRequest.briefServices = body.briefServices;
+    if (body.briefDeliverables !== undefined) updateRequest.briefDeliverables = body.briefDeliverables;
     if (body.briefFee !== undefined) updateRequest.briefFee = body.briefFee;
     if (body.briefProgram !== undefined) updateRequest.briefProgram = body.briefProgram;
     if (body.scopeWorks !== undefined) updateRequest.scopeWorks = body.scopeWorks;

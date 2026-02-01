@@ -1,18 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check } from 'lucide-react';
+import { Check, Maximize2, Minimize2 } from 'lucide-react';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
-
-const TriangleRight = () => (
-  <svg
-    className="w-3 h-3 text-[var(--color-text-muted)]"
-    viewBox="0 0 12 12"
-    fill="currentColor"
-  >
-    <polygon points="2,0 12,6 2,12" />
-  </svg>
-);
 
 interface ObjectivesNavProps {
   projectId: string;
@@ -36,7 +26,7 @@ export function ObjectivesNav({ projectId, data, profileData, onShowObjectives, 
                         data?.functionalQuality?.source === 'ai_polished';
 
   return (
-    <div className={`nav-panel py-3 pl-2 pr-3 relative overflow-hidden ${isActive ? 'nav-panel-active' : ''}`}>
+    <div className={`nav-panel-section py-3 pl-2 pr-3 ${isActive ? 'nav-panel-active' : ''}`}>
       <button
         onClick={onShowObjectives}
         className="nav-panel-header w-full"
@@ -50,7 +40,11 @@ export function ObjectivesNav({ projectId, data, profileData, onShowObjectives, 
               <Check className="w-3 h-3" /> {isAiGenerated ? 'AI' : 'Set'}
             </span>
           )}
-          <TriangleRight />
+          {isActive ? (
+            <Minimize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+          ) : (
+            <Maximize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-text-muted)] transition-colors" />
+          )}
         </div>
       </button>
 

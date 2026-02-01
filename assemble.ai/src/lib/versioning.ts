@@ -1,5 +1,4 @@
-import { db } from './db';
-import { documents, versions, fileAssets } from './db/schema';
+import { db, documents, versions, fileAssets } from './db';
 import { eq, desc } from 'drizzle-orm';
 
 export class VersioningService {

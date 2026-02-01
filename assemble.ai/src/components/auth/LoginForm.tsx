@@ -2,18 +2,19 @@
 
 /**
  * LoginForm Component
- * Email/password login form with rate limit handling.
+ * Email/password login form using Better Auth.
  */
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signIn } from '@/lib/auth-client';
 
 interface LoginFormProps {
   redirectTo?: string;
 }
 
-export function LoginForm({ redirectTo = '/' }: LoginFormProps) {
+export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,20 +45,27 @@ export function LoginForm({ redirectTo = '/' }: LoginFormProps) {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn.email({
+        email,
+        password,
       });
 
-      const data = await response.json();
+      if (result.error) {
+        // Handle Better Auth error responses
+        const errorCode = result.error.code;
+        const errorMessage = result.error.message || 'Login failed';
 
-      if (!response.ok) {
-        if (data.error?.code === 'RATE_LIMITED' && data.error?.retryAfter) {
-          setRateLimitCountdown(data.error.retryAfter);
-          setError(`Too many failed attempts. Please wait ${data.error.retryAfter} seconds.`);
+        // Check for rate limiting (if implemented via plugin)
+        if (errorCode === 'RATE_LIMITED' || errorCode === 'TOO_MANY_REQUESTS') {
+          const retryAfter = 60; // Default 60 seconds
+          setRateLimitCountdown(retryAfter);
+          setError(`Too many failed attempts. Please wait ${retryAfter} seconds.`);
+        } else if (errorCode === 'INVALID_EMAIL_OR_PASSWORD') {
+          setError('Invalid email or password');
+        } else if (errorCode === 'USER_NOT_FOUND') {
+          setError('No account found with this email');
         } else {
-          setError(data.error?.message || 'Login failed');
+          setError(errorMessage);
         }
         return;
       }
@@ -67,6 +75,7 @@ export function LoginForm({ redirectTo = '/' }: LoginFormProps) {
       router.refresh();
 
     } catch (err) {
+      console.error('Login error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

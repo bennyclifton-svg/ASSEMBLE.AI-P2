@@ -35,6 +35,16 @@ export type InputInterpretation =
   | 'focused';     // User provided topic keywords to focus on
 
 /**
+ * Configuration for bullet-point generation (short response pattern)
+ */
+export interface BulletGenerationConfig {
+  enabled: true;
+  headers: string[];
+  bulletCount: { min: number; max: number };
+  wordCount: { short: { min: number; max: number }; expanded: { min: number; max: number } };
+}
+
+/**
  * Metadata for each field type
  */
 export interface FieldTypeMetadata {
@@ -44,6 +54,7 @@ export interface FieldTypeMetadata {
   requiresDiscipline: boolean;
   requiresTrade: boolean;
   defaultPlaceholder: string;
+  bulletGeneration?: BulletGenerationConfig;
 }
 
 /**
@@ -58,6 +69,12 @@ export const FIELD_METADATA: Record<FieldType, FieldTypeMetadata> = {
     requiresDiscipline: true,
     requiresTrade: false,
     defaultPlaceholder: 'Enter service details or instructions for AI...',
+    bulletGeneration: {
+      enabled: true,
+      headers: ['Advisory Services', 'Design Services', 'Documentation', 'Project Support'],
+      bulletCount: { min: 6, max: 12 },
+      wordCount: { short: { min: 2, max: 5 }, expanded: { min: 10, max: 15 } },
+    },
   },
   'brief.deliverables': {
     displayName: 'Deliverables',
@@ -66,6 +83,12 @@ export const FIELD_METADATA: Record<FieldType, FieldTypeMetadata> = {
     requiresDiscipline: true,
     requiresTrade: false,
     defaultPlaceholder: 'Enter deliverables or instructions for AI...',
+    bulletGeneration: {
+      enabled: true,
+      headers: ['Reports & Studies', 'Drawings & Documentation', 'Certifications', 'Ongoing Support'],
+      bulletCount: { min: 6, max: 12 },
+      wordCount: { short: { min: 2, max: 5 }, expanded: { min: 10, max: 15 } },
+    },
   },
 
   // RFT Contractor Fields
@@ -76,6 +99,12 @@ export const FIELD_METADATA: Record<FieldType, FieldTypeMetadata> = {
     requiresDiscipline: false,
     requiresTrade: true,
     defaultPlaceholder: 'Enter scope details or instructions for AI...',
+    bulletGeneration: {
+      enabled: true,
+      headers: ['Site Works', 'Installation', 'Testing & Commissioning', 'Warranties'],
+      bulletCount: { min: 6, max: 12 },
+      wordCount: { short: { min: 2, max: 5 }, expanded: { min: 10, max: 15 } },
+    },
   },
 
   // TRR Fields (Future)
@@ -187,6 +216,123 @@ export function isInstructionInput(input: string): boolean {
 }
 
 /**
+ * Get prompt template for RFT fields with short bullet generation (2-5 words)
+ * Follows the same pattern as objectives generation
+ */
+function getRftBulletPromptTemplate(
+  fieldType: FieldType,
+  mode: InputInterpretation,
+  hasRAG: boolean
+): string {
+  const metadata = FIELD_METADATA[fieldType];
+  const bulletConfig = metadata.bulletGeneration!;
+  const headersFormatted = bulletConfig.headers.map(h => `**${h}**`).join(', ');
+
+  // RAG section
+  const ragSection = hasRAG
+    ? `## Retrieved Documents (Knowledge Source)
+{ragChunks}`
+    : `## Note
+No Knowledge Source documents are available for this project. Generate content based on the project context above and professional best practices for the {contextName} discipline/trade.`;
+
+  // Discipline-specific instruction
+  const disciplineInstruction = `
+
+CRITICAL: This content must be SPECIFIC to the {contextName} discipline/trade. Do NOT generate generic project information - focus ONLY on services, deliverables, and requirements that are directly relevant to {contextName}.`;
+
+  switch (mode) {
+    case 'generate':
+    case 'focused':
+      // ITERATION 1: Generate SHORT bullet points (2-5 words each)
+      const focusSection = mode === 'focused' ? `
+
+## Focus Area
+{userInput}
+
+Focus your bullets specifically on this topic while maintaining the short format.` : '';
+
+      return `You are an expert construction project manager in Australia generating ${metadata.contextLabel} for {contextName}.
+
+## Project Context
+{projectContext}
+
+${ragSection}${focusSection}
+
+INSTRUCTIONS - ITERATION 1 (SHORT BULLETS):
+Generate SHORT bullet points only (${bulletConfig.wordCount.short.min}-${bulletConfig.wordCount.short.max} words each).
+
+1. Each bullet: ${bulletConfig.wordCount.short.min}-${bulletConfig.wordCount.short.max} words MAXIMUM (e.g., "Design review assistance", "NCC compliance assessment")
+2. NO prose, NO sentences, NO detailed explanations
+3. Output ${bulletConfig.bulletCount.min}-${bulletConfig.bulletCount.max} bullets total
+4. Group by category using headers: ${headersFormatted}
+5. Use ONLY headers that are relevant - skip headers with no applicable items
+6. Be SPECIFIC to {contextName} - not generic project content
+
+Example format for ${metadata.contextLabel}:
+**${bulletConfig.headers[0]}**
+- Design review assistance
+- Compliance assessment
+- Specification advice
+
+**${bulletConfig.headers[1]}**
+- Schematic design development
+- Detail coordination
+- Shop drawing review
+
+Generate content for {contextName} now.${disciplineInstruction}`;
+
+    case 'enhance':
+      // ITERATION 2: Expand short bullets to 10-15 words
+      return `You are an expert construction project manager and technical writer in Australia.
+
+## Existing Content to Expand
+{userInput}
+
+## Project Context
+{projectContext}
+
+${ragSection}
+
+INSTRUCTIONS - ITERATION 2 (EXPAND BULLETS):
+Expand each short bullet point to ${bulletConfig.wordCount.expanded.min}-${bulletConfig.wordCount.expanded.max} words.
+
+1. Add specific Australian standards references where relevant (AS, NCC, BCA)
+2. Make requirements measurable where possible (quantities, timeframes, deliverable types)
+3. PRESERVE the user's structure - keep ALL headers and bullet order exactly as provided
+4. PRESERVE any user edits - do NOT change, remove, or reorder items
+5. Keep language professional and formal - suitable for tender documentation
+6. Do NOT add new categories or bullet points not present in the input
+7. Do NOT remove any items - every input bullet must have a corresponding expanded output
+
+Example transformation:
+Input: "- Design review assistance"
+Output: "- Provide design review assistance during schematic and design development phases per AS 1100.101"
+
+Input: "- NCC compliance assessment"
+Output: "- Conduct NCC 2022 compliance assessment and provide written certification of conformance"
+
+Input: "- Shop drawing review"
+Output: "- Review and approve contractor shop drawings within 5 business days of submission"
+
+Generate expanded content for {contextName}.${disciplineInstruction}`;
+
+    case 'instruction':
+      // User gave explicit instructions - follow them but still aim for bullet format
+      return `You are an expert construction project manager in Australia generating ${metadata.contextLabel} for {contextName}.
+
+Follow these instructions:
+{userInput}
+
+## Project Context
+{projectContext}
+
+${ragSection}
+
+Generate professional content that addresses the user's instructions. If no format is specified, use short bullet points (${bulletConfig.wordCount.short.min}-${bulletConfig.wordCount.short.max} words each) organized under headers: ${headersFormatted}.${disciplineInstruction}`;
+  }
+}
+
+/**
  * Get the appropriate prompt template based on input mode and field type
  * @param fieldType - The type of field being generated
  * @param mode - The detected input interpretation mode
@@ -195,6 +341,12 @@ export function isInstructionInput(input: string): boolean {
  */
 export function getPromptTemplate(fieldType: FieldType, mode: InputInterpretation, hasRAG: boolean = true): string {
   const metadata = FIELD_METADATA[fieldType];
+
+  // Route RFT fields with bullet generation to the specialized prompt template
+  if (metadata.bulletGeneration?.enabled) {
+    return getRftBulletPromptTemplate(fieldType, mode, hasRAG);
+  }
+
   const isDisciplineField = fieldType.startsWith('brief.') || fieldType.startsWith('scope.');
 
   // Add discipline-specific instruction for brief/scope fields

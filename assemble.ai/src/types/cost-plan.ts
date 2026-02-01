@@ -158,7 +158,7 @@ export interface GroupedLine {
 
 export interface CreateCostLineInput {
   projectId: string;
-  stakeholderId?: string;
+  stakeholderId?: string | null;
   section: CostLineSection;
   costCode?: string;
   activity: string;
@@ -166,7 +166,7 @@ export interface CreateCostLineInput {
   budgetCents?: number;
   approvedContractCents?: number;
   masterStage?: MasterStageId;
-  sortOrder: number;
+  sortOrder?: number;
 }
 
 export interface UpdateCostLineInput {

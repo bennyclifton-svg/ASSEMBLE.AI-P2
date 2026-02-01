@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Check, HelpCircle } from 'lucide-react';
+import { Check, HelpCircle, Globe } from 'lucide-react';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import {
   ContextChips,
@@ -20,13 +20,25 @@ import type {
   SubclassOption,
   ScaleField,
   ComplexityOption,
+  Region,
 } from '@/types/profiler';
+import { REGIONS } from '@/types/profiler';
 
+
+// Region configuration from templates
+const regionConfig = (profileTemplates as any).regionConfig as Record<Region, {
+  code: Region;
+  name: string;
+  buildingCodeAbbrev: string;
+  currencySymbol: string;
+}>;
 
 interface ProfilerMiddlePanelProps {
   projectId: string;
   buildingClass: BuildingClass | null;
   projectType: ProjectType | null;
+  region?: Region;
+  onRegionChange?: (region: Region) => void;
   initialData?: {
     subclass?: string[];
     subclassOther?: string[];
@@ -42,6 +54,8 @@ export function ProfilerMiddlePanel({
   projectId,
   buildingClass,
   projectType,
+  region = 'AU',
+  onRegionChange,
   initialData,
   onProfileComplete,
   onProfileLoad,
@@ -49,6 +63,11 @@ export function ProfilerMiddlePanel({
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Debug logging for props
+  useEffect(() => {
+    console.log('[ProfilerMiddlePanel] Props received - buildingClass:', buildingClass, 'projectType:', projectType, 'initialData:', initialData);
+  }, [buildingClass, projectType, initialData]);
 
   // Form state
   const [selectedSubclasses, setSelectedSubclasses] = useState<string[]>(initialData?.subclass || []);
@@ -78,7 +97,9 @@ export function ProfilerMiddlePanel({
 
   // Sync with initial data
   useEffect(() => {
+    console.log('[ProfilerMiddlePanel] initialData changed:', initialData);
     if (initialData) {
+      console.log('[ProfilerMiddlePanel] Syncing state from initialData');
       setSelectedSubclasses(initialData.subclass || []);
       setSubclassOther(initialData.subclassOther || []);
       setScaleData(initialData.scaleData || {});
@@ -299,28 +320,9 @@ export function ProfilerMiddlePanel({
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Context Chips with Save Button */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-border)]">
-        <div className="flex-1">
-          {selectedSubclasses.length > 0 ? (
-            <ContextChips
-              buildingClass={buildingClass}
-              projectType={projectType}
-              subclass={selectedSubclasses}
-              scaleData={scaleData}
-              complexity={complexity}
-            />
-          ) : (
-            <ContextChips
-              buildingClass={buildingClass}
-              projectType={projectType}
-              subclass={[]}
-              scaleData={{}}
-              complexity={{}}
-            />
-          )}
-        </div>
-        <div className="flex items-center gap-2 ml-4">
+      {/* Header with Save Button */}
+      <div className="flex items-center justify-end px-6 py-3 border-b border-[var(--color-border)]">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleLoad}
             disabled={isLoading}
@@ -446,6 +448,19 @@ export function ProfilerMiddlePanel({
           </div>
         </div>
 
+        {/* Context Chips (NCC class, estimated cost, program) - shown above Power Features */}
+        {selectedSubclasses.length > 0 && (
+          <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+            <ContextChips
+              buildingClass={buildingClass}
+              projectType={projectType}
+              subclass={selectedSubclasses}
+              scaleData={scaleData}
+              complexity={complexity}
+            />
+          </div>
+        )}
+
         {/* Power Features - shown when complexity is selected */}
         {Object.keys(complexity).length > 0 && (
           <div className="mt-8 grid grid-cols-2 gap-6">
@@ -482,6 +497,35 @@ export function ProfilerMiddlePanel({
             />
           </div>
         )}
+
+        {/* Region Selector - at bottom of panel */}
+        <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <Globe className="w-4 h-4 text-[var(--color-text-muted)]" />
+              <span className="text-xs font-medium text-[var(--color-text-secondary)]">Region</span>
+            </div>
+            <div className="flex gap-1">
+              {REGIONS.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => onRegionChange?.(r)}
+                  className={`
+                    px-3 py-1.5 rounded text-xs font-medium transition-all
+                    ${
+                      region === r
+                        ? 'bg-[var(--color-text-muted)] text-white'
+                        : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-text-muted)]/20'
+                    }
+                  `}
+                  title={regionConfig[r]?.name || r}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -18,6 +18,8 @@ interface CategoryTileProps {
     onFilesDropped: (files: File[], categoryId?: string, subcategoryId?: string, subcategoryName?: string) => void;
     /** Callback for click events (expansion or selection). */
     onClick?: () => void;
+    /** Callback for regular click to toggle category filter. */
+    onCategoryClick?: () => void;
     /** Callback for Ctrl+click to bulk-select all documents in this category. */
     onBulkSelectCategory?: (categoryId: string, subcategoryId?: string) => void;
     /** Callback when files are added to Knowledge category (triggers RAG). */
@@ -32,6 +34,10 @@ interface CategoryTileProps {
     isUploading?: boolean;
     /** Whether this is the special upload tile. */
     isUploadTile?: boolean;
+    /** Whether this tile is currently selected/active (permanent highlight state). */
+    isSelected?: boolean;
+    /** Whether this tile is currently filtered (solid fill highlight). */
+    isFiltered?: boolean;
 }
 
 /**
@@ -43,6 +49,7 @@ export function CategoryTile({
     subcategory,
     onFilesDropped,
     onClick,
+    onCategoryClick,
     onBulkSelectCategory,
     onKnowledgeAction,
     isExpanded,
@@ -50,6 +57,8 @@ export function CategoryTile({
     hasSelection = false,
     isUploading = false,
     isUploadTile = false,
+    isSelected = false,
+    isFiltered = false,
 }: CategoryTileProps) {
     // Check if this is the Knowledge category (triggers auto-RAG)
     const isKnowledgeCategory = category.isKnowledgeSource === true;
@@ -79,104 +88,98 @@ export function CategoryTile({
         // Upload tile should not handle clicks
         if (isUploadTile) return;
 
-        // Ctrl+click (or Cmd+click on Mac) triggers bulk category selection
-        if ((event.ctrlKey || event.metaKey) && onBulkSelectCategory) {
+        // Ctrl+click (or Cmd+click on Mac) handling
+        if (event.ctrlKey || event.metaKey) {
             event.preventDefault();
-            if (subcategory) {
-                onBulkSelectCategory(category.id, subcategory.id);
-            } else {
-                onBulkSelectCategory(category.id);
+
+            // With selection: categorize files into this category
+            if (hasSelection) {
+                // Knowledge category: only trigger RAG, don't change document category
+                if (isKnowledgeCategory && onKnowledgeAction) {
+                    onKnowledgeAction([]); // Empty array signals "use selected documents"
+                    return;
+                }
+
+                // Categorize selected files
+                if (subcategory) {
+                    onFilesDropped([], category.id, subcategory.id, subcategory.name);
+                } else if (!category.hasSubcategories) {
+                    onFilesDropped([], category.id);
+                }
+                return;
+            }
+
+            // Without selection: bulk-select all documents in this category
+            if (onBulkSelectCategory) {
+                if (subcategory) {
+                    onBulkSelectCategory(category.id, subcategory.id);
+                } else {
+                    onBulkSelectCategory(category.id);
+                }
             }
             return;
         }
 
-        if (hasSelection) {
-            // Knowledge category: only trigger RAG, don't change document category
-            if (isKnowledgeCategory && onKnowledgeAction) {
-                onKnowledgeAction([]); // Empty array signals "use selected documents"
-                return;
-            }
-
-            // If files are selected, clicking categorizes them (no files passed)
-            if (subcategory) {
-                onFilesDropped([], category.id, subcategory.id, subcategory.name);
-            } else if (!category.hasSubcategories) {
-                // Only allow categorizing to categories without subcategories
-                onFilesDropped([], category.id);
-            } else if (onClick) {
-                // For categories with subcategories, expand them
-                onClick();
-            }
-        } else if (onClick) {
-            // Otherwise, handle expansion
-            onClick();
+        // Regular click: expand (if has subcategories) or filter
+        if (category.hasSubcategories && !subcategory) {
+            onClick?.(); // Expand/collapse subcategories
+        } else {
+            onCategoryClick?.(); // Toggle filter
         }
     };
 
     const displayName = subcategory ? subcategory.name : category.name;
 
-    // Check if this is a Consultants or Contractors tile
-    const isConsultantsOrContractors = category.id === 'consultants' || category.id === 'contractors';
-
-    // Map category IDs to accent colors for theme support
-    const getAccentColorClasses = (categoryId: string): { bg: string; bgHover: string; text: string; ring: string } => {
-        switch (categoryId) {
-            case 'planning':
-                return {
-                    bg: 'bg-[var(--color-accent-green)]/20',
-                    bgHover: 'hover:bg-[var(--color-accent-green)]/30',
-                    text: 'text-[var(--color-accent-green)]',
-                    ring: 'ring-[var(--color-accent-green)]',
-                };
-            case 'scheme-design':
-                return {
-                    bg: 'bg-[var(--color-accent-yellow)]/20',
-                    bgHover: 'hover:bg-[var(--color-accent-yellow)]/30',
-                    text: 'text-[var(--color-accent-yellow)]',
-                    ring: 'ring-[var(--color-accent-yellow)]',
-                };
-            case 'detail-design':
-                return {
-                    bg: 'bg-[var(--color-accent-purple)]/20',
-                    bgHover: 'hover:bg-[var(--color-accent-purple)]/30',
-                    text: 'text-[var(--color-accent-purple)]',
-                    ring: 'ring-[var(--color-accent-purple)]',
-                };
-            case 'procurement':
-                return {
-                    bg: 'bg-[var(--color-accent-coral)]/20',
-                    bgHover: 'hover:bg-[var(--color-accent-coral)]/30',
-                    text: 'text-[var(--color-accent-coral)]',
-                    ring: 'ring-[var(--color-accent-coral)]',
-                };
-            case 'cost-planning':
-                return {
-                    bg: 'bg-[var(--color-accent-yellow)]/20',
-                    bgHover: 'hover:bg-[var(--color-accent-yellow)]/30',
-                    text: 'text-[var(--color-accent-yellow)]',
-                    ring: 'ring-[var(--color-accent-yellow)]',
-                };
-            case 'administration':
-                return {
-                    bg: 'bg-[var(--color-text-muted)]/15',
-                    bgHover: 'hover:bg-[var(--color-text-muted)]/25',
-                    text: 'text-[var(--color-text-secondary)]',
-                    ring: 'ring-[var(--color-text-muted)]',
-                };
-            case 'meetings':
-            case 'knowledge':
-            default:
-                return {
-                    bg: 'bg-[var(--color-accent-teal)]/20',
-                    bgHover: 'hover:bg-[var(--color-accent-teal)]/30',
-                    text: 'text-[var(--color-accent-teal)]',
-                    ring: 'ring-[var(--color-accent-teal)]',
-                };
+    // Determine text color class based on filtered/selected state
+    // Filtered state uses inverse text (white on solid fill)
+    // Knowledge tile uses teal when selected, others use copper
+    const getTextColorClass = () => {
+        // Filtered state: white text on solid fill
+        if (isFiltered) {
+            return 'text-[var(--color-text-inverse)]';
         }
+        if (isSelected) {
+            if (isKnowledgeCategory) {
+                return 'text-[var(--color-accent-teal)]';
+            }
+            return 'text-[var(--color-accent-copper)]';
+        }
+        // Default: secondary text that turns copper on hover (or teal for Knowledge)
+        if (isKnowledgeCategory) {
+            return 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-teal)]';
+        }
+        return 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-copper)]';
+    };
+    const textColorClass = getTextColorClass();
+
+    // Get selected state styling based on whether this is Knowledge tile or not
+    const getSelectedStyles = () => {
+        if (!isSelected) return '';
+        if (isKnowledgeCategory) {
+            // Knowledge tile uses teal when selected
+            return 'border-[var(--color-accent-teal)] bg-[var(--color-accent-teal-tint)]';
+        }
+        // Regular tiles use copper when selected
+        return 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)]';
     };
 
-    const accentColors = getAccentColorClasses(category.id);
-    const textColorClass = isUploadTile || isConsultantsOrContractors ? 'text-[var(--color-text-secondary)]' : accentColors.text;
+    // Get hover state styling
+    const getHoverStyles = () => {
+        if (isSelected || isFiltered) return ''; // No hover change when selected or filtered
+        if (isKnowledgeCategory) {
+            return 'hover:border-[var(--color-accent-teal)]/50 hover:bg-[var(--color-accent-teal-tint)]';
+        }
+        return 'hover:border-[var(--color-accent-copper)]/50 hover:bg-[var(--color-accent-copper-tint)]';
+    };
+
+    // Get filtered state styling (solid fill, like project type buttons)
+    const getFilteredStyles = () => {
+        if (!isFiltered) return '';
+        if (isKnowledgeCategory) {
+            return 'bg-[var(--color-accent-teal)] border-[var(--color-accent-teal)]';
+        }
+        return 'bg-[var(--color-accent-copper)] border-[var(--color-accent-copper)]';
+    };
 
     return (
         <div
@@ -187,24 +190,25 @@ export function CategoryTile({
                 'flex items-center justify-center text-center overflow-hidden',
                 // Compact size
                 isSubcategory ? 'h-10 px-3 py-1' : 'h-11 px-3 py-1',
-                // Upload tile special styling - thinner border
-                isUploadTile && 'border-2 border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent-green)] hover:bg-[var(--color-accent-green)]/5',
-                // Consultants and Contractors category tiles - solid border, thinner (no bg hover)
-                isConsultantsOrContractors && !isSubcategory && 'border-2 border-solid border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent-green)]',
-                // Consultants and Contractors subcategory tiles - solid border (no bg hover)
-                isConsultantsOrContractors && isSubcategory && 'border-2 border-solid border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent-green)]',
-                // Regular category tiles - use accent colors
-                !isUploadTile && !isConsultantsOrContractors && accentColors.bg,
-                !isUploadTile && !isConsultantsOrContractors && accentColors.bgHover,
-                !isUploadTile && !isConsultantsOrContractors && 'border-0',
-                // Drag active state for regular tiles
-                isDragActive && !isUploadTile && !isConsultantsOrContractors && 'ring-2',
-                isDragActive && !isUploadTile && !isConsultantsOrContractors && accentColors.ring
+                // Upload tile special styling - dashed border
+                isUploadTile && 'border-2 border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent-copper)]/50 hover:bg-[var(--color-accent-copper-tint)]',
+                // All category tiles - base styling
+                !isUploadTile && 'border border-[var(--color-border)] bg-[var(--color-bg-secondary)]',
+                // Hover styles (when not selected or filtered)
+                !isUploadTile && !isSelected && !isFiltered && getHoverStyles(),
+                // Selected state - permanent highlight (transparent tint)
+                !isUploadTile && isSelected && !isFiltered && getSelectedStyles(),
+                // Filtered state - solid fill (highest priority)
+                !isUploadTile && isFiltered && getFilteredStyles(),
+                // Drag active state - ring
+                isDragActive && !isUploadTile && (isKnowledgeCategory
+                    ? 'ring-2 ring-[var(--color-accent-teal)]'
+                    : 'ring-2 ring-[var(--color-accent-copper)]')
             )}
             style={{
-                ...(isDragActive && (isUploadTile || isConsultantsOrContractors) && {
-                    borderColor: 'var(--color-accent-green)',
-                    backgroundColor: 'var(--color-accent-green-10)',
+                ...(isDragActive && isUploadTile && {
+                    borderColor: 'var(--color-accent-copper)',
+                    backgroundColor: 'var(--color-accent-copper-tint)',
                 }),
             }}
         >
@@ -214,7 +218,7 @@ export function CategoryTile({
             {isUploadTile ? (
                 <div className="flex flex-col items-center justify-center gap-1">
                     <Upload
-                        className="w-6 h-6 text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-green)] transition-colors"
+                        className="w-6 h-6 text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-copper)] transition-colors"
                     />
                 </div>
             ) : isKnowledgeCategory ? (
@@ -252,14 +256,14 @@ export function CategoryTile({
                         <Upload
                             className={cn(
                                 'w-4 h-4 flex-shrink-0 transition-colors',
-                                isConsultantsOrContractors ? 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-green)]' : textColorClass
+                                textColorClass
                             )}
                         />
                         <span
                             className={cn(
                                 'font-medium truncate transition-colors',
                                 isSubcategory ? 'text-sm' : 'text-base',
-                                isConsultantsOrContractors ? 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-green)]' : textColorClass
+                                textColorClass
                             )}
                         >
                             {displayName}
@@ -270,7 +274,7 @@ export function CategoryTile({
                             className={cn(
                                 'w-4 h-4 flex-shrink-0 ml-2 transition-transform',
                                 isExpanded && 'rotate-90',
-                                isConsultantsOrContractors ? 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-green)]' : textColorClass
+                                textColorClass
                             )}
                             viewBox="0 0 12 12"
                             fill="currentColor"

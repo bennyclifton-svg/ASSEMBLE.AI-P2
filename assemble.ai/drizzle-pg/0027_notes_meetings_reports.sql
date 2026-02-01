@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS report_attendees (
     adhoc_name TEXT,
     adhoc_firm TEXT,
     adhoc_group TEXT,
+    adhoc_sub_group TEXT,
     is_distribution BOOLEAN DEFAULT true,
     created_at TEXT
 );

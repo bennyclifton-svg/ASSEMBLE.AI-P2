@@ -314,6 +314,21 @@ export interface PolishContentResponse {
   content: string;
 }
 
+export interface GenerateNoteContentRequest {
+  noteId: string;
+  projectId: string;
+  existingContent?: string;
+  existingTitle?: string;
+}
+
+export interface GenerateNoteContentResponse {
+  content: string;
+  sourcesUsed: {
+    attachedDocs: number;
+    ragChunks: number;
+  };
+}
+
 // ============================================================================
 // SHARED TYPES
 // ============================================================================

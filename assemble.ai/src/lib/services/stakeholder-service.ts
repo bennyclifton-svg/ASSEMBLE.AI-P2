@@ -5,12 +5,12 @@
  * CRUD operations for the unified stakeholder system
  */
 
-import { db } from '../db';
 import {
+  db,
   projectStakeholders,
   stakeholderTenderStatuses,
   stakeholderSubmissionStatuses,
-} from '../db/schema';
+} from '../db';
 import { eq, and, asc, isNull, inArray } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type {
@@ -146,6 +146,7 @@ export async function getStakeholders(projectId: string): Promise<StakeholderLis
       disciplineOrTrade: s.disciplineOrTrade ?? undefined,
       isEnabled: s.isEnabled ?? true,
       briefServices: s.briefServices ?? undefined,
+      briefDeliverables: s.briefDeliverables ?? undefined,
       briefFee: s.briefFee ?? undefined,
       briefProgram: s.briefProgram ?? undefined,
       scopeWorks: s.scopeWorks ?? undefined,
@@ -156,9 +157,9 @@ export async function getStakeholders(projectId: string): Promise<StakeholderLis
       sortOrder: s.sortOrder ?? 0,
       notes: s.notes ?? undefined,
       isAiGenerated: s.isAiGenerated ?? false,
-      createdAt: s.createdAt ?? new Date().toISOString(),
-      updatedAt: s.updatedAt ?? new Date().toISOString(),
-      deletedAt: s.deletedAt ?? undefined,
+      createdAt: s.createdAt instanceof Date ? s.createdAt.toISOString() : (s.createdAt ?? new Date().toISOString()),
+      updatedAt: s.updatedAt instanceof Date ? s.updatedAt.toISOString() : (s.updatedAt ?? new Date().toISOString()),
+      deletedAt: s.deletedAt instanceof Date ? s.deletedAt.toISOString() : (s.deletedAt ?? undefined),
     };
 
     if (s.stakeholderGroup === 'consultant' || s.stakeholderGroup === 'contractor') {
@@ -170,7 +171,7 @@ export async function getStakeholders(projectId: string): Promise<StakeholderLis
           statusType: ts.statusType as TenderStatusType,
           isActive: ts.isActive ?? false,
           isComplete: ts.isComplete ?? false,
-          completedAt: ts.completedAt ?? undefined,
+          completedAt: ts.completedAt instanceof Date ? ts.completedAt.toISOString() : (ts.completedAt ?? undefined),
         }));
 
       return { ...base, tenderStatuses: statuses } as StakeholderWithStatus;
@@ -185,10 +186,10 @@ export async function getStakeholders(projectId: string): Promise<StakeholderLis
               id: submissionStatus.id,
               stakeholderId: submissionStatus.stakeholderId,
               status: submissionStatus.status as SubmissionStatus,
-              submittedAt: submissionStatus.submittedAt ?? undefined,
+              submittedAt: submissionStatus.submittedAt instanceof Date ? submissionStatus.submittedAt.toISOString() : (submissionStatus.submittedAt ?? undefined),
               submissionRef: submissionStatus.submissionRef ?? undefined,
-              responseDue: submissionStatus.responseDue ?? undefined,
-              responseReceivedAt: submissionStatus.responseReceivedAt ?? undefined,
+              responseDue: submissionStatus.responseDue instanceof Date ? submissionStatus.responseDue.toISOString() : (submissionStatus.responseDue ?? undefined),
+              responseReceivedAt: submissionStatus.responseReceivedAt instanceof Date ? submissionStatus.responseReceivedAt.toISOString() : (submissionStatus.responseReceivedAt ?? undefined),
               responseNotes: submissionStatus.responseNotes ?? undefined,
               conditions: submissionStatus.conditions ? JSON.parse(submissionStatus.conditions) : undefined,
               conditionsCleared: submissionStatus.conditionsCleared ?? false,
@@ -237,6 +238,7 @@ export async function getStakeholderById(id: string): Promise<StakeholderWithSta
     disciplineOrTrade: stakeholder.disciplineOrTrade ?? undefined,
     isEnabled: stakeholder.isEnabled ?? true,
     briefServices: stakeholder.briefServices ?? undefined,
+    briefDeliverables: stakeholder.briefDeliverables ?? undefined,
     briefFee: stakeholder.briefFee ?? undefined,
     briefProgram: stakeholder.briefProgram ?? undefined,
     scopeWorks: stakeholder.scopeWorks ?? undefined,
@@ -247,9 +249,9 @@ export async function getStakeholderById(id: string): Promise<StakeholderWithSta
     sortOrder: stakeholder.sortOrder ?? 0,
     notes: stakeholder.notes ?? undefined,
     isAiGenerated: stakeholder.isAiGenerated ?? false,
-    createdAt: stakeholder.createdAt ?? new Date().toISOString(),
-    updatedAt: stakeholder.updatedAt ?? new Date().toISOString(),
-    deletedAt: stakeholder.deletedAt ?? undefined,
+    createdAt: stakeholder.createdAt instanceof Date ? stakeholder.createdAt.toISOString() : (stakeholder.createdAt ?? new Date().toISOString()),
+    updatedAt: stakeholder.updatedAt instanceof Date ? stakeholder.updatedAt.toISOString() : (stakeholder.updatedAt ?? new Date().toISOString()),
+    deletedAt: stakeholder.deletedAt instanceof Date ? stakeholder.deletedAt.toISOString() : (stakeholder.deletedAt ?? undefined),
   };
 
   if (stakeholder.stakeholderGroup === 'consultant' || stakeholder.stakeholderGroup === 'contractor') {
@@ -266,7 +268,7 @@ export async function getStakeholderById(id: string): Promise<StakeholderWithSta
         statusType: ts.statusType as TenderStatusType,
         isActive: ts.isActive ?? false,
         isComplete: ts.isComplete ?? false,
-        completedAt: ts.completedAt ?? undefined,
+        completedAt: ts.completedAt instanceof Date ? ts.completedAt.toISOString() : (ts.completedAt ?? undefined),
       })),
     } as StakeholderWithStatus;
   }
@@ -284,10 +286,10 @@ export async function getStakeholderById(id: string): Promise<StakeholderWithSta
             id: submissionStatus.id,
             stakeholderId: submissionStatus.stakeholderId,
             status: submissionStatus.status as SubmissionStatus,
-            submittedAt: submissionStatus.submittedAt ?? undefined,
+            submittedAt: submissionStatus.submittedAt instanceof Date ? submissionStatus.submittedAt.toISOString() : (submissionStatus.submittedAt ?? undefined),
             submissionRef: submissionStatus.submissionRef ?? undefined,
-            responseDue: submissionStatus.responseDue ?? undefined,
-            responseReceivedAt: submissionStatus.responseReceivedAt ?? undefined,
+            responseDue: submissionStatus.responseDue instanceof Date ? submissionStatus.responseDue.toISOString() : (submissionStatus.responseDue ?? undefined),
+            responseReceivedAt: submissionStatus.responseReceivedAt instanceof Date ? submissionStatus.responseReceivedAt.toISOString() : (submissionStatus.responseReceivedAt ?? undefined),
             responseNotes: submissionStatus.responseNotes ?? undefined,
             conditions: submissionStatus.conditions ? JSON.parse(submissionStatus.conditions) : undefined,
             conditionsCleared: submissionStatus.conditionsCleared ?? false,
@@ -407,6 +409,7 @@ export async function updateStakeholder(
       contactPhone: data.contactPhone,
       isEnabled: data.isEnabled,
       briefServices: data.briefServices,
+      briefDeliverables: data.briefDeliverables,
       briefFee: data.briefFee,
       briefProgram: data.briefProgram,
       scopeWorks: data.scopeWorks,
@@ -415,7 +418,7 @@ export async function updateStakeholder(
       submissionRef: data.submissionRef,
       submissionType: data.submissionType,
       notes: data.notes,
-      updatedAt: new Date().toISOString(),
+      updatedAt: new Date(),
     })
     .where(eq(projectStakeholders.id, id));
 
@@ -442,14 +445,14 @@ export async function updateTenderStatus(
   if (!existing) return null;
 
   const updates: Record<string, unknown> = {
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date(),
   };
 
   if (data.isActive !== undefined) updates.isActive = data.isActive;
   if (data.isComplete !== undefined) {
     updates.isComplete = data.isComplete;
     if (data.isComplete) {
-      updates.completedAt = new Date().toISOString();
+      updates.completedAt = new Date();
     }
   }
 
@@ -469,7 +472,7 @@ export async function updateTenderStatus(
     statusType: updated.statusType as TenderStatusType,
     isActive: updated.isActive ?? false,
     isComplete: updated.isComplete ?? false,
-    completedAt: updated.completedAt ?? undefined,
+    completedAt: updated.completedAt instanceof Date ? updated.completedAt.toISOString() : (updated.completedAt ?? undefined),
   };
 }
 
@@ -489,7 +492,7 @@ export async function updateSubmissionStatus(
 
   const updates: Record<string, unknown> = {
     status: data.status,
-    updatedAt: new Date().toISOString(),
+    updatedAt: new Date(),
   };
 
   if (data.submissionRef !== undefined) updates.submissionRef = data.submissionRef;
@@ -500,12 +503,12 @@ export async function updateSubmissionStatus(
 
   // Set submitted timestamp if status is submitted
   if (data.status === 'submitted' && !existing.submittedAt) {
-    updates.submittedAt = new Date().toISOString();
+    updates.submittedAt = new Date();
   }
 
   // Set response received timestamp if status is approved/rejected
   if ((data.status === 'approved' || data.status === 'rejected') && !existing.responseReceivedAt) {
-    updates.responseReceivedAt = new Date().toISOString();
+    updates.responseReceivedAt = new Date();
   }
 
   await db
@@ -522,10 +525,10 @@ export async function updateSubmissionStatus(
     id: updated.id,
     stakeholderId: updated.stakeholderId,
     status: updated.status as SubmissionStatus,
-    submittedAt: updated.submittedAt ?? undefined,
+    submittedAt: updated.submittedAt instanceof Date ? updated.submittedAt.toISOString() : (updated.submittedAt ?? undefined),
     submissionRef: updated.submissionRef ?? undefined,
-    responseDue: updated.responseDue ?? undefined,
-    responseReceivedAt: updated.responseReceivedAt ?? undefined,
+    responseDue: updated.responseDue instanceof Date ? updated.responseDue.toISOString() : (updated.responseDue ?? undefined),
+    responseReceivedAt: updated.responseReceivedAt instanceof Date ? updated.responseReceivedAt.toISOString() : (updated.responseReceivedAt ?? undefined),
     responseNotes: updated.responseNotes ?? undefined,
     conditions: updated.conditions ? JSON.parse(updated.conditions) : undefined,
     conditionsCleared: updated.conditionsCleared ?? false,
@@ -553,7 +556,7 @@ export async function reorderStakeholders(
   for (let i = 0; i < stakeholderIds.length; i++) {
     await db
       .update(projectStakeholders)
-      .set({ sortOrder: i, updatedAt: new Date().toISOString() })
+      .set({ sortOrder: i, updatedAt: new Date() })
       .where(
         and(
           eq(projectStakeholders.id, stakeholderIds[i]),
@@ -577,7 +580,7 @@ export async function deleteStakeholder(id: string): Promise<boolean> {
 
   await db
     .update(projectStakeholders)
-    .set({ deletedAt: new Date().toISOString() })
+    .set({ deletedAt: new Date() })
     .where(eq(projectStakeholders.id, id));
 
   return true;
@@ -590,6 +593,8 @@ export async function deleteStakeholdersByGroup(
   projectId: string,
   group: StakeholderGroup
 ): Promise<number> {
+  console.log('[deleteStakeholdersByGroup] projectId:', projectId, 'group:', group);
+
   // First get the IDs to delete
   const toDelete = await db
     .select({ id: projectStakeholders.id })
@@ -602,9 +607,12 @@ export async function deleteStakeholdersByGroup(
       )
     );
 
+  console.log('[deleteStakeholdersByGroup] Found', toDelete.length, 'stakeholders to delete');
+
   if (toDelete.length === 0) return 0;
 
   const ids = toDelete.map(s => s.id);
+  console.log('[deleteStakeholdersByGroup] IDs to delete:', ids);
 
   // Delete related statuses (cascade should handle this but be explicit)
   await db.delete(stakeholderTenderStatuses).where(inArray(stakeholderTenderStatuses.stakeholderId, ids));
@@ -613,6 +621,7 @@ export async function deleteStakeholdersByGroup(
   // Delete the stakeholders
   await db.delete(projectStakeholders).where(inArray(projectStakeholders.id, ids));
 
+  console.log('[deleteStakeholdersByGroup] Deleted', ids.length, 'stakeholders');
   return ids.length;
 }
 

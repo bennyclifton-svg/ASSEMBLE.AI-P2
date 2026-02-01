@@ -23,11 +23,10 @@ const SECTION_NAMES: Record<CostLineSection, string> = {
 
 // Editable column indices
 const EDITABLE_COLUMNS: Record<number, string> = {
-  0: 'costCode',
-  2: 'description',
-  3: 'reference',
-  4: 'budgetCents',
-  5: 'approvedContractCents',
+  1: 'description',
+  2: 'reference',
+  3: 'budgetCents',
+  4: 'approvedContractCents',
 };
 
 interface CostPlanSheetProps {
@@ -41,7 +40,7 @@ interface CostPlanSheetProps {
 // Create header row
 function createHeaderRow() {
   const headers = [
-    'Cost Code', 'Discipline', 'Description', 'Reference',
+    'Discipline', 'Description', 'Reference',
     'Budget', 'Approved Contract', 'Forecast Vars', 'Approved Vars',
     'Final Forecast', 'Variance', 'Claimed', 'Current Month', 'ETC'
   ];
@@ -58,7 +57,7 @@ function createHeaderRow() {
 
 // Create section header row
 function createSectionHeaderRow(section: CostLineSection) {
-  const cells = Array(13).fill(null).map(() => ({
+  const cells = Array(12).fill(null).map(() => ({
     v: '',
     bg: '#374151',
     fc: '#ffffff',
@@ -75,7 +74,7 @@ function createSectionHeaderRow(section: CostLineSection) {
 
 // Create empty placeholder row for empty sections
 function createEmptyRow() {
-  return Array(13).fill(null).map(() => ({
+  return Array(12).fill(null).map(() => ({
     v: '',
     bg: '#1e1e2e',
     fc: '#6b7280',
@@ -89,7 +88,6 @@ function createCostLineRow(line: CostLineWithCalculations) {
   const varianceBg = variance < 0 ? '#fee2e2' : undefined;
 
   return [
-    { v: line.costCode || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
     { v: line.stakeholder?.name || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
     { v: line.activity, ct: { fa: '@', t: 's' }, fc: '#3b82f6' },
     { v: line.reference || '', ct: { fa: '@', t: 's' }, fc: '#3b82f6' },

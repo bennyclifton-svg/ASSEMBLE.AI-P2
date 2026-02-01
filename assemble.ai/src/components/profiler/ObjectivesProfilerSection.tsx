@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Save } from 'lucide-react';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import type { ObjectiveContent, ObjectiveSource, ProfileContext } from '@/types/profiler';
 
@@ -32,21 +31,21 @@ function ObjectiveEditor({ label, objective, onChange, isGenerating, isPolishing
     setEditValue(objective?.content || '');
   }, [objective?.content]);
 
-  // Auto-resize textarea when entering edit mode or content changes
+  // Focus and position cursor at end only when entering edit mode
   useLayoutEffect(() => {
     if (isEditing && textareaRef.current) {
       const textarea = textareaRef.current;
       // Reset height to recalculate
       textarea.style.height = 'auto';
-      // Set to scrollHeight with minimum of 80px
-      const newHeight = Math.max(textarea.scrollHeight, 80);
+      // Set to scrollHeight with minimum of 100px
+      const newHeight = Math.max(textarea.scrollHeight, 100);
       textarea.style.height = newHeight + 'px';
       // Focus without selecting text - place cursor at end with no selection
       textarea.focus({ preventScroll: true });
       const len = textarea.value.length;
       textarea.setSelectionRange(len, len);
     }
-  }, [isEditing, editValue]);
+  }, [isEditing]);
 
   const handleSave = () => {
     if (editValue.trim() !== objective?.content) {
@@ -63,87 +62,53 @@ function ObjectiveEditor({ label, objective, onChange, isGenerating, isPolishing
     setIsEditing(false);
   };
 
-  const handleCancel = () => {
-    setEditValue(objective?.content || '');
-    setIsEditing(false);
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      handleCancel();
-    }
     if (e.key === 'Enter' && e.ctrlKey) {
       handleSave();
     }
   };
 
   return (
-    <div className="overflow-hidden">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">{label}</span>
+    <div className="border border-[var(--color-border)] rounded overflow-hidden flex flex-col">
+      {/* Header with copper tint background - matches Brief section */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
+        <span className="text-[var(--color-accent-copper)] font-medium text-sm uppercase tracking-wide">{label}</span>
         <div className="flex items-center gap-3">
           {headerActions}
         </div>
       </div>
 
-      <div className="p-3 bg-[var(--color-bg-secondary)]">
-        {isGenerating || isPolishing ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex flex-col items-center gap-3">
-              <DiamondIcon className="w-8 h-8 text-[var(--color-accent-copper)] animate-spin-ease" />
-              <p className="text-sm text-[var(--color-text-muted)]">
-                {isGenerating ? 'Generating objectives...' : 'Polishing content...'}
-              </p>
-            </div>
-          </div>
-        ) : isEditing ? (
-          <div className="space-y-3">
-            <textarea
-              ref={textareaRef}
-              value={editValue}
-              onChange={(e) => {
-                setEditValue(e.target.value);
-                e.target.style.height = 'auto';
-                e.target.style.height = Math.max(e.target.scrollHeight, 80) + 'px';
-              }}
-              onKeyDown={handleKeyDown}
-              className="w-full text-sm bg-transparent border-none shadow-none outline-none focus:outline-none focus:ring-0 text-[var(--color-text-secondary)] resize-none"
-              style={{ minHeight: '80px', padding: '0', margin: '0' }}
-              placeholder={`Enter ${label.toLowerCase()} objectives...`}
-            />
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--color-text-muted)]">Ctrl+Enter to save, Esc to cancel</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCancel}
-                  className="px-3 py-1.5 text-xs bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-3 py-1.5 text-xs bg-[var(--color-accent-primary)] text-[var(--color-bg-primary)] hover:opacity-90 transition-colors flex items-center gap-1"
-                >
-                  <Save className="w-3 h-3" />
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* Content area - matches Brief section textarea styling */}
+      <div className="flex-1">
+        {isEditing ? (
+          <textarea
+            ref={textareaRef}
+            value={editValue}
+            onChange={(e) => {
+              setEditValue(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.max(e.target.scrollHeight, 100) + 'px';
+            }}
+            onKeyDown={handleKeyDown}
+            onBlur={handleSave}
+            className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
+            style={{ fieldSizing: 'content' } as React.CSSProperties}
+            placeholder={`Enter ${label.toLowerCase()} objectives...`}
+          />
         ) : objective?.content ? (
           <div
-            className="text-sm text-[var(--color-text-secondary)] whitespace-pre-wrap cursor-text border border-transparent rounded-sm transition-colors hover:border-[var(--color-accent-copper)]/20"
+            className="w-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text text-sm whitespace-pre-wrap"
             onClick={() => setIsEditing(true)}
           >
             {objective.content}
           </div>
         ) : (
-          <button
+          <div
             onClick={() => setIsEditing(true)}
-            className="w-full py-4 text-sm text-[var(--color-text-muted)] border-2 border-dashed border-[var(--color-border)] hover:border-[var(--color-accent-primary)]/50 hover:text-[var(--color-text-secondary)] transition-colors"
+            className="w-full bg-[var(--color-bg-secondary)] min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text text-sm text-[var(--color-text-muted)]"
           >
-            Click to add {label.toLowerCase()} objectives...
-          </button>
+            Enter {label.toLowerCase()} objectives...
+          </div>
         )}
       </div>
     </div>
@@ -331,7 +296,7 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
           `}
           title={canGenerate ? 'Generate objectives from profile' : 'Complete profile to enable'}
         >
-          <DiamondIcon className="w-4 h-4" variant="empty" />
+          <DiamondIcon className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} variant="empty" />
           {isGenerating ? 'Generating...' : 'Generate'}
         </button>
         <button
@@ -346,7 +311,7 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
           `}
           title={canPolish ? 'Polish existing objectives' : 'Add content to enable'}
         >
-          <DiamondIcon className="w-4 h-4" variant="filled" />
+          <DiamondIcon className={`w-4 h-4 ${isPolishing ? 'animate-spin' : ''}`} variant="filled" />
           {isPolishing ? 'Polishing...' : 'Polish'}
         </button>
       </>
@@ -354,8 +319,7 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
   };
 
   return (
-    <div className="bg-[var(--color-bg-primary)] p-2">
-      <div className="space-y-3">
+    <div className="grid grid-cols-2 gap-4">
         {/* Functional & Quality Objectives */}
         <ObjectiveEditor
           label="Functional & Quality"
@@ -376,6 +340,5 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
           headerActions={createActionButtons('planningCompliance')}
         />
       </div>
-    </div>
   );
 }

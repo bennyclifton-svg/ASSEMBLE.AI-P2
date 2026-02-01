@@ -9,7 +9,7 @@
 // COLUMN TYPE DEFINITIONS
 // ============================================================================
 
-export type ColumnType = 'text' | 'currency' | 'currencyVariance' | 'percent' | 'date' | 'monthYear' | 'discipline' | 'dropdown' | 'costCode';
+export type ColumnType = 'text' | 'currency' | 'currencyVariance' | 'percent' | 'date' | 'monthYear' | 'discipline' | 'dropdown';
 
 export type ColumnAlign = 'left' | 'center' | 'right';
 
@@ -37,21 +37,6 @@ export interface ColumnDefinition {
 // ============================================================================
 
 export const PROJECT_SUMMARY_COLUMNS: ColumnDefinition[] = [
-  {
-    key: 'costCode',
-    label: 'Cost Code',
-    shortLabel: 'Code',
-    type: 'costCode',
-    width: 80,
-    minWidth: 60,
-    maxWidth: 120,
-    editable: true,
-    align: 'left',
-    sortable: true,
-    filterable: true,
-    resizable: true,
-    description: 'Unique identifier for this cost line',
-  },
   {
     key: 'discipline',
     label: 'Discipline',

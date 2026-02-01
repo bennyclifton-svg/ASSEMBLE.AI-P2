@@ -71,4 +71,11 @@ export interface TRRAttachment {
     documentName: string;
     revision: number;
     date?: string;
+    // Drawing extraction fields
+    drawingNumber?: string | null;
+    drawingRevision?: string | null;
+    categoryId?: string | null;
+    categoryName?: string | null;
+    subcategoryId?: string | null;
+    subcategoryName?: string | null;
 }

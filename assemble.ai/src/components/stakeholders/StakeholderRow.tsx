@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Trash2 } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import type {
   StakeholderWithStatus,
   TenderStatus,
@@ -18,15 +18,25 @@ interface StakeholderRowProps {
   onUpdate?: (id: string, data: UpdateStakeholderRequest) => Promise<StakeholderWithStatus | null>;
   onUpdateTenderStatus?: (id: string, statusType: TenderStatusType, isActive: boolean) => void;
   onUpdateSubmissionStatus?: (id: string, status: SubmissionStatus) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => Promise<boolean>;
+  isSelected?: boolean;
+  onSelect?: (id: string, event: React.MouseEvent) => void;
 }
 
-// Tender status labels
+// Tender status labels (T-S-R-A display)
 const TENDER_STATUS_LABELS: Record<TenderStatusType, string> = {
-  brief: 'B',
-  tender: 'T',
+  brief: 'T',
+  tender: 'S',
   rec: 'R',
   award: 'A',
+};
+
+// Tender status tooltip descriptions
+const TENDER_STATUS_TOOLTIPS: Record<TenderStatusType, string> = {
+  brief: 'Tender Released',
+  tender: 'Tender Submitted',
+  rec: 'Tender Recommended',
+  award: 'Tender Awarded',
 };
 
 // Submission status colors
@@ -127,6 +137,8 @@ export function StakeholderRow({
   onUpdateTenderStatus,
   onUpdateSubmissionStatus,
   onDelete,
+  isSelected,
+  onSelect,
 }: StakeholderRowProps) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -186,11 +198,13 @@ export function StakeholderRow({
   return (
     <tr
       className={cn(
-        'transition-all duration-150 border-b border-[var(--color-border)]',
-        isHovered ? 'bg-[var(--color-bg-tertiary)]' : 'bg-transparent'
+        'transition-all duration-150 border-b border-[var(--color-border)] cursor-pointer select-none',
+        isSelected ? 'bg-[var(--color-bg-tertiary)]' : isHovered ? 'bg-[var(--color-bg-tertiary)]' : 'bg-transparent'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+      onClick={(e) => onSelect?.(stakeholder.id, e)}
     >
       {/* Group */}
       <td className="px-3 py-2 text-sm text-[var(--color-text-muted)]">
@@ -279,9 +293,7 @@ export function StakeholderRow({
                       : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]',
                     'hover:opacity-80 cursor-pointer'
                   )}
-                  title={`${type.charAt(0).toUpperCase() + type.slice(1)}: ${
-                    isComplete ? 'Complete' : isActive ? 'Active' : 'Pending'
-                  }`}
+                  title={TENDER_STATUS_TOOLTIPS[type]}
                 >
                   {TENDER_STATUS_LABELS[type]}
                 </button>
@@ -318,14 +330,17 @@ export function StakeholderRow({
       <td className="px-3 py-2 w-10">
         {onDelete && (
           <button
-            onClick={() => onDelete(stakeholder.id)}
+            onClick={async (e) => {
+              e.stopPropagation();
+              await onDelete(stakeholder.id);
+            }}
             className={cn(
               'p-1 text-[var(--color-text-muted)] hover:text-red-500 transition-colors',
-              isHovered ? 'opacity-100' : 'opacity-0'
+              (isHovered || isSelected) ? 'opacity-100' : 'opacity-0'
             )}
             title="Delete stakeholder"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash className="w-4 h-4" />
           </button>
         )}
       </td>

@@ -23,6 +23,11 @@ interface TransmittalDocument {
     categoryName: string | null;
     subcategoryId: string | null;
     subcategoryName: string | null;
+    // Drawing extraction fields
+    drawingNumber: string | null;
+    drawingName: string | null;
+    drawingRevision: string | null;
+    drawingExtractionStatus: string | null;
 }
 
 interface AddendumTransmittal {

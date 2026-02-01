@@ -7,10 +7,9 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MeetingAttendee, ReportAttendee } from '@/types/notes-meetings-reports';
 
@@ -34,6 +33,8 @@ export function MeetingStakeholderTable({
     showAttendingColumn = true,
     className,
 }: MeetingStakeholderTableProps) {
+    const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
+
     const getDisplayInfo = (attendee: Attendee) => {
         if (attendee.stakeholder) {
             return {
@@ -87,6 +88,8 @@ export function MeetingStakeholderTable({
                                     'border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)]',
                                     isAdhoc && 'bg-[var(--color-bg-secondary)]'
                                 )}
+                                onMouseEnter={() => setHoveredRowId(attendee.id)}
+                                onMouseLeave={() => setHoveredRowId(null)}
                             >
                                 <td className="py-0.5 px-2 capitalize text-[var(--color-text-secondary)]">
                                     {info.group}
@@ -124,16 +127,16 @@ export function MeetingStakeholderTable({
                                     />
                                 </td>
                                 <td className="py-0.5 px-2 text-center">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 hover:text-red-500"
-                                        onClick={() => onRemoveAttendee(attendee.id)}
-                                        disabled={isLoading}
-                                        title="Remove attendee"
-                                    >
-                                        <X className="h-3.5 w-3.5" />
-                                    </Button>
+                                    {hoveredRowId === attendee.id && (
+                                        <button
+                                            onClick={() => onRemoveAttendee(attendee.id)}
+                                            disabled={isLoading}
+                                            className="p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50"
+                                            title="Remove attendee"
+                                        >
+                                            <Trash className="h-3.5 w-3.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)]" />
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         );

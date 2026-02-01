@@ -92,7 +92,7 @@ export function ReportCard({
             variant="translucent"
             className={cn('overflow-hidden', className)}
         >
-            <div className="flex items-center">
+            <div className="flex items-center group bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors border-b border-[var(--color-border)]">
                 <div className="flex-1">
                     <CardHeader
                         title={report.title}
@@ -108,9 +108,10 @@ export function ReportCard({
                         showDelete={true}
                         showDownload={false}
                         showEmail={false}
+                        className="border-b-0 hover:bg-transparent"
                     />
                 </div>
-                <div className="flex items-center gap-1 pr-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                <div className="flex items-center gap-1 pr-4 py-3">
                     <ExportButton
                         onExport={handleExport}
                         size="sm"

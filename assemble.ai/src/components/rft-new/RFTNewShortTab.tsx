@@ -11,7 +11,7 @@ import { type RftNew } from '@/lib/hooks/use-rft-new';
 import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
 import { Textarea } from '@/components/ui/textarea';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
-import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { useFieldGeneration } from '@/lib/hooks/use-field-generation';
 
@@ -555,6 +555,14 @@ export function RFTNewShortTab({
                 ...prev,
                 service: result.content,
             }));
+            // Persist generated content to database
+            if (stakeholderId) {
+                await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ briefServices: result.content }),
+                });
+            }
             toast({
                 title: 'Service Generated',
                 description: buildSourceDescription(result.metadata, result.sources.length),
@@ -566,7 +574,7 @@ export function RFTNewShortTab({
                 variant: 'destructive',
             });
         }
-    }, [generateServiceApi, toast]);
+    }, [generateServiceApi, toast, stakeholderId, projectId]);
 
     /**
      * Polish Service field by enhancing existing content
@@ -587,6 +595,14 @@ export function RFTNewShortTab({
                 ...prev,
                 service: result.content,
             }));
+            // Persist polished content to database
+            if (stakeholderId) {
+                await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ briefServices: result.content }),
+                });
+            }
             toast({
                 title: 'Service Polished',
                 description: buildSourceDescription(result.metadata, result.sources.length),
@@ -600,7 +616,7 @@ export function RFTNewShortTab({
         } finally {
             setIsPolishingService(false);
         }
-    }, [generateServiceApi, briefData.service, toast]);
+    }, [generateServiceApi, briefData.service, toast, stakeholderId, projectId]);
 
     /**
      * Generate Deliverables field from scratch using Unified Field Generation
@@ -612,6 +628,14 @@ export function RFTNewShortTab({
                 ...prev,
                 deliverables: result.content,
             }));
+            // Persist generated content to database
+            if (stakeholderId) {
+                await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ briefDeliverables: result.content }),
+                });
+            }
             toast({
                 title: 'Deliverables Generated',
                 description: buildSourceDescription(result.metadata, result.sources.length),
@@ -623,7 +647,7 @@ export function RFTNewShortTab({
                 variant: 'destructive',
             });
         }
-    }, [generateDeliverablesApi, toast]);
+    }, [generateDeliverablesApi, toast, stakeholderId, projectId]);
 
     /**
      * Polish Deliverables field by enhancing existing content
@@ -644,6 +668,14 @@ export function RFTNewShortTab({
                 ...prev,
                 deliverables: result.content,
             }));
+            // Persist polished content to database
+            if (stakeholderId) {
+                await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ briefDeliverables: result.content }),
+                });
+            }
             toast({
                 title: 'Deliverables Polished',
                 description: buildSourceDescription(result.metadata, result.sources.length),
@@ -657,7 +689,7 @@ export function RFTNewShortTab({
         } finally {
             setIsPolishingDeliverables(false);
         }
-    }, [generateDeliverablesApi, briefData.deliverables, toast]);
+    }, [generateDeliverablesApi, briefData.deliverables, toast, stakeholderId, projectId]);
 
     if (isLoading) {
         return (
@@ -745,158 +777,132 @@ export function RFTNewShortTab({
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     Objectives
                 </h3>
-                <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                    <table className="w-full text-sm">
-                        <tbody>
-                            <tr className="border-b border-[var(--color-border)]">
-                                <td className="w-36 px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium align-top">
-                                    Functional & Quality
-                                </td>
-                                <td className="px-4 py-2.5 text-[var(--color-text-primary)] whitespace-pre-wrap">
-                                    {objectives.functionalQuality || '-'}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium align-top">
-                                    Planning & Compliance
-                                </td>
-                                <td className="px-4 py-2.5 text-[var(--color-text-primary)] whitespace-pre-wrap">
-                                    {objectives.planningCompliance || '-'}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div className="grid grid-cols-2 gap-4">
+                    {/* Left: Functional & Quality */}
+                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                        <div className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium text-sm border-b border-[var(--color-border)]">
+                            Functional & Quality
+                        </div>
+                        <div className="px-4 py-2.5 text-[var(--color-text-primary)] text-sm whitespace-pre-wrap">
+                            {objectives.functionalQuality || '-'}
+                        </div>
+                    </div>
+                    {/* Right: Planning & Compliance */}
+                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                        <div className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium text-sm border-b border-[var(--color-border)]">
+                            Planning & Compliance
+                        </div>
+                        <div className="px-4 py-2.5 text-[var(--color-text-primary)] text-sm whitespace-pre-wrap">
+                            {objectives.planningCompliance || '-'}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* 3. Brief Section - Service */}
+            {/* 3. Brief Section - Service & Deliverables side by side */}
             <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                        Service
-                    </h3>
-                    <div className="flex items-center gap-3">
-                        {/* Generate Button */}
-                        <button
-                            onClick={handleGenerateService}
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+                    Brief
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                    {/* Left: Service */}
+                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
+                            <span className="text-[var(--color-accent-copper)] font-medium text-sm">Service</span>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleGenerateService}
+                                    disabled={isGeneratingService || isPolishingService}
+                                    className={`
+                                        flex items-center gap-1.5 text-sm font-medium transition-all
+                                        ${isGeneratingService || isPolishingService
+                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                        }
+                                    `}
+                                    title="Generate short bullet points (2-5 words each)"
+                                >
+                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingService && 'animate-spin')} variant="empty" />
+                                    <span>{isGeneratingService ? 'Generating...' : 'Generate'}</span>
+                                </button>
+                                <button
+                                    onClick={handlePolishService}
+                                    disabled={isGeneratingService || isPolishingService || !briefData.service.trim()}
+                                    className={`
+                                        flex items-center gap-1.5 text-sm font-medium transition-all
+                                        ${(isGeneratingService || isPolishingService || !briefData.service.trim())
+                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                        }
+                                    `}
+                                    title="Expand bullets to full descriptions (10-15 words)"
+                                >
+                                    <DiamondIcon className={cn('w-4 h-4', isPolishingService && 'animate-spin')} variant="filled" />
+                                    <span>{isPolishingService ? 'Polishing...' : 'Polish'}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <Textarea
+                            value={briefData.service}
+                            onChange={(e) => handleBriefChange('service', e.target.value)}
+                            onBlur={() => handleSaveBrief('service')}
+                            placeholder="Enter service details..."
                             disabled={isGeneratingService || isPolishingService}
-                            className={`
-                                flex items-center gap-1.5 text-sm font-medium transition-all
-                                ${isGeneratingService || isPolishingService
-                                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
-                                }
-                            `}
-                            title="Generate service description from scratch"
-                        >
-                            {isGeneratingService ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <DiamondIcon className="w-4 h-4" variant="empty" />
-                            )}
-                            <span>{isGeneratingService ? 'Generating...' : 'Generate'}</span>
-                        </button>
-                        {/* Polish Button */}
-                        <button
-                            onClick={handlePolishService}
-                            disabled={isGeneratingService || isPolishingService || !briefData.service.trim()}
-                            className={`
-                                flex items-center gap-1.5 text-sm font-medium transition-all
-                                ${(isGeneratingService || isPolishingService || !briefData.service.trim())
-                                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
-                                }
-                            `}
-                            title="Polish and enhance existing content"
-                        >
-                            {isPolishingService ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <DiamondIcon className="w-4 h-4" variant="filled" />
-                            )}
-                            <span>{isPolishingService ? 'Polishing...' : 'Polish'}</span>
-                        </button>
-                        {isSavingBrief && (
-                            <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
-                        )}
+                            className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                            style={{ fieldSizing: 'content' } as React.CSSProperties}
+                        />
                     </div>
-                </div>
-                <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                    <Textarea
-                        value={briefData.service}
-                        onChange={(e) => handleBriefChange('service', e.target.value)}
-                        onBlur={() => handleSaveBrief('service')}
-                        placeholder="Enter service details..."
-                        disabled={isGeneratingService || isPolishingService}
-                        className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                        style={{ fieldSizing: 'content' } as React.CSSProperties}
-                    />
-                </div>
-            </div>
-
-            {/* 3b. Brief Section - Deliverables */}
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                        Deliverables
-                    </h3>
-                    <div className="flex items-center gap-3">
-                        {/* Generate Button */}
-                        <button
-                            onClick={handleGenerateDeliverables}
+                    {/* Right: Deliverables */}
+                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
+                            <span className="text-[var(--color-accent-copper)] font-medium text-sm">Deliverables</span>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={handleGenerateDeliverables}
+                                    disabled={isGeneratingDeliverables || isPolishingDeliverables}
+                                    className={`
+                                        flex items-center gap-1.5 text-sm font-medium transition-all
+                                        ${isGeneratingDeliverables || isPolishingDeliverables
+                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                        }
+                                    `}
+                                    title="Generate short bullet points (2-5 words each)"
+                                >
+                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingDeliverables && 'animate-spin')} variant="empty" />
+                                    <span>{isGeneratingDeliverables ? 'Generating...' : 'Generate'}</span>
+                                </button>
+                                <button
+                                    onClick={handlePolishDeliverables}
+                                    disabled={isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim()}
+                                    className={`
+                                        flex items-center gap-1.5 text-sm font-medium transition-all
+                                        ${(isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim())
+                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                        }
+                                    `}
+                                    title="Expand bullets to full descriptions (10-15 words)"
+                                >
+                                    <DiamondIcon className={cn('w-4 h-4', isPolishingDeliverables && 'animate-spin')} variant="filled" />
+                                    <span>{isPolishingDeliverables ? 'Polishing...' : 'Polish'}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <Textarea
+                            value={briefData.deliverables}
+                            onChange={(e) => handleBriefChange('deliverables', e.target.value)}
+                            onBlur={() => handleSaveBrief('deliverables')}
+                            placeholder="Enter deliverables..."
                             disabled={isGeneratingDeliverables || isPolishingDeliverables}
-                            className={`
-                                flex items-center gap-1.5 text-sm font-medium transition-all
-                                ${isGeneratingDeliverables || isPolishingDeliverables
-                                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
-                                }
-                            `}
-                            title="Generate deliverables from scratch"
-                        >
-                            {isGeneratingDeliverables ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <DiamondIcon className="w-4 h-4" variant="empty" />
-                            )}
-                            <span>{isGeneratingDeliverables ? 'Generating...' : 'Generate'}</span>
-                        </button>
-                        {/* Polish Button */}
-                        <button
-                            onClick={handlePolishDeliverables}
-                            disabled={isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim()}
-                            className={`
-                                flex items-center gap-1.5 text-sm font-medium transition-all
-                                ${(isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim())
-                                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
-                                }
-                            `}
-                            title="Polish and enhance existing content"
-                        >
-                            {isPolishingDeliverables ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                                <DiamondIcon className="w-4 h-4" variant="filled" />
-                            )}
-                            <span>{isPolishingDeliverables ? 'Polishing...' : 'Polish'}</span>
-                        </button>
-                        {isSavingBrief && (
-                            <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
-                        )}
+                            className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                            style={{ fieldSizing: 'content' } as React.CSSProperties}
+                        />
                     </div>
                 </div>
-                <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                    <Textarea
-                        value={briefData.deliverables}
-                        onChange={(e) => handleBriefChange('deliverables', e.target.value)}
-                        onBlur={() => handleSaveBrief('deliverables')}
-                        placeholder="Enter deliverables..."
-                        disabled={isGeneratingDeliverables || isPolishingDeliverables}
-                        className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                        style={{ fieldSizing: 'content' } as React.CSSProperties}
-                    />
-                </div>
+                {isSavingBrief && (
+                    <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
+                )}
             </div>
 
             {/* 4. Program Section - Visual Gantt */}

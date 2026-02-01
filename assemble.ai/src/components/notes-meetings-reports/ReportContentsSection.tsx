@@ -208,7 +208,8 @@ export function ReportContentsSection({
                         value={localContent}
                         onChange={handleContentChange}
                         placeholder="Enter content..."
-                        className="w-full min-h-[80px] p-2 text-sm bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-md text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)] resize-none"
+                        className="w-full min-h-[80px] p-2 text-sm bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none"
+                        style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
                     />
                 </div>
             )}

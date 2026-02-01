@@ -9,7 +9,6 @@ import { FirmData, FirmType } from './types';
 interface FirmCardExpandedProps {
   type: FirmType;
   firm: FirmData;
-  onToggleExpand: () => void;
   onSave: (data: Partial<FirmData>) => Promise<void>;
   onDelete: () => void;
   onShortlistToggle: (shortlisted: boolean) => Promise<void>;
@@ -87,11 +86,11 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
     w-full px-2 py-1 rounded text-[var(--color-text-primary)] text-sm
     bg-transparent border border-transparent
     transition-colors duration-150
-    focus:outline-none focus:bg-[var(--color-bg-tertiary)] focus:border-[var(--color-accent-teal)] focus:text-[var(--color-text-primary)]
+    focus:outline-none focus:bg-[var(--color-bg-tertiary)] focus:border-[var(--color-accent-primary)] focus:text-[var(--color-text-primary)]
     hover:border-[var(--color-border)]
     disabled:opacity-50
     resize-none
-    selection:bg-[var(--color-accent-teal-tint)] selection:text-[var(--color-text-primary)]
+    selection:bg-[var(--color-accent-primary-tint)] selection:text-[var(--color-text-primary)]
   `;
 
   return (
@@ -131,7 +130,6 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
 export function FirmCardExpanded({
   type,
   firm,
-  onToggleExpand,
   onSave,
   onDelete,
   onShortlistToggle,
@@ -219,11 +217,12 @@ export function FirmCardExpanded({
   return (
     <div
       className={`
-        rounded-lg bg-[var(--color-bg-secondary)] border transition-colors duration-150
-        ${isDragOver ? 'border-[var(--color-accent-teal)] border-dashed border-2' : 'border-[var(--color-border)]'}
-        ${isHovered && !isDragOver ? 'border-[var(--color-accent-teal)]' : ''}
+        bg-[var(--color-bg-secondary)] transition-colors duration-150
+        ${isDragOver ? 'ring-2 ring-[var(--color-accent-teal)] ring-inset' : ''}
+        ${isHovered && !isDragOver ? 'bg-[var(--color-bg-tertiary)]' : ''}
         ${firm.awarded ? 'border-l-[3px] border-l-[var(--color-accent-green)]' : ''}
         w-[220px] flex-shrink-0
+        border-r border-[var(--color-border)]
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -250,10 +249,10 @@ export function FirmCardExpanded({
               w-full h-7 px-2 py-1 rounded text-[var(--color-text-primary)] text-sm
               bg-transparent border border-transparent
               transition-colors duration-150
-              focus:outline-none focus:bg-[var(--color-bg-tertiary)] focus:border-[var(--color-accent-teal)] focus:text-[var(--color-text-primary)]
+              focus:outline-none focus:bg-[var(--color-bg-tertiary)] focus:border-[var(--color-accent-primary)] focus:text-[var(--color-text-primary)]
               hover:border-[var(--color-border)]
               disabled:opacity-50
-              selection:bg-[var(--color-accent-teal-tint)] selection:text-[var(--color-text-primary)]
+              selection:bg-[var(--color-accent-primary-tint)] selection:text-[var(--color-text-primary)]
             `}
           />
         </div>
@@ -265,7 +264,7 @@ export function FirmCardExpanded({
             onClick={handleStarClick}
             className={`
               p-0.5 rounded transition-colors
-              ${firm.shortlisted ? 'text-[var(--color-accent-yellow)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
+              ${firm.shortlisted ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
             `}
             title={firm.shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
           >
@@ -288,21 +287,6 @@ export function FirmCardExpanded({
             title="Delete firm"
           >
             <Trash className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Collapse triangle (rotated 90 degrees to point down) */}
-          <button
-            onClick={onToggleExpand}
-            className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-            title="Collapse"
-          >
-            <svg
-              className="w-3.5 h-3.5 rotate-90"
-              viewBox="0 0 12 12"
-              fill="currentColor"
-            >
-              <polygon points="2,0 12,6 2,12" />
-            </svg>
           </button>
         </div>
       </div>

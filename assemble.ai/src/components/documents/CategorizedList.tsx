@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import {
     TableBody,
     TableCell,
@@ -12,43 +12,15 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Trash2, Loader2, FileIcon, Folder, ChevronUp, ChevronDown, Trash } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
-import { useDocumentSyncStatus, useSyncStatus } from '@/lib/hooks/use-sync-status';
+import { useSyncStatus, SyncStatus } from '@/lib/hooks/use-sync-status';
+import { useRenderLoopGuard, useStableArray } from '@/lib/hooks/use-render-loop-guard';
 import { cn } from '@/lib/utils';
 
 /**
- * Maps category IDs to accent color CSS variables for consistent theming.
- */
-function getCategoryAccentColor(categoryId: string | undefined): string {
-    if (!categoryId) return 'var(--color-text-muted)';
-
-    switch (categoryId) {
-        case 'planning':
-            return 'var(--color-accent-green)';
-        case 'scheme-design':
-            return 'var(--color-accent-yellow)';
-        case 'detail-design':
-            return 'var(--color-accent-purple)';
-        case 'meetings':
-        case 'knowledge':
-            return 'var(--color-accent-teal)';
-        case 'procurement':
-            return 'var(--color-accent-coral)';
-        case 'cost-planning':
-            return 'var(--color-accent-yellow)';
-        case 'administration':
-            return 'var(--color-text-secondary)';
-        default:
-            return 'var(--color-text-muted)';
-    }
-}
-
-/**
  * T032: Sync status dot indicator (compact version)
+ * Now receives status as prop to avoid individual API calls per document
  */
-function SyncStatusDot({ documentId }: { documentId: string }) {
-    const { statuses } = useSyncStatus([documentId]);
-    const status = statuses[documentId];
-
+function SyncStatusDot({ status }: { status: SyncStatus | null }) {
     if (!status || status.status === null) {
         return null; // Not synced
     }
@@ -80,6 +52,11 @@ interface Document {
     categoryName?: string;
     subcategoryId?: string;
     subcategoryName?: string;
+    // Drawing extraction fields
+    drawingNumber?: string | null;
+    drawingName?: string | null;
+    drawingRevision?: string | null;
+    drawingExtractionStatus?: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'SKIPPED' | 'FAILED' | null;
 }
 
 interface CategorizedListProps {
@@ -88,9 +65,13 @@ interface CategorizedListProps {
     selectedIds?: Set<string>;
     onSelectionChange?: (selectedIds: Set<string>) => void;
     scrollContainerRef?: React.RefObject<HTMLDivElement | null>;
+    /** Filter to show only documents in this category. */
+    filterCategoryId?: string | null;
+    /** Filter to show only documents in this subcategory. */
+    filterSubcategoryId?: string | null;
 }
 
-export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef }: CategorizedListProps) {
+export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef, filterCategoryId, filterSubcategoryId }: CategorizedListProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(externalSelectedIds || new Set());
@@ -99,10 +80,25 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
     const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [sortColumn, setSortColumn] = useState<'name' | 'category' | 'subcategory' | 'version' | null>(null);
+    const [sortColumn, setSortColumn] = useState<'drawingNumber' | 'name' | 'drawingRevision' | 'category' | 'subcategory' | 'fileName' | 'version' | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
+    // Track if this is the initial load to avoid flickering during background refreshes
+    const hasLoadedOnce = useRef(false);
+
     const { toast } = useToast();
+
+    // Render loop detection - prevents infinite re-render cycles
+    const { isInCooldown } = useRenderLoopGuard({
+        componentName: 'CategorizedList',
+        maxRendersPerSecond: 15,
+        cooldownMs: 2000,
+    });
+
+    // Batch fetch sync status for all documents (single API call instead of one per document)
+    // Use stable array to prevent unnecessary re-fetches when document array reference changes but IDs are the same
+    const documentIds = useStableArray(useMemo(() => documents.map(d => d.id), [documents]));
+    const { statuses: syncStatuses } = useSyncStatus(isInCooldown ? [] : documentIds);
 
     // Sorting logic
     const sortedDocuments = useMemo(() => {
@@ -112,8 +108,20 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             let comparison = 0;
 
             switch (sortColumn) {
+                case 'drawingNumber':
+                    const drawA = a.drawingNumber || '';
+                    const drawB = b.drawingNumber || '';
+                    comparison = drawA.localeCompare(drawB);
+                    break;
                 case 'name':
-                    comparison = a.originalName.localeCompare(b.originalName);
+                    const nameA = a.drawingName || a.originalName || '';
+                    const nameB = b.drawingName || b.originalName || '';
+                    comparison = nameA.localeCompare(nameB);
+                    break;
+                case 'drawingRevision':
+                    const revA = a.drawingRevision || '';
+                    const revB = b.drawingRevision || '';
+                    comparison = revA.localeCompare(revB);
                     break;
                 case 'category':
                     const catA = a.categoryName || '';
@@ -125,6 +133,11 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                     const subB = b.subcategoryName || '';
                     comparison = subA.localeCompare(subB);
                     break;
+                case 'fileName':
+                    const fileA = a.originalName || '';
+                    const fileB = b.originalName || '';
+                    comparison = fileA.localeCompare(fileB);
+                    break;
                 case 'version':
                     comparison = a.versionNumber - b.versionNumber;
                     break;
@@ -134,7 +147,18 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         });
     }, [documents, sortColumn, sortDirection]);
 
-    const handleSort = (column: 'name' | 'category' | 'subcategory' | 'version') => {
+    // Filter documents by category if filter is active
+    const filteredDocuments = useMemo(() => {
+        if (!filterCategoryId) return sortedDocuments;
+        return sortedDocuments.filter(doc => {
+            if (filterSubcategoryId) {
+                return doc.categoryId === filterCategoryId && doc.subcategoryId === filterSubcategoryId;
+            }
+            return doc.categoryId === filterCategoryId;
+        });
+    }, [sortedDocuments, filterCategoryId, filterSubcategoryId]);
+
+    const handleSort = (column: 'drawingNumber' | 'name' | 'drawingRevision' | 'category' | 'subcategory' | 'fileName' | 'version') => {
         if (sortColumn === column) {
             // Toggle direction or clear
             if (sortDirection === 'asc') {
@@ -149,12 +173,61 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         }
     };
 
-    const SortIndicator = ({ column }: { column: 'name' | 'category' | 'subcategory' | 'version' }) => {
+    const SortIndicator = ({ column }: { column: 'drawingNumber' | 'name' | 'drawingRevision' | 'category' | 'subcategory' | 'fileName' | 'version' }) => {
         if (sortColumn !== column) return null;
         return sortDirection === 'asc'
             ? <ChevronUp className="w-4 h-4 inline ml-1" />
             : <ChevronDown className="w-4 h-4 inline ml-1" />
     };
+
+    // Fetch data function - defined before effects that use it
+    const fetchData = useCallback(async () => {
+        // Skip fetching during cooldown to break render loops
+        if (isInCooldown) {
+            return;
+        }
+
+        // Save scroll position before fetching
+        const scrollTop = scrollContainerRef?.current?.scrollTop ?? 0;
+
+        try {
+            // Only show loading spinner on initial load, not during background refreshes
+            // This prevents flickering when polling for drawing extraction status
+            if (!hasLoadedOnce.current) {
+                setLoading(true);
+            }
+            const res = await fetch(`/api/documents?projectId=${projectId}`);
+            if (res.ok) {
+                const data = await res.json();
+
+                // Debug: Log any documents with missing originalName
+                const missingNames = data.filter((d: Document) => !d.originalName);
+                if (missingNames.length > 0) {
+                    console.warn('[CategorizedList] Documents with missing originalName:', missingNames);
+                }
+
+                setDocuments(data);
+
+                // Restore scroll position after data is loaded
+                // Use requestAnimationFrame to ensure DOM has updated
+                requestAnimationFrame(() => {
+                    if (scrollContainerRef?.current) {
+                        scrollContainerRef.current.scrollTop = scrollTop;
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Failed to fetch data', error);
+        } finally {
+            setLoading(false);
+            hasLoadedOnce.current = true;
+        }
+    }, [isInCooldown, projectId, scrollContainerRef]);
+
+    // Reset hasLoadedOnce when projectId changes to show loading state on project switch
+    useEffect(() => {
+        hasLoadedOnce.current = false;
+    }, [projectId]);
 
     // Sync internal state when external selection changes (e.g., from transmittal load)
     useEffect(() => {
@@ -164,8 +237,10 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     }, [externalSelectedIds]);
 
     useEffect(() => {
+        // Skip during cooldown to prevent render loops
+        if (isInCooldown) return;
         fetchData();
-    }, [refreshTrigger, projectId]);
+    }, [refreshTrigger, projectId, isInCooldown, fetchData]);
 
     // Keyboard shortcuts
     useEffect(() => {
@@ -193,38 +268,26 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedIds, documents, deletingId, onSelectionChange]);
 
-    const fetchData = async () => {
-        // Save scroll position before fetching
-        const scrollTop = scrollContainerRef?.current?.scrollTop ?? 0;
+    // Check if any documents have pending/processing drawing extraction
+    const hasProcessingDrawings = useMemo(() =>
+        documents.some(doc =>
+            doc.drawingExtractionStatus === 'PROCESSING' ||
+            doc.drawingExtractionStatus === 'PENDING'
+        ),
+        [documents]
+    );
 
-        try {
-            setLoading(true);
-            const res = await fetch(`/api/documents?projectId=${projectId}`);
-            if (res.ok) {
-                const data = await res.json();
+    // Poll for drawing extraction status updates
+    useEffect(() => {
+        // Skip polling during cooldown to prevent render loops
+        if (!hasProcessingDrawings || isInCooldown) return;
 
-                // Debug: Log any documents with missing originalName
-                const missingNames = data.filter((d: Document) => !d.originalName);
-                if (missingNames.length > 0) {
-                    console.warn('[CategorizedList] Documents with missing originalName:', missingNames);
-                }
+        const interval = setInterval(() => {
+            fetchData();
+        }, 3000); // Poll every 3 seconds
 
-                setDocuments(data);
-
-                // Restore scroll position after data is loaded
-                // Use requestAnimationFrame to ensure DOM has updated
-                requestAnimationFrame(() => {
-                    if (scrollContainerRef?.current) {
-                        scrollContainerRef.current.scrollTop = scrollTop;
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Failed to fetch data', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        return () => clearInterval(interval);
+    }, [hasProcessingDrawings, projectId, isInCooldown, fetchData]);
 
     const handleSelectAll = (checked: boolean) => {
         const newSelection = checked ? new Set(documents.map(d => d.id)) : new Set<string>();
@@ -238,13 +301,14 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         const isSelected = newSelected.has(id);
 
         if (event.shiftKey && lastSelectedId) {
-            const start = documents.findIndex(d => d.id === lastSelectedId);
-            const end = documents.findIndex(d => d.id === id);
+            // Use filteredDocuments to match the visual order displayed to the user
+            const start = filteredDocuments.findIndex(d => d.id === lastSelectedId);
+            const end = filteredDocuments.findIndex(d => d.id === id);
 
             if (start !== -1 && end !== -1) {
                 const low = Math.min(start, end);
                 const high = Math.max(start, end);
-                const range = documents.slice(low, high + 1);
+                const range = filteredDocuments.slice(low, high + 1);
 
                 // Range select always adds to selection
                 range.forEach(doc => newSelected.add(doc.id));
@@ -402,38 +466,61 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                         <TableHeader>
                             <TableRow className="border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)]">
                                 <TableHead
-                                    className="text-[var(--color-text-primary)] cursor-pointer hover:text-white select-none w-[50%] @md:w-auto"
+                                    className="text-[var(--color-text-primary)] w-16 !px-2 cursor-pointer hover:text-white select-none"
+                                    onClick={() => handleSort('drawingNumber')}
+                                >
+                                    #<SortIndicator column="drawingNumber" />
+                                </TableHead>
+                                <TableHead
+                                    className="text-[var(--color-text-primary)] !px-2 cursor-pointer hover:text-white select-none"
                                     onClick={() => handleSort('name')}
                                 >
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 flex-shrink-0" />
                                         <span>Name</span>
                                         {selectedIds.size > 0 ? (
-                                            <span className="text-[var(--color-accent-yellow)] text-xs">({selectedIds.size} selected)</span>
+                                            <span className="text-[var(--color-accent-yellow)] text-xs">({selectedIds.size})</span>
                                         ) : (
-                                            <span className="text-[var(--color-text-muted)] text-xs">({documents.length})</span>
+                                            <span className="text-[var(--color-text-muted)] text-xs">({filteredDocuments.length})</span>
                                         )}
                                         <SortIndicator column="name" />
                                     </div>
                                 </TableHead>
                                 <TableHead
-                                    className="text-[var(--color-text-primary)] w-[35%] @md:w-36 cursor-pointer hover:text-white select-none"
+                                    className="text-[var(--color-text-primary)] w-10 !px-2 cursor-pointer hover:text-white select-none"
+                                    onClick={() => handleSort('drawingRevision')}
+                                >
+                                    Rev<SortIndicator column="drawingRevision" />
+                                </TableHead>
+                                <TableHead
+                                    className="text-[var(--color-text-muted)] w-14 @2xl:w-20 @3xl:w-auto !px-2 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
                                     onClick={() => handleSort('category')}
                                 >
-                                    Category<SortIndicator column="category" />
+                                    <span className="@3xl:hidden">Cat</span>
+                                    <span className="hidden @3xl:inline">Category</span>
+                                    <SortIndicator column="category" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-[var(--color-text-primary)] w-36 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
+                                    className="text-[var(--color-text-muted)] w-28 @2xl:w-36 @3xl:w-auto !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-white select-none"
                                     onClick={() => handleSort('subcategory')}
                                 >
-                                    Subcategory<SortIndicator column="subcategory" />
+                                    <span className="@3xl:hidden">Subcat</span>
+                                    <span className="hidden @3xl:inline">Subcategory</span>
+                                    <SortIndicator column="subcategory" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-[var(--color-text-primary)] w-14 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
+                                    className="text-[var(--color-text-muted)] w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-white select-none"
+                                    onClick={() => handleSort('fileName')}
+                                >
+                                    File Name<SortIndicator column="fileName" />
+                                </TableHead>
+                                <TableHead
+                                    className="text-[var(--color-text-muted)] w-8 !px-1 @lg:table-cell hidden cursor-pointer hover:text-white select-none"
                                     onClick={() => handleSort('version')}
                                 >
-                                    Ver<SortIndicator column="version" />
+                                    V<SortIndicator column="version" />
                                 </TableHead>
-                                <TableHead className="w-10 @sm:table-cell hidden">
+                                <TableHead className="w-8 !px-1 @sm:table-cell hidden">
                                     {selectedIds.size > 0 ? (
                                         <button
                                             onClick={() => setShowDeleteConfirm(true)}
@@ -456,18 +543,18 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {documents.length === 0 ? (
+                            {filteredDocuments.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center text-[var(--color-text-muted)] h-24">
-                                        No documents found.
+                                    <TableCell colSpan={8} className="text-center text-[var(--color-text-muted)] h-24">
+                                        {filterCategoryId ? 'No documents in this category.' : 'No documents found.'}
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                sortedDocuments.map((doc) => (
+                                filteredDocuments.map((doc) => (
                                     <TableRow
                                         key={doc.id}
                                         className={cn(
-                                            "border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors cursor-pointer select-none h-12",
+                                            "border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors cursor-pointer select-none h-9",
                                             selectedIds.has(doc.id) && "bg-[var(--color-bg-tertiary)]"
                                         )}
                                         onMouseEnter={() => setHoveredRowId(doc.id)}
@@ -479,54 +566,92 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         }}
                                         onClick={(e) => handleSelect(doc.id, e)}
                                     >
-                                        <TableCell className="font-medium text-[var(--color-text-primary)] !py-2 w-[50%] @md:w-auto">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-2 flex-shrink-0">
-                                                    <SyncStatusDot documentId={doc.id} />
-                                                </div>
-                                                <span className="truncate flex-1" title={doc.originalName || 'Untitled'}>
-                                                    {doc.originalName || <span className="text-[var(--color-text-muted)] italic">Untitled Document</span>}
+                                        <TableCell className="text-[var(--color-text-primary)] w-16 !px-2 !py-1.5">
+                                            {doc.drawingExtractionStatus === 'PROCESSING' ? (
+                                                <Loader2 className="w-4 h-4 animate-spin text-[var(--color-text-muted)]" />
+                                            ) : doc.drawingNumber ? (
+                                                <span className="truncate block" title={doc.drawingNumber}>
+                                                    {doc.drawingNumber}
                                                 </span>
+                                            ) : (
+                                                <span className="text-[var(--color-text-muted)]">—</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="font-medium text-[var(--color-text-primary)] !px-2 !py-1.5">
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <div className="w-2 flex-shrink-0">
+                                                    <SyncStatusDot status={syncStatuses[doc.id] || null} />
+                                                </div>
+                                                {doc.drawingExtractionStatus === 'PROCESSING' ? (
+                                                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                                        <Loader2 className="w-3 h-3 animate-spin text-[var(--color-text-muted)] flex-shrink-0" />
+                                                        <span className="truncate text-[var(--color-text-muted)] italic">Extracting...</span>
+                                                    </div>
+                                                ) : (
+                                                    <span
+                                                        className="truncate flex-1"
+                                                        title={doc.drawingName || doc.originalName || 'Untitled'}
+                                                    >
+                                                        {doc.drawingName || doc.originalName || (
+                                                            <span className="text-[var(--color-text-muted)] italic">Untitled Document</span>
+                                                        )}
+                                                    </span>
+                                                )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="w-[35%] @md:w-36 !py-2">
-                                            <div className="flex items-center gap-2 min-w-0">
+                                        <TableCell className="text-[var(--color-text-primary)] w-10 !px-2 !py-1.5">
+                                            {doc.drawingRevision ? (
+                                                <span title={doc.drawingRevision}>{doc.drawingRevision}</span>
+                                            ) : (
+                                                <span className="text-[var(--color-text-muted)]">—</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="w-14 @2xl:w-20 @3xl:w-auto @lg:table-cell hidden !px-2 !py-1.5">
+                                            <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
                                                 {doc.categoryName ? (
                                                     <>
                                                         <Folder
-                                                            className="w-4 h-4 flex-shrink-0 fill-current"
-                                                            style={{
-                                                                color: getCategoryAccentColor(doc.categoryId)
-                                                            }}
+                                                            className="w-3 h-3 flex-shrink-0 fill-current text-[var(--color-text-muted)]"
                                                         />
                                                         <span
-                                                            className="truncate"
+                                                            className="truncate @3xl:overflow-visible text-[var(--color-text-muted)] text-xs"
                                                             title={doc.categoryName}
-                                                            style={{
-                                                                color: getCategoryAccentColor(doc.categoryId)
-                                                            }}
                                                         >
                                                             {doc.categoryName}
                                                         </span>
                                                     </>
                                                 ) : (
-                                                    <span className="text-[var(--color-text-muted)] italic">—</span>
+                                                    <span className="text-[var(--color-text-muted)]">—</span>
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="w-36 @lg:table-cell hidden !py-2">
+                                        <TableCell className="w-28 @2xl:w-36 @3xl:w-auto @md:table-cell hidden !pl-2 !pr-1 !py-1.5">
+                                            {doc.subcategoryName ? (
+                                                <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
+                                                    <Folder
+                                                        className="w-3 h-3 flex-shrink-0 fill-current text-[var(--color-text-muted)]"
+                                                    />
+                                                    <span
+                                                        className="truncate @3xl:overflow-visible text-[var(--color-text-muted)] text-xs"
+                                                        title={doc.subcategoryName}
+                                                    >
+                                                        {doc.subcategoryName}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[var(--color-text-muted)]">—</span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="text-[var(--color-text-muted)] w-28 @4xl:w-auto @3xl:table-cell hidden !pl-1 !pr-2 !py-1.5">
                                             <span
-                                                className="truncate"
-                                                title={doc.subcategoryName || ''}
-                                                style={{
-                                                    color: doc.categoryId ? getCategoryAccentColor(doc.categoryId) : 'var(--color-text-muted)'
-                                                }}
+                                                className="truncate @4xl:overflow-visible block text-xs"
+                                                title={doc.originalName || 'Unknown'}
                                             >
-                                                {doc.subcategoryName || <span className="text-[var(--color-text-muted)]">—</span>}
+                                                {doc.originalName || <span className="italic">Unknown</span>}
                                             </span>
                                         </TableCell>
-                                        <TableCell className="text-[var(--color-text-primary)] w-14 @lg:table-cell hidden !py-2">v{doc.versionNumber}</TableCell>
-                                        <TableCell className="w-10 @sm:table-cell hidden !py-2">
+                                        <TableCell className="text-[var(--color-text-muted)] w-8 @lg:table-cell hidden !px-1 !py-1.5 text-xs">v{doc.versionNumber}</TableCell>
+                                        <TableCell className="w-8 @sm:table-cell hidden !px-1 !py-1.5">
                                             {(hoveredRowId === doc.id || deletingId === doc.id) && (
                                                 <button
                                                     onClick={(e) => {

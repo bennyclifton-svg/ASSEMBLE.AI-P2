@@ -5,7 +5,7 @@ import { eq, and, isNull, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';
 import { extractVariationFromPdf } from '@/lib/variation/extract';
-import { matchCostLine } from '@/lib/variation/cost-line-matcher';
+import { matchVariationToCostLine } from '@/lib/variation/cost-line-matcher';
 
 /**
  * POST /api/projects/[projectId]/variations/upload
@@ -57,13 +57,24 @@ export async function POST(
     const extractedData = extraction.variation;
     console.log(`[variation-upload] Extracted: ${extractedData.variationNumber || 'No number'} - ${extractedData.description.substring(0, 50)}`);
 
-    // Step 2: Match to cost line if reference provided
-    const costLineMatch = await matchCostLine(
-      extractedData.costLineReference,
-      projectId
-    );
+    // Step 2: Enhanced cost line matching with AI
+    const costLineMatch = await matchVariationToCostLine({
+      costLineReference: extractedData.costLineReference,
+      description: extractedData.description,
+      category: extractedData.category,
+    }, projectId);
 
-    console.log(`[variation-upload] Cost line match: ${costLineMatch.found ? costLineMatch.match?.activity : 'Not found'}`);
+    // Auto-assign only if confidence >= 80%
+    const matchedCostLineId = costLineMatch.matchConfidence >= 0.80
+      ? costLineMatch.costLineId
+      : null;
+
+    console.log(`[variation-upload] Cost line match: ${costLineMatch.found ? costLineMatch.costLine?.activity : 'Not found'} (confidence: ${(costLineMatch.matchConfidence * 100).toFixed(0)}%, type: ${costLineMatch.matchType})`);
+    if (matchedCostLineId) {
+      console.log(`[variation-upload] Auto-assigned to cost line: ${matchedCostLineId}`);
+    } else if (costLineMatch.found) {
+      console.log(`[variation-upload] Suggested cost line (below auto-assign threshold): ${costLineMatch.costLineId}`);
+    }
 
     // Step 3: Save file to storage
     const { path: storagePath, hash, size } = await storage.save(file, buffer);
@@ -163,7 +174,7 @@ export async function POST(
     await db.insert(variations).values({
       id: variationId,
       projectId,
-      costLineId: costLineMatch.match?.costLineId || null,
+      costLineId: matchedCostLineId,
       variationNumber,
       category: extractedData.category,
       description: extractedData.description,
@@ -190,15 +201,16 @@ export async function POST(
         confidence: extractedData.confidence,
         parserUsed: extraction.parserUsed,
         costLineMatched: costLineMatch.found,
+        costLineAutoAssigned: !!matchedCostLineId,
         costLineMatchDetails: costLineMatch.found
           ? {
-              costLineId: costLineMatch.match?.costLineId,
-              costCode: costLineMatch.match?.costCode,
-              activity: costLineMatch.match?.activity,
-              matchScore: costLineMatch.match?.matchScore,
-              matchType: costLineMatch.match?.matchType,
-              disciplineName: costLineMatch.match?.disciplineName,
-              tradeName: costLineMatch.match?.tradeName,
+              costLineId: costLineMatch.costLineId,
+              activity: costLineMatch.costLine?.activity,
+              section: costLineMatch.costLine?.section,
+              matchConfidence: costLineMatch.matchConfidence,
+              matchType: costLineMatch.matchType,
+              matchReason: costLineMatch.matchReason,
+              alternatives: costLineMatch.alternatives,
             }
           : null,
       },

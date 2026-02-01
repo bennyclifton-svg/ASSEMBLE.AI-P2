@@ -11,6 +11,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Copy, Trash2, Star, Download, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { AIGenerateButton } from './AIGenerateButton';
 
 interface CardHeaderAction {
     id: string;
@@ -32,12 +33,15 @@ interface CardHeaderProps {
     onDelete?: () => void;
     onDownload?: () => void;
     onEmail?: () => void;
+    onGenerate?: () => void;
     customActions?: CardHeaderAction[];
     showStar?: boolean;
     showCopy?: boolean;
     showDelete?: boolean;
     showDownload?: boolean;
     showEmail?: boolean;
+    showGenerate?: boolean;
+    isGenerating?: boolean;
     className?: string;
 }
 
@@ -52,12 +56,15 @@ export function CardHeader({
     onDelete,
     onDownload,
     onEmail,
+    onGenerate,
     customActions = [],
     showStar = false,
     showCopy = true,
     showDelete = true,
     showDownload = false,
     showEmail = false,
+    showGenerate = false,
+    isGenerating = false,
     className,
 }: CardHeaderProps) {
     const [isEditing, setIsEditing] = useState(false);
@@ -107,7 +114,7 @@ export function CardHeader({
     return (
         <div
             className={cn(
-                'flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] transition-colors cursor-pointer',
+                'flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] group-hover:bg-[var(--color-bg-tertiary)] transition-colors cursor-pointer',
                 className
             )}
             onClick={onToggleExpand}
@@ -125,7 +132,7 @@ export function CardHeader({
                         onBlur={handleTitleBlur}
                         onKeyDown={handleTitleKeyDown}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex-1 min-w-0 bg-transparent border-b border-[var(--color-accent-primary)] text-[var(--color-text-primary)] font-medium focus:outline-none"
+                        className="flex-1 min-w-0 bg-transparent border-none text-[var(--color-text-primary)] font-medium focus:outline-none focus:ring-0"
                     />
                 ) : (
                     <span
@@ -141,6 +148,14 @@ export function CardHeader({
             </div>
 
             <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                {showGenerate && onGenerate && (
+                    <AIGenerateButton
+                        onClick={onGenerate}
+                        isLoading={isGenerating}
+                        tooltip="Generate content with AI"
+                    />
+                )}
+
                 {showStar && onStarToggle && (
                     <Button
                         variant="ghost"

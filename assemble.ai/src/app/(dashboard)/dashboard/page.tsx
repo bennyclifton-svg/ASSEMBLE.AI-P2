@@ -5,50 +5,47 @@
  */
 
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 import { db } from '@/lib/db';
-import { users, sessions, projects } from '@/lib/db';
+import { projects } from '@/lib/db';
+import { user as userTable } from '@/lib/db/auth-schema';
 import { eq, desc } from 'drizzle-orm';
-import { hashToken } from '@/lib/auth/session';
+import { auth } from '@/lib/better-auth';
 import Link from 'next/link';
 
 async function getProjectsForUser() {
-    const cookieStore = await cookies();
-    const sessionToken = cookieStore.get('session')?.value;
+    try {
+        const session = await auth.api.getSession({
+            headers: await headers(),
+        });
 
-    if (!sessionToken) {
+        if (!session?.user) {
+            return null;
+        }
+
+        // Get user with organization info
+        const [user] = await db
+            .select()
+            .from(userTable)
+            .where(eq(userTable.id, session.user.id))
+            .limit(1);
+
+        if (!user?.organizationId) {
+            return [];
+        }
+
+        // Get user's projects
+        const userProjects = await db
+            .select()
+            .from(projects)
+            .where(eq(projects.organizationId, user.organizationId))
+            .orderBy(desc(projects.updatedAt));
+
+        return userProjects;
+    } catch (error) {
+        console.error('Error getting projects:', error);
         return null;
     }
-
-    // Get user from session
-    const [session] = await db
-        .select()
-        .from(sessions)
-        .where(eq(sessions.tokenHash, hashToken(sessionToken)))
-        .limit(1);
-
-    if (!session) {
-        return null;
-    }
-
-    const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, session.userId))
-        .limit(1);
-
-    if (!user?.organizationId) {
-        return [];
-    }
-
-    // Get user's projects
-    const userProjects = await db
-        .select()
-        .from(projects)
-        .where(eq(projects.organizationId, user.organizationId))
-        .orderBy(desc(projects.updatedAt));
-
-    return userProjects;
 }
 
 export default async function DashboardPage() {

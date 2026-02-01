@@ -31,7 +31,8 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
 
             // Ensure data is an array before using it
             if (!res.ok || !Array.isArray(data)) {
-                console.error('Error fetching projects:', data?.error || 'Invalid response');
+                const errorMessage = data?.error?.message || data?.error || 'Invalid response';
+                console.error('Error fetching projects:', errorMessage);
                 return;
             }
 

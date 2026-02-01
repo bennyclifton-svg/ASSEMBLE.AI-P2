@@ -132,8 +132,9 @@ export function WorkScopeSelector({
     }
   };
 
-  // Total selection count
-  const totalSelections = selectedScopes.length;
+  // Total selection count - only count items that exist in current categories
+  const validScopeValues = new Set(categories.flatMap(cat => cat.items.map(item => item.value)));
+  const totalSelections = selectedScopes.filter(scope => validScopeValues.has(scope)).length;
 
   if (categories.length === 0) {
     return null;

@@ -1,39 +1,39 @@
 /**
- * Password Hashing Utilities
- * Uses bcryptjs for secure password hashing and verification.
+ * Password Utilities
+ * Password hashing and validation using bcryptjs.
+ * Compatible with Better Auth's password storage in the account table.
  */
 
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 12;
+const MIN_PASSWORD_LENGTH = 8;
 
 /**
- * Hash a password using bcrypt
- * @param password - Plain text password
- * @returns Promise resolving to the hashed password
+ * Hash a password using bcrypt.
  */
 export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, SALT_ROUNDS);
+    return bcrypt.hash(password, SALT_ROUNDS);
 }
 
 /**
- * Verify a password against a hash
- * @param password - Plain text password to verify
- * @param hash - Stored password hash
- * @returns Promise resolving to true if password matches
+ * Verify a password against a hash.
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+    return bcrypt.compare(password, hash);
 }
 
 /**
- * Validate password meets minimum requirements
- * @param password - Password to validate
- * @returns Object with isValid flag and error message if invalid
+ * Validate password strength.
  */
 export function validatePassword(password: string): { isValid: boolean; error?: string } {
-  if (!password || password.length < 8) {
-    return { isValid: false, error: 'Password must be at least 8 characters' };
-  }
-  return { isValid: true };
+    if (!password) {
+        return { isValid: false, error: 'Password is required' };
+    }
+
+    if (password.length < MIN_PASSWORD_LENGTH) {
+        return { isValid: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
+    }
+
+    return { isValid: true };
 }

@@ -28,7 +28,9 @@ import { VariationsPanel } from './VariationsPanel';
 import { InvoicesPanel } from './InvoicesPanel';
 import { DisciplineDropdown } from './cells/DisciplineDropdown';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
+import { ProgramActivitySelector } from './ProgramActivitySelector';
 import type { CostLineSection, CostLineWithCalculations, GroupedLine, GroupedLineTotals } from '@/types/cost-plan';
+import type { ProgramActivity } from '@/types/program';
 
 // App color palette - consistent with global styles
 const COLORS = {
@@ -131,7 +133,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     });
 
     const { costLines, totals, isLoading, error, refetch } = useCostPlan(projectId, selectedMonth);
-    const { createCostLine, updateCostLine, deleteCostLine, reorderCostLines, isSubmitting } = useCostLineMutations(projectId);
+    const { createCostLine, updateCostLine, deleteCostLine, bulkDeleteCostLines, reorderCostLines, isSubmitting } = useCostLineMutations(projectId);
 
     // Fetch stakeholders for dropdown options (replaces old disciplines/trades)
     const { stakeholders } = useStakeholders({ projectId });
@@ -160,6 +162,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     const [showAddRow, setShowAddRow] = useState<CostLineSection | null>(null);
     const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; activity: string } | null>(null);
+    const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
     const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
     // Drag and drop state
@@ -174,6 +177,10 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
 
     // Section generation state
     const [generatingSection, setGeneratingSection] = useState<CostLineSection | null>(null);
+
+    // Program activity selector dialog state
+    const [programSelectorOpen, setProgramSelectorOpen] = useState(false);
+    const [programSelectorSourceLine, setProgramSelectorSourceLine] = useState<CostLineWithCalculations | null>(null);
 
     // DnD sensors
     const sensors = useSensors(
@@ -191,11 +198,10 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         setShowAddRow(section);
     };
 
-    const handleCreateLine = async (section: CostLineSection, data: { activity: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => {
+    const handleCreateLine = async (section: CostLineSection, data: { activity: string; budgetCents?: number; approvedContractCents?: number }) => {
         await createCostLine({
             section,
             activity: data.activity,
-            costCode: data.costCode,
             budgetCents: data.budgetCents,
             approvedContractCents: data.approvedContractCents,
             sortOrder: costLines.filter(l => l.section === section).length,
@@ -342,6 +348,62 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         }
     };
 
+    // Handle opening program activity selector for a line
+    const handleGenerateFromProgram = (line: CostLineWithCalculations) => {
+        setProgramSelectorSourceLine(line);
+        setProgramSelectorOpen(true);
+    };
+
+    // Handle confirmation from program activity selector
+    const handleProgramActivitiesSelected = async (selectedActivities: ProgramActivity[]) => {
+        if (!programSelectorSourceLine || selectedActivities.length === 0) return;
+
+        const sourceLine = programSelectorSourceLine;
+        const sectionLines = linesBySection[sourceLine.section] || [];
+        const sourceIndex = sectionLines.findIndex(l => l.id === sourceLine.id);
+
+        // Create new cost lines for each selected activity (they'll be added at end initially)
+        const newLineIds: string[] = [];
+        for (const activity of selectedActivities) {
+            const result = await createCostLine({
+                section: sourceLine.section,
+                activity: activity.name,
+                stakeholderId: sourceLine.stakeholderId,
+            });
+            if (result?.id) {
+                newLineIds.push(result.id);
+            }
+        }
+
+        // Reorder to place new lines directly after source line
+        if (newLineIds.length > 0 && sourceIndex !== -1) {
+            // Build new order: lines before source + source + new lines + lines after source
+            const updates: Array<{ id: string; sortOrder: number }> = [];
+            let order = 1;
+
+            // Lines before and including source
+            for (let i = 0; i <= sourceIndex; i++) {
+                updates.push({ id: sectionLines[i].id, sortOrder: order++ });
+            }
+
+            // New lines
+            for (const newId of newLineIds) {
+                updates.push({ id: newId, sortOrder: order++ });
+            }
+
+            // Lines after source
+            for (let i = sourceIndex + 1; i < sectionLines.length; i++) {
+                updates.push({ id: sectionLines[i].id, sortOrder: order++ });
+            }
+
+            await reorderCostLines(updates);
+        }
+
+        await refetch();
+        setProgramSelectorOpen(false);
+        setProgramSelectorSourceLine(null);
+    };
+
     // Update local state when costLines change
     useEffect(() => {
         const grouped = SECTIONS.reduce((acc, section) => {
@@ -367,6 +429,11 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     // Selection handlers
     const handleRowClick = useCallback((lineId: string, section: CostLineSection, e: React.MouseEvent) => {
         const lines = localLinesBySection[section] || [];
+
+        // Prevent text selection on shift+click
+        if (e.shiftKey) {
+            e.preventDefault();
+        }
 
         if (e.shiftKey && lastSelectedId) {
             // Shift+click: select range (only within same section)
@@ -407,7 +474,39 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     // Clear selection when clicking outside
     const clearSelection = useCallback(() => {
         setSelectedIds(new Set());
+        setLastSelectedId(null);
     }, []);
+
+    // Bulk delete handler
+    const handleBulkDelete = async () => {
+        const idsToDelete = Array.from(selectedIds);
+        try {
+            await bulkDeleteCostLines(idsToDelete);
+            setSelectedIds(new Set());
+            setLastSelectedId(null);
+            setBulkDeleteConfirm(false);
+            refetch();
+        } catch (error) {
+            console.error('Bulk delete failed:', error);
+        }
+    };
+
+    // Keyboard shortcuts for selection
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // ESC to clear selection
+            if (e.key === 'Escape' && selectedIds.size > 0) {
+                setSelectedIds(new Set());
+                setLastSelectedId(null);
+            }
+            // DELETE to open bulk delete confirmation
+            if (e.key === 'Delete' && selectedIds.size > 0 && !isSubmitting) {
+                setBulkDeleteConfirm(true);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedIds, isSubmitting]);
 
     // Drag handlers
     const handleDragStart = useCallback((event: DragStartEvent) => {
@@ -648,8 +747,8 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     return (
         <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
             {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex-shrink-0">
-                {/* Left side - Action Buttons */}
+            <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex-shrink-0">
+                {/* Right side - Clear All + Month Selector */}
                 <div className="flex gap-2 items-center">
                     <button
                         onClick={handleClearAll}
@@ -659,10 +758,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                     >
                         Clear All
                     </button>
-                </div>
-
-                {/* Right side - Month Selector */}
-                <select
+                    <select
                     value={`${selectedMonth.year}-${String(selectedMonth.month).padStart(2, '0')}`}
                     onChange={(e) => {
                         const [year, month] = e.target.value.split('-').map(Number);
@@ -677,6 +773,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                         </option>
                     ))}
                 </select>
+                </div>
             </div>
 
             {/* Spreadsheet */}
@@ -686,39 +783,51 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <div className="flex-1 h-0 overflow-x-auto overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
-                    <table className="border-collapse text-xs w-full min-w-[1100px]">
+                <div className="cost-plan-container flex-1 h-0 overflow-x-auto overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
+                    <table className="border-collapse text-xs w-full select-none">
                         <thead className="sticky top-0 z-10">
                             <tr className="bg-[var(--color-accent-copper-tint)] border border-[var(--color-accent-copper)]">
-                                <th className="border border-[var(--color-accent-copper)] px-0.5 py-1.5 w-6" rowSpan={2}>
-                                    <button
-                                        onClick={toggleRollUpMode}
-                                        className="p-0.5 text-[var(--color-accent-copper)]/70 hover:text-[var(--color-accent-copper)] transition-colors"
-                                        title={isRollUpMode ? "Expand all rows" : "Roll up by discipline/trade"}
-                                    >
-                                        {isRollUpMode ? (
-                                            <ChevronDown className="h-3.5 w-3.5" />
-                                        ) : (
-                                            <ChevronRight className="h-3.5 w-3.5" />
-                                        )}
-                                    </button>
+                                <th className="border border-[var(--color-accent-copper)] px-0 py-1.5 w-8" rowSpan={2}>
+                                    <div className="flex items-center justify-center px-1">
+                                        <button
+                                            onClick={toggleRollUpMode}
+                                            className="p-0.5 text-[var(--color-accent-copper)]/70 hover:text-[var(--color-accent-copper)] transition-colors"
+                                            title={isRollUpMode ? "Expand all rows" : "Roll up by discipline/trade"}
+                                        >
+                                            {isRollUpMode ? (
+                                                <ChevronDown className="h-3.5 w-3.5" />
+                                            ) : (
+                                                <ChevronRight className="h-3.5 w-3.5" />
+                                            )}
+                                        </button>
+                                    </div>
                                 </th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-left w-16" rowSpan={2}>Code</th>
                                 <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-left w-20" rowSpan={2}>Discipline</th>
                                 <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-left w-[200px]" rowSpan={2}>Description</th>
                                 <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Budget</th>
                                 <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Contract</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-center text-[var(--color-accent-copper)] font-medium w-[120px]" colSpan={2}>VARIATIONS</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Forecast</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Variance</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Claimed</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[60px]" rowSpan={2}>Month</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Remaining</th>
+                                <th className="col-priority-3 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-center text-[var(--color-accent-copper)] font-medium w-[120px]" colSpan={2}>VARIATIONS</th>
+                                <th className="col-priority-3 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Forecast</th>
+                                <th className="col-priority-2 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Variance</th>
+                                <th className="col-priority-2 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Claimed</th>
+                                <th className="col-priority-1 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[60px]" rowSpan={2}>Month</th>
+                                <th className="col-priority-1 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Remaining</th>
                                 <th className="border border-[var(--color-accent-copper)] px-1 py-1.5 w-7" rowSpan={2}></th>
+                                <th className="border border-[var(--color-accent-copper)] px-1 py-1.5 w-7" rowSpan={2}>
+                                    {selectedIds.size > 0 && (
+                                        <button
+                                            onClick={() => setBulkDeleteConfirm(true)}
+                                            className="p-0.5 text-[var(--color-accent-coral)] hover:opacity-80 transition-colors"
+                                            title={`Delete ${selectedIds.size} selected item${selectedIds.size > 1 ? 's' : ''}`}
+                                        >
+                                            <Trash className="h-3.5 w-3.5" />
+                                        </button>
+                                    )}
+                                </th>
                             </tr>
                             <tr className="bg-[var(--color-accent-copper-tint)]">
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1 text-center text-[var(--color-accent-copper)] font-medium w-[60px]">Forecast</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1 text-center text-[var(--color-accent-copper)] font-medium w-[60px]">Approved</th>
+                                <th className="col-priority-3 border border-[var(--color-accent-copper)] px-1.5 py-1 text-center text-[var(--color-accent-copper)] font-medium w-[60px]">Forecast</th>
+                                <th className="col-priority-3 border border-[var(--color-accent-copper)] px-1.5 py-1 text-center text-[var(--color-accent-copper)] font-medium w-[60px]">Approved</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -754,28 +863,30 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                                         groupedData={groupedData}
                                         onGenerateSection={handleGenerateSection}
                                         isGeneratingSection={generatingSection === section}
+                                        onGenerateFromProgram={handleGenerateFromProgram}
                                     />
                                 );
                             })}
 
                             {/* GRAND TOTAL Row */}
                             <tr className="bg-[var(--color-bg-tertiary)] font-semibold">
-                                <td className="border border-[var(--color-border)] px-0.5 py-1.5"></td>
-                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-[var(--color-text-primary)]" colSpan={3}>GRAND TOTAL</td>
+                                <td className="border border-[var(--color-border)] px-0.5 py-1.5 w-8"></td>
+                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-[var(--color-text-primary)]" colSpan={2}>GRAND TOTAL</td>
                                 <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.budgetCents || 0)}</td>
                                 <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.approvedContractCents || 0)}</td>
-                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.forecastVariationsCents || 0)}</td>
-                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.approvedVariationsCents || 0)}</td>
-                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.finalForecastCents || 0)}</td>
-                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right">
+                                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.forecastVariationsCents || 0)}</td>
+                                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.approvedVariationsCents || 0)}</td>
+                                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.finalForecastCents || 0)}</td>
+                                <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1.5 text-right">
                                     <span className={totals && totals.varianceCents < 0 ? 'text-[var(--color-accent-coral)]' : 'text-[var(--color-accent-green)]'}>
                                         {formatCurrency(totals?.varianceCents || 0)}
                                     </span>
                                 </td>
-                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.claimedCents || 0)}</td>
-                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.currentMonthCents || 0)}</td>
-                                <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.etcCents || 0)}</td>
-                                <td className="border border-[var(--color-border)] px-1 py-1.5"></td>
+                                <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.claimedCents || 0)}</td>
+                                <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.currentMonthCents || 0)}</td>
+                                <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.etcCents || 0)}</td>
+                                <td className="border border-[var(--color-border)] px-1 py-1.5 w-7"></td>
+                                <td className="border border-[var(--color-border)] px-1 py-1.5 w-7"></td>
                             </tr>
                         </tbody>
                     </table>
@@ -787,10 +898,9 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                         <table className="border-collapse text-xs min-w-[900px] w-max">
                             <tbody>
                                 <tr className="bg-[var(--color-bg-hover)] shadow-lg opacity-90">
-                                    <td className="border border-[var(--color-border)] px-0.5 py-1 w-6">
+                                    <td className="border border-[var(--color-border)] px-0.5 py-1 w-10">
                                         <GripVertical className="h-3.5 w-3.5 text-[var(--color-text-primary)]" />
                                     </td>
-                                    <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-accent-teal)] font-mono">{activeLine.costCode || '-'}</td>
                                     <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)]">{activeLine.stakeholder?.name || '-'}</td>
                                     <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-primary)]">
                                         {activeLine.activity}
@@ -800,7 +910,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                                             </span>
                                         )}
                                     </td>
-                                    <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-accent-teal)]" colSpan={10}>
+                                    <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-accent-teal)]" colSpan={11}>
                                         {formatCurrency(activeLine.budgetCents)}
                                     </td>
                                 </tr>
@@ -818,6 +928,31 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                     isSubmitting={isSubmitting}
                 />
             )}
+
+            {bulkDeleteConfirm && (
+                <BulkDeleteConfirmDialog
+                    count={selectedIds.size}
+                    onClose={() => setBulkDeleteConfirm(false)}
+                    onConfirm={handleBulkDelete}
+                    isSubmitting={isSubmitting}
+                />
+            )}
+
+            {/* Program Activity Selector Dialog */}
+            <ProgramActivitySelector
+                projectId={projectId}
+                isOpen={programSelectorOpen}
+                onClose={() => {
+                    setProgramSelectorOpen(false);
+                    setProgramSelectorSourceLine(null);
+                }}
+                onConfirm={handleProgramActivitiesSelected}
+                sourceLine={programSelectorSourceLine ? {
+                    id: programSelectorSourceLine.id,
+                    activity: programSelectorSourceLine.activity,
+                    stakeholderId: programSelectorSourceLine.stakeholderId,
+                } : undefined}
+            />
         </div>
     );
 }
@@ -854,7 +989,7 @@ interface SectionBlockProps {
     onRowClick: (lineId: string, section: CostLineSection, e: React.MouseEvent) => void;
     // Add line props
     showAddRow: boolean;
-    onSaveNewLine: (data: { activity: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => Promise<void>;
+    onSaveNewLine: (data: { activity: string; budgetCents?: number; approvedContractCents?: number }) => Promise<void>;
     onCancelNewLine: () => void;
     isSubmitting: boolean;
     // Discipline/Trade dropdown options
@@ -868,6 +1003,8 @@ interface SectionBlockProps {
     // Section generation props
     onGenerateSection: (section: CostLineSection) => void;
     isGeneratingSection: boolean;
+    // Line-level program activity generation
+    onGenerateFromProgram: (line: CostLineWithCalculations) => void;
 }
 
 function SectionBlock({
@@ -894,6 +1031,7 @@ function SectionBlock({
     groupedData,
     onGenerateSection,
     isGeneratingSection,
+    onGenerateFromProgram,
 }: SectionBlockProps) {
     // Determine if this section supports roll-up
     const supportsRollUp = section === 'CONSULTANTS' || section === 'CONSTRUCTION';
@@ -903,25 +1041,8 @@ function SectionBlock({
         <>
             {/* Section Header */}
             <tr className="bg-[var(--color-bg-hover)]">
-                <td className="border border-[var(--color-border)] px-0.5 py-1.5"></td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1.5 font-semibold text-[var(--color-text-primary)]" colSpan={3}>
-                    <span className="flex items-center gap-2">
-                        {/* Diamond icon for sections with stakeholder mapping (not CONTINGENCY) */}
-                        {section !== 'CONTINGENCY' && (
-                            <button
-                                onClick={() => onGenerateSection(section)}
-                                disabled={isGeneratingSection || shouldShowRolledUp}
-                                className="p-0.5 text-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)]/80 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={`Populate ${SECTION_NAMES[section]} from stakeholders`}
-                            >
-                                <DiamondIcon variant="empty" className="w-3.5 h-3.5" />
-                            </button>
-                        )}
-                        {SECTION_NAMES[section]}
-                    </span>
-                </td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1.5" colSpan={9}></td>
-                <td className="border border-[var(--color-border)] px-1 py-1.5 text-center">
+                {/* Plus button at far left */}
+                <td className="border border-[var(--color-border)] px-1 py-1.5 w-8 text-center">
                     <button
                         onClick={onAddLine}
                         disabled={showAddRow || shouldShowRolledUp}
@@ -931,6 +1052,33 @@ function SectionBlock({
                         <Plus className="h-3.5 w-3.5" />
                     </button>
                 </td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1.5 font-semibold text-[var(--color-text-primary)]" colSpan={2}>
+                    {SECTION_NAMES[section]}
+                </td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1.5"></td>
+                {/* Generate section button (second-to-last column, aligned with line diamond icons) */}
+                <td className="border border-[var(--color-border)] px-1 py-1.5 w-7 text-center">
+                    {section !== 'CONTINGENCY' && (
+                        <button
+                            onClick={() => onGenerateSection(section)}
+                            disabled={isGeneratingSection || shouldShowRolledUp}
+                            className="p-0.5 text-[var(--color-accent-copper)] hover:opacity-80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={isGeneratingSection ? 'Generating...' : `Populate ${SECTION_NAMES[section]} from stakeholders`}
+                        >
+                            <DiamondIcon variant="empty" className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </td>
+                {/* Empty cell for delete column (far right) */}
+                <td className="border border-[var(--color-border)] px-1 py-1.5 w-7"></td>
             </tr>
 
             {shouldShowRolledUp ? (
@@ -980,6 +1128,7 @@ function SectionBlock({
                                 onCellChange={onCellChange}
                                 onCancelEdit={onCancelEdit}
                                 onDelete={() => onDeleteLine(line.id, line.activity)}
+                                onGenerateFromProgram={() => onGenerateFromProgram(line)}
                                 isSelected={selectedIds.has(line.id)}
                                 onRowClick={onRowClick}
                                 selectedCount={selectedIds.size}
@@ -1002,22 +1151,23 @@ function SectionBlock({
 
             {/* Sub-Total Row */}
             <tr className="bg-[var(--color-bg-tertiary)]">
-                <td className="border border-[var(--color-border)] px-0.5 py-1"></td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)] font-medium" colSpan={3}>Sub-Total</td>
+                <td className="border border-[var(--color-border)] px-0.5 py-1 w-8"></td>
+                <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)] font-medium" colSpan={2}>Sub-Total</td>
                 <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.budget)}</td>
                 <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.approvedContract)}</td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.forecastVars)}</td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.approvedVars)}</td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.finalForecast)}</td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right">
+                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.forecastVars)}</td>
+                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.approvedVars)}</td>
+                <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.finalForecast)}</td>
+                <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1 text-right">
                     <span className={sectionTotals.variance < 0 ? 'text-[var(--color-accent-coral)]' : sectionTotals.variance > 0 ? 'text-[var(--color-accent-green)]' : 'text-[var(--color-text-muted)]'}>
                         {formatCurrency(sectionTotals.variance)}
                     </span>
                 </td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.claimed)}</td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.currentMonth)}</td>
-                <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.etc)}</td>
-                <td className="border border-[var(--color-border)] px-1 py-1"></td>
+                <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.claimed)}</td>
+                <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.currentMonth)}</td>
+                <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.etc)}</td>
+                <td className="border border-[var(--color-border)] px-1 py-1 w-7"></td>
+                <td className="border border-[var(--color-border)] px-1 py-1 w-7"></td>
             </tr>
         </>
     );
@@ -1031,6 +1181,7 @@ interface SortableCostLineRowProps {
     onCellChange: (id: string, field: string, value: string | number | null) => void;
     onCancelEdit: () => void;
     onDelete: () => void;
+    onGenerateFromProgram: () => void;
     isSelected: boolean;
     onRowClick: (lineId: string, section: CostLineSection, e: React.MouseEvent) => void;
     selectedCount: number;
@@ -1046,6 +1197,7 @@ function SortableCostLineRow({
     onCellChange,
     onCancelEdit,
     onDelete,
+    onGenerateFromProgram,
     isSelected,
     onRowClick,
     selectedCount,
@@ -1077,6 +1229,7 @@ function SortableCostLineRow({
             onCellChange={onCellChange}
             onCancelEdit={onCancelEdit}
             onDelete={onDelete}
+            onGenerateFromProgram={onGenerateFromProgram}
             isSelected={isSelected}
             isDragging={isDragging}
             onRowClick={onRowClick}
@@ -1096,6 +1249,7 @@ interface CostLineRowProps {
     onCellChange: (id: string, field: string, value: string | number | null) => void;
     onCancelEdit: () => void;
     onDelete: () => void;
+    onGenerateFromProgram: () => void;
     isSelected: boolean;
     isDragging: boolean;
     onRowClick: (lineId: string, section: CostLineSection, e: React.MouseEvent) => void;
@@ -1107,47 +1261,35 @@ interface CostLineRowProps {
 }
 
 const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(function CostLineRow(
-    { line, section, editingCell, onStartEdit, onCellChange, onCancelEdit, onDelete, isSelected, isDragging, onRowClick, dragHandleProps, selectedCount, style, disciplines, trades },
+    { line, section, editingCell, onStartEdit, onCellChange, onCancelEdit, onDelete, onGenerateFromProgram, isSelected, isDragging, onRowClick, dragHandleProps, selectedCount, style, disciplines, trades },
     ref
 ) {
     const variance = line.calculated.varianceToBudgetCents;
     const isEditing = (field: string) => editingCell?.id === line.id && editingCell?.field === field;
 
-    const handleClick = (e: React.MouseEvent) => {
-        // Only handle selection if not clicking on editable cell or delete button
-        const target = e.target as HTMLElement;
-        if (target.closest('button') || target.closest('input')) return;
-        onRowClick(line.id, section, e);
-    };
-
     return (
         <tr
             ref={ref}
             style={style}
-            onClick={handleClick}
             className={`
-                transition-colors group
+                transition-colors group cursor-pointer
                 ${isDragging ? 'opacity-50 bg-[var(--color-bg-hover)]' : 'bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]'}
-                ${isSelected ? 'bg-[var(--color-accent-teal)]/20 hover:bg-[var(--color-accent-teal)]/20' : ''}
+                ${isSelected ? 'bg-[var(--color-bg-hover)]' : ''}
             `}
+            onClick={(e) => onRowClick(line.id, section, e)}
         >
             {/* Grip Handle */}
-            <td className="border border-[var(--color-border)] px-0.5 py-1 w-6">
-                <button
-                    className="cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-0.5"
-                    {...dragHandleProps}
-                >
-                    <GripVertical className="h-3.5 w-3.5" />
-                </button>
+            <td className="border border-[var(--color-border)] px-0 py-1 w-8">
+                <div className="flex items-center justify-center h-full">
+                    <button
+                        className="cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] p-0.5"
+                        {...dragHandleProps}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <GripVertical className="h-3.5 w-3.5" />
+                    </button>
+                </div>
             </td>
-            <EditableCell
-                value={line.costCode || ''}
-                isEditing={isEditing('costCode')}
-                onStartEdit={() => onStartEdit(line.id, 'costCode')}
-                onSave={(value) => onCellChange(line.id, 'costCode', value)}
-                onCancel={onCancelEdit}
-                className="font-mono text-[var(--color-accent-teal)]"
-            />
             <td className="border border-[var(--color-border)] px-1 py-0.5 min-w-[100px]">
                 <DisciplineDropdown
                     value={line.stakeholderId}
@@ -1185,36 +1327,45 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
                 onCancel={onCancelEdit}
                 className="text-[var(--color-accent-teal)]"
             />
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.forecastVariationsCents ? formatCurrency(line.calculated.forecastVariationsCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.approvedVariationsCents ? formatCurrency(line.calculated.approvedVariationsCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
                 {formatCurrency(line.calculated.finalForecastCents)}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right">
+            <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1 text-right">
                 <span className={variance < 0 ? 'text-[var(--color-accent-coral)]' : variance > 0 ? 'text-[var(--color-accent-green)]' : 'text-[var(--color-text-muted)]'}>
                     {variance !== 0 ? formatCurrency(variance) : '-'}
                 </span>
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.claimedToDateCents ? formatCurrency(line.calculated.claimedToDateCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.currentMonthCents ? formatCurrency(line.calculated.currentMonthCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.etcCents ? formatCurrency(line.calculated.etcCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1 py-1 text-center">
+            <td className="border border-[var(--color-border)] px-1 py-1 w-7 text-center">
                 <button
-                    onClick={onDelete}
+                    onClick={(e) => { e.stopPropagation(); onGenerateFromProgram(); }}
+                    className="p-0.5 text-[var(--color-accent-copper)] hover:opacity-80 transition-all opacity-0 group-hover:opacity-100"
+                    title="Generate line items from program activities"
+                >
+                    <DiamondIcon variant="empty" className="w-3.5 h-3.5" />
+                </button>
+            </td>
+            <td className="border border-[var(--color-border)] px-1 py-1 w-7 text-center">
+                <button
+                    onClick={(e) => { e.stopPropagation(); onDelete(); }}
                     className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] hover:bg-[var(--color-bg-hover)] rounded transition-colors opacity-0 group-hover:opacity-100"
                     title="Delete line"
                 >
-                    <Trash className="h-3 w-3" />
+                    <Trash className="h-3.5 w-3.5" />
                 </button>
             </td>
         </tr>
@@ -1343,7 +1494,7 @@ function EditableNumberCell({ value, isEditing, onStartEdit, onSave, onCancel, c
 }
 
 interface AddCostLineRowProps {
-    onSave: (data: { activity: string; costCode?: string; budgetCents?: number; approvedContractCents?: number }) => Promise<void>;
+    onSave: (data: { activity: string; budgetCents?: number; approvedContractCents?: number }) => Promise<void>;
     onCancel: () => void;
     isSubmitting: boolean;
 }
@@ -1351,7 +1502,6 @@ interface AddCostLineRowProps {
 function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps) {
     const activityRef = useRef<HTMLInputElement>(null);
     const [formData, setFormData] = useState({
-        costCode: '',
         activity: '',
         budgetCents: 0,
         approvedContractCents: 0,
@@ -1366,7 +1516,6 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
         if (!formData.activity.trim()) return;
         await onSave({
             activity: formData.activity,
-            costCode: formData.costCode || undefined,
             budgetCents: formData.budgetCents || undefined,
             approvedContractCents: formData.approvedContractCents || undefined,
         });
@@ -1386,16 +1535,7 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
 
     return (
         <tr className="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]" onKeyDown={handleKeyDown}>
-            <td className="border border-[var(--color-border)] px-0.5 py-1"></td>
-            <td className="border border-[var(--color-border)] px-1 py-1">
-                <input
-                    type="text"
-                    value={formData.costCode}
-                    onChange={(e) => setFormData({ ...formData, costCode: e.target.value })}
-                    placeholder="Code"
-                    className={inputClass}
-                />
-            </td>
+            <td className="border border-[var(--color-border)] px-0.5 py-1 w-8"></td>
             <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)]">-</td>
             <td className="border border-[var(--color-border)] px-1 py-1">
                 <input
@@ -1425,14 +1565,15 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
                     className={numberInputClass}
                 />
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
-            <td className="border border-[var(--color-border)] px-1 py-1 text-center">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">-</td>
+            <td className="border border-[var(--color-border)] px-1 py-1 w-7"></td>
+            <td className="border border-[var(--color-border)] px-1 py-1 w-7 text-center">
                 <div className="flex items-center justify-center gap-1">
                     <button
                         onClick={handleSave}
@@ -1475,7 +1616,7 @@ function CollapsedGroupRow({ group, isExpanded, onToggle }: CollapsedGroupRowPro
             onClick={onToggle}
         >
             {/* Chevron Column */}
-            <td className="border border-[var(--color-border)] px-0.5 py-1.5 w-6">
+            <td className="border border-[var(--color-border)] px-0.5 py-1.5 w-8">
                 <button className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
                     {isExpanded ? (
                         <ChevronDown className="h-3.5 w-3.5" />
@@ -1484,9 +1625,6 @@ function CollapsedGroupRow({ group, isExpanded, onToggle }: CollapsedGroupRowPro
                     )}
                 </button>
             </td>
-
-            {/* Code - empty for group row */}
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-[var(--color-text-muted)]">-</td>
 
             {/* Discipline/Trade Name */}
             <td className="border border-[var(--color-border)] px-1.5 py-1.5 font-medium whitespace-nowrap">
@@ -1507,30 +1645,32 @@ function CollapsedGroupRow({ group, isExpanded, onToggle }: CollapsedGroupRowPro
             <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">
                 {formatCurrency(totals.approvedContract)}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
                 {totals.forecastVars ? formatCurrency(totals.forecastVars) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
                 {totals.approvedVars ? formatCurrency(totals.approvedVars) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)] font-medium">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)] font-medium">
                 {formatCurrency(totals.finalForecast)}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right">
+            <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1.5 text-right">
                 <span className={totals.variance < 0 ? 'text-[var(--color-accent-coral)]' : totals.variance > 0 ? 'text-[var(--color-accent-green)]' : 'text-[var(--color-text-muted)]'}>
                     {totals.variance !== 0 ? formatCurrency(totals.variance) : '-'}
                 </span>
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
                 {totals.claimed ? formatCurrency(totals.claimed) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
                 {totals.currentMonth ? formatCurrency(totals.currentMonth) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
                 {totals.etc ? formatCurrency(totals.etc) : '-'}
             </td>
 
+            {/* Generate column - empty for group row */}
+            <td className="border border-[var(--color-border)] px-1 py-1.5 w-7"></td>
             {/* Actions column - empty for group row */}
             <td className="border border-[var(--color-border)] px-1 py-1.5 w-7"></td>
         </tr>
@@ -1551,7 +1691,7 @@ function ReadOnlyLineRow({ line, isIndented = false, showDiscipline = false, dis
     return (
         <tr className={`bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] ${isIndented ? 'opacity-90' : ''}`}>
             {/* Chevron to collapse (only on first row when expanded) */}
-            <td className="border border-[var(--color-border)] px-0.5 py-1 w-6">
+            <td className="border border-[var(--color-border)] px-0.5 py-1 w-8">
                 {showDiscipline && onCollapse ? (
                     <button
                         onClick={onCollapse}
@@ -1560,11 +1700,6 @@ function ReadOnlyLineRow({ line, isIndented = false, showDiscipline = false, dis
                         <ChevronDown className="h-3.5 w-3.5" />
                     </button>
                 ) : null}
-            </td>
-
-            {/* Code */}
-            <td className="border border-[var(--color-border)] px-1.5 py-1 font-mono text-[var(--color-accent-teal)]">
-                {line.costCode || '-'}
             </td>
 
             {/* Discipline/Trade - show name on first row, dash on others */}
@@ -1584,30 +1719,32 @@ function ReadOnlyLineRow({ line, isIndented = false, showDiscipline = false, dis
             <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
                 {formatCurrency(line.approvedContractCents)}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.forecastVariationsCents ? formatCurrency(line.calculated.forecastVariationsCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.approvedVariationsCents ? formatCurrency(line.calculated.approvedVariationsCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">
                 {formatCurrency(line.calculated.finalForecastCents)}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right">
+            <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1 text-right">
                 <span className={variance < 0 ? 'text-[var(--color-accent-coral)]' : variance > 0 ? 'text-[var(--color-accent-green)]' : 'text-[var(--color-text-muted)]'}>
                     {variance !== 0 ? formatCurrency(variance) : '-'}
                 </span>
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.claimedToDateCents ? formatCurrency(line.calculated.claimedToDateCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.currentMonthCents ? formatCurrency(line.calculated.currentMonthCents) : '-'}
             </td>
-            <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
+            <td className="col-priority-1 border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-muted)]">
                 {line.calculated.etcCents ? formatCurrency(line.calculated.etcCents) : '-'}
             </td>
 
+            {/* No generate button in read-only mode */}
+            <td className="border border-[var(--color-border)] px-1 py-1 w-7"></td>
             {/* No delete button in read-only mode */}
             <td className="border border-[var(--color-border)] px-1 py-1 w-7"></td>
         </tr>
@@ -1668,6 +1805,70 @@ function DeleteConfirmDialog({ activity, onClose, onConfirm, isSubmitting }: Del
                             className="px-4 py-2 text-xs bg-[var(--color-accent-coral)] text-white rounded hover:bg-[var(--color-accent-coral)]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             {isSubmitting ? 'Deleting...' : 'Delete'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ============================================================================
+// BULK DELETE CONFIRM DIALOG
+// ============================================================================
+
+interface BulkDeleteConfirmDialogProps {
+    count: number;
+    onClose: () => void;
+    onConfirm: () => void;
+    isSubmitting: boolean;
+}
+
+function BulkDeleteConfirmDialog({ count, onClose, onConfirm, isSubmitting }: BulkDeleteConfirmDialogProps) {
+    // Handle Enter key to confirm delete
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && !isSubmitting) {
+                e.preventDefault();
+                onConfirm();
+            } else if (e.key === 'Escape') {
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onConfirm, onClose, isSubmitting]);
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-sm border border-[var(--color-border)]">
+                <div className="px-4 py-3 border-b border-[var(--color-border)]">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                        Delete {count} Cost Line{count > 1 ? 's' : ''}
+                    </h2>
+                </div>
+                <div className="p-4 space-y-4">
+                    <p className="text-sm text-[var(--color-text-primary)]">
+                        Are you sure you want to delete <strong>{count}</strong> selected cost line{count > 1 ? 's' : ''}?
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                        This action cannot be undone.
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-4 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onConfirm}
+                            disabled={isSubmitting}
+                            className="px-4 py-2 text-xs bg-[var(--color-accent-coral)] text-white rounded hover:bg-[var(--color-accent-coral)]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {isSubmitting ? 'Deleting...' : `Delete ${count} Item${count > 1 ? 's' : ''}`}
                         </button>
                     </div>
                 </div>

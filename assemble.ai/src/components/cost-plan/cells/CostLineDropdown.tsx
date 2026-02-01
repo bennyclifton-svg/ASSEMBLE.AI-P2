@@ -5,7 +5,7 @@
  * Feature 006 - Cost Planning Module (Task T094)
  *
  * Dropdown selector for cost lines, grouped by section.
- * Shows [code] - description format.
+ * Shows discipline - description format.
  */
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -18,7 +18,6 @@ import {
 
 interface CostLineOption {
   id: string;
-  costCode?: string | null;
   description: string;
   section: CostLineSection;
 }
@@ -81,9 +80,8 @@ export function CostLineDropdown({
     let filtered = costLines.filter((cl) => {
       if (filterSection && cl.section !== filterSection) return false;
       if (!search) return true;
-      const code = cl.costCode?.toLowerCase() || '';
       const desc = cl.description.toLowerCase();
-      return code.includes(searchLower) || desc.includes(searchLower);
+      return desc.includes(searchLower);
     });
 
     // Group by section
@@ -98,10 +96,10 @@ export function CostLineDropdown({
       grouped[cl.section].push(cl);
     });
 
-    // Sort items within each section alphanumerically by cost code, then description
+    // Sort items within each section alphanumerically by description
     const sortAlphanumeric = (a: CostLineOption, b: CostLineOption) => {
-      const aKey = (a.costCode || a.activity).toLowerCase();
-      const bKey = (b.costCode || b.activity).toLowerCase();
+      const aKey = a.description.toLowerCase();
+      const bKey = b.description.toLowerCase();
       return aKey.localeCompare(bKey, undefined, { numeric: true, sensitivity: 'base' });
     };
 
@@ -119,10 +117,7 @@ export function CostLineDropdown({
   }, [costLines, search, filterSection]);
 
   const formatCostLine = (cl: CostLineOption) => {
-    if (cl.costCode) {
-      return `[${cl.costCode}] ${cl.activity}`;
-    }
-    return cl.activity;
+    return cl.description;
   };
 
   const handleSelect = (costLineId: string) => {

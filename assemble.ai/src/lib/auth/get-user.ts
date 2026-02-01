@@ -1,123 +1,117 @@
 /**
- * Authentication helper for API routes
- * Gets the current authenticated user from session cookie.
+ * Get Current User Helper
+ * Server-side utility to get the current authenticated user using Better Auth.
  */
 
+import { headers } from 'next/headers';
+import { auth } from '@/lib/better-auth';
 import { db } from '@/lib/db';
-import { users, sessions } from '@/lib/db';
-import { getSessionToken, hashToken, isSessionExpired } from './session';
+import { user as userTable } from '@/lib/db/auth-schema';
+import { organizations } from '@/lib/db/pg-schema';
 import { eq } from 'drizzle-orm';
 
-export interface AuthenticatedUser {
-  id: string;
-  email: string;
-  displayName: string;
-  organizationId: string | null;
+export interface CurrentUser {
+    id: string;
+    email: string;
+    displayName: string | null;
+    organizationId: string | null;
+    organization?: {
+        id: string;
+        name: string;
+    } | null;
+}
+
+export interface AuthError {
+    message: string;
+    code: string;
 }
 
 export interface AuthResult {
-  user: AuthenticatedUser | null;
-  error: { code: string; message: string } | null;
-  status: number;
+    user: CurrentUser | null;
+    error?: AuthError;
+    status: number;
 }
 
 /**
- * Get the current authenticated user from the session cookie.
- * Returns user data or error information.
+ * Get the currently authenticated user from the session.
+ * Returns an AuthResult object with user, error, and status.
  */
 export async function getCurrentUser(): Promise<AuthResult> {
-  try {
-    // Get session token from cookie
-    const sessionToken = await getSessionToken();
+    try {
+        const session = await auth.api.getSession({
+            headers: await headers(),
+        });
 
-    if (!sessionToken) {
-      return {
-        user: null,
-        error: { code: 'UNAUTHORIZED', message: 'No valid session' },
-        status: 401,
-      };
+        if (!session?.user) {
+            return {
+                user: null,
+                error: { message: 'Not authenticated', code: 'UNAUTHORIZED' },
+                status: 401,
+            };
+        }
+
+        const betterAuthUser = session.user;
+
+        // Get the full user record with organization info
+        const [userRecord] = await db
+            .select()
+            .from(userTable)
+            .where(eq(userTable.id, betterAuthUser.id))
+            .limit(1);
+
+        if (!userRecord) {
+            return {
+                user: null,
+                error: { message: 'User not found', code: 'USER_NOT_FOUND' },
+                status: 404,
+            };
+        }
+
+        // Get organization if user has one
+        let organization = null;
+        if (userRecord.organizationId) {
+            const [org] = await db
+                .select()
+                .from(organizations)
+                .where(eq(organizations.id, userRecord.organizationId))
+                .limit(1);
+
+            if (org) {
+                organization = {
+                    id: org.id,
+                    name: org.name,
+                };
+            }
+        }
+
+        return {
+            user: {
+                id: userRecord.id,
+                email: userRecord.email,
+                displayName: userRecord.name || null,
+                organizationId: userRecord.organizationId || null,
+                organization,
+            },
+            status: 200,
+        };
+    } catch (error) {
+        console.error('Error getting current user:', error);
+        return {
+            user: null,
+            error: { message: 'Authentication error', code: 'AUTH_ERROR' },
+            status: 500,
+        };
     }
-
-    // Find session
-    const [session] = await db
-      .select()
-      .from(sessions)
-      .where(eq(sessions.tokenHash, hashToken(sessionToken)))
-      .limit(1);
-
-    if (!session) {
-      return {
-        user: null,
-        error: { code: 'UNAUTHORIZED', message: 'Invalid session' },
-        status: 401,
-      };
-    }
-
-    // Check if session expired
-    if (isSessionExpired(session.expiresAt)) {
-      // Clean up expired session
-      await db.delete(sessions).where(eq(sessions.id, session.id));
-      return {
-        user: null,
-        error: { code: 'UNAUTHORIZED', message: 'Session expired' },
-        status: 401,
-      };
-    }
-
-    // Get user
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, session.userId))
-      .limit(1);
-
-    if (!user) {
-      return {
-        user: null,
-        error: { code: 'UNAUTHORIZED', message: 'User not found' },
-        status: 401,
-      };
-    }
-
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        organizationId: user.organizationId,
-      },
-      error: null,
-      status: 200,
-    };
-  } catch (error) {
-    console.error('Get current user error:', error);
-    return {
-      user: null,
-      error: { code: 'SERVER_ERROR', message: 'Authentication error' },
-      status: 500,
-    };
-  }
 }
 
 /**
- * Require authentication for an API route.
- * Throws if not authenticated.
+ * Require authentication - throws if not authenticated.
+ * Use in API routes that require auth.
  */
-export async function requireAuth(): Promise<AuthenticatedUser> {
-  const result = await getCurrentUser();
-  if (!result.user) {
-    throw new AuthError(result.error!.code, result.error!.message, result.status);
-  }
-  return result.user;
-}
-
-export class AuthError extends Error {
-  code: string;
-  status: number;
-
-  constructor(code: string, message: string, status: number) {
-    super(message);
-    this.code = code;
-    this.status = status;
-  }
+export async function requireAuth(): Promise<CurrentUser> {
+    const result = await getCurrentUser();
+    if (!result.user) {
+        throw new Error(result.error?.message || 'Unauthorized');
+    }
+    return result.user;
 }

@@ -12,9 +12,9 @@ export default async function DashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
-    // Check for session cookie (basic auth check)
+    // Check for Better Auth session cookie
     const cookieStore = await cookies();
-    const session = cookieStore.get('session');
+    const session = cookieStore.get('better-auth.session_token');
 
     if (!session) {
         redirect('/login');

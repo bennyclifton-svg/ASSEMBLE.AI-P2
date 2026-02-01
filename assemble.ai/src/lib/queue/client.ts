@@ -26,6 +26,7 @@ export const QUEUE_NAMES = {
     DOCUMENT_PROCESSING: 'document-processing',
     CHUNK_EMBEDDING: 'chunk-embedding',
     REPORT_GENERATION: 'report-generation',
+    DRAWING_EXTRACTION: 'drawing-extraction',
 } as const;
 
 // Job types
@@ -51,7 +52,15 @@ export interface ReportGenerationJob {
     documentSetIds: string[];
 }
 
-export type QueueJob = DocumentProcessingJob | ChunkEmbeddingJob | ReportGenerationJob;
+export interface DrawingExtractionJob {
+    type: 'extract_drawing';
+    fileAssetId: string;
+    storagePath: string;
+    filename: string;
+    mimeType: string;
+}
+
+export type QueueJob = DocumentProcessingJob | ChunkEmbeddingJob | ReportGenerationJob | DrawingExtractionJob;
 
 // Queue configuration
 const DEFAULT_JOB_OPTIONS = {
@@ -73,6 +82,7 @@ const DEFAULT_JOB_OPTIONS = {
 let documentQueue: Queue | null = null;
 let chunkQueue: Queue | null = null;
 let reportQueue: Queue | null = null;
+let drawingQueue: Queue | null = null;
 let connection: IORedis | null = null;
 
 /**
@@ -128,6 +138,22 @@ export function getReportQueue(): Queue<ReportGenerationJob> {
         });
     }
     return reportQueue as Queue<ReportGenerationJob>;
+}
+
+/**
+ * Get or create drawing extraction queue
+ */
+export function getDrawingQueue(): Queue<DrawingExtractionJob> {
+    if (!drawingQueue) {
+        drawingQueue = new Queue(QUEUE_NAMES.DRAWING_EXTRACTION, {
+            connection: getConnection(),
+            defaultJobOptions: {
+                ...DEFAULT_JOB_OPTIONS,
+                attempts: 3, // Retry for API failures
+            },
+        });
+    }
+    return drawingQueue as Queue<DrawingExtractionJob>;
 }
 
 /**
@@ -213,23 +239,57 @@ export async function addSectionForGeneration(
 }
 
 /**
+ * Add document for drawing number extraction
+ */
+export async function addDrawingForExtraction(
+    fileAssetId: string,
+    storagePath: string,
+    filename: string,
+    mimeType: string
+): Promise<Job<DrawingExtractionJob>> {
+    const queue = getDrawingQueue();
+
+    // Ensure queue is not paused
+    if (await queue.isPaused()) {
+        await queue.resume();
+    }
+
+    return queue.add(
+        'extract',
+        {
+            type: 'extract_drawing',
+            fileAssetId,
+            storagePath,
+            filename,
+            mimeType,
+        },
+        {
+            jobId: `drawing-${fileAssetId}-${Date.now()}`,
+        }
+    );
+}
+
+/**
  * Get queue statistics
  */
 export async function getQueueStats() {
     const docQueue = getDocumentQueue();
     const chunkQueueInstance = getChunkQueue();
     const repQueue = getReportQueue();
+    const drawQueue = getDrawingQueue();
 
-    const [docCounts, chunkCounts, repCounts] = await Promise.all([
+    const [docCounts, chunkCounts, repCounts, drawCounts] = await Promise.all([
         docQueue.getJobCounts(),
         chunkQueueInstance.getJobCounts(),
         repQueue.getJobCounts(),
+        drawQueue.getJobCounts(),
     ]);
 
     return {
         documentProcessing: docCounts,
         chunkEmbedding: chunkCounts,
         reportGeneration: repCounts,
+        drawingExtraction: drawCounts,
     };
 }
 
@@ -237,7 +297,7 @@ export async function getQueueStats() {
  * Clean up all queues (for graceful shutdown)
  */
 export async function closeQueues(): Promise<void> {
-    const queues = [documentQueue, chunkQueue, reportQueue].filter(Boolean);
+    const queues = [documentQueue, chunkQueue, reportQueue, drawingQueue].filter(Boolean);
 
     await Promise.all(queues.map(q => q?.close()));
 
@@ -249,6 +309,7 @@ export async function closeQueues(): Promise<void> {
     documentQueue = null;
     chunkQueue = null;
     reportQueue = null;
+    drawingQueue = null;
 }
 
 /**

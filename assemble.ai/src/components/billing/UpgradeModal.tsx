@@ -37,36 +37,36 @@ export function UpgradeModal({
             />
 
             {/* Modal */}
-            <div className="relative w-full max-w-md rounded-xl border border-gray-800 bg-[#252526] p-6 shadow-2xl">
+            <div className="relative w-full max-w-md rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-2xl">
                 {/* Close button */}
                 <button
                     onClick={onClose}
-                    className="absolute right-4 top-4 text-gray-400 hover:text-white"
+                    className="absolute right-4 top-4 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                 >
                     <X className="h-5 w-5" />
                 </button>
 
                 {/* Icon */}
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600/10">
-                    <Sparkles className="h-6 w-6 text-blue-400" />
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--color-accent-copper)]/10">
+                    <Sparkles className="h-6 w-6 text-[var(--color-accent-copper)]" />
                 </div>
 
                 {/* Title */}
-                <h2 className="text-xl font-semibold text-white">
+                <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
                     Upgrade to {planName}
                 </h2>
 
                 {/* Description */}
-                <p className="mt-2 text-gray-400">
-                    <strong className="text-white">{featureName}</strong> is a premium feature.
+                <p className="mt-2 text-[var(--color-text-muted)]">
+                    <strong className="text-[var(--color-text-primary)]">{featureName}</strong> is a premium feature.
                     {featureDescription && (
                         <span className="mt-1 block">{featureDescription}</span>
                     )}
                 </p>
 
                 {/* Benefits */}
-                <div className="mt-6 rounded-lg bg-[#1e1e1e] p-4">
-                    <p className="text-sm font-medium text-white">
+                <div className="mt-6 rounded-lg bg-[var(--color-bg-tertiary)] p-4">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)]">
                         What you&apos;ll get with {planName}:
                     </p>
                     <ul className="mt-3 space-y-2">
@@ -95,13 +95,13 @@ export function UpgradeModal({
                 <div className="mt-6 flex gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 rounded-lg border border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-300 hover:border-gray-600 hover:text-white"
+                        className="flex-1 rounded-lg border border-[var(--color-border)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] hover:border-[var(--color-accent-copper)]/50 hover:text-[var(--color-text-primary)]"
                     >
                         Maybe Later
                     </button>
                     <Link
                         href={`/billing?upgrade=${requiredPlan}`}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-500"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--color-accent-copper)] px-4 py-2.5 text-sm font-medium text-[var(--color-text-inverse)] hover:bg-[var(--color-accent-copper-light)]"
                         onClick={onClose}
                     >
                         Upgrade Now
@@ -110,7 +110,7 @@ export function UpgradeModal({
                 </div>
 
                 {/* Trial note */}
-                <p className="mt-4 text-center text-xs text-gray-500">
+                <p className="mt-4 text-center text-xs text-[var(--color-text-muted)]">
                     14-day free trial included. Cancel anytime.
                 </p>
             </div>
@@ -120,9 +120,9 @@ export function UpgradeModal({
 
 function BenefitItem({ children }: { children: React.ReactNode }) {
     return (
-        <li className="flex items-center gap-2 text-sm text-gray-300">
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+        <li className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-accent-copper)]/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent-copper)]" />
             </span>
             {children}
         </li>

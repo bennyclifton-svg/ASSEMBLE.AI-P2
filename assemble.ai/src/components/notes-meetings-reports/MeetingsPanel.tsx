@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { MeetingCard } from './MeetingCard';
 import { DeleteConfirmDialog } from './shared/DeleteConfirmDialog';
 import { useMeetings, useMeetingMutations } from '@/lib/hooks/use-meetings';
-import { Plus, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { UpdateMeetingRequest } from '@/types/notes-meetings-reports';
 

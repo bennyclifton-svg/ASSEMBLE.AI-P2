@@ -8,18 +8,10 @@ import {
   Building2,
   Shield,
   HardHat,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import type { StakeholderGroup } from '@/types/stakeholder';
-
-const TriangleRight = () => (
-  <svg
-    className="w-3 h-3 text-[var(--color-text-muted)]"
-    viewBox="0 0 12 12"
-    fill="currentColor"
-  >
-    <polygon points="2,0 12,6 2,12" />
-  </svg>
-);
 
 interface StakeholderNavProps {
   projectId: string;
@@ -44,7 +36,7 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
 
   if (isLoading) {
     return (
-      <div className="nav-panel py-3 pl-2 pr-3 relative overflow-hidden">
+      <div className="nav-panel-section py-3 pl-2 pr-3">
         <Skeleton className="h-5 w-24 mb-2" />
         <div className="space-y-1">
           {[1, 2, 3, 4].map((i) => (
@@ -56,7 +48,7 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
   }
 
   return (
-    <div className={`nav-panel relative overflow-hidden ${isActive ? 'nav-panel-active' : ''}`}>
+    <div className={`nav-panel-section ${isActive ? 'nav-panel-active' : ''}`}>
       {/* Header */}
       <div
         className="nav-panel-header pl-2 pr-3 py-2 border-b border-[var(--color-border)]"
@@ -68,7 +60,11 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
           </h3>
           <span className="text-xs text-[var(--color-text-muted)]">({counts.total})</span>
         </div>
-        <TriangleRight />
+        {isActive ? (
+          <Minimize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+        ) : (
+          <Maximize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-text-muted)] transition-colors" />
+        )}
       </div>
 
       {/* Compact Group List */}

@@ -13,6 +13,12 @@ interface CategoryUploadTilesProps {
     onBulkSelectCategory?: (categoryId: string, subcategoryId?: string) => void;
     /** Callback when files are added to Knowledge category (triggers RAG). Empty array = use selected documents. */
     onKnowledgeAction?: (files: File[]) => void;
+    /** Currently filtered category ID (null = no filter). */
+    filterCategoryId?: string | null;
+    /** Currently filtered subcategory ID (null = no subcategory filter). */
+    filterSubcategoryId?: string | null;
+    /** Callback when filter changes. */
+    onFilterChange?: (categoryId: string | null, subcategoryId?: string | null) => void;
 }
 
 export function CategoryUploadTiles({
@@ -21,6 +27,9 @@ export function CategoryUploadTiles({
     selectedDocumentIds = [],
     onBulkSelectCategory,
     onKnowledgeAction,
+    filterCategoryId,
+    filterSubcategoryId,
+    onFilterChange,
 }: CategoryUploadTilesProps) {
     const { categories, isLoading } = useActiveCategories(projectId);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -77,10 +86,22 @@ export function CategoryUploadTiles({
                         category={category}
                         onFilesDropped={onFilesDropped}
                         onClick={category.hasSubcategories ? () => toggleCategory(category.id) : undefined}
+                        onCategoryClick={() => {
+                            // Toggle filter for this category (only for categories without subcategories)
+                            if (!category.hasSubcategories) {
+                                if (filterCategoryId === category.id && !filterSubcategoryId) {
+                                    onFilterChange?.(null); // Clear filter
+                                } else {
+                                    onFilterChange?.(category.id); // Set filter
+                                }
+                            }
+                        }}
                         onBulkSelectCategory={onBulkSelectCategory}
                         onKnowledgeAction={onKnowledgeAction}
                         isExpanded={expandedCategories.has(category.id)}
                         hasSelection={hasSelection}
+                        isSelected={expandedCategories.has(category.id)}
+                        isFiltered={filterCategoryId === category.id && !filterSubcategoryId}
                     />
                 ))}
             </div>
@@ -103,9 +124,18 @@ export function CategoryUploadTiles({
                                         category={category}
                                         subcategory={subcategory}
                                         onFilesDropped={onFilesDropped}
+                                        onCategoryClick={() => {
+                                            // Toggle filter for this subcategory
+                                            if (filterCategoryId === category.id && filterSubcategoryId === subcategory.id) {
+                                                onFilterChange?.(null); // Clear filter
+                                            } else {
+                                                onFilterChange?.(category.id, subcategory.id); // Set filter
+                                            }
+                                        }}
                                         onBulkSelectCategory={onBulkSelectCategory}
                                         isSubcategory
                                         hasSelection={hasSelection}
+                                        isFiltered={filterCategoryId === category.id && filterSubcategoryId === subcategory.id}
                                     />
                                 </div>
                             ))}

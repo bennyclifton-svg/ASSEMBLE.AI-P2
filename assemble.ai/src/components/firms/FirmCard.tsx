@@ -11,7 +11,6 @@ export function FirmCard({
   firm,
   category,
   isExpanded,
-  onToggleExpand,
   onSave,
   onDelete,
   onShortlistToggle,
@@ -110,7 +109,6 @@ export function FirmCard({
         <FirmCardExpanded
           type={type}
           firm={firm}
-          onToggleExpand={onToggleExpand}
           onSave={onSave}
           onDelete={handleDelete}
           onShortlistToggle={onShortlistToggle}
@@ -121,7 +119,6 @@ export function FirmCard({
       ) : (
         <FirmCardCompact
           firm={firm}
-          onToggleExpand={onToggleExpand}
           onSave={onSave}
           onDelete={handleDelete}
           onShortlistToggle={onShortlistToggle}

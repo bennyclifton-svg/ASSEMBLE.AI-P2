@@ -98,6 +98,19 @@
   --font-semibold: 600;
   --font-bold: 700;
 
+  /* Cool Gray Palette (Clean/Tech) */
+  /* Cool Gray Palette (Slate - Colder/Bluer) */
+  --primitive-cool-gray-50: #f8fafc;
+  --primitive-cool-gray-100: #f1f5f9;
+  --primitive-cool-gray-200: #e2e8f0;
+  --primitive-cool-gray-300: #cbd5e1;
+  --primitive-cool-gray-400: #94a3b8;
+  --primitive-cool-gray-500: #64748b;
+  --primitive-cool-gray-600: #475569;
+  --primitive-cool-gray-700: #334155;
+  --primitive-cool-gray-800: #1e293b;
+  --primitive-cool-gray-900: #0f172a;
+
   /* Border Radius */
   --radius-sm: 4px;
   --radius: 8px;
@@ -110,11 +123,12 @@
    TIER 2: SEMANTIC TOKENS - PRECISION THEME
    "Architectural Precision" Dark - Copper on Slate
    ============================================ */
-[data-theme="precision"], :root:not([data-theme="precision-light"]) {
+[data-theme="precision"],
+:root:not([data-theme="precision-light"]) {
   /* Backgrounds - Deep slate with warmth */
-  --color-bg-primary: var(--primitive-slate-850);
-  --color-bg-secondary: var(--primitive-slate-900);
-  --color-bg-tertiary: var(--primitive-slate-800);
+  --color-bg-primary: var(--primitive-slate-900);
+  --color-bg-secondary: var(--primitive-slate-950);
+  --color-bg-tertiary: var(--primitive-slate-850);
   --color-bg-elevated: rgba(26, 29, 33, 0.7);
   --color-bg-inverse: var(--primitive-copper-lighter);
 
@@ -130,11 +144,14 @@
   --color-border-strong: rgba(107, 114, 128, 0.4);
   --color-border-accent: rgba(212, 165, 116, 0.18);
 
-  /* Primary accent is copper */
-  --color-accent-primary: var(--primitive-copper);
-  --color-accent-primary-hover: var(--primitive-copper-light);
-  --color-accent-primary-muted: var(--primitive-copper-darker);
-  --color-accent-primary-tint: rgba(212, 165, 116, 0.12);
+  /* Primary accent is Silver/Titanium (Architecture Metal) */
+  --color-accent-primary: #E2E8F0;
+  /* Slate-200 (Bright Silver) */
+  --color-accent-primary-hover: #F8FAFC;
+  /* Slate-50 (Near White Silver) */
+  --color-accent-primary-muted: #94A3B8;
+  /* Slate-400 (Muted Silver) */
+  --color-accent-primary-tint: rgba(226, 232, 240, 0.12);
 
   /* Secondary accents (for status, etc.) */
   --color-accent-green: #7A9E7E;
@@ -197,82 +214,90 @@
    "Architectural Precision" Light - Warm Cream with Copper
    ============================================ */
 [data-theme="precision-light"] {
-  /* Backgrounds - Warm creams and off-whites */
-  --color-bg-primary: var(--primitive-cream-50);
-  --color-bg-secondary: var(--primitive-cream-100);
-  --color-bg-tertiary: var(--primitive-cream-200);
-  --color-bg-elevated: var(--primitive-white);
-  --color-bg-inverse: var(--primitive-brown-900);
+  /* Backgrounds - Cool tech aesthetic */
+  --color-bg-primary: var(--primitive-cool-gray-50);
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: var(--primitive-cool-gray-100);
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-inverse: var(--primitive-cool-gray-900);
 
-  /* Text - Warm browns instead of harsh blacks */
-  --color-text-primary: var(--primitive-brown-900);
-  --color-text-secondary: var(--primitive-brown-700);
-  --color-text-muted: var(--primitive-brown-500);
-  --color-text-inverse: var(--primitive-cream-50);
+  /* Text - High contrast / Deep Slate */
+  --color-text-primary: var(--primitive-cool-gray-900);
+  --color-text-secondary: var(--primitive-cool-gray-600);
+  --color-text-muted: var(--primitive-cool-gray-500);
+  --color-text-inverse: #FFFFFF;
 
-  /* Borders - Warm tan tones */
-  --color-border: rgba(180, 140, 100, 0.2);
-  --color-border-subtle: rgba(180, 140, 100, 0.12);
-  --color-border-strong: rgba(180, 140, 100, 0.35);
-  --color-border-accent: rgba(180, 140, 100, 0.25);
+  /* Borders - Crisp cool greys */
+  --color-border: var(--primitive-cool-gray-200);
+  --color-border-subtle: var(--primitive-cool-gray-100);
+  --color-border-strong: var(--primitive-cool-gray-300);
+  --color-border-accent: rgba(184, 137, 90, 0.4);
 
-  /* Primary accent - Darker copper for better contrast on light */
-  --color-accent-primary: #B8895A;
-  --color-accent-primary-hover: #9A7348;
-  --color-accent-primary-muted: #C4A070;
-  --color-accent-primary-tint: rgba(184, 137, 90, 0.12);
+  /* Primary accent - Darker Statuary Bronze (Premium Look) */
+  --color-accent-primary: #8C5E3C;
+  /* Darker Bronze */
+  --color-accent-primary-hover: #6D482F;
+  /* Even Darker on Hover */
+  --color-accent-primary-muted: #A67C5D;
+  /* Muted Bronze */
+  --color-accent-primary-tint: rgba(140, 94, 60, 0.1);
 
-  /* Secondary accents - Darker earth tones for light mode */
-  --color-accent-green: #5D7E5F;
-  --color-accent-yellow: #C4960C;
-  --color-accent-coral: #A65454;
-  --color-accent-teal: #3D8B84;
-  --color-accent-purple: #8B5CF6;
+  /* Secondary accents - Adjusted for cool background */
+  --color-accent-green: #15803d;
+  /* emerald-700 */
+  --color-accent-yellow: #ca8a04;
+  /* yellow-600 */
+  --color-accent-coral: #b91c1c;
+  /* red-700 */
+  --color-accent-teal: #0f766e;
+  /* teal-700 */
+  --color-accent-purple: #7e22ce;
+  /* purple-700 */
   --color-accent-copper: #B8895A;
 
-  /* Accent Tints - Subtle warm backgrounds */
-  --color-accent-green-tint: rgba(93, 126, 95, 0.12);
-  --color-accent-yellow-tint: rgba(196, 150, 12, 0.12);
-  --color-accent-coral-tint: rgba(166, 84, 84, 0.12);
-  --color-accent-teal-tint: rgba(61, 139, 132, 0.12);
-  --color-accent-purple-tint: rgba(139, 92, 246, 0.12);
+  /* Accent Tints - Cleaner */
+  --color-accent-green-tint: rgba(21, 128, 61, 0.1);
+  --color-accent-yellow-tint: rgba(202, 138, 4, 0.1);
+  --color-accent-coral-tint: rgba(185, 28, 28, 0.1);
+  --color-accent-teal-tint: rgba(15, 118, 110, 0.1);
+  --color-accent-purple-tint: rgba(126, 34, 206, 0.1);
   --color-accent-copper-tint: rgba(184, 137, 90, 0.12);
 
   /* Semantic States */
-  --color-success: #5D7E5F;
-  --color-warning: #C4960C;
-  --color-error: #A65454;
+  --color-success: #15803d;
+  --color-warning: #ca8a04;
+  --color-error: #b91c1c;
   --color-info: #B8895A;
 
-  /* Shadows - Warm, subtle */
-  --shadow-sm: 0 1px 2px rgba(180, 140, 100, 0.08);
-  --shadow: 0 2px 4px rgba(180, 140, 100, 0.1), 0 1px 2px rgba(180, 140, 100, 0.06);
-  --shadow-md: 0 4px 8px rgba(180, 140, 100, 0.12);
-  --shadow-lg: 0 8px 16px rgba(180, 140, 100, 0.15);
-  --shadow-glow: 0 0 20px rgba(184, 137, 90, 0.15);
+  /* Shadows - Crisp, not muddy */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: 0 0 15px rgba(184, 137, 90, 0.15);
 
   /* Scrollbar */
-  --scrollbar-track: var(--primitive-cream-100);
-  --scrollbar-thumb: #D4CCC0;
-  --scrollbar-thumb-hover: #C4B8A8;
+  --scrollbar-track: var(--primitive-cool-gray-50);
+  --scrollbar-thumb: var(--primitive-cool-gray-300);
+  --scrollbar-thumb-hover: var(--primitive-cool-gray-400);
 
   /* Tailwind CSS Theme Integration */
   --background: var(--color-bg-primary);
   --foreground: var(--color-text-primary);
-  --card: var(--color-bg-elevated);
+  --card: var(--color-bg-secondary);
   --card-foreground: var(--color-text-primary);
-  --popover: var(--color-bg-elevated);
+  --popover: var(--color-bg-secondary);
   --popover-foreground: var(--color-text-primary);
   --primary: var(--color-accent-primary);
-  --primary-foreground: var(--primitive-white);
+  --primary-foreground: #FFFFFF;
   --secondary: var(--color-bg-tertiary);
   --secondary-foreground: var(--color-text-primary);
   --muted: var(--color-bg-tertiary);
   --muted-foreground: var(--color-text-muted);
   --accent: var(--color-accent-primary);
-  --accent-foreground: var(--primitive-white);
+  --accent-foreground: #FFFFFF;
   --destructive: var(--color-error);
-  --destructive-foreground: var(--primitive-white);
+  --destructive-foreground: #FFFFFF;
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-accent-primary);
@@ -319,7 +344,9 @@ body {
 }
 
 /* Apply serif font to major headings */
-h1, h2, .heading-serif {
+h1,
+h2,
+.heading-serif {
   font-family: var(--font-heading);
 }
 
@@ -412,21 +439,6 @@ textarea:-webkit-autofill:active {
 /* ============================================
    PRECISION THEME UTILITIES - DARK
    ============================================ */
-/* Blueprint grid background */
-[data-theme="precision"] .bg-blueprint {
-  background-image:
-    linear-gradient(rgba(212, 165, 116, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(212, 165, 116, 0.04) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
-
-[data-theme="precision"] .bg-blueprint-dense {
-  background-image:
-    linear-gradient(rgba(212, 165, 116, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(212, 165, 116, 0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
 /* Translucent card style */
 [data-theme="precision"] .card-translucent {
   background: var(--color-bg-elevated);
@@ -463,21 +475,6 @@ textarea:-webkit-autofill:active {
 /* ============================================
    PRECISION THEME UTILITIES - LIGHT
    ============================================ */
-/* Blueprint grid - warmer tone for light bg */
-[data-theme="precision-light"] .bg-blueprint {
-  background-image:
-    linear-gradient(rgba(180, 140, 100, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(180, 140, 100, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
-}
-
-[data-theme="precision-light"] .bg-blueprint-dense {
-  background-image:
-    linear-gradient(rgba(180, 140, 100, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(180, 140, 100, 0.08) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
 /* Card styles */
 [data-theme="precision-light"] .card-translucent {
   background: var(--color-bg-elevated);
@@ -639,16 +636,17 @@ textarea:-webkit-autofill:active {
 
   .btn-copper-outline {
     background: transparent;
-    color: #9A7348;
-    border: 1px solid rgba(184, 137, 90, 0.4);
+    color: #856038;
+    border: 1px solid rgba(184, 137, 90, 0.6);
     transition: all 0.15s ease;
   }
 
   .btn-copper-outline:hover {
     background: rgba(184, 137, 90, 0.1);
-    border-color: rgba(184, 137, 90, 0.6);
+    border-color: rgba(184, 137, 90, 0.8);
   }
 }
+
 
 /* ============================================
    PRECISION INTERACTIVE STATES
@@ -869,12 +867,15 @@ textarea:-webkit-autofill:active {
 }
 
 /* Smooth theme transition */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.05s ease;
 }
 
 /* Disable transitions on initial page load */
-.no-transitions, .no-transitions * {
+.no-transitions,
+.no-transitions * {
   transition: none !important;
 }
 
@@ -883,6 +884,92 @@ textarea:-webkit-autofill:active {
    Unified styling for left nav panels with
    default, hover, and active states
    ============================================ */
+
+/* Unified panel container - outer wrapper for joined sections */
+.nav-panel-unified {
+  background: rgba(20, 22, 24, 0.85);
+  /* More opaque base */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* Internal section within unified panel */
+.nav-panel-section {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+  /* Transparent by default, container provides base */
+  transition: background-color 0.2s ease, background 0.2s ease;
+}
+
+/* Section divider (not on last section) */
+.nav-panel-section:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Section hover state - very transparent to show grid */
+.nav-panel-section:hover {
+  background: rgba(212, 165, 116, 0.03);
+}
+
+/* Section active state - very transparent with subtle copper tint */
+.nav-panel-section.nav-panel-active {
+  background: rgba(212, 165, 116, 0.04);
+}
+
+/* Active section header accent line */
+.nav-panel-section.nav-panel-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      var(--primitive-copper) 20%,
+      var(--primitive-copper-light) 50%,
+      var(--primitive-copper) 80%,
+      transparent 100%);
+  border-radius: 0 0 2px 2px;
+  opacity: 0.8;
+}
+
+/* Active section title color */
+.nav-panel-section.nav-panel-active .nav-panel-title {
+  color: var(--primitive-copper);
+}
+
+/* Light theme adjustments for unified sections */
+[data-theme="precision-light"] .nav-panel-unified {
+  background: rgba(245, 242, 237, 0.85);
+  /* More opaque base */
+}
+
+[data-theme="precision-light"] .nav-panel-section {
+  background: transparent;
+}
+
+[data-theme="precision-light"] .nav-panel-section:hover {
+  background: rgba(184, 137, 90, 0.04);
+}
+
+[data-theme="precision-light"] .nav-panel-section.nav-panel-active {
+  background: rgba(184, 137, 90, 0.06);
+}
+
+[data-theme="precision-light"] .nav-panel-section.nav-panel-active::before {
+  background: linear-gradient(90deg,
+      transparent 0%,
+      #B8895A 20%,
+      #C4A070 50%,
+      #B8895A 80%,
+      transparent 100%);
+}
+
+[data-theme="precision-light"] .nav-panel-section.nav-panel-active .nav-panel-title {
+  color: #9A7348;
+}
 
 /* Base nav panel - default state */
 .nav-panel {
@@ -898,23 +985,19 @@ textarea:-webkit-autofill:active {
 /* Hover state - subtle copper warmth */
 .nav-panel:hover {
   border-color: rgba(212, 165, 116, 0.3);
-  background: linear-gradient(
-    135deg,
-    var(--color-bg-primary) 0%,
-    rgba(212, 165, 116, 0.03) 100%
-  );
+  background: linear-gradient(135deg,
+      var(--color-bg-primary) 0%,
+      rgba(212, 165, 116, 0.03) 100%);
 }
 
 /* Active/Selected state - full copper highlight */
 .nav-panel-active,
 .nav-panel.nav-panel-active {
   border-color: var(--primitive-copper);
-  background: linear-gradient(
-    135deg,
-    rgba(212, 165, 116, 0.08) 0%,
-    rgba(212, 165, 116, 0.04) 50%,
-    var(--color-bg-primary) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(212, 165, 116, 0.08) 0%,
+      rgba(212, 165, 116, 0.04) 50%,
+      var(--color-bg-primary) 100%);
   box-shadow:
     0 0 0 1px rgba(212, 165, 116, 0.15),
     0 0 20px rgba(212, 165, 116, 0.08),
@@ -929,14 +1012,12 @@ textarea:-webkit-autofill:active {
   left: 12px;
   right: 12px;
   height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--primitive-copper) 20%,
-    var(--primitive-copper-light) 50%,
-    var(--primitive-copper) 80%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      var(--primitive-copper) 20%,
+      var(--primitive-copper-light) 50%,
+      var(--primitive-copper) 80%,
+      transparent 100%);
   border-radius: 0 0 2px 2px;
   opacity: 0.8;
 }
@@ -964,6 +1045,15 @@ textarea:-webkit-autofill:active {
   transform: translateX(2px);
 }
 
+/* Section hover highlights both title and chevron */
+.nav-panel-section:hover .nav-panel-title {
+  color: var(--primitive-copper);
+}
+
+.nav-panel-section:hover .nav-panel-chevron {
+  color: var(--primitive-copper);
+}
+
 /* Nav panel chevron icon */
 .nav-panel-chevron {
   transition:
@@ -974,22 +1064,18 @@ textarea:-webkit-autofill:active {
 /* Light theme adjustments */
 [data-theme="precision-light"] .nav-panel:hover {
   border-color: rgba(184, 137, 90, 0.35);
-  background: linear-gradient(
-    135deg,
-    var(--color-bg-primary) 0%,
-    rgba(184, 137, 90, 0.04) 100%
-  );
+  background: linear-gradient(135deg,
+      var(--color-bg-primary) 0%,
+      rgba(184, 137, 90, 0.04) 100%);
 }
 
 [data-theme="precision-light"] .nav-panel-active,
 [data-theme="precision-light"] .nav-panel.nav-panel-active {
   border-color: #B8895A;
-  background: linear-gradient(
-    135deg,
-    rgba(184, 137, 90, 0.1) 0%,
-    rgba(184, 137, 90, 0.05) 50%,
-    var(--color-bg-primary) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(184, 137, 90, 0.1) 0%,
+      rgba(184, 137, 90, 0.05) 50%,
+      var(--color-bg-primary) 100%);
   box-shadow:
     0 0 0 1px rgba(184, 137, 90, 0.2),
     0 0 20px rgba(184, 137, 90, 0.06),
@@ -997,14 +1083,12 @@ textarea:-webkit-autofill:active {
 }
 
 [data-theme="precision-light"] .nav-panel-active::before {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    #B8895A 20%,
-    #C4A070 50%,
-    #B8895A 80%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      #B8895A 20%,
+      #C4A070 50%,
+      #B8895A 80%,
+      transparent 100%);
 }
 
 [data-theme="precision-light"] .nav-panel-active .nav-panel-title {
@@ -1019,6 +1103,14 @@ textarea:-webkit-autofill:active {
   color: #9A7348;
 }
 
+[data-theme="precision-light"] .nav-panel-section:hover .nav-panel-title {
+  color: #9A7348;
+}
+
+[data-theme="precision-light"] .nav-panel-section:hover .nav-panel-chevron {
+  color: #9A7348;
+}
+
 /* ============================================
    PRECISION THEME ANIMATIONS & MICRO-INTERACTIONS
    ============================================ */
@@ -1029,6 +1121,7 @@ textarea:-webkit-autofill:active {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1040,6 +1133,7 @@ textarea:-webkit-autofill:active {
     opacity: 0;
     transform: translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1050,6 +1144,7 @@ textarea:-webkit-autofill:active {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -1060,6 +1155,7 @@ textarea:-webkit-autofill:active {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -1070,6 +1166,7 @@ textarea:-webkit-autofill:active {
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
@@ -1079,6 +1176,7 @@ textarea:-webkit-autofill:active {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -1107,12 +1205,10 @@ textarea:-webkit-autofill:active {
 
 .animate-shimmer {
   animation: shimmer 2s linear infinite;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(212, 165, 116, 0.1) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(212, 165, 116, 0.1) 50%,
+      transparent 100%);
   background-size: 1000px 100%;
 }
 
@@ -1163,6 +1259,7 @@ textarea:-webkit-autofill:active {
 
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -1187,4 +1284,40 @@ textarea:-webkit-autofill:active {
 .number-input-hide-spinners::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* ============================================
+   COST PLAN TABLE - Priority Column Collapsing
+   ============================================ */
+
+/* Container for cost plan table */
+.cost-plan-container {
+  container-type: inline-size;
+  container-name: costplan;
+}
+
+/* Column priority classes - lower number = collapse first */
+/* Priority 1: Month, Remaining - collapse first */
+/* Priority 2: Claimed, Variance */
+/* Priority 3: Forecast, Approved Var, Forecast Var */
+
+/* Hide priority 1 columns below 900px */
+@container costplan (max-width: 900px) {
+  .col-priority-1 {
+    display: none;
+  }
+}
+
+/* Hide priority 2 columns below 750px */
+@container costplan (max-width: 750px) {
+  .col-priority-2 {
+    display: none;
+  }
+}
+
+/* Hide priority 3 columns below 600px */
+@container costplan (max-width: 600px) {
+  .col-priority-3 {
+    display: none;
+  }
 }

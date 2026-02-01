@@ -23,7 +23,7 @@ export async function GET(
             return NextResponse.json({ error: 'Addendum not found' }, { status: 404 });
         }
 
-        // Fetch transmittal documents with details including category/subcategory
+        // Fetch transmittal documents with details including category/subcategory and drawing info
         const transmittalDocs = await db
             .select({
                 id: addendumTransmittals.id,
@@ -37,6 +37,11 @@ export async function GET(
                 categoryName: categories.name,
                 subcategoryId: documents.subcategoryId,
                 subcategoryName: subcategories.name,
+                // Drawing extraction fields
+                drawingNumber: fileAssets.drawingNumber,
+                drawingName: fileAssets.drawingName,
+                drawingRevision: fileAssets.drawingRevision,
+                drawingExtractionStatus: fileAssets.drawingExtractionStatus,
             })
             .from(addendumTransmittals)
             .innerJoin(documents, eq(addendumTransmittals.documentId, documents.id))

@@ -152,6 +152,13 @@ export const polishContentSchema = z.object({
   tone: toneSchema.optional(),
 });
 
+export const generateNoteContentSchema = z.object({
+  noteId: z.string().min(1),
+  projectId: z.string().min(1),
+  existingContent: z.string().optional(),
+  existingTitle: z.string().optional(),
+});
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -179,3 +186,4 @@ export type StakeholderGroup = z.infer<typeof stakeholderGroupSchema>;
 export type ContextType = z.infer<typeof contextTypeSchema>;
 export type Tone = z.infer<typeof toneSchema>;
 export type ExportFormat = z.infer<typeof exportFormatSchema>;
+export type GenerateNoteContentInput = z.infer<typeof generateNoteContentSchema>;

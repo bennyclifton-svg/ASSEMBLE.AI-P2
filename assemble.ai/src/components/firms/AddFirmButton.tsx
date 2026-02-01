@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import { AddFirmButtonProps } from './types';
 
-export function AddFirmButton({ onAdd, onFileDrop }: AddFirmButtonProps) {
+export function AddFirmButton({ onAdd, onFileDrop, isExpanded = false }: AddFirmButtonProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -63,10 +63,12 @@ export function AddFirmButton({ onAdd, onFileDrop }: AddFirmButtonProps) {
   return (
     <div
       className={`
-        flex items-center justify-center px-3 py-2 rounded-lg cursor-pointer
-        border-2 border-dashed transition-all duration-150
-        ${getBorderColor()} ${getBackgroundStyle()}
-        w-[220px] h-[66px] flex-shrink-0
+        flex items-center justify-center px-3 py-2 cursor-pointer
+        border-l border-dashed transition-all duration-150
+        ${isDragOver || isHovered ? 'border-[var(--color-accent-teal)]' : 'border-[var(--color-border-strong)]'}
+        ${getBackgroundStyle()}
+        w-[220px] flex-shrink-0
+        ${isExpanded ? 'min-h-[300px]' : 'min-h-[66px]'}
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

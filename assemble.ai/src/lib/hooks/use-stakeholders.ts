@@ -5,7 +5,7 @@
  * Hook for fetching and managing stakeholders
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type {
   StakeholderWithStatus,
   StakeholderGroup,
@@ -16,6 +16,7 @@ import type {
   SubmissionStatus,
   GeneratedStakeholder,
 } from '@/types/stakeholder';
+import { useStakeholderRefresh } from '@/lib/contexts/stakeholder-refresh-context';
 
 interface UseStakeholdersOptions {
   projectId: string;
@@ -44,11 +45,13 @@ interface GenerateOptions {
   groups?: StakeholderGroup[];
   includeAuthorities?: boolean;
   includeContractors?: boolean;
+  smartMerge?: boolean;
 }
 
 interface GenerateResult {
   created: number;
   deleted: number;
+  skipped: number;
   generated: GeneratedStakeholder[];
 }
 
@@ -79,10 +82,16 @@ export function useStakeholders({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Subscribe to stakeholder refresh signals for cross-component sync
+  const { version, triggerRefresh } = useStakeholderRefresh();
+
   // Fetch stakeholders
-  const fetchStakeholders = useCallback(async () => {
+  // showLoading: controls whether to show full loading skeleton (true for initial load, false for background refetch)
+  const fetchStakeholders = useCallback(async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) {
+        setIsLoading(true);
+      }
       setError(null);
 
       const url = groupFilter
@@ -98,14 +107,21 @@ export function useStakeholders({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
     }
   }, [projectId, groupFilter]);
 
-  // Initial fetch
+  // Track if we've done the initial load
+  const hasInitiallyLoaded = useRef(false);
+
+  // Fetch on mount and when version changes (triggered by stakeholder generation)
   useEffect(() => {
-    fetchStakeholders();
-  }, [fetchStakeholders]);
+    // Only show loading skeleton on initial mount, not on version-triggered refetches
+    fetchStakeholders(!hasInitiallyLoaded.current);
+    hasInitiallyLoaded.current = true;
+  }, [fetchStakeholders, version]);
 
   // Create stakeholder
   const createStakeholder = useCallback(
@@ -120,14 +136,15 @@ export function useStakeholders({
         if (!response.ok) throw new Error('Failed to create stakeholder');
 
         const stakeholder = await response.json();
-        await fetchStakeholders(); // Refetch to update state
+        await fetchStakeholders(false); // Refetch without full loading
+        triggerRefresh(); // Notify other components (StakeholderNav, categories)
         return stakeholder;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
         return null;
       }
     },
-    [projectId, fetchStakeholders]
+    [projectId, fetchStakeholders, triggerRefresh]
   );
 
   // Update stakeholder
@@ -161,6 +178,9 @@ export function useStakeholders({
   // Delete stakeholder
   const deleteStakeholder = useCallback(
     async (id: string): Promise<boolean> => {
+      // Find the stakeholder before deletion for count updates
+      const stakeholderToDelete = stakeholders.find(s => s.id === id);
+
       try {
         const response = await fetch(`/api/projects/${projectId}/stakeholders/${id}`, {
           method: 'DELETE',
@@ -170,23 +190,24 @@ export function useStakeholders({
 
         // Optimistically update local state
         setStakeholders(prev => prev.filter(s => s.id !== id));
-        setCounts(prev => {
-          const stakeholder = stakeholders.find(s => s.id === id);
-          if (!stakeholder) return prev;
-          return {
-            ...prev,
-            [stakeholder.stakeholderGroup]: prev[stakeholder.stakeholderGroup] - 1,
-            total: prev.total - 1,
-          };
-        });
 
+        // Update counts using the captured stakeholder
+        if (stakeholderToDelete) {
+          setCounts(prev => ({
+            ...prev,
+            [stakeholderToDelete.stakeholderGroup]: prev[stakeholderToDelete.stakeholderGroup] - 1,
+            total: prev.total - 1,
+          }));
+        }
+
+        triggerRefresh(); // Notify other components (StakeholderNav, categories)
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
         return false;
       }
     },
-    [projectId, stakeholders]
+    [projectId, stakeholders, triggerRefresh]
   );
 
   // Toggle enabled status
@@ -215,8 +236,8 @@ export function useStakeholders({
 
         if (!response.ok) throw new Error('Failed to update tender status');
 
-        // Refetch to get updated statuses
-        await fetchStakeholders();
+        // Refetch to get updated statuses without full loading
+        await fetchStakeholders(false);
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -243,8 +264,8 @@ export function useStakeholders({
 
         if (!response.ok) throw new Error('Failed to update submission status');
 
-        // Refetch to get updated statuses
-        await fetchStakeholders();
+        // Refetch to get updated statuses without full loading
+        await fetchStakeholders(false);
         return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -287,34 +308,39 @@ export function useStakeholders({
   const generateStakeholders = useCallback(
     async (options: GenerateOptions = {}): Promise<GenerateResult | null> => {
       try {
-        setIsLoading(true);
+        // Don't set isLoading here - let the UI handle per-group loading state
+        // to avoid replacing the entire table with skeletons
         const response = await fetch(`/api/projects/${projectId}/stakeholders/generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...options,
             preview: false,
+            smartMerge: options.smartMerge ?? true, // Default to smart merge
           }),
         });
 
         if (!response.ok) throw new Error('Failed to generate stakeholders');
 
         const result = await response.json();
-        await fetchStakeholders(); // Refetch to get new stakeholders
+        await fetchStakeholders(false); // Refetch without showing full loading skeleton
+
+        // Notify all other components (StakeholderNav, DocumentRepository categories, etc.)
+        // to refetch their stakeholder-dependent data
+        triggerRefresh();
 
         return {
           created: result.created,
           deleted: result.deleted,
+          skipped: result.skipped || 0,
           generated: result.generated,
         };
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
         return null;
-      } finally {
-        setIsLoading(false);
       }
     },
-    [projectId, fetchStakeholders]
+    [projectId, fetchStakeholders, triggerRefresh]
   );
 
   // Preview generation

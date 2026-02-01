@@ -85,6 +85,36 @@ export function useCostLineMutations(projectId: string, onSuccess?: () => void) 
     }
   }, [projectId, onSuccess]);
 
+  const bulkDeleteCostLines = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/projects/${projectId}/cost-lines/bulk-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete cost lines');
+      }
+
+      const result = await response.json();
+      onSuccess?.();
+      return result;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'An error occurred';
+      setError(message);
+      throw err;
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [projectId, onSuccess]);
+
   const reorderCostLines = useCallback(async (updates: Array<{ id: string; sortOrder: number }>) => {
     setIsSubmitting(true);
     setError(null);
@@ -115,6 +145,7 @@ export function useCostLineMutations(projectId: string, onSuccess?: () => void) 
     createCostLine,
     updateCostLine,
     deleteCostLine,
+    bulkDeleteCostLines,
     reorderCostLines,
     isSubmitting,
     error,

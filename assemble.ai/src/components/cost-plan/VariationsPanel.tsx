@@ -327,10 +327,10 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
     const inputClass = "w-full h-full px-2 py-1 -mx-2 -my-1 bg-transparent border border-[var(--color-border)]/60 text-[11px] text-[var(--color-text-primary)] focus:outline-none";
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
-    // Sort cost lines alphabetically by cost code or description
+    // Sort cost lines alphabetically by discipline or description
     const sortedCostLines = [...costLines].sort((a, b) => {
-        const aKey = a.costCode || a.activity;
-        const bKey = b.costCode || b.activity;
+        const aKey = a.stakeholder?.name || a.activity;
+        const bKey = b.stakeholder?.name || b.activity;
         return aKey.localeCompare(bKey, undefined, { numeric: true });
     });
 
@@ -446,13 +446,9 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                     <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
                     {sortedCostLines.map((line) => {
                         const stakeholderName = line.stakeholder?.name || '';
-                        const label = line.costCode
-                            ? stakeholderName
-                                ? `${line.costCode} - ${stakeholderName} - ${line.activity}`
-                                : `${line.costCode} - ${line.activity}`
-                            : stakeholderName
-                                ? `${stakeholderName} - ${line.activity}`
-                                : line.activity;
+                        const label = stakeholderName
+                            ? `${stakeholderName} - ${line.activity}`
+                            : line.activity;
                         return (
                             <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                                 {label}
@@ -575,10 +571,10 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
         amountForecastCents: 0,
     });
 
-    // Sort cost lines alphabetically by cost code or description
+    // Sort cost lines alphabetically by discipline or description
     const sortedCostLines = [...costLines].sort((a, b) => {
-        const aKey = a.costCode || a.activity;
-        const bKey = b.costCode || b.activity;
+        const aKey = a.stakeholder?.name || a.activity;
+        const bKey = b.stakeholder?.name || b.activity;
         return aKey.localeCompare(bKey, undefined, { numeric: true });
     });
 
@@ -637,13 +633,9 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                     <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
                     {sortedCostLines.map((line) => {
                         const stakeholderName = line.stakeholder?.name || '';
-                        const label = line.costCode
-                            ? stakeholderName
-                                ? `${line.costCode} - ${stakeholderName} - ${line.activity}`
-                                : `${line.costCode} - ${line.activity}`
-                            : stakeholderName
-                                ? `${stakeholderName} - ${line.activity}`
-                                : line.activity;
+                        const label = stakeholderName
+                            ? `${stakeholderName} - ${line.activity}`
+                            : line.activity;
                         return (
                             <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
                                 {label}

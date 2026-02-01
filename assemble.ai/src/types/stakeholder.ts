@@ -133,6 +133,7 @@ export interface Stakeholder {
   disciplineOrTrade?: string;
   isEnabled: boolean;
   briefServices?: string;
+  briefDeliverables?: string;
   briefFee?: string;
   briefProgram?: string;
   scopeWorks?: string;
@@ -229,6 +230,7 @@ export interface UpdateStakeholderRequest {
   contactPhone?: string;
   isEnabled?: boolean;
   briefServices?: string;
+  briefDeliverables?: string;
   briefFee?: string;
   briefProgram?: string;
   scopeWorks?: string;

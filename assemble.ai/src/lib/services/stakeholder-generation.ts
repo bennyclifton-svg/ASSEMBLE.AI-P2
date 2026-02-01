@@ -36,6 +36,7 @@ import type {
   GeneratedStakeholder,
   GenerateStakeholdersRequest,
   GenerateStakeholdersResponse,
+  StakeholderWithStatus,
 } from '@/types/stakeholder';
 
 // ============================================
@@ -358,31 +359,77 @@ export async function generateStakeholders(
 }
 
 /**
+ * Check if a generated stakeholder already exists in the list
+ */
+function stakeholderExists(
+  generated: GeneratedStakeholder,
+  existing: StakeholderWithStatus[]
+): boolean {
+  const sameGroup = existing.filter(ex => ex.stakeholderGroup === generated.stakeholderGroup);
+
+  return sameGroup.some(ex => {
+    // Match by name (case-insensitive)
+    const nameMatch = ex.name.toLowerCase() === generated.name.toLowerCase();
+
+    // For consultants/contractors, also check disciplineOrTrade
+    if (generated.disciplineOrTrade && ex.disciplineOrTrade) {
+      const tradeMatch = ex.disciplineOrTrade.toLowerCase() === generated.disciplineOrTrade.toLowerCase();
+      return nameMatch || tradeMatch;
+    }
+
+    return nameMatch;
+  });
+}
+
+/**
  * Apply generated stakeholders to a project
+ * When existingStakeholders is provided, performs smart deduplication (only adds new ones)
  */
 export async function applyGeneratedStakeholders(
   projectId: string,
   generated: GeneratedStakeholder[],
-  mode: 'merge' | 'replace' = 'merge'
-): Promise<{ created: number; deleted: number }> {
+  mode: 'merge' | 'replace' = 'merge',
+  requestedGroups?: StakeholderGroup[],
+  existingStakeholders?: StakeholderWithStatus[]
+): Promise<{ created: number; deleted: number; skipped: number }> {
   let deleted = 0;
+  let skipped = 0;
 
-  // Group stakeholders by group
-  const byGroup = generated.reduce((acc, s) => {
-    if (!acc[s.stakeholderGroup]) acc[s.stakeholderGroup] = [];
-    acc[s.stakeholderGroup].push(s);
-    return acc;
-  }, {} as Record<StakeholderGroup, GeneratedStakeholder[]>);
+  console.log('[applyGeneratedStakeholders] Mode:', mode, 'RequestedGroups:', requestedGroups);
 
-  // In replace mode, delete existing stakeholders for groups being generated
+  // In replace mode, delete existing stakeholders for the requested groups
+  // Use requestedGroups if provided, otherwise derive from generated array
   if (mode === 'replace') {
-    for (const group of Object.keys(byGroup) as StakeholderGroup[]) {
-      deleted += await deleteStakeholdersByGroup(projectId, group);
+    const groupsToDelete = requestedGroups || [
+      ...new Set(generated.map(s => s.stakeholderGroup))
+    ];
+    console.log('[applyGeneratedStakeholders] Deleting groups:', groupsToDelete);
+    for (const group of groupsToDelete) {
+      const deletedCount = await deleteStakeholdersByGroup(projectId, group);
+      console.log('[applyGeneratedStakeholders] Deleted', deletedCount, 'from group:', group);
+      deleted += deletedCount;
     }
+  } else {
+    console.log('[applyGeneratedStakeholders] Skipping delete - mode is not replace');
+  }
+
+  // Smart deduplication: filter out stakeholders that already exist
+  let stakeholdersToCreate = generated;
+  if (existingStakeholders && existingStakeholders.length > 0) {
+    console.log('[applyGeneratedStakeholders] Smart merge - checking against', existingStakeholders.length, 'existing stakeholders');
+    stakeholdersToCreate = generated.filter(gen => {
+      if (stakeholderExists(gen, existingStakeholders)) {
+        skipped++;
+        console.log('[applyGeneratedStakeholders] Skipping duplicate:', gen.name);
+        return false;
+      }
+      return true;
+    });
+    console.log('[applyGeneratedStakeholders] After dedup:', stakeholdersToCreate.length, 'to create,', skipped, 'skipped');
   }
 
   // Convert generated stakeholders to create requests
-  const createRequests: CreateStakeholderRequest[] = generated.map(g => ({
+  const createRequests: CreateStakeholderRequest[] = stakeholdersToCreate.map(g => ({
     stakeholderGroup: g.stakeholderGroup,
     name: g.name,
     role: g.role,
@@ -398,6 +445,7 @@ export async function applyGeneratedStakeholders(
   return {
     created: created.length,
     deleted,
+    skipped,
   };
 }
 

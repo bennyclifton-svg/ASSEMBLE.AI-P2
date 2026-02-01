@@ -1,7 +1,16 @@
 {
   "metadata": {
-    "version": "1.0.0",
-    "lastUpdated": "2026-01-27"
+    "version": "2.0.0",
+    "lastUpdated": "2026-01-28",
+    "totalRules": 175,
+    "ruleCategories": {
+      "objectives_functional_quality": 36,
+      "objectives_planning_compliance": 45,
+      "stakeholders_client": 7,
+      "stakeholders_authority": 29,
+      "stakeholders_consultant": 35,
+      "stakeholders_contractor": 23
+    }
   },
 
   "objectives_functional_quality": [
@@ -67,6 +76,416 @@
         { "text": "Custom joinery throughout", "category": "Finishes", "confidence": "medium" }
       ],
       "priority": 60,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-030",
+      "description": "Warehouse building objectives",
+      "condition": { "profiler": { "subclass": "warehouse" } },
+      "infer": [
+        { "text": "Clear span warehouse structure", "category": "Structure", "confidence": "high" },
+        { "text": "High bay racking provision", "category": "Operational", "confidence": "high" },
+        { "text": "Heavy duty floor slab", "category": "Structure", "confidence": "high" },
+        { "text": "Loading dock facilities", "category": "Operations", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-031",
+      "description": "Manufacturing building objectives",
+      "condition": { "profiler": { "subclass": "manufacturing" } },
+      "infer": [
+        { "text": "Process plant accommodation", "category": "Operations", "confidence": "high" },
+        { "text": "High power supply requirements", "category": "Services", "confidence": "high" },
+        { "text": "Industrial ventilation systems", "category": "Services", "confidence": "high" },
+        { "text": "Personnel amenities block", "category": "Facilities", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-032",
+      "description": "Cold storage building objectives",
+      "condition": { "profiler": { "subclass": "cold_storage" } },
+      "infer": [
+        { "text": "Temperature controlled storage zones", "category": "Operations", "confidence": "high" },
+        { "text": "Refrigeration plant and systems", "category": "Services", "confidence": "high" },
+        { "text": "Thermal envelope performance", "category": "Envelope", "confidence": "high" },
+        { "text": "Airlock entry systems", "category": "Operations", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-033",
+      "description": "Cleanroom building objectives",
+      "condition": { "profiler": { "subclass": "cleanroom" } },
+      "infer": [
+        { "text": "ISO classification cleanroom zones", "category": "Operations", "confidence": "high" },
+        { "text": "HEPA filtration systems", "category": "Services", "confidence": "high" },
+        { "text": "Positive pressure control", "category": "Services", "confidence": "high" },
+        { "text": "Gowning and airlocks", "category": "Operations", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-034",
+      "description": "Data centre building objectives",
+      "condition": { "profiler": { "subclass": "data_centre" } },
+      "infer": [
+        { "text": "Uptime Institute tier classification", "category": "Operational", "confidence": "high" },
+        { "text": "N+1 or 2N power redundancy", "category": "Services", "confidence": "high" },
+        { "text": "Precision cooling systems", "category": "Services", "confidence": "high" },
+        { "text": "Physical security systems", "category": "Security", "confidence": "high" },
+        { "text": "Fire suppression systems", "category": "Fire", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-035",
+      "description": "Dangerous goods building objectives",
+      "condition": { "profiler": { "subclass": "dangerous_goods" } },
+      "infer": [
+        { "text": "Dangerous goods segregation", "category": "Safety", "confidence": "high" },
+        { "text": "Bunding and containment", "category": "Safety", "confidence": "high" },
+        { "text": "Emergency response provisions", "category": "Safety", "confidence": "high" },
+        { "text": "Hazardous area electrical", "category": "Services", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-040",
+      "description": "Healthcare building objectives",
+      "condition": { "profiler": { "subclass": "healthcare" } },
+      "infer": [
+        { "text": "Functional room classifications", "category": "Planning", "confidence": "high" },
+        { "text": "Medical gas systems", "category": "Services", "confidence": "high" },
+        { "text": "Infection control design", "category": "Design", "confidence": "high" },
+        { "text": "Patient flow optimisation", "category": "Planning", "confidence": "high" },
+        { "text": "Essential services redundancy", "category": "Services", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-041",
+      "description": "Education building objectives",
+      "condition": { "profiler": { "subclass": ["school", "tertiary"] } },
+      "infer": [
+        { "text": "Flexible learning spaces", "category": "Planning", "confidence": "high" },
+        { "text": "Natural daylight provision", "category": "Design", "confidence": "high" },
+        { "text": "Indoor air quality management", "category": "Services", "confidence": "high" },
+        { "text": "Acoustic separation", "category": "Acoustic", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-042",
+      "description": "Correctional building objectives",
+      "condition": { "profiler": { "subclass": "correctional" } },
+      "infer": [
+        { "text": "Security classification zones", "category": "Security", "confidence": "high" },
+        { "text": "Anti-ligature design", "category": "Safety", "confidence": "high" },
+        { "text": "Controlled movement design", "category": "Operations", "confidence": "high" },
+        { "text": "Surveillance coverage", "category": "Security", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-043",
+      "description": "Emergency services building objectives",
+      "condition": { "profiler": { "subclass": "emergency_services" } },
+      "infer": [
+        { "text": "24/7 operational readiness", "category": "Operations", "confidence": "high" },
+        { "text": "Rapid deployment design", "category": "Operations", "confidence": "high" },
+        { "text": "Vehicle accommodation", "category": "Planning", "confidence": "high" },
+        { "text": "Essential services resilience", "category": "Services", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-044",
+      "description": "Performing arts building objectives",
+      "condition": { "profiler": { "subclass": "performing_arts" } },
+      "infer": [
+        { "text": "Auditorium acoustics", "category": "Acoustic", "confidence": "high" },
+        { "text": "Stage and backstage facilities", "category": "Planning", "confidence": "high" },
+        { "text": "Theatre lighting systems", "category": "Services", "confidence": "high" },
+        { "text": "Audience sightlines", "category": "Design", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-045",
+      "description": "Sports building objectives",
+      "condition": { "profiler": { "subclass": "sports" } },
+      "infer": [
+        { "text": "Sports field/court specifications", "category": "Planning", "confidence": "high" },
+        { "text": "Spectator facilities", "category": "Planning", "confidence": "high" },
+        { "text": "Sports lighting systems", "category": "Services", "confidence": "high" },
+        { "text": "Change room and amenities", "category": "Planning", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-050",
+      "description": "Road infrastructure objectives",
+      "condition": { "profiler": { "subclass": ["road", "highway"] } },
+      "infer": [
+        { "text": "Pavement design standards", "category": "Design", "confidence": "high" },
+        { "text": "Drainage infrastructure", "category": "Civil", "confidence": "high" },
+        { "text": "Traffic management", "category": "Safety", "confidence": "high" },
+        { "text": "Road safety barriers", "category": "Safety", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-051",
+      "description": "Rail infrastructure objectives",
+      "condition": { "profiler": { "subclass": ["rail", "light_rail"] } },
+      "infer": [
+        { "text": "Track alignment design", "category": "Design", "confidence": "high" },
+        { "text": "Signalling systems", "category": "Systems", "confidence": "high" },
+        { "text": "Overhead wiring systems", "category": "Services", "confidence": "high" },
+        { "text": "Platform interface", "category": "Design", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-052",
+      "description": "Water infrastructure objectives",
+      "condition": { "profiler": { "subclass": ["water", "wastewater"] } },
+      "infer": [
+        { "text": "Hydraulic design standards", "category": "Design", "confidence": "high" },
+        { "text": "Treatment process requirements", "category": "Process", "confidence": "high" },
+        { "text": "Environmental compliance", "category": "Environment", "confidence": "high" }
+      ],
+      "priority": 88,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-053",
+      "description": "Solar farm objectives",
+      "condition": { "profiler": { "subclass": "solar" } },
+      "infer": [
+        { "text": "Panel array layout optimisation", "category": "Design", "confidence": "high" },
+        { "text": "Grid connection infrastructure", "category": "Services", "confidence": "high" },
+        { "text": "Inverter and transformer systems", "category": "Services", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-054",
+      "description": "Wind farm objectives",
+      "condition": { "profiler": { "subclass": "wind" } },
+      "infer": [
+        { "text": "Turbine foundation design", "category": "Structure", "confidence": "high" },
+        { "text": "Wind resource assessment", "category": "Environment", "confidence": "high" },
+        { "text": "Grid connection infrastructure", "category": "Services", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-055",
+      "description": "Marina objectives",
+      "condition": { "profiler": { "subclass": "marina" } },
+      "infer": [
+        { "text": "Marine structures design", "category": "Structure", "confidence": "high" },
+        { "text": "Berth and pontoon layout", "category": "Planning", "confidence": "high" },
+        { "text": "Marine services provisions", "category": "Services", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-060",
+      "description": "Farm building objectives",
+      "condition": { "profiler": { "subclass": "farm" } },
+      "infer": [
+        { "text": "Agricultural shed construction", "category": "Structure", "confidence": "high" },
+        { "text": "Machinery storage", "category": "Operations", "confidence": "high" },
+        { "text": "Rural power and water", "category": "Services", "confidence": "high" }
+      ],
+      "priority": 75,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-061",
+      "description": "Winery building objectives",
+      "condition": { "profiler": { "subclass": "winery" } },
+      "infer": [
+        { "text": "Process and production areas", "category": "Operations", "confidence": "high" },
+        { "text": "Temperature controlled storage", "category": "Services", "confidence": "high" },
+        { "text": "Cellar door and tasting facilities", "category": "Planning", "confidence": "high" }
+      ],
+      "priority": 80,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-062",
+      "description": "Livestock building objectives",
+      "condition": { "profiler": { "subclass": "livestock" } },
+      "infer": [
+        { "text": "Animal housing standards", "category": "Operations", "confidence": "high" },
+        { "text": "Biosecurity provisions", "category": "Safety", "confidence": "high" },
+        { "text": "Waste management systems", "category": "Services", "confidence": "high" }
+      ],
+      "priority": 80,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-063",
+      "description": "Vertical farming objectives",
+      "condition": { "profiler": { "subclass": "vertical_farming" } },
+      "infer": [
+        { "text": "Growing environment control", "category": "Services", "confidence": "high" },
+        { "text": "LED lighting systems", "category": "Services", "confidence": "high" },
+        { "text": "Hydroponic/Aeroponic systems", "category": "Systems", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-070",
+      "description": "Defense building objectives",
+      "condition": { "profiler": { "building_class": "defense_secure" } },
+      "infer": [
+        { "text": "Security zone classifications", "category": "Security", "confidence": "high" },
+        { "text": "SCIF/secure area requirements", "category": "Security", "confidence": "high" },
+        { "text": "Intrusion detection systems", "category": "Security", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-071",
+      "description": "Data sovereignty objectives",
+      "condition": { "profiler": { "subclass": "data_sovereignty" } },
+      "infer": [
+        { "text": "PROTECTED/SECRET classification", "category": "Security", "confidence": "high" },
+        { "text": "TEMPEST shielding requirements", "category": "Security", "confidence": "high" },
+        { "text": "Isolated network infrastructure", "category": "ICT", "confidence": "high" }
+      ],
+      "priority": 100,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-080",
+      "description": "Basic quality tier implications",
+      "condition": { "profiler": { "complexity": { "quality_tier": "basic" } } },
+      "infer": [
+        { "text": "Standard fixtures and fittings", "category": "Finishes", "confidence": "high" },
+        { "text": "Builder-grade specifications", "category": "Finishes", "confidence": "high" }
+      ],
+      "priority": 55,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-081",
+      "description": "High quality tier implications",
+      "condition": { "profiler": { "complexity": { "quality_tier": "high" } } },
+      "infer": [
+        { "text": "Premium fixtures and fittings", "category": "Finishes", "confidence": "high" },
+        { "text": "Detailed architectural finishes", "category": "Finishes", "confidence": "high" },
+        { "text": "Feature lighting throughout", "category": "Services", "confidence": "medium" }
+      ],
+      "priority": 70,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-082",
+      "description": "Sloping site considerations",
+      "condition": { "profiler": { "complexity": { "site_conditions": "sloping" } } },
+      "infer": [
+        { "text": "Cut and fill earthworks", "category": "Site", "confidence": "high" },
+        { "text": "Retaining wall structures", "category": "Structure", "confidence": "high" },
+        { "text": "Drainage management", "category": "Civil", "confidence": "high" }
+      ],
+      "priority": 72,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-083",
+      "description": "Rock site considerations",
+      "condition": { "profiler": { "complexity": { "site_conditions": "rock" } } },
+      "infer": [
+        { "text": "Rock excavation/breaking", "category": "Site", "confidence": "high" },
+        { "text": "Rock anchor foundations", "category": "Structure", "confidence": "medium" }
+      ],
+      "priority": 70,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-084",
+      "description": "Flood prone site considerations",
+      "condition": { "profiler": { "complexity": { "flood_overlay": true } } },
+      "infer": [
+        { "text": "Flood planning level compliance", "category": "Planning", "confidence": "high" },
+        { "text": "Flood resilient construction", "category": "Design", "confidence": "high" },
+        { "text": "Flood evacuation management", "category": "Safety", "confidence": "medium" }
+      ],
+      "priority": 78,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-085",
+      "description": "Coastal site considerations",
+      "condition": { "profiler": { "complexity": { "site_conditions": "coastal" } } },
+      "infer": [
+        { "text": "Corrosion protection measures", "category": "Durability", "confidence": "high" },
+        { "text": "Marine-grade materials", "category": "Materials", "confidence": "high" },
+        { "text": "Coastal erosion setback compliance", "category": "Planning", "confidence": "medium" }
+      ],
+      "priority": 74,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-086",
+      "description": "Partial occupation constraints",
+      "condition": { "profiler": { "complexity": { "operational_constraints": "partial_occupation" } } },
+      "infer": [
+        { "text": "Staged construction works", "category": "Construction", "confidence": "high" },
+        { "text": "Temporary separations and hoardings", "category": "Construction", "confidence": "high" },
+        { "text": "Noise and dust management", "category": "Construction", "confidence": "high" }
+      ],
+      "priority": 75,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-087",
+      "description": "Live environment constraints",
+      "condition": { "profiler": { "complexity": { "operational_constraints": "live_environment" } } },
+      "infer": [
+        { "text": "Out-of-hours construction works", "category": "Construction", "confidence": "high" },
+        { "text": "Hot permit systems", "category": "Safety", "confidence": "high" },
+        { "text": "Operational interface management", "category": "Construction", "confidence": "high" }
+      ],
+      "priority": 80,
+      "source": "inferred"
+    },
+    {
+      "id": "ofq-088",
+      "description": "24/7 operational constraints",
+      "condition": { "profiler": { "complexity": { "operational_constraints": "24_7_operations" } } },
+      "infer": [
+        { "text": "24/7 operational continuity requirements", "category": "Operational", "confidence": "high" },
+        { "text": "Redundant systems during changeover", "category": "Services", "confidence": "high" },
+        { "text": "Detailed construction methodology", "category": "Construction", "confidence": "high" }
+      ],
+      "priority": 85,
       "source": "inferred"
     }
   ],
@@ -153,6 +572,471 @@
       ],
       "priority": 90,
       "source": "inferred"
+    },
+    {
+      "id": "opc-030",
+      "description": "Industrial fire requirements",
+      "condition": { "profiler": { "building_class": "industrial" } },
+      "infer": [
+        { "text": "Fire compartmentation requirements", "category": "Fire Safety", "confidence": "high" },
+        { "text": "Emergency egress design", "category": "Fire Safety", "confidence": "high" },
+        { "text": "Fire water storage and hydrants", "category": "Fire Safety", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-031",
+      "description": "Dangerous goods requirements",
+      "condition": { "profiler": { "subclass": "dangerous_goods" } },
+      "infer": [
+        { "text": "Dangerous goods license", "category": "Compliance", "confidence": "high" },
+        { "text": "EPA environmental protection license", "category": "Environment", "confidence": "high" },
+        { "text": "SafeWork hazardous chemicals notification", "category": "Safety", "confidence": "high" },
+        { "text": "Fire and Rescue pre-incident plan", "category": "Fire Safety", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-032",
+      "description": "Data centre compliance",
+      "condition": { "profiler": { "subclass": "data_centre" } },
+      "infer": [
+        { "text": "Uptime Institute certification", "category": "Compliance", "confidence": "high" },
+        { "text": "NABERS Energy rating", "category": "Sustainability", "confidence": "medium" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-033",
+      "description": "Cleanroom compliance",
+      "condition": { "profiler": { "subclass": "cleanroom" } },
+      "infer": [
+        { "text": "ISO 14644 cleanroom classification", "category": "Compliance", "confidence": "high" },
+        { "text": "TGA/FDA compliance if pharmaceutical", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-034",
+      "description": "Cold storage compliance",
+      "condition": { "profiler": { "subclass": "cold_storage" } },
+      "infer": [
+        { "text": "Food safety HACCP compliance", "category": "Compliance", "confidence": "high" },
+        { "text": "Cold chain certification", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-040",
+      "description": "Healthcare regulatory requirements",
+      "condition": { "profiler": { "subclass": "healthcare" } },
+      "infer": [
+        { "text": "Health Infrastructure design guidelines", "category": "Compliance", "confidence": "high" },
+        { "text": "ACHS accreditation requirements", "category": "Compliance", "confidence": "high" },
+        { "text": "Radiation safety requirements", "category": "Safety", "confidence": "medium" },
+        { "text": "Medical gas standards compliance", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-041",
+      "description": "Education regulatory requirements",
+      "condition": { "profiler": { "subclass": ["school", "tertiary"] } },
+      "infer": [
+        { "text": "AISNSW/DoE design standards", "category": "Compliance", "confidence": "high" },
+        { "text": "Child safe design requirements", "category": "Safety", "confidence": "high" },
+        { "text": "Educational facility guidelines", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-042",
+      "description": "Correctional regulatory requirements",
+      "condition": { "profiler": { "subclass": "correctional" } },
+      "infer": [
+        { "text": "Corrective Services design guidelines", "category": "Compliance", "confidence": "high" },
+        { "text": "Security classification compliance", "category": "Security", "confidence": "high" },
+        { "text": "Human rights standards", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-050",
+      "description": "Road infrastructure approvals",
+      "condition": { "profiler": { "subclass": ["road", "highway"] } },
+      "infer": [
+        { "text": "Road authority design approval", "category": "Approval", "confidence": "high" },
+        { "text": "Traffic management plan approval", "category": "Approval", "confidence": "high" },
+        { "text": "Road occupancy permits", "category": "Permit", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-051",
+      "description": "Rail infrastructure approvals",
+      "condition": { "profiler": { "subclass": ["rail", "light_rail"] } },
+      "infer": [
+        { "text": "ONRSR accreditation", "category": "Compliance", "confidence": "high" },
+        { "text": "Rail safety management system", "category": "Safety", "confidence": "high" },
+        { "text": "Rail corridor access agreements", "category": "Approval", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-052",
+      "description": "Energy infrastructure approvals",
+      "condition": { "profiler": { "subclass": ["solar", "wind"] } },
+      "infer": [
+        { "text": "Grid connection agreement", "category": "Approval", "confidence": "high" },
+        { "text": "Environmental impact assessment", "category": "Environment", "confidence": "high" },
+        { "text": "AEMO registration", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-053",
+      "description": "Marina approvals",
+      "condition": { "profiler": { "subclass": ["marina", "marine"] } },
+      "infer": [
+        { "text": "Crown lands lease/license", "category": "Approval", "confidence": "high" },
+        { "text": "Marine works approval", "category": "Approval", "confidence": "high" },
+        { "text": "Environmental protection license", "category": "Environment", "confidence": "high" }
+      ],
+      "priority": 88,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-060",
+      "description": "Agricultural compliance",
+      "condition": { "profiler": { "building_class": "agricultural" } },
+      "infer": [
+        { "text": "Agricultural land use compliance", "category": "Planning", "confidence": "high" },
+        { "text": "Water licensing requirements", "category": "Compliance", "confidence": "medium" }
+      ],
+      "priority": 75,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-061",
+      "description": "Livestock biosecurity requirements",
+      "condition": { "profiler": { "subclass": "livestock" } },
+      "infer": [
+        { "text": "Biosecurity plan requirements", "category": "Safety", "confidence": "high" },
+        { "text": "Animal welfare compliance", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 80,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-070",
+      "description": "Defense security requirements",
+      "condition": { "profiler": { "building_class": "defense_secure" } },
+      "infer": [
+        { "text": "Defence security clearance requirements", "category": "Security", "confidence": "high" },
+        { "text": "AGSVA personnel clearances", "category": "Security", "confidence": "high" },
+        { "text": "PSPF compliance", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 100,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-071",
+      "description": "SCIF/Data sovereignty requirements",
+      "condition": { "profiler": { "subclass": ["scif", "data_sovereignty"] } },
+      "infer": [
+        { "text": "ISM compliance", "category": "Security", "confidence": "high" },
+        { "text": "TEMPEST certification", "category": "Security", "confidence": "high" },
+        { "text": "Secure construction requirements", "category": "Security", "confidence": "high" }
+      ],
+      "priority": 100,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-080",
+      "description": "Flood study requirements",
+      "condition": { "profiler": { "complexity": { "flood_overlay": true } } },
+      "infer": [
+        { "text": "Flood impact assessment", "category": "Environment", "confidence": "high" },
+        { "text": "Hydraulic study", "category": "Environment", "confidence": "high" }
+      ],
+      "priority": 82,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-100",
+      "description": "NZ Building Code compliance",
+      "condition": { "profiler": { "region": "NZ" } },
+      "infer": [
+        { "text": "New Zealand Building Code compliance", "category": "Building Code", "confidence": "high" },
+        { "text": "Building consent required", "category": "Consent", "confidence": "high" }
+      ],
+      "priority": 100,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-101",
+      "description": "NZ Resource consent",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "NZ" } },
+          { "profiler": { "complexity": { "approval_pathway": ["notified_consent", "limited_notified"] } } }
+        ]
+      },
+      "infer": [
+        { "text": "Resource consent application", "category": "Planning", "confidence": "high" },
+        { "text": "Assessment of Environmental Effects", "category": "Planning", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-102",
+      "description": "NZ H1 Energy efficiency",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "NZ" } },
+          { "profiler": { "building_class": ["residential", "commercial"] } }
+        ]
+      },
+      "infer": [
+        { "text": "NZBC H1 Energy Efficiency compliance", "category": "Sustainability", "confidence": "high" },
+        { "text": "H1 calculation methodology report", "category": "Compliance", "confidence": "medium" }
+      ],
+      "priority": 80,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-103",
+      "description": "NZ E2 Weathertightness",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "NZ" } },
+          { "profiler": { "building_class": ["residential", "commercial"] } }
+        ]
+      },
+      "infer": [
+        { "text": "NZBC E2 External Moisture compliance", "category": "Weathertightness", "confidence": "high" },
+        { "text": "E2/AS1 or alternative solution", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-110",
+      "description": "UK Building Regulations",
+      "condition": { "profiler": { "region": "UK" } },
+      "infer": [
+        { "text": "Building Regulations 2010 compliance", "category": "Building Code", "confidence": "high" },
+        { "text": "Building Control approval required", "category": "Approval", "confidence": "high" }
+      ],
+      "priority": 100,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-111",
+      "description": "UK Planning Permission",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "UK" } },
+          { "profiler": { "complexity": { "approval_pathway": ["full_planning", "outline_planning"] } } }
+        ]
+      },
+      "infer": [
+        { "text": "Planning permission application", "category": "Planning", "confidence": "high" },
+        { "text": "Design and Access Statement", "category": "Planning", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-112",
+      "description": "UK Part L Energy",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "UK" } },
+          { "profiler": { "building_class": ["residential", "commercial"] } }
+        ]
+      },
+      "infer": [
+        { "text": "Part L Conservation of Fuel and Power compliance", "category": "Sustainability", "confidence": "high" },
+        { "text": "Energy Performance Certificate (EPC)", "category": "Compliance", "confidence": "high" },
+        { "text": "SAP/SBEM calculation", "category": "Compliance", "confidence": "high" }
+      ],
+      "priority": 85,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-113",
+      "description": "UK Part M Accessibility",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "UK" } },
+          { "profiler": { "building_class": ["commercial", "institution"] } }
+        ]
+      },
+      "infer": [
+        { "text": "Part M Access to and Use of Buildings compliance", "category": "Accessibility", "confidence": "high" },
+        { "text": "Equality Act 2010 requirements", "category": "Accessibility", "confidence": "high" }
+      ],
+      "priority": 82,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-114",
+      "description": "UK Listed Building Consent",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "UK" } },
+          { "profiler": { "complexity": { "heritage": "heritage_overlay" } } }
+        ]
+      },
+      "infer": [
+        { "text": "Listed Building Consent required", "category": "Heritage", "confidence": "high" },
+        { "text": "Heritage Impact Assessment", "category": "Heritage", "confidence": "high" },
+        { "text": "Conservation Area consent if applicable", "category": "Heritage", "confidence": "medium" }
+      ],
+      "priority": 88,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-115",
+      "description": "UK CDM Regulations",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "UK" } },
+          { "profiler": { "project_type": ["new", "refurb"] } }
+        ]
+      },
+      "infer": [
+        { "text": "CDM Regulations 2015 compliance", "category": "Safety", "confidence": "high" },
+        { "text": "Principal Designer appointment", "category": "Safety", "confidence": "high" },
+        { "text": "Construction Phase Plan", "category": "Safety", "confidence": "high" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-116",
+      "description": "UK Part B Fire Safety",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "UK" } },
+          { "or": [
+            { "profiler": { "scale": { "storeys": { "min": 2 } } } },
+            { "profiler": { "building_class": ["commercial", "institution", "residential"] } }
+          ]}
+        ]
+      },
+      "infer": [
+        { "text": "Part B Fire Safety compliance", "category": "Fire Safety", "confidence": "high" },
+        { "text": "Fire Strategy Report", "category": "Fire Safety", "confidence": "high" }
+      ],
+      "priority": 92,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-120",
+      "description": "US IBC compliance",
+      "condition": { "profiler": { "region": "US" } },
+      "infer": [
+        { "text": "International Building Code (IBC) compliance", "category": "Building Code", "confidence": "high" },
+        { "text": "Building permit required", "category": "Permit", "confidence": "high" }
+      ],
+      "priority": 100,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-121",
+      "description": "US IRC for residential",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "US" } },
+          { "profiler": { "subclass": ["house", "townhouse"] } }
+        ]
+      },
+      "infer": [
+        { "text": "International Residential Code (IRC) compliance", "category": "Building Code", "confidence": "high" }
+      ],
+      "priority": 95,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-122",
+      "description": "US ADA accessibility",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "US" } },
+          { "profiler": { "building_class": ["commercial", "institution"] } }
+        ]
+      },
+      "infer": [
+        { "text": "Americans with Disabilities Act (ADA) compliance", "category": "Accessibility", "confidence": "high" },
+        { "text": "2010 ADA Standards for Accessible Design", "category": "Accessibility", "confidence": "high" }
+      ],
+      "priority": 88,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-123",
+      "description": "US NFPA fire codes",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "US" } },
+          { "or": [
+            { "profiler": { "scale": { "storeys": { "min": 2 } } } },
+            { "profiler": { "building_class": ["commercial", "institution"] } }
+          ]}
+        ]
+      },
+      "infer": [
+        { "text": "NFPA 101 Life Safety Code compliance", "category": "Fire Safety", "confidence": "high" },
+        { "text": "NFPA 13 sprinkler requirements", "category": "Fire Safety", "confidence": "medium" }
+      ],
+      "priority": 90,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-124",
+      "description": "US IECC energy code",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "US" } },
+          { "profiler": { "building_class": ["residential", "commercial"] } }
+        ]
+      },
+      "infer": [
+        { "text": "International Energy Conservation Code (IECC) compliance", "category": "Energy", "confidence": "high" },
+        { "text": "Energy modeling and compliance documentation", "category": "Energy", "confidence": "medium" }
+      ],
+      "priority": 82,
+      "source": "inferred"
+    },
+    {
+      "id": "opc-125",
+      "description": "US Zoning compliance",
+      "condition": {
+        "and": [
+          { "profiler": { "region": "US" } },
+          { "profiler": { "project_type": "new" } }
+        ]
+      },
+      "infer": [
+        { "text": "Zoning ordinance compliance", "category": "Planning", "confidence": "high" },
+        { "text": "Zoning variance if required", "category": "Planning", "confidence": "medium" }
+      ],
+      "priority": 92,
+      "source": "inferred"
     }
   ],
 
@@ -183,6 +1067,54 @@
         "condition": { "profiler": { "complexity": { "procurement_route": "traditional" } } },
         "infer": [{ "name": "Superintendent", "subgroup": "Superintendent", "reason": "Contract administration", "confidence": "high" }],
         "priority": 70,
+        "source": "inferred"
+      },
+      {
+        "id": "sc-004",
+        "description": "Facilities manager for operational buildings",
+        "condition": { "profiler": { "building_class": ["commercial", "institution"] } },
+        "infer": [{ "name": "Facilities Manager", "subgroup": "Facilities", "reason": "Operational handover", "confidence": "medium" }],
+        "priority": 55,
+        "source": "inferred"
+      },
+      {
+        "id": "sc-005",
+        "description": "End user representative",
+        "condition": { "profiler": { "building_class": ["institution", "commercial"] } },
+        "infer": [{ "name": "End User Representative", "subgroup": "End User", "reason": "Operational requirements", "confidence": "medium" }],
+        "priority": 60,
+        "source": "inferred"
+      },
+      {
+        "id": "sc-010",
+        "description": "D&C procurement team",
+        "condition": { "profiler": { "complexity": { "procurement_route": "design_construct" } } },
+        "infer": [{ "name": "D&C Contractor", "subgroup": "Head Contractor", "reason": "Design and construction delivery", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "sc-011",
+        "description": "ECI procurement team",
+        "condition": { "profiler": { "complexity": { "procurement_route": "early_contractor_involvement" } } },
+        "infer": [{ "name": "ECI Contractor", "subgroup": "Head Contractor", "reason": "Early contractor involvement", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sc-012",
+        "description": "Managing Contractor procurement",
+        "condition": { "profiler": { "complexity": { "procurement_route": "managing_contractor" } } },
+        "infer": [{ "name": "Managing Contractor", "subgroup": "Head Contractor", "reason": "Trade package management", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sc-013",
+        "description": "Alliance procurement team",
+        "condition": { "profiler": { "complexity": { "procurement_route": "alliance" } } },
+        "infer": [{ "name": "Alliance Manager", "subgroup": "Project Manager", "reason": "Alliance facilitation", "confidence": "high" }],
+        "priority": 80,
         "source": "inferred"
       }
     ],
@@ -239,6 +1171,309 @@
         "condition": { "profiler": { "complexity": { "contamination_level": ["significant", "heavily_contaminated"] } } },
         "infer": [{ "name": "Environment Protection Authority", "subgroup": "EPA", "role": "Environmental Referral", "reason": "Environmental compliance", "confidence": "medium" }],
         "priority": 70,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-010",
+        "description": "SafeWork for dangerous goods",
+        "condition": { "profiler": { "subclass": "dangerous_goods" } },
+        "infer": [{ "name": "SafeWork NSW", "subgroup": "SafeWork", "role": "Dangerous Goods", "reason": "Hazardous materials compliance", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-011",
+        "description": "Water utility for industrial",
+        "condition": { "profiler": { "building_class": "industrial" } },
+        "infer": [{ "name": "Sydney Water", "subgroup": "Utility", "role": "Trade Waste", "reason": "Trade waste agreement", "confidence": "medium" }],
+        "priority": 65,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-012",
+        "description": "Power utility for industrial",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": "industrial" } },
+            { "profiler": { "subclass": "data_centre" } }
+          ]
+        },
+        "infer": [{ "name": "Ausgrid/Endeavour Energy", "subgroup": "Utility", "role": "Power Supply", "reason": "High voltage connection", "confidence": "medium" }],
+        "priority": 68,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-020",
+        "description": "Health department for healthcare",
+        "condition": { "profiler": { "subclass": "healthcare" } },
+        "infer": [{ "name": "NSW Health Infrastructure", "subgroup": "Health", "role": "Health Approval", "reason": "Healthcare facility compliance", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-021",
+        "description": "Radiation authority for healthcare",
+        "condition": { "profiler": { "subclass": "healthcare" } },
+        "infer": [{ "name": "EPA (Radiation)", "subgroup": "EPA", "role": "Radiation License", "reason": "Medical radiation equipment", "confidence": "medium" }],
+        "priority": 72,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-022",
+        "description": "Education department for schools",
+        "condition": { "profiler": { "subclass": ["school", "tertiary"] } },
+        "infer": [{ "name": "School Infrastructure NSW", "subgroup": "Education", "role": "Education Approval", "reason": "Educational facility requirements", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-023",
+        "description": "Corrective services for correctional",
+        "condition": { "profiler": { "subclass": "correctional" } },
+        "infer": [{ "name": "Corrective Services NSW", "subgroup": "Justice", "role": "Security Approval", "reason": "Correctional facility requirements", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-030",
+        "description": "Transport for NSW for road infrastructure",
+        "condition": { "profiler": { "subclass": ["road", "highway"] } },
+        "infer": [{ "name": "Transport for NSW", "subgroup": "TfNSW", "role": "Road Authority", "reason": "State road authority", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-031",
+        "description": "Rail authority for rail infrastructure",
+        "condition": { "profiler": { "subclass": ["rail", "light_rail"] } },
+        "infer": [{ "name": "Sydney Metro/Sydney Trains", "subgroup": "TfNSW", "role": "Rail Authority", "reason": "Rail infrastructure owner", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-032",
+        "description": "ONRSR for rail safety",
+        "condition": { "profiler": { "subclass": ["rail", "light_rail"] } },
+        "infer": [{ "name": "Office of National Rail Safety Regulator", "subgroup": "ONRSR", "role": "Rail Safety", "reason": "Rail safety accreditation", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-033",
+        "description": "AEMO for energy infrastructure",
+        "condition": { "profiler": { "subclass": ["solar", "wind"] } },
+        "infer": [{ "name": "Australian Energy Market Operator", "subgroup": "AEMO", "role": "Grid Registration", "reason": "Energy market registration", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-034",
+        "description": "Crown lands for marina",
+        "condition": { "profiler": { "subclass": ["marina", "marine"] } },
+        "infer": [{ "name": "Crown Lands", "subgroup": "Crown", "role": "Lease/License", "reason": "Marine lease approval", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-040",
+        "description": "Department of Agriculture for livestock",
+        "condition": { "profiler": { "subclass": "livestock" } },
+        "infer": [{ "name": "Department of Primary Industries", "subgroup": "DPI", "role": "Biosecurity", "reason": "Animal welfare and biosecurity", "confidence": "high" }],
+        "priority": 80,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-050",
+        "description": "Defence security for defense buildings",
+        "condition": { "profiler": { "building_class": "defense_secure" } },
+        "infer": [{ "name": "Australian Defence Force", "subgroup": "Defence", "role": "Security Clearance", "reason": "Defence security requirements", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-051",
+        "description": "ASIO for high security facilities",
+        "condition": { "profiler": { "subclass": ["scif", "data_sovereignty"] } },
+        "infer": [{ "name": "Australian Security Intelligence Organisation", "subgroup": "ASIO", "role": "Security Assessment", "reason": "National security assessment", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-100",
+        "description": "NZ Local Council",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "NZ" } },
+            { "profiler": { "project_type": ["new", "refurb"] } }
+          ]
+        },
+        "infer": [{ "name": "Local Council", "subgroup": "Council", "role": "Building Consent", "reason": "Building consent authority", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-101",
+        "description": "Fire and Emergency NZ",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "NZ" } },
+            { "or": [
+              { "profiler": { "scale": { "storeys": { "min": 2 } } } },
+              { "profiler": { "building_class": ["commercial", "institution"] } }
+            ]}
+          ]
+        },
+        "infer": [{ "name": "Fire and Emergency New Zealand", "subgroup": "Fire", "role": "Fire Safety Review", "reason": "Fire safety compliance", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-102",
+        "description": "Heritage NZ",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "NZ" } },
+            { "profiler": { "complexity": { "heritage": "heritage_overlay" } } }
+          ]
+        },
+        "infer": [{ "name": "Heritage New Zealand Pouhere Taonga", "subgroup": "Heritage", "role": "Heritage Authority", "reason": "Heritage building approval", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-103",
+        "description": "WorkSafe NZ",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "NZ" } },
+            { "profiler": { "building_class": "industrial" } }
+          ]
+        },
+        "infer": [{ "name": "WorkSafe New Zealand", "subgroup": "Other", "role": "Health and Safety", "reason": "Workplace safety compliance", "confidence": "medium" }],
+        "priority": 70,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-110",
+        "description": "UK Local Planning Authority",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "UK" } },
+            { "profiler": { "project_type": ["new", "refurb"] } }
+          ]
+        },
+        "infer": [{ "name": "Local Planning Authority", "subgroup": "Council", "role": "Planning Permission", "reason": "Planning consent authority", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-111",
+        "description": "UK Building Control",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "UK" } },
+            { "profiler": { "project_type": ["new", "refurb"] } }
+          ]
+        },
+        "infer": [{ "name": "Building Control", "subgroup": "Other", "role": "Building Regulations", "reason": "Building regulations approval", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-112",
+        "description": "Historic England",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "UK" } },
+            { "profiler": { "complexity": { "heritage": "heritage_overlay" } } }
+          ]
+        },
+        "infer": [{ "name": "Historic England", "subgroup": "Heritage", "role": "Heritage Advice", "reason": "Listed building consultation", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-113",
+        "description": "UK Fire Authority",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "UK" } },
+            { "or": [
+              { "profiler": { "scale": { "storeys": { "min": 3 } } } },
+              { "profiler": { "building_class": ["commercial", "institution"] } }
+            ]}
+          ]
+        },
+        "infer": [{ "name": "Fire and Rescue Service", "subgroup": "Fire", "role": "Fire Safety Consultation", "reason": "Fire safety consultation", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-114",
+        "description": "UK HSE",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "UK" } },
+            { "profiler": { "building_class": "industrial" } }
+          ]
+        },
+        "infer": [{ "name": "Health and Safety Executive", "subgroup": "Other", "role": "HSE Notification", "reason": "Major hazard facilities", "confidence": "medium" }],
+        "priority": 75,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-120",
+        "description": "US Building Department",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "US" } },
+            { "profiler": { "project_type": ["new", "refurb"] } }
+          ]
+        },
+        "infer": [{ "name": "Building Department (AHJ)", "subgroup": "Council", "role": "Building Permit", "reason": "Building permit authority", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-121",
+        "description": "US Fire Marshal",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "US" } },
+            { "or": [
+              { "profiler": { "scale": { "storeys": { "min": 2 } } } },
+              { "profiler": { "building_class": ["commercial", "institution"] } }
+            ]}
+          ]
+        },
+        "infer": [{ "name": "Fire Marshal", "subgroup": "Fire", "role": "Fire Review", "reason": "Fire code compliance", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-122",
+        "description": "US Planning/Zoning",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "US" } },
+            { "profiler": { "project_type": "new" } }
+          ]
+        },
+        "infer": [{ "name": "Planning and Zoning Department", "subgroup": "Council", "role": "Zoning Review", "reason": "Zoning compliance", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "sa-123",
+        "description": "US State Historic Preservation Office",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "US" } },
+            { "profiler": { "complexity": { "heritage": "heritage_overlay" } } }
+          ]
+        },
+        "infer": [{ "name": "State Historic Preservation Office (SHPO)", "subgroup": "Heritage", "role": "Historic Review", "reason": "Historic preservation review", "confidence": "high" }],
+        "priority": 85,
         "source": "inferred"
       }
     ],
@@ -331,6 +1566,340 @@
         "infer": [{ "name": "Access Consultant", "subgroup": "Access", "reason": "DDA compliance", "confidence": "medium" }],
         "priority": 70,
         "source": "inferred"
+      },
+      {
+        "id": "sco-021",
+        "description": "Landscape architect for larger sites",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "site_area_sqm": { "min": 2000 } } } },
+            { "profiler": { "building_class": ["commercial", "residential", "institution"] } }
+          ]
+        },
+        "infer": [{ "name": "Landscape Architect", "subgroup": "Landscape", "reason": "External works design", "confidence": "high" }],
+        "priority": 72,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-022",
+        "description": "Traffic engineer",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "car_spaces": { "min": 30 } } } },
+            { "profiler": { "building_class": ["commercial", "industrial"] } }
+          ]
+        },
+        "infer": [{ "name": "Traffic Engineer", "subgroup": "Civil", "reason": "Traffic impact assessment", "confidence": "high" }],
+        "priority": 73,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-023",
+        "description": "Town planner",
+        "condition": {
+          "or": [
+            { "profiler": { "complexity": { "approval_pathway": ["regional_da", "state_significant"] } } },
+            { "profiler": { "project_type": "new" } }
+          ]
+        },
+        "infer": [{ "name": "Town Planner", "subgroup": "Planning", "reason": "Planning approval coordination", "confidence": "high" }],
+        "priority": 80,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-024",
+        "description": "BCA/Building Code consultant",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 3 } } } },
+            { "profiler": { "building_class": ["mixed", "commercial"] } }
+          ]
+        },
+        "infer": [{ "name": "BCA Consultant", "subgroup": "Building Code", "reason": "Code compliance certification", "confidence": "high" }],
+        "priority": 78,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-025",
+        "description": "Surveyor",
+        "condition": { "profiler": { "project_type": ["new", "extend"] } },
+        "infer": [{ "name": "Surveyor", "subgroup": "Survey", "reason": "Site survey and setout", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-026",
+        "description": "Quantity surveyor",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "gfa_sqm": { "min": 500 } } } },
+            { "profiler": { "complexity": { "quality_tier": ["high", "premium"] } } }
+          ]
+        },
+        "infer": [{ "name": "Quantity Surveyor", "subgroup": "Cost Planning", "reason": "Cost estimation and control", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-027",
+        "description": "Acoustic engineer",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["mixed", "institution"] } },
+            { "profiler": { "complexity": { "site_conditions": "infill" } } }
+          ]
+        },
+        "infer": [{ "name": "Acoustic Engineer", "subgroup": "Acoustic", "reason": "Noise assessment and design", "confidence": "high" }],
+        "priority": 65,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-028",
+        "description": "ESD consultant for sustainability",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["commercial", "institution"] } },
+            { "profiler": { "complexity": { "sustainability": ["nabers", "green_star"] } } }
+          ]
+        },
+        "infer": [{ "name": "ESD Consultant", "subgroup": "Sustainability", "reason": "Sustainability design and certification", "confidence": "high" }],
+        "priority": 70,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-029",
+        "description": "Facade engineer",
+        "condition": {
+          "or": [
+            { "profiler": { "work_scope_includes": ["curtain_wall", "facade_system"] } },
+            { "and": [
+              { "profiler": { "building_class": "commercial" } },
+              { "profiler": { "scale": { "storeys": { "min": 6 } } } }
+            ]}
+          ]
+        },
+        "infer": [{ "name": "Facade Engineer", "subgroup": "Facade", "reason": "Facade design and engineering", "confidence": "high" }],
+        "priority": 72,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-030",
+        "description": "Lift consultant",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 3 } } } },
+            { "profiler": { "building_class": ["commercial", "institution"] } }
+          ]
+        },
+        "infer": [{ "name": "Lift Consultant", "subgroup": "Vertical Transport", "reason": "Lift design and specification", "confidence": "high" }],
+        "priority": 68,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-031",
+        "description": "Security consultant",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["institution", "commercial"] } },
+            { "profiler": { "complexity": { "quality_tier": "premium" } } }
+          ]
+        },
+        "infer": [{ "name": "Security Consultant", "subgroup": "Security", "reason": "Security design and specification", "confidence": "medium" }],
+        "priority": 55,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-032",
+        "description": "Building services commissioning",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["commercial", "institution", "industrial"] } },
+            { "profiler": { "scale": { "gfa_sqm": { "min": 2000 } } } }
+          ]
+        },
+        "infer": [{ "name": "Commissioning Agent", "subgroup": "Commissioning", "reason": "Services commissioning management", "confidence": "medium" }],
+        "priority": 62,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-033",
+        "description": "Arborist",
+        "condition": { "profiler": { "complexity": { "site_conditions": "infill" } } },
+        "infer": [{ "name": "Arborist", "subgroup": "Landscape", "reason": "Tree assessment and protection", "confidence": "medium" }],
+        "priority": 50,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-034",
+        "description": "Bushfire consultant AU",
+        "condition": {
+          "and": [
+            { "profiler": { "region": "AU" } },
+            { "profiler": { "complexity": { "bushfire": ["bap", "fz"] } } }
+          ]
+        },
+        "infer": [{ "name": "Bushfire Consultant", "subgroup": "Bushfire", "reason": "BAL assessment and compliance", "confidence": "high" }],
+        "priority": 80,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-035",
+        "description": "Wind engineer for tall buildings",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 10 } } } },
+            { "profiler": { "complexity": { "site_conditions": "coastal" } } }
+          ]
+        },
+        "infer": [{ "name": "Wind Engineer", "subgroup": "Structural", "reason": "Wind load analysis and facade pressures", "confidence": "high" }],
+        "priority": 70,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-036",
+        "description": "Lighting designer",
+        "condition": {
+          "or": [
+            { "profiler": { "complexity": { "quality_tier": ["high", "premium"] } } },
+            { "profiler": { "building_class": "institution" } }
+          ]
+        },
+        "infer": [{ "name": "Lighting Designer", "subgroup": "Electrical", "reason": "Feature lighting design", "confidence": "medium" }],
+        "priority": 52,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-037",
+        "description": "Wayfinding/Signage consultant",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": "institution" } },
+            { "profiler": { "scale": { "gfa_sqm": { "min": 5000 } } } }
+          ]
+        },
+        "infer": [{ "name": "Wayfinding/Signage Consultant", "subgroup": "Other", "reason": "Navigation and signage design", "confidence": "medium" }],
+        "priority": 45,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-040",
+        "description": "Process engineer for industrial",
+        "condition": { "profiler": { "building_class": "industrial" } },
+        "infer": [{ "name": "Process Engineer", "subgroup": "Process", "reason": "Industrial process design", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-041",
+        "description": "Material handling engineer",
+        "condition": { "profiler": { "subclass": ["warehouse", "distribution"] } },
+        "infer": [{ "name": "Material Handling Engineer", "subgroup": "Process", "reason": "Logistics and racking design", "confidence": "high" }],
+        "priority": 82,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-042",
+        "description": "Refrigeration engineer",
+        "condition": { "profiler": { "subclass": "cold_storage" } },
+        "infer": [{ "name": "Refrigeration Engineer", "subgroup": "Mechanical", "reason": "Cold storage systems", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-043",
+        "description": "Cleanroom specialist",
+        "condition": { "profiler": { "subclass": "cleanroom" } },
+        "infer": [{ "name": "Cleanroom Specialist", "subgroup": "Specialist", "reason": "Cleanroom design and classification", "confidence": "high" }],
+        "priority": 92,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-050",
+        "description": "Medical planner",
+        "condition": { "profiler": { "subclass": "healthcare" } },
+        "infer": [{ "name": "Medical Planner", "subgroup": "Healthcare", "reason": "Healthcare facility planning", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-051",
+        "description": "Education planner",
+        "condition": { "profiler": { "subclass": ["school", "tertiary"] } },
+        "infer": [{ "name": "Education Planner", "subgroup": "Education", "reason": "Educational facility planning", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-052",
+        "description": "Medical equipment planner",
+        "condition": { "profiler": { "subclass": "healthcare" } },
+        "infer": [{ "name": "Medical Equipment Planner", "subgroup": "Healthcare", "reason": "Medical equipment coordination", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-053",
+        "description": "Laboratory planner",
+        "condition": { "profiler": { "subclass": ["healthcare", "research"] } },
+        "infer": [{ "name": "Laboratory Planner", "subgroup": "Specialist", "reason": "Laboratory design and specification", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-060",
+        "description": "Civil engineer for infrastructure",
+        "condition": { "profiler": { "building_class": "infrastructure" } },
+        "infer": [{ "name": "Civil Engineer", "subgroup": "Civil", "reason": "Infrastructure design lead", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-061",
+        "description": "Environmental consultant for infrastructure",
+        "condition": { "profiler": { "building_class": "infrastructure" } },
+        "infer": [{ "name": "Environmental Consultant", "subgroup": "Environment", "reason": "Environmental impact assessment", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-070",
+        "description": "Agricultural consultant",
+        "condition": { "profiler": { "building_class": "agricultural" } },
+        "infer": [{ "name": "Agricultural Consultant", "subgroup": "Agricultural", "reason": "Agricultural operations planning", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-080",
+        "description": "Security cleared consultant",
+        "condition": { "profiler": { "building_class": "defense_secure" } },
+        "infer": [{ "name": "Security Cleared Architect", "subgroup": "Security", "reason": "Security cleared design", "confidence": "high" }],
+        "priority": 100,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-081",
+        "description": "SCIF specialist",
+        "condition": { "profiler": { "subclass": ["scif", "data_sovereignty"] } },
+        "infer": [{ "name": "SCIF/TEMPEST Specialist", "subgroup": "Security", "reason": "Secure facility design", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-090",
+        "description": "Interior Designer for high/premium",
+        "condition": { "profiler": { "complexity": { "quality_tier": ["high", "premium"] } } },
+        "infer": [{ "name": "Interior Designer", "subgroup": "Interior Design", "reason": "Interior design coordination", "confidence": "high" }],
+        "priority": 72,
+        "source": "inferred"
+      },
+      {
+        "id": "sco-091",
+        "description": "Hydraulic engineer for flood sites",
+        "condition": { "profiler": { "complexity": { "flood_overlay": true } } },
+        "infer": [{ "name": "Hydraulic/Flooding Engineer", "subgroup": "Civil", "reason": "Flood study and mitigation", "confidence": "high" }],
+        "priority": 78,
+        "source": "inferred"
       }
     ],
 
@@ -383,6 +1952,295 @@
         },
         "infer": [{ "name": "Facade Contractor", "subgroup": "Facade", "reason": "Building envelope", "confidence": "high" }],
         "priority": 75,
+        "source": "inferred"
+      },
+      {
+        "id": "str-011",
+        "description": "Piling contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 5 } } } },
+            { "profiler": { "scale": { "basement_levels": { "min": 2 } } } },
+            { "profiler": { "complexity": { "site_conditions": ["rock", "high_water_table"] } } }
+          ]
+        },
+        "infer": [{ "name": "Piling Contractor", "subgroup": "Substructure", "reason": "Deep foundation works", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "str-012",
+        "description": "Shoring contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "basement_levels": { "min": 1 } } } },
+            { "profiler": { "complexity": { "site_conditions": "infill" } } }
+          ]
+        },
+        "infer": [{ "name": "Shoring Contractor", "subgroup": "Substructure", "reason": "Excavation support", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "str-013",
+        "description": "Structural steel contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "work_scope_includes": ["steel_frame"] } },
+            { "profiler": { "building_class": ["industrial", "commercial"] } }
+          ]
+        },
+        "infer": [{ "name": "Structural Steel Contractor", "subgroup": "Structure", "reason": "Steel frame erection", "confidence": "high" }],
+        "priority": 82,
+        "source": "inferred"
+      },
+      {
+        "id": "str-014",
+        "description": "Concrete contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 3 } } } },
+            { "profiler": { "work_scope_includes": ["post_tensioned", "precast"] } }
+          ]
+        },
+        "infer": [{ "name": "Concrete Contractor", "subgroup": "Structure", "reason": "Concrete structure works", "confidence": "high" }],
+        "priority": 80,
+        "source": "inferred"
+      },
+      {
+        "id": "str-015",
+        "description": "Waterproofing contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "basement_levels": { "min": 1 } } } },
+            { "profiler": { "work_scope_includes": ["wet_areas", "podium"] } }
+          ]
+        },
+        "infer": [{ "name": "Waterproofing Contractor", "subgroup": "Specialist", "reason": "Below-ground and wet area waterproofing", "confidence": "high" }],
+        "priority": 78,
+        "source": "inferred"
+      },
+      {
+        "id": "str-016",
+        "description": "Fire protection contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 2 } } } },
+            { "profiler": { "building_class": ["commercial", "institution"] } }
+          ]
+        },
+        "infer": [{ "name": "Fire Protection Contractor", "subgroup": "Fire", "reason": "Sprinkler and fire systems", "confidence": "high" }],
+        "priority": 82,
+        "source": "inferred"
+      },
+      {
+        "id": "str-017",
+        "description": "Mechanical services contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["commercial", "institution", "industrial"] } },
+            { "profiler": { "scale": { "gfa_sqm": { "min": 1000 } } } }
+          ]
+        },
+        "infer": [{ "name": "Mechanical Services Contractor", "subgroup": "Mechanical", "reason": "HVAC installation", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "str-018",
+        "description": "Electrical contractor",
+        "condition": { "profiler": { "project_type": ["new", "refurb"] } },
+        "infer": [{ "name": "Electrical Contractor", "subgroup": "Electrical", "reason": "Electrical installation", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "str-019",
+        "description": "Hydraulic/Plumbing contractor",
+        "condition": { "profiler": { "project_type": ["new", "refurb"] } },
+        "infer": [{ "name": "Hydraulic/Plumbing Contractor", "subgroup": "Hydraulic", "reason": "Plumbing and drainage", "confidence": "high" }],
+        "priority": 88,
+        "source": "inferred"
+      },
+      {
+        "id": "str-020",
+        "description": "Lift contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "storeys": { "min": 3 } } } },
+            { "profiler": { "building_class": ["commercial", "institution"] } }
+          ]
+        },
+        "infer": [{ "name": "Lift Contractor", "subgroup": "Vertical Transport", "reason": "Lift installation", "confidence": "high" }],
+        "priority": 75,
+        "source": "inferred"
+      },
+      {
+        "id": "str-021",
+        "description": "Roofing contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": "industrial" } },
+            { "profiler": { "work_scope_includes": ["metal_roof", "membrane_roof"] } }
+          ]
+        },
+        "infer": [{ "name": "Roofing Contractor", "subgroup": "Envelope", "reason": "Roof installation", "confidence": "high" }],
+        "priority": 72,
+        "source": "inferred"
+      },
+      {
+        "id": "str-022",
+        "description": "Glazing contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["commercial", "mixed"] } },
+            { "profiler": { "work_scope_includes": ["curtain_wall", "shopfront"] } }
+          ]
+        },
+        "infer": [{ "name": "Glazing Contractor", "subgroup": "Facade", "reason": "Window and glazing installation", "confidence": "high" }],
+        "priority": 70,
+        "source": "inferred"
+      },
+      {
+        "id": "str-023",
+        "description": "Joinery contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["residential", "commercial"] } },
+            { "profiler": { "complexity": { "quality_tier": ["medium", "high", "premium"] } } }
+          ]
+        },
+        "infer": [{ "name": "Joinery Contractor", "subgroup": "Finishes", "reason": "Custom joinery installation", "confidence": "high" }],
+        "priority": 65,
+        "source": "inferred"
+      },
+      {
+        "id": "str-024",
+        "description": "Landscaping contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "scale": { "site_area_sqm": { "min": 1000 } } } },
+            { "profiler": { "project_type": "new" } }
+          ]
+        },
+        "infer": [{ "name": "Landscaping Contractor", "subgroup": "Landscape", "reason": "External landscape works", "confidence": "high" }],
+        "priority": 60,
+        "source": "inferred"
+      },
+      {
+        "id": "str-025",
+        "description": "Security systems contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["commercial", "institution"] } },
+            { "profiler": { "complexity": { "quality_tier": ["high", "premium"] } } }
+          ]
+        },
+        "infer": [{ "name": "Security Systems Contractor", "subgroup": "Security", "reason": "Security system installation", "confidence": "medium" }],
+        "priority": 55,
+        "source": "inferred"
+      },
+      {
+        "id": "str-026",
+        "description": "Audio visual contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": "institution" } },
+            { "profiler": { "subclass": ["performing_arts", "sports"] } }
+          ]
+        },
+        "infer": [{ "name": "Audio Visual Contractor", "subgroup": "AV", "reason": "AV systems installation", "confidence": "medium" }],
+        "priority": 52,
+        "source": "inferred"
+      },
+      {
+        "id": "str-027",
+        "description": "Data/ICT contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["commercial", "institution"] } },
+            { "profiler": { "subclass": "data_centre" } }
+          ]
+        },
+        "infer": [{ "name": "Data/ICT Contractor", "subgroup": "ICT", "reason": "Data and communications cabling", "confidence": "high" }],
+        "priority": 68,
+        "source": "inferred"
+      },
+      {
+        "id": "str-028",
+        "description": "BMS contractor",
+        "condition": {
+          "or": [
+            { "profiler": { "building_class": ["commercial", "institution", "industrial"] } },
+            { "profiler": { "scale": { "gfa_sqm": { "min": 2000 } } } }
+          ]
+        },
+        "infer": [{ "name": "BMS Contractor", "subgroup": "Controls", "reason": "Building management system", "confidence": "high" }],
+        "priority": 70,
+        "source": "inferred"
+      },
+      {
+        "id": "str-029",
+        "description": "Remediation contractor",
+        "condition": { "profiler": { "complexity": { "contamination_level": ["minor", "significant", "heavily_contaminated"] } } },
+        "infer": [{ "name": "Remediation Contractor", "subgroup": "Specialist", "reason": "Site contamination remediation", "confidence": "high" }],
+        "priority": 92,
+        "source": "inferred"
+      },
+      {
+        "id": "str-030",
+        "description": "Industrial racking contractor",
+        "condition": { "profiler": { "subclass": ["warehouse", "distribution"] } },
+        "infer": [{ "name": "Racking Contractor", "subgroup": "Industrial", "reason": "Storage racking systems", "confidence": "high" }],
+        "priority": 80,
+        "source": "inferred"
+      },
+      {
+        "id": "str-031",
+        "description": "Refrigeration contractor",
+        "condition": { "profiler": { "subclass": "cold_storage" } },
+        "infer": [{ "name": "Refrigeration Contractor", "subgroup": "Specialist", "reason": "Cold storage systems installation", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "str-032",
+        "description": "Cleanroom contractor",
+        "condition": { "profiler": { "subclass": "cleanroom" } },
+        "infer": [{ "name": "Cleanroom Contractor", "subgroup": "Specialist", "reason": "Cleanroom construction", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "str-040",
+        "description": "Medical fit-out contractor",
+        "condition": { "profiler": { "subclass": "healthcare" } },
+        "infer": [{ "name": "Medical Fit-out Contractor", "subgroup": "Specialist", "reason": "Healthcare facility fit-out", "confidence": "high" }],
+        "priority": 85,
+        "source": "inferred"
+      },
+      {
+        "id": "str-050",
+        "description": "Marine contractor",
+        "condition": { "profiler": { "subclass": ["marina", "marine"] } },
+        "infer": [{ "name": "Marine Contractor", "subgroup": "Marine", "reason": "Marine construction works", "confidence": "high" }],
+        "priority": 95,
+        "source": "inferred"
+      },
+      {
+        "id": "str-051",
+        "description": "Solar PV contractor",
+        "condition": { "profiler": { "subclass": "solar" } },
+        "infer": [{ "name": "Solar PV Contractor", "subgroup": "Renewable", "reason": "Solar installation", "confidence": "high" }],
+        "priority": 90,
+        "source": "inferred"
+      },
+      {
+        "id": "str-060",
+        "description": "Security cleared contractor",
+        "condition": { "profiler": { "building_class": "defense_secure" } },
+        "infer": [{ "name": "Security Cleared Contractor", "subgroup": "Security", "reason": "Cleared contractor for secure facilities", "confidence": "high" }],
+        "priority": 100,
         "source": "inferred"
       }
     ]

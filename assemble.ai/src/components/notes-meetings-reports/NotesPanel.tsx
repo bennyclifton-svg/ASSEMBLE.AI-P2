@@ -9,7 +9,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Plus, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NoteCard } from './NoteCard';
@@ -223,7 +223,7 @@ function EmptyState({ onCreateNote, isCreating }: EmptyStateProps) {
     return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="rounded-full bg-[var(--color-bg-tertiary)] p-4 mb-4">
-                <StickyNote className="h-8 w-8 text-[var(--color-text-muted)]" />
+                <FileText className="h-8 w-8 text-[var(--color-text-muted)]" />
             </div>
             <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
                 No notes yet

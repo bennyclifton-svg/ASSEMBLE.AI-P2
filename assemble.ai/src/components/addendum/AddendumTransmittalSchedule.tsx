@@ -7,24 +7,9 @@
 
 import { useAddendumTransmittal } from '@/lib/hooks/use-addendum-transmittal';
 import { FileText, Loader2, Folder } from 'lucide-react';
-import { getCategoryById } from '@/lib/constants/categories';
 
 interface AddendumTransmittalScheduleProps {
     addendumId: string;
-}
-
-/**
- * Get category color by ID - falls back to constants if not in database
- */
-function getCategoryColor(categoryId: string | null): string {
-    if (!categoryId) return 'var(--color-text-muted)';
-
-    // Try to get from constants first (for color)
-    const category = getCategoryById(categoryId);
-    if (category) return category.color;
-
-    // Default gray
-    return 'var(--color-text-muted)';
 }
 
 export function AddendumTransmittalSchedule({ addendumId }: AddendumTransmittalScheduleProps) {
@@ -64,17 +49,15 @@ export function AddendumTransmittalSchedule({ addendumId }: AddendumTransmittalS
                         <thead>
                             <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">
                                 <th className="text-left px-4 py-2.5 font-medium w-10">#</th>
-                                <th className="text-left px-4 py-2.5 font-medium">Document</th>
+                                <th className="text-left px-4 py-2.5 font-medium w-24">DWG #</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Name</th>
                                 <th className="text-center px-4 py-2.5 font-medium w-16">Rev</th>
                                 <th className="text-left px-4 py-2.5 font-medium w-36">Category</th>
                                 <th className="text-left px-4 py-2.5 font-medium w-40">Subcategory</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {transmittal?.documents.map((doc, index) => {
-                                const categoryColor = getCategoryColor(doc.categoryId);
-
-                                return (
+                            {transmittal?.documents.map((doc, index) => (
                                     <tr
                                         key={doc.id}
                                         className="border-t border-[var(--color-border)] hover:bg-[#2d2d30]/50"
@@ -82,22 +65,29 @@ export function AddendumTransmittalSchedule({ addendumId }: AddendumTransmittalS
                                         <td className="px-4 py-2.5 text-[#6e6e6e]">
                                             {index + 1}
                                         </td>
+                                        <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
+                                            {doc.drawingNumber ? (
+                                                <span title={doc.drawingNumber}>
+                                                    {doc.drawingNumber}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[#6e6e6e]">-</span>
+                                            )}
+                                        </td>
                                         <td className="px-4 py-2.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
-                                            {doc.originalName}
+                                            {doc.drawingName || doc.originalName}
                                         </td>
                                         <td className="px-4 py-2.5 text-center text-[var(--color-text-primary)]">
-                                            {String(doc.versionNumber).padStart(2, '0')}
+                                            {doc.drawingRevision || <span className="text-[#6e6e6e]">-</span>}
                                         </td>
                                         <td className="px-4 py-2.5">
                                             {doc.categoryName ? (
                                                 <div className="flex items-center gap-1.5">
                                                     <Folder
-                                                        className="w-3.5 h-3.5 flex-shrink-0"
-                                                        style={{ color: categoryColor }}
+                                                        className="w-3.5 h-3.5 flex-shrink-0 text-[var(--color-text-primary)]"
                                                     />
                                                     <span
-                                                        className="text-sm truncate"
-                                                        style={{ color: categoryColor }}
+                                                        className="text-sm truncate text-[var(--color-text-primary)]"
                                                     >
                                                         {doc.categoryName}
                                                     </span>
@@ -110,12 +100,10 @@ export function AddendumTransmittalSchedule({ addendumId }: AddendumTransmittalS
                                             {doc.subcategoryName ? (
                                                 <div className="flex items-center gap-1.5">
                                                     <Folder
-                                                        className="w-3.5 h-3.5 flex-shrink-0"
-                                                        style={{ color: categoryColor }}
+                                                        className="w-3.5 h-3.5 flex-shrink-0 text-[var(--color-text-primary)]"
                                                     />
                                                     <span
-                                                        className="text-sm truncate"
-                                                        style={{ color: categoryColor }}
+                                                        className="text-sm truncate text-[var(--color-text-primary)]"
                                                     >
                                                         {doc.subcategoryName}
                                                     </span>
@@ -125,8 +113,7 @@ export function AddendumTransmittalSchedule({ addendumId }: AddendumTransmittalS
                                             )}
                                         </td>
                                     </tr>
-                                );
-                            })}
+                            ))}
                         </tbody>
                     </table>
                 )}

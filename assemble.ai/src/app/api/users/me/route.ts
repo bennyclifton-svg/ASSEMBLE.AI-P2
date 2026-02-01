@@ -1,14 +1,15 @@
 /**
  * PATCH /api/users/me
  * Update the current user's profile (displayName, password).
+ * Uses Better Auth for authentication and account management.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { users } from '@/lib/db';
+import { user as userTable, account as accountTable } from '@/lib/db/auth-schema';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { hashPassword, verifyPassword, validatePassword } from '@/lib/auth/password';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 interface UpdateUserRequest {
   displayName?: string;
@@ -19,19 +20,18 @@ interface UpdateUserRequest {
 export async function PATCH(request: NextRequest) {
   try {
     // Get authenticated user
-    const authResult = await getCurrentUser();
-    if (!authResult.user) {
-      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
+        { status: 401 }
+      );
     }
 
     const body: UpdateUserRequest = await request.json();
     const { displayName, currentPassword, newPassword } = body;
 
-    const updates: { displayName?: string; passwordHash?: string; updatedAt: number } = {
-      updatedAt: Math.floor(Date.now() / 1000),
-    };
-
-    // Update display name
+    // Update display name in user table
     if (displayName !== undefined) {
       if (!displayName || displayName.length < 1 || displayName.length > 100) {
         return NextResponse.json(
@@ -39,10 +39,18 @@ export async function PATCH(request: NextRequest) {
           { status: 400 }
         );
       }
-      updates.displayName = displayName;
+
+      await db
+        .update(userTable)
+        .set({
+          name: displayName,
+          displayName: displayName,
+          updatedAt: new Date(),
+        })
+        .where(eq(userTable.id, currentUser.id));
     }
 
-    // Update password
+    // Update password in account table (Better Auth stores passwords in account table)
     if (newPassword !== undefined) {
       if (!currentPassword) {
         return NextResponse.json(
@@ -51,22 +59,27 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      // Get user's current password hash
-      const [user] = await db
-        .select({ passwordHash: users.passwordHash })
-        .from(users)
-        .where(eq(users.id, authResult.user.id))
+      // Get user's credential account (providerId = 'credential')
+      const [credentialAccount] = await db
+        .select()
+        .from(accountTable)
+        .where(
+          and(
+            eq(accountTable.userId, currentUser.id),
+            eq(accountTable.providerId, 'credential')
+          )
+        )
         .limit(1);
 
-      if (!user) {
+      if (!credentialAccount || !credentialAccount.password) {
         return NextResponse.json(
-          { error: { code: 'USER_NOT_FOUND', message: 'User not found' } },
-          { status: 404 }
+          { error: { code: 'NO_PASSWORD_AUTH', message: 'Password authentication not available for this account' } },
+          { status: 400 }
         );
       }
 
       // Verify current password
-      const isValidPassword = await verifyPassword(currentPassword, user.passwordHash);
+      const isValidPassword = await verifyPassword(currentPassword, credentialAccount.password);
       if (!isValidPassword) {
         return NextResponse.json(
           { error: { code: 'INVALID_PASSWORD', message: 'Current password is incorrect', field: 'currentPassword' } },
@@ -83,26 +96,27 @@ export async function PATCH(request: NextRequest) {
         );
       }
 
-      // Hash new password
-      updates.passwordHash = await hashPassword(newPassword);
+      // Hash and update password
+      const hashedPassword = await hashPassword(newPassword);
+      await db
+        .update(accountTable)
+        .set({
+          password: hashedPassword,
+          updatedAt: new Date(),
+        })
+        .where(eq(accountTable.id, credentialAccount.id));
     }
-
-    // Apply updates
-    await db
-      .update(users)
-      .set(updates)
-      .where(eq(users.id, authResult.user.id));
 
     // Get updated user
     const [updatedUser] = await db
       .select({
-        id: users.id,
-        email: users.email,
-        displayName: users.displayName,
-        organizationId: users.organizationId,
+        id: userTable.id,
+        email: userTable.email,
+        displayName: userTable.name,
+        organizationId: userTable.organizationId,
       })
-      .from(users)
-      .where(eq(users.id, authResult.user.id))
+      .from(userTable)
+      .where(eq(userTable.id, currentUser.id))
       .limit(1);
 
     return NextResponse.json({

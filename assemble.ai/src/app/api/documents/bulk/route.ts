@@ -54,12 +54,12 @@ export async function DELETE(request: NextRequest) {
         // Cascade delete: we need to delete in this order:
         // 1. Get all version IDs for these documents
         // 2. Delete transmittal items that reference these versions
-        // 3. Delete addendum/RFT/TRR transmittals that reference these documents
+        // 3. Delete addendum/RFT/TRR/note/meeting/report transmittals that reference these documents
         // 4. Delete versions
         // 5. Delete file assets (if not referenced elsewhere)
         // 6. Delete documents
 
-        const { versions, fileAssets, transmittalItems, addendumTransmittals, rftNewTransmittals, trrTransmittals } = await import('@/lib/db/schema');
+        const { versions, fileAssets, transmittalItems, addendumTransmittals, rftNewTransmittals, trrTransmittals, noteTransmittals, meetingTransmittals, reportTransmittals } = await import('@/lib/db/schema');
         const { eq, inArray, and } = await import('drizzle-orm');
 
         // First, verify all documents belong to the specified project
@@ -92,10 +92,13 @@ export async function DELETE(request: NextRequest) {
             await db.delete(versions).where(inArray(versions.id, versionIds));
         }
 
-        // Delete addendum/RFT/TRR transmittals that reference these documents
+        // Delete addendum/RFT/TRR/note/meeting/report transmittals that reference these documents
         await db.delete(addendumTransmittals).where(inArray(addendumTransmittals.documentId, validDocIds));
         await db.delete(rftNewTransmittals).where(inArray(rftNewTransmittals.documentId, validDocIds));
         await db.delete(trrTransmittals).where(inArray(trrTransmittals.documentId, validDocIds));
+        await db.delete(noteTransmittals).where(inArray(noteTransmittals.documentId, validDocIds));
+        await db.delete(meetingTransmittals).where(inArray(meetingTransmittals.documentId, validDocIds));
+        await db.delete(reportTransmittals).where(inArray(reportTransmittals.documentId, validDocIds));
 
         // Delete file assets (we could check if they're referenced elsewhere, but for now just delete)
         if (fileAssetIds.length > 0) {

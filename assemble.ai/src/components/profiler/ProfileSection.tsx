@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Building2, Home, Factory, Landmark, Layers, Route, Tractor, Shield, Globe } from 'lucide-react';
+import { Building2, Home, Factory, Landmark, Layers, Route, Tractor, Shield, Maximize2, Minimize2, ChevronDown, ChevronUp } from 'lucide-react';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import type {
   BuildingClass,
@@ -9,7 +9,6 @@ import type {
   BuildingClassConfig,
   Region,
 } from '@/types/profiler';
-import { REGIONS } from '@/types/profiler';
 
 interface ProfileSectionProps {
   projectId: string;
@@ -31,32 +30,16 @@ const BUILDING_CLASS_ICONS: Record<string, React.ReactNode> = {
   defense_secure: <Shield className="w-4 h-4" />,
 };
 
-const TriangleRight = () => (
-  <svg
-    className="w-3 h-3 text-[var(--color-text-muted)]"
-    viewBox="0 0 12 12"
-    fill="currentColor"
-  >
-    <polygon points="2,0 12,6 2,12" />
-  </svg>
-);
-
-// Region configuration from templates
-const regionConfig = (profileTemplates as any).regionConfig as Record<Region, {
-  code: Region;
-  name: string;
-  buildingCodeAbbrev: string;
-  currencySymbol: string;
-}>;
+// Primary classes shown by default, secondary classes hidden behind "Others"
+const PRIMARY_CLASSES: BuildingClass[] = ['residential', 'commercial', 'industrial', 'institution'];
+const SECONDARY_CLASSES: BuildingClass[] = ['mixed', 'infrastructure', 'agricultural', 'defense_secure'];
 
 export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onShowProfiler, isActive = false }: ProfileSectionProps) {
   // Form state - Class, Type, and Region
   const [buildingClass, setBuildingClass] = useState<BuildingClass | null>(data?.buildingClass || null);
   const [projectType, setProjectType] = useState<ProjectType | null>(data?.projectType || null);
   const [region, setRegion] = useState<Region>(data?.region || 'AU');
-
-  // Check if profile has subclass/scale/complexity (already configured)
-  const hasFullProfile = data?.subclass?.length > 0 && Object.keys(data?.scaleData || {}).length > 0;
+  const [showOtherClasses, setShowOtherClasses] = useState<boolean>(false);
 
   // Sync with external data
   useEffect(() => {
@@ -64,6 +47,10 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
       setBuildingClass(data.buildingClass || null);
       setProjectType(data.projectType || null);
       setRegion(data.region || 'AU');
+      // Auto-expand "Others" if a secondary class is selected
+      if (data.buildingClass && SECONDARY_CLASSES.includes(data.buildingClass)) {
+        setShowOtherClasses(true);
+      }
     }
   }, [data]);
 
@@ -84,27 +71,22 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
     onShowProfiler?.();
   };
 
-  // Handle region selection
-  const handleRegionSelect = (newRegion: Region) => {
-    setRegion(newRegion);
-  };
-
-  const classConfig = buildingClass
-    ? (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[buildingClass]
-    : null;
-
   const isClassTypeComplete = buildingClass && projectType;
 
   return (
     <div
-      className={`nav-panel py-3 pl-2 pr-3 relative overflow-hidden ${isActive ? 'nav-panel-active' : ''} ${isClassTypeComplete ? 'cursor-pointer hover:bg-[var(--color-bg-tertiary)]/50' : ''}`}
+      className={`nav-panel-section py-3 pl-2 pr-3 ${isActive ? 'nav-panel-active' : ''} ${isClassTypeComplete ? 'cursor-pointer' : ''}`}
       onClick={isClassTypeComplete ? onShowProfiler : undefined}
     >
       <div className="nav-panel-header w-full mb-2">
         <h3 className="nav-panel-title text-sm font-semibold text-[var(--color-text-primary)] transition-colors">
           Project Profile
         </h3>
-        <TriangleRight />
+        {isActive ? (
+          <Minimize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+        ) : (
+          <Maximize2 className="nav-panel-chevron w-3.5 h-3.5 text-[var(--color-text-muted)] transition-colors" />
+        )}
       </div>
 
       {/* Building Class and Project Type side by side */}
@@ -112,23 +94,58 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
         {/* Building Class selection */}
         <div>
           <div className="space-y-1">
-            {Object.entries(profileTemplates.buildingClasses).map(([key, config]) => (
-              <button
-                key={key}
-                onClick={(e) => { e.stopPropagation(); handleClassSelect(key as BuildingClass); }}
-                className={`
-                  w-full flex items-center gap-1.5 p-2 rounded-lg border text-xs transition-all
-                  ${
-                    buildingClass === key
-                      ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
-                      : 'border-[var(--color-border)] hover:border-[var(--color-accent-copper)]/50 text-[var(--color-text-secondary)]'
-                  }
-                `}
-              >
-                {BUILDING_CLASS_ICONS[key]}
-                <span className="truncate">{(config as BuildingClassConfig).label}</span>
-              </button>
-            ))}
+            {/* Primary classes - always visible */}
+            {PRIMARY_CLASSES.map((key) => {
+              const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key];
+              return (
+                <button
+                  key={key}
+                  onClick={(e) => { e.stopPropagation(); handleClassSelect(key); }}
+                  className={`
+                    w-full flex items-center gap-1.5 p-2 rounded-lg border text-xs transition-all
+                    ${
+                      buildingClass === key
+                        ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
+                        : 'border-[var(--color-border)] hover:border-[var(--color-accent-copper)]/50 text-[var(--color-text-secondary)]'
+                    }
+                  `}
+                >
+                  {BUILDING_CLASS_ICONS[key]}
+                  <span className="truncate">{config.label}</span>
+                </button>
+              );
+            })}
+
+            {/* Others toggle button */}
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowOtherClasses(!showOtherClasses); }}
+              className="w-full flex items-center justify-between gap-1.5 p-2 rounded-lg border text-xs transition-all border-[var(--color-border)] hover:border-[var(--color-text-muted)]/50 text-[var(--color-text-muted)]"
+            >
+              <span>Others</span>
+              {showOtherClasses ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Secondary classes - shown when expanded */}
+            {showOtherClasses && SECONDARY_CLASSES.map((key) => {
+              const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key];
+              return (
+                <button
+                  key={key}
+                  onClick={(e) => { e.stopPropagation(); handleClassSelect(key); }}
+                  className={`
+                    w-full flex items-center gap-1.5 p-2 rounded-lg border text-xs transition-all
+                    ${
+                      buildingClass === key
+                        ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
+                        : 'border-[var(--color-border)] hover:border-[var(--color-accent-copper)]/50 text-[var(--color-text-secondary)]'
+                    }
+                  `}
+                >
+                  {BUILDING_CLASS_ICONS[key]}
+                  <span className="truncate">{config.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -154,31 +171,6 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
           </div>
         </div>
       </div>
-
-      {/* Region Selector - compact horizontal layout at bottom */}
-      <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-[var(--color-border)]" onClick={(e) => e.stopPropagation()}>
-        <Globe className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-        <div className="flex gap-1 flex-1">
-          {REGIONS.map((r) => (
-            <button
-              key={r}
-              onClick={() => handleRegionSelect(r)}
-              className={`
-                flex-1 px-2 py-1 rounded text-xs font-medium transition-all
-                ${
-                  region === r
-                    ? 'bg-[var(--color-text-muted)] text-white'
-                    : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-text-muted)]/20'
-                }
-              `}
-              title={regionConfig[r]?.name || r}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-      </div>
-
     </div>
   );
 }

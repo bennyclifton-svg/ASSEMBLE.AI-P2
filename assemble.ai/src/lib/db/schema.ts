@@ -37,6 +37,14 @@ export const fileAssets = sqliteTable('file_assets', {
     hash: text('hash').notNull(),
     ocrStatus: text('ocr_status', { enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'] }).default('PENDING'),
     ocrText: text('ocr_text'),
+    // Drawing extraction fields (Feature: AI-powered drawing number extraction)
+    drawingNumber: text('drawing_number'),              // e.g., "A-101", "SK-001", "DWG-2024-001"
+    drawingName: text('drawing_name'),                  // e.g., "Floor Plan - Level 1"
+    drawingRevision: text('drawing_revision'),          // e.g., "A", "P01", "Rev B"
+    drawingExtractionStatus: text('drawing_extraction_status', {
+        enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'SKIPPED', 'FAILED']
+    }).default('PENDING'),
+    drawingExtractionConfidence: integer('drawing_extraction_confidence'), // 0-100
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -97,6 +105,8 @@ export const projects = sqliteTable('projects', {
             'industrial', 'fitout', 'refurbishment', 'remediation'
         ]
     }),
+    // Drawing extraction toggle (default: enabled)
+    drawingExtractionEnabled: integer('drawing_extraction_enabled', { mode: 'boolean' }).default(true),
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });

@@ -114,6 +114,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 .select({
                     id: fileAssets.id,
                     originalName: fileAssets.originalName,
+                    // Drawing extraction fields
+                    drawingNumber: fileAssets.drawingNumber,
+                    drawingName: fileAssets.drawingName,
+                    drawingRevision: fileAssets.drawingRevision,
+                    drawingExtractionStatus: fileAssets.drawingExtractionStatus,
                 })
                 .from(fileAssets)
                 .where(inArray(fileAssets.id, fileAssetIds))
@@ -172,9 +177,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 subcategoryId: doc?.subcategoryId || null,
                 categoryName: category?.name || null,
                 subcategoryName: subcategory?.name || null,
-                documentName: fileAsset?.originalName || 'Unknown',
+                documentName: fileAsset?.drawingName || fileAsset?.originalName || 'Unknown',
                 revision: version?.versionNumber || 1,
                 addedAt: t.addedAt,
+                // Drawing extraction fields
+                drawingNumber: fileAsset?.drawingNumber || null,
+                drawingName: fileAsset?.drawingName || null,
+                drawingRevision: fileAsset?.drawingRevision || null,
+                drawingExtractionStatus: fileAsset?.drawingExtractionStatus || null,
             };
         });
 

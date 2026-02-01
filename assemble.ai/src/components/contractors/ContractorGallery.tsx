@@ -46,8 +46,8 @@ export function ContractorGallery({
   const { contractors, isLoading, addContractor, updateContractor, deleteContractor, toggleShortlist, toggleAward } = useContractors(projectId, trade);
   const { toast } = useToast();
 
-  // Accordion state - only one card expanded at a time
-  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  // Global firms expansion state - all firms expand/collapse together
+  const [isFirmsExpanded, setIsFirmsExpanded] = useState<boolean>(false);
 
   // New firm state - for creating a new firm
   const [newFirm, setNewFirm] = useState<FirmData | null>(null);
@@ -61,10 +61,6 @@ export function ContractorGallery({
     id: '',
     name: '',
   });
-
-  const handleToggleExpand = (id: string) => {
-    setExpandedCardId(prev => prev === id ? null : id);
-  };
 
   const handleSave = async (id: string, data: Partial<FirmData>) => {
     try {
@@ -83,7 +79,6 @@ export function ContractorGallery({
             description: 'Contractor added successfully',
           });
           setNewFirm(null);
-          setExpandedCardId(newContractor.id);
         } else {
           // Just update local state for new firm
           setNewFirm({ ...newFirm, ...data });
@@ -120,7 +115,6 @@ export function ContractorGallery({
   const handleDelete = async (id: string) => {
     if (id === 'new') {
       setNewFirm(null);
-      setExpandedCardId(null);
       return;
     }
 
@@ -130,9 +124,6 @@ export function ContractorGallery({
         title: 'Success',
         description: 'Contractor deleted successfully',
       });
-      if (expandedCardId === id) {
-        setExpandedCardId(null);
-      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -268,12 +259,11 @@ export function ContractorGallery({
         }
       } else {
         // Add as new
-        const newContractor = await addContractor(formData);
+        await addContractor(formData);
         toast({
           title: 'Success',
           description: 'New contractor added from extracted data',
         });
-        setExpandedCardId(newContractor.id);
       }
     } catch {
       // Error already handled in handleFileExtraction
@@ -302,12 +292,11 @@ export function ContractorGallery({
         notes: extractedData.notes || '',
         trade,
       };
-      const newContractor = await addContractor(formData);
+      await addContractor(formData);
       toast({
         title: 'Success',
         description: 'New contractor added from extracted data',
       });
-      setExpandedCardId(newContractor.id);
     } catch {
       // Error already handled
     }
@@ -350,8 +339,6 @@ export function ContractorGallery({
       companyId: null,
       trade,
     });
-    // Collapse any expanded card
-    setExpandedCardId(null);
   };
 
   const openDeleteDialog = (id: string, name: string) => {
@@ -368,22 +355,40 @@ export function ContractorGallery({
 
   return (
     <div className="space-y-6">
-      {/* Firms Section */}
-      <div>
-        <h3 className="text-lg font-semibold text-[#cccccc] mb-4">Firms</h3>
-        <div className="relative">
+      {/* Firms Section - Unified Panel */}
+      <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
+        {/* Header with master toggle */}
+        <button
+          onClick={() => setIsFirmsExpanded(prev => !prev)}
+          className="w-full flex items-center gap-2 px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+        >
+          <svg
+            className={`w-3.5 h-3.5 text-[var(--color-text-muted)] transition-transform ${isFirmsExpanded ? 'rotate-90' : ''}`}
+            viewBox="0 0 12 12"
+            fill="currentColor"
+          >
+            <polygon points="2,0 12,6 2,12" />
+          </svg>
+          <span className="text-lg font-semibold text-[var(--color-text-primary)]">Firms</span>
+          <span className="text-sm text-[var(--color-text-muted)]">
+            ({contractors.length + (newFirm ? 1 : 0)})
+          </span>
+        </button>
+
+        {/* Content */}
+        <div className="relative bg-[var(--color-bg-primary)]">
           {/* Extraction Progress Overlay */}
           {isExtracting && (
-            <div className="absolute inset-0 z-50 bg-[#1e1e1e]/80 rounded-lg flex items-center justify-center">
-              <div className="bg-[#1e1e1e] border border-[#3e3e42] rounded-lg p-6 flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0e639c]"></div>
-                <p className="text-[#cccccc] font-semibold">Extracting contractor data...</p>
-                <p className="text-xs text-[#858585]">This may take a few moments</p>
+            <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 flex items-center justify-center">
+              <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
+                <p className="text-[var(--color-text-primary)] font-semibold">Extracting contractor data...</p>
+                <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
               </div>
             </div>
           )}
 
-          <div className="flex gap-3 overflow-x-auto pt-3 pb-4 items-start" style={{ scrollbarWidth: 'thin' }}>
+          <div className="flex overflow-x-auto py-3 px-1 items-stretch" style={{ scrollbarWidth: 'thin' }}>
             {/* Existing contractors */}
             {contractors.map((contractor) => (
               <FirmCard
@@ -403,8 +408,7 @@ export function ContractorGallery({
                   trade: contractor.trade,
                 }}
                 category={trade}
-                isExpanded={expandedCardId === contractor.id}
-                onToggleExpand={() => handleToggleExpand(contractor.id)}
+                isExpanded={isFirmsExpanded}
                 onSave={(data) => handleSave(contractor.id, data)}
                 onDelete={() => openDeleteDialog(contractor.id, contractor.companyName)}
                 onShortlistToggle={(shortlisted) => handleShortlistToggle(contractor.id, shortlisted)}
@@ -420,8 +424,7 @@ export function ContractorGallery({
                 type="contractor"
                 firm={newFirm}
                 category={trade}
-                isExpanded={expandedCardId === 'new'}
-                onToggleExpand={() => handleToggleExpand('new')}
+                isExpanded={isFirmsExpanded}
                 onSave={(data) => handleSave('new', data)}
                 onDelete={() => handleDelete('new')}
                 onShortlistToggle={(shortlisted) => handleShortlistToggle('new', shortlisted)}
@@ -434,6 +437,7 @@ export function ContractorGallery({
             <AddFirmButton
               onAdd={handleAddNew}
               onFileDrop={handleAddNewFileDrop}
+              isExpanded={isFirmsExpanded}
             />
           </div>
         </div>

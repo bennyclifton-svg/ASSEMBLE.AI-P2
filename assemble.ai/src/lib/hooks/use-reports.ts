@@ -93,6 +93,12 @@ interface UseReportSectionsReturn {
     refetch: () => void;
 }
 
+interface AddStakeholderGroupResult {
+    added: ReportAttendee[];
+    totalInGroup: number;
+    alreadyAdded: number;
+}
+
 interface UseReportAttendeesReturn {
     attendees: ReportAttendee[];
     isLoading: boolean;
@@ -100,7 +106,7 @@ interface UseReportAttendeesReturn {
     addAttendee: (data: AddAttendeeRequest) => Promise<ReportAttendee>;
     updateAttendee: (attendeeId: string, data: UpdateAttendeeRequest) => Promise<ReportAttendee>;
     removeAttendee: (attendeeId: string) => Promise<void>;
-    addStakeholderGroup: (group: string) => Promise<ReportAttendee[]>;
+    addStakeholderGroup: (group: string) => Promise<AddStakeholderGroupResult>;
     refetch: () => void;
 }
 
@@ -488,8 +494,9 @@ export function useReportAttendees(reportId: string | null, projectId?: string):
 
     /**
      * Add all stakeholders from a group
+     * Returns object with added attendees and metadata for UI feedback
      */
-    const addStakeholderGroup = useCallback(async (group: string): Promise<ReportAttendee[]> => {
+    const addStakeholderGroup = useCallback(async (group: string): Promise<AddStakeholderGroupResult> => {
         if (!reportId || !projectId) {
             throw new Error('Report ID and Project ID are required');
         }
@@ -504,21 +511,35 @@ export function useReportAttendees(reportId: string | null, projectId?: string):
         }
 
         const { stakeholders } = await stakeholdersResponse.json();
+        const totalInGroup = stakeholders.length;
 
-        // Add each stakeholder as an attendee
+        // Get existing attendee stakeholder IDs to avoid duplicates
+        const existingStakeholderIds = new Set(
+            (data?.attendees ?? [])
+                .filter((a: ReportAttendee) => a.stakeholderId)
+                .map((a: ReportAttendee) => a.stakeholderId)
+        );
+
+        // Filter to only stakeholders not already added
+        const newStakeholders = stakeholders.filter(
+            (s: { id: string }) => !existingStakeholderIds.has(s.id)
+        );
+        const alreadyAdded = totalInGroup - newStakeholders.length;
+
+        // Add each new stakeholder as an attendee
         const addedAttendees: ReportAttendee[] = [];
-        for (const stakeholder of stakeholders) {
+        for (const stakeholder of newStakeholders) {
             try {
                 const attendee = await addAttendee({ stakeholderId: stakeholder.id });
                 addedAttendees.push(attendee);
             } catch (e) {
-                // Skip if already added
+                // Skip if already added (race condition)
                 console.warn(`Stakeholder ${stakeholder.id} may already be added`);
             }
         }
 
-        return addedAttendees;
-    }, [reportId, projectId, addAttendee]);
+        return { added: addedAttendees, totalInGroup, alreadyAdded };
+    }, [reportId, projectId, addAttendee, data?.attendees]);
 
     const refetch = useCallback(() => {
         mutate();

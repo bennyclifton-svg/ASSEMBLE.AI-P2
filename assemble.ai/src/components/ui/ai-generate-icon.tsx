@@ -1,7 +1,6 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 
 interface AIGenerateIconProps {
     size?: number;
@@ -24,35 +23,18 @@ export function AIGenerateIcon({
     isLoading = false,
     title = 'Generate with AI',
 }: AIGenerateIconProps) {
-    if (isLoading) {
-        return (
-            <span
-                className={cn(
-                    'inline-flex items-center justify-center',
-                    className
-                )}
-                title="Generating..."
-            >
-                <Loader2
-                    className="animate-spin"
-                    style={{ width: size, height: size }}
-                />
-            </span>
-        );
-    }
-
     return (
         <button
             onClick={onClick}
-            disabled={disabled}
+            disabled={disabled || isLoading}
             className={cn(
                 'inline-flex items-center justify-center',
                 'hover:opacity-80 transition-opacity cursor-pointer',
                 'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#0e639c] rounded',
-                disabled && 'opacity-50 cursor-not-allowed',
+                (disabled || isLoading) && 'opacity-50 cursor-not-allowed',
                 className
             )}
-            title={title}
+            title={isLoading ? 'Generating...' : title}
             type="button"
         >
             <svg
@@ -61,6 +43,7 @@ export function AIGenerateIcon({
                 viewBox="0 0 16 16"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
+                className={isLoading ? 'animate-spin' : ''}
             >
                 {/* Outer diamond (square rotated 45°) */}
                 <path

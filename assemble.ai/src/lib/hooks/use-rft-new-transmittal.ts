@@ -21,6 +21,11 @@ export interface TransmittalDocument {
     versionNumber: number;
     uploadedAt: string | null;
     addedAt: string;
+    // Drawing extraction fields
+    drawingNumber: string | null;
+    drawingName: string | null;
+    drawingRevision: string | null;
+    drawingExtractionStatus: string | null;
 }
 
 interface UseRftNewTransmittalOptions {

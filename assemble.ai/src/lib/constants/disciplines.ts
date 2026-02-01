@@ -37,9 +37,15 @@ export const CONSULTANT_DISCIPLINES = [
   { name: 'Waste Management', order: 35 },
   { name: 'Wastewater', order: 36 },
   { name: 'Waterproofing', order: 37 },
+  { name: 'BMS', order: 38 },
+  { name: 'ICT', order: 39 },
+  { name: 'Lighting', order: 40 },
+  { name: 'Security', order: 41 },
+  { name: 'Town Planning', order: 42 },
+  { name: 'Wind', order: 43 },
 ] as const;
 
-// Default Contractor Trades (21 total)
+// Default Contractor Trades (35 total)
 export const CONTRACTOR_TRADES = [
   { name: 'Concrete Finisher', order: 1 },
   { name: 'Steel Fixer', order: 2 },
@@ -62,6 +68,30 @@ export const CONTRACTOR_TRADES = [
   { name: 'Mason', order: 19 },
   { name: 'Welder', order: 20 },
   { name: 'Landscaper', order: 21 },
+  { name: 'Civil', order: 22 },
+  { name: 'Concrete', order: 23 },
+  { name: 'Demolition', order: 24 },
+  { name: 'Excavation', order: 25 },
+  { name: 'Facade', order: 26 },
+  { name: 'Fire Services', order: 27 },
+  { name: 'Formwork', order: 28 },
+  { name: 'Hydraulic', order: 29 },
+  { name: 'Joinery', order: 30 },
+  { name: 'Lift', order: 31 },
+  { name: 'Mechanical', order: 32 },
+  { name: 'Piling', order: 33 },
+  { name: 'Signage', order: 34 },
+  { name: 'Structural Steel', order: 35 },
+  { name: 'Ceilings', order: 36 },
+  { name: 'Electrical', order: 37 },
+  { name: 'Fitout', order: 38 },
+  { name: 'Flooring', order: 39 },
+  { name: 'Glazing', order: 40 },
+  { name: 'Landscaping', order: 41 },
+  { name: 'Painting', order: 42 },
+  { name: 'Precast', order: 43 },
+  { name: 'Roofing', order: 44 },
+  { name: 'Waterproofing', order: 45 },
 ] as const;
 
 // Status types for both consultants and contractors

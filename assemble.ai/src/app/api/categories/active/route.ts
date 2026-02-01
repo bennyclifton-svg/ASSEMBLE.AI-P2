@@ -1,8 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { consultantDisciplines, contractorTrades } from '@/lib/db';
-import { eq, asc } from 'drizzle-orm';
+import { projectStakeholders } from '@/lib/db';
+import { eq, and, asc, isNull } from 'drizzle-orm';
 import { getAllCategories, type ActiveCategory, type Subcategory } from '@/lib/constants/categories';
+
+/**
+ * Helper function to extract unique subcategories from stakeholders
+ * Handles deduplication, empty values, and alphabetical sorting
+ */
+function getUniqueSubcategories(
+    stakeholders: (typeof projectStakeholders.$inferSelect)[],
+    parentCategoryId: string
+): Subcategory[] {
+    const uniqueMap = new Map<string, { id: string; name: string }>();
+
+    for (const s of stakeholders) {
+        const disciplineOrTrade = s.disciplineOrTrade?.trim();
+        if (disciplineOrTrade) {
+            const key = disciplineOrTrade.toLowerCase();
+            if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, {
+                    id: s.id,
+                    name: disciplineOrTrade,
+                });
+            }
+        }
+    }
+
+    return Array.from(uniqueMap.values())
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(item => ({
+            id: item.id,
+            name: item.name,
+            parentCategoryId,
+        }));
+}
 
 export async function GET(request: NextRequest) {
     try {
@@ -16,17 +48,33 @@ export async function GET(request: NextRequest) {
         // Get all categories
         const categories = getAllCategories();
 
-        // Fetch active consultant disciplines (ordered alphabetically)
-        const activeDisciplines = await db.query.consultantDisciplines.findMany({
-            where: eq(consultantDisciplines.projectId, projectId),
-            orderBy: asc(consultantDisciplines.disciplineName),
-        });
+        // Fetch active consultant stakeholders (for Scheme Design, Detail Design, Consultants)
+        const consultantStakeholders = await db
+            .select()
+            .from(projectStakeholders)
+            .where(
+                and(
+                    eq(projectStakeholders.projectId, projectId),
+                    eq(projectStakeholders.stakeholderGroup, 'consultant'),
+                    eq(projectStakeholders.isEnabled, true),
+                    isNull(projectStakeholders.deletedAt)
+                )
+            )
+            .orderBy(asc(projectStakeholders.disciplineOrTrade));
 
-        // Fetch active contractor trades (ordered alphabetically)
-        const activeTrades = await db.query.contractorTrades.findMany({
-            where: eq(contractorTrades.projectId, projectId),
-            orderBy: asc(contractorTrades.tradeName),
-        });
+        // Fetch active contractor stakeholders (for Contractors category)
+        const contractorStakeholders = await db
+            .select()
+            .from(projectStakeholders)
+            .where(
+                and(
+                    eq(projectStakeholders.projectId, projectId),
+                    eq(projectStakeholders.stakeholderGroup, 'contractor'),
+                    eq(projectStakeholders.isEnabled, true),
+                    isNull(projectStakeholders.deletedAt)
+                )
+            )
+            .orderBy(asc(projectStakeholders.disciplineOrTrade));
 
         // Build active categories with their subcategories
         const activeCategories: ActiveCategory[] = categories.map(category => {
@@ -37,23 +85,11 @@ export async function GET(request: NextRequest) {
             let subcategories: Subcategory[] = [];
 
             if (category.subcategorySource === 'consultants') {
-                // Filter to only enabled disciplines
-                subcategories = activeDisciplines
-                    .filter(d => d.isEnabled)
-                    .map(d => ({
-                        id: d.id,
-                        name: d.disciplineName,
-                        parentCategoryId: category.id,
-                    }));
+                // Get unique disciplines from consultant stakeholders
+                subcategories = getUniqueSubcategories(consultantStakeholders, category.id);
             } else if (category.subcategorySource === 'contractors') {
-                // Filter to only enabled trades
-                subcategories = activeTrades
-                    .filter(t => t.isEnabled)
-                    .map(t => ({
-                        id: t.id,
-                        name: t.tradeName,
-                        parentCategoryId: category.id,
-                    }));
+                // Get unique trades from contractor stakeholders
+                subcategories = getUniqueSubcategories(contractorStakeholders, category.id);
             }
 
             return {

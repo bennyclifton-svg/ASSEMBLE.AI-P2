@@ -18,7 +18,7 @@ const spectral = Spectral({
 });
 
 export const metadata: Metadata = {
-  title: "TESSERA - Procurement Intelligence",
+  title: "Foundry",
   description: "Architectural Precision in Procurement - AI-powered tender management platform",
 };
 

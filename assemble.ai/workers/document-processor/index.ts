@@ -10,19 +10,22 @@ import { config } from 'dotenv';
 
 // Load environment variables FIRST - before any other imports
 // In production (Docker), env vars are injected so this is a no-op
-// In development, load from .env.local
+// In development, load env files in same order as Next.js
 if (process.env.NODE_ENV !== 'production') {
     config({ path: '.env.local' });
+    config({ path: '.env.development' });
+    config({ path: '.env' });
 }
 
 // Verify required env vars
 console.log('[worker] Checking environment variables...');
+console.log('[worker] DATABASE_URL:', process.env.DATABASE_URL ? 'set (PostgreSQL)' : 'NOT SET');
 console.log('[worker] SUPABASE_POSTGRES_URL:', process.env.SUPABASE_POSTGRES_URL ? 'set' : 'NOT SET');
 console.log('[worker] REDIS_URL:', process.env.REDIS_URL ? 'set' : 'NOT SET');
 console.log('[worker] VOYAGE_API_KEY:', process.env.VOYAGE_API_KEY ? 'set' : 'NOT SET');
 
-if (!process.env.SUPABASE_POSTGRES_URL) {
-    console.error('[worker] FATAL: SUPABASE_POSTGRES_URL is not set!');
+if (!process.env.DATABASE_URL && !process.env.SUPABASE_POSTGRES_URL) {
+    console.error('[worker] FATAL: DATABASE_URL or SUPABASE_POSTGRES_URL is not set!');
     process.exit(1);
 }
 

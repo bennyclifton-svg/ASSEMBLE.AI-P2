@@ -2,12 +2,13 @@
 
 /**
  * RegisterForm Component
- * Registration form for creating new accounts.
+ * Registration form using Better Auth.
  */
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { signUp } from '@/lib/auth-client';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -35,31 +36,45 @@ export function RegisterForm() {
       return;
     }
 
+    if (!displayName || displayName.length < 1 || displayName.length > 100) {
+      setFieldErrors({ displayName: 'Display name must be 1-100 characters' });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, displayName }),
+      const result = await signUp.email({
+        email,
+        password,
+        name: displayName,
       });
 
-      const data = await response.json();
+      if (result.error) {
+        // Handle Better Auth error responses
+        const errorCode = result.error.code;
+        const errorMessage = result.error.message || 'Registration failed';
 
-      if (!response.ok) {
-        if (data.error?.field) {
-          setFieldErrors({ [data.error.field]: data.error.message });
+        if (errorCode === 'USER_ALREADY_EXISTS' || errorCode === 'EMAIL_ALREADY_EXISTS') {
+          setFieldErrors({ email: 'Email already registered' });
+        } else if (errorCode === 'INVALID_EMAIL') {
+          setFieldErrors({ email: 'Invalid email format' });
+        } else if (errorCode === 'PASSWORD_TOO_SHORT') {
+          setFieldErrors({ password: 'Password is too short' });
+        } else if (errorCode === 'WEAK_PASSWORD') {
+          setFieldErrors({ password: 'Password is too weak' });
         } else {
-          setError(data.error?.message || 'Registration failed');
+          setError(errorMessage);
         }
         return;
       }
 
       // Successful registration - redirect to dashboard
-      router.push('/');
+      router.push('/dashboard');
       router.refresh();
 
     } catch (err) {
+      console.error('Registration error:', err);
       setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);

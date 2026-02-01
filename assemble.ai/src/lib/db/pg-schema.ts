@@ -42,6 +42,12 @@ export const fileAssets = pgTable('file_assets', {
     hash: text('hash').notNull(),
     ocrStatus: text('ocr_status').default('PENDING'),
     ocrText: text('ocr_text'),
+    // Drawing extraction fields (Feature: AI-powered drawing number extraction)
+    drawingNumber: text('drawing_number'),              // e.g., "A-101", "SK-001", "DWG-2024-001"
+    drawingName: text('drawing_name'),                  // e.g., "Floor Plan - Level 1"
+    drawingRevision: text('drawing_revision'),          // e.g., "A", "P01", "Rev B"
+    drawingExtractionStatus: text('drawing_extraction_status').default('PENDING'),
+    drawingExtractionConfidence: integer('drawing_extraction_confidence'), // 0-100
     createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -95,6 +101,7 @@ export const projects = pgTable('projects', {
             'industrial', 'fitout', 'refurbishment', 'remediation'
         ]
     }),
+    drawingExtractionEnabled: boolean('drawing_extraction_enabled').default(true),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -1138,6 +1145,7 @@ export const projectStakeholders = pgTable('project_stakeholders', {
     disciplineOrTrade: text('discipline_or_trade'),
     isEnabled: boolean('is_enabled').default(true),
     briefServices: text('brief_services'),
+    briefDeliverables: text('brief_deliverables'),
     briefFee: text('brief_fee'),
     briefProgram: text('brief_program'),
     scopeWorks: text('scope_works'),
@@ -1480,5 +1488,70 @@ export const reportTransmittalsRelations = relations(reportTransmittals, ({ one 
     document: one(documents, {
         fields: [reportTransmittals.documentId],
         references: [documents.id],
+    }),
+}));
+
+// ============================================================================
+// BILLING / PRODUCTS SCHEMA (Phase 5 - Polar Integration)
+// ============================================================================
+
+/**
+ * Products Table
+ * Stores subscription plan/product configuration.
+ * Allows different Polar product IDs for sandbox vs production.
+ */
+export const products = pgTable('products', {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    description: text('description'),
+    slug: text('slug').notNull().unique(),                    // 'starter', 'professional'
+    polarProductId: text('polar_product_id').notNull(),       // Polar product ID (different per environment)
+    priceCents: integer('price_cents').notNull(),             // Price in cents (4900 = $49.00)
+    billingInterval: text('billing_interval').notNull().default('month'), // 'month' or 'year'
+    features: text('features'),                               // Plan features as JSON string
+    isActive: boolean('is_active').default(true),
+    displayOrder: integer('display_order').default(0),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+}, (table) => [
+    index('products_slug_idx').on(table.slug),
+    index('products_active_idx').on(table.isActive, table.displayOrder),
+]);
+
+/**
+ * Transactions Table
+ * Tracks all payment transactions from Polar.
+ * Used for audit trail and transaction history in billing page.
+ */
+export const transactions = pgTable('transactions', {
+    id: text('id').primaryKey(),
+    userId: text('user_id').notNull(),                        // References Better Auth user table
+    productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
+    polarOrderId: text('polar_order_id').unique(),            // Polar order ID (idempotency key)
+    polarCheckoutId: text('polar_checkout_id'),               // Polar checkout session ID
+    polarSubscriptionId: text('polar_subscription_id'),       // Associated subscription if any
+    amountCents: integer('amount_cents').notNull(),           // Amount charged in cents
+    currency: text('currency').default('usd'),
+    status: text('status').notNull().default('pending'),      // 'pending', 'completed', 'refunded'
+    metadata: text('metadata'),                               // Additional data from Polar as JSON
+    createdAt: integer('created_at').notNull(),
+}, (table) => [
+    index('transactions_user_id_idx').on(table.userId),
+    index('transactions_polar_order_idx').on(table.polarOrderId),
+    index('transactions_subscription_idx').on(table.polarSubscriptionId),
+]);
+
+// ============================================================================
+// BILLING RELATIONS
+// ============================================================================
+
+export const productsRelations = relations(products, ({ many }) => ({
+    transactions: many(transactions),
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+    product: one(products, {
+        fields: [transactions.productId],
+        references: [products.id],
     }),
 }));

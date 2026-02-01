@@ -16,6 +16,20 @@ import { toast } from '@/lib/hooks/use-toast';
 // TYPES
 // ============================================================================
 
+interface CostLineMatchDetails {
+  costLineId: string;
+  activity: string;
+  section: string;
+  matchConfidence: number;
+  matchType: 'exact' | 'ai_description' | 'fuzzy';
+  matchReason: string;
+  alternatives?: Array<{
+    costLineId: string;
+    activity: string;
+    confidence: number;
+  }>;
+}
+
 interface ExtractionDetails {
   confidence: {
     overall: number;
@@ -23,15 +37,8 @@ interface ExtractionDetails {
   };
   parserUsed: string;
   costLineMatched: boolean;
-  costLineMatchDetails?: {
-    costLineId: string;
-    costCode: string | null;
-    activity: string;
-    matchScore: number;
-    matchType: 'exact' | 'partial' | 'fuzzy';
-    disciplineName?: string;
-    tradeName?: string;
-  } | null;
+  costLineAutoAssigned?: boolean;
+  costLineMatchDetails?: CostLineMatchDetails | null;
 }
 
 interface UploadResult {
@@ -121,14 +128,22 @@ export function VariationDropZone({ projectId, children, onUploadComplete }: Var
         const extraction = result.extraction;
 
         let toastMessage = `Variation ${variation?.variationNumber} created`;
-        if (extraction?.costLineMatched && extraction.costLineMatchDetails) {
-          toastMessage += ` (matched to ${extraction.costLineMatchDetails.activity})`;
+        if (extraction?.costLineAutoAssigned && extraction.costLineMatchDetails) {
+          toastMessage += ` → ${extraction.costLineMatchDetails.activity}`;
+        } else if (extraction?.costLineMatched && extraction.costLineMatchDetails) {
+          toastMessage += ` (suggested: ${extraction.costLineMatchDetails.activity})`;
         }
+
+        let toastDescription = extraction?.confidence.overall
+          ? `Extraction confidence: ${Math.round(extraction.confidence.overall * 100)}%`
+          : undefined;
+        if (extraction?.costLineAutoAssigned && extraction.costLineMatchDetails) {
+          toastDescription = `Auto-assigned to cost line (${Math.round(extraction.costLineMatchDetails.matchConfidence * 100)}% match)`;
+        }
+
         toast({
           title: toastMessage,
-          description: extraction?.confidence.overall
-            ? `Extraction confidence: ${Math.round(extraction.confidence.overall * 100)}%`
-            : undefined,
+          description: toastDescription,
         });
 
         // Notify parent
@@ -311,12 +326,29 @@ export function VariationDropZone({ projectId, children, onUploadComplete }: Var
                     <div className="text-sm text-[var(--color-text-primary)] mt-1">
                       Forecast: {formatCurrency(lastResult.variation.amountForecastCents)}
                     </div>
+                    {/* Cost Line Match Info */}
                     {lastResult.extraction?.costLineMatchDetails && (
-                      <div className="text-xs text-[var(--color-text-muted)] mt-1">
-                        Matched: {lastResult.extraction.costLineMatchDetails.activity}
+                      <div className="text-xs mt-2 pt-2 border-t border-[var(--color-border)]">
+                        {lastResult.extraction.costLineAutoAssigned ? (
+                          <div className="text-green-400">
+                            <span className="font-medium">Auto-assigned: </span>
+                            {lastResult.extraction.costLineMatchDetails.activity}
+                            <span className="ml-1 text-[var(--color-text-muted)]">
+                              ({Math.round(lastResult.extraction.costLineMatchDetails.matchConfidence * 100)}% confidence)
+                            </span>
+                          </div>
+                        ) : lastResult.extraction.costLineMatched ? (
+                          <div className="text-yellow-400">
+                            <span className="font-medium">Suggested: </span>
+                            {lastResult.extraction.costLineMatchDetails.activity}
+                            <span className="ml-1 text-[var(--color-text-muted)]">
+                              ({Math.round(lastResult.extraction.costLineMatchDetails.matchConfidence * 100)}% - review needed)
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     )}
-                    {lastResult.extraction?.confidence.overall && (
+                    {lastResult.extraction?.confidence.overall && !lastResult.extraction?.costLineMatchDetails && (
                       <div className="text-xs text-[var(--color-text-muted)] mt-1">
                         Confidence: {Math.round(lastResult.extraction.confidence.overall * 100)}%
                       </div>

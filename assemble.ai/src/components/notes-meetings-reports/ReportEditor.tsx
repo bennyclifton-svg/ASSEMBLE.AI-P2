@@ -85,6 +85,8 @@ export function ReportEditor({
 
     const [isGeneratingSections, setIsGeneratingSections] = useState(false);
     const [isAddingAdhoc, setIsAddingAdhoc] = useState(false);
+    const [isAddingGroup, setIsAddingGroup] = useState(false);
+    const [groupFeedback, setGroupFeedback] = useState<string | null>(null);
     const [adhocForm, setAdhocForm] = useState({
         adhocName: '',
         adhocFirm: '',
@@ -131,9 +133,25 @@ export function ReportEditor({
     // Handle stakeholder group selection
     const handleSelectGroup = async (group: StakeholderGroup) => {
         try {
-            await addStakeholderGroup(group);
+            setIsAddingGroup(true);
+            setGroupFeedback(null);
+            const result = await addStakeholderGroup(group);
+
+            if (result.totalInGroup === 0) {
+                setGroupFeedback(`No ${group} stakeholders found in the project. Add stakeholders in the Stakeholders section first.`);
+            } else if (result.added.length === 0 && result.alreadyAdded > 0) {
+                setGroupFeedback(`All ${result.totalInGroup} ${group} stakeholder${result.totalInGroup !== 1 ? 's are' : ' is'} already in the distribution list.`);
+            } else if (result.added.length > 0) {
+                setGroupFeedback(`Added ${result.added.length} ${group} stakeholder${result.added.length !== 1 ? 's' : ''}`);
+            }
+
+            setTimeout(() => setGroupFeedback(null), 3000);
         } catch (error) {
             console.error('Failed to add stakeholder group:', error);
+            setGroupFeedback(`Failed to add ${group} stakeholders. Please try again.`);
+            setTimeout(() => setGroupFeedback(null), 3000);
+        } finally {
+            setIsAddingGroup(false);
         }
     };
 
@@ -368,8 +386,31 @@ export function ReportEditor({
                         onSelectGroup={handleSelectGroup}
                         onAddAdhoc={() => setIsAddingAdhoc(true)}
                         selectedGroups={selectedGroups}
+                        disabled={isAddingGroup}
                     />
                 </div>
+
+                {/* Feedback message */}
+                {groupFeedback && (
+                    <div className={cn(
+                        'mb-3 px-3 py-2 rounded-md text-sm',
+                        groupFeedback.includes('No ') || groupFeedback.includes('Failed')
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            : groupFeedback.includes('already')
+                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                : 'bg-green-500/10 text-green-600 dark:text-green-400'
+                    )}>
+                        {groupFeedback}
+                    </div>
+                )}
+
+                {/* Loading indicator for adding group */}
+                {isAddingGroup && (
+                    <div className="mb-3 flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Adding stakeholders...</span>
+                    </div>
+                )}
 
                 {/* Ad-hoc Form */}
                 {isAddingAdhoc && (

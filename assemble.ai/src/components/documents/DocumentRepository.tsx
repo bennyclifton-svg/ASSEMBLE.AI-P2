@@ -20,6 +20,8 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     const [uploadFiles, setUploadFiles] = useState<UploadFileStatus[]>([]);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [knowledgeSetId, setKnowledgeSetId] = useState<string | null>(null);
+    const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
+    const [filterSubcategoryId, setFilterSubcategoryId] = useState<string | null>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
 
@@ -146,7 +148,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
         }
     };
 
-    const handleBulkCategorize = async (categoryId: string, subcategoryId?: string) => {
+    const handleBulkCategorize = async (categoryId: string, subcategoryId?: string, subcategoryName?: string) => {
         const documentIds = Array.from(selectedIds);
         if (documentIds.length === 0) return;
 
@@ -154,7 +156,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
             const response = await fetch('/api/documents/bulk-categorize', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ documentIds, categoryId, subcategoryId }),
+                body: JSON.stringify({ documentIds, categoryId, subcategoryId, subcategoryName }),
             });
 
             if (response.ok) {
@@ -185,10 +187,83 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
         }
     };
 
+    /**
+     * Handle category filter change from clicking category tiles.
+     * Pass null to clear the filter, or categoryId to filter by category.
+     */
+    const handleFilterChange = (categoryId: string | null, subcategoryId?: string | null) => {
+        setFilterCategoryId(categoryId);
+        setFilterSubcategoryId(subcategoryId ?? null);
+    };
+
+    // Upload configuration
+    const UPLOAD_THROTTLE_MS = 100; // Delay between uploads to prevent DB pool exhaustion
+    const MAX_RETRIES = 3;
+    const INITIAL_RETRY_DELAY_MS = 500;
+
+    // Helper: delay function
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Helper: upload single file with retry logic
+    const uploadFileWithRetry = async (
+        file: File,
+        formData: FormData,
+        maxRetries: number = MAX_RETRIES
+    ): Promise<{ success: boolean; response?: Response; error?: string }> => {
+        let lastError: string = '';
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const res = await fetch('/api/documents', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (res.ok) {
+                    return { success: true, response: res };
+                }
+
+                // Server returned an error - check if retryable
+                const status = res.status;
+
+                // Don't retry client errors (4xx) except for 429 (rate limit) and 408 (timeout)
+                if (status >= 400 && status < 500 && status !== 429 && status !== 408) {
+                    let errorText = '';
+                    try {
+                        errorText = await res.text();
+                    } catch {
+                        errorText = `Server error: ${status} ${res.statusText}`;
+                    }
+                    return { success: false, error: errorText || `Server error: ${status}` };
+                }
+
+                // Retryable server error (5xx, 429, 408)
+                lastError = `Server error: ${status} ${res.statusText}`;
+
+                if (attempt < maxRetries) {
+                    const retryDelay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+                    console.log(`[Upload] Retry ${attempt}/${maxRetries} for ${file.name} after ${retryDelay}ms`);
+                    await delay(retryDelay);
+                }
+            } catch (networkError) {
+                // Network-level error - always retry
+                lastError = networkError instanceof Error ? networkError.message : 'Network error';
+
+                if (attempt < maxRetries) {
+                    const retryDelay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+                    console.log(`[Upload] Network error, retry ${attempt}/${maxRetries} for ${file.name} after ${retryDelay}ms`);
+                    await delay(retryDelay);
+                }
+            }
+        }
+
+        return { success: false, error: lastError || 'Upload failed after retries' };
+    };
+
     const handleFilesSelected = async (files: File[], categoryId?: string, subcategoryId?: string, subcategoryName?: string) => {
         // If no files provided but we have selected documents, this is a bulk categorize action
         if (files.length === 0 && selectedIds.size > 0 && categoryId) {
-            await handleBulkCategorize(categoryId, subcategoryId);
+            await handleBulkCategorize(categoryId, subcategoryId, subcategoryName);
             return;
         }
 
@@ -216,6 +291,11 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
 
+                // Throttle: add delay between uploads to prevent DB pool exhaustion
+                if (i > 0) {
+                    await delay(UPLOAD_THROTTLE_MS);
+                }
+
                 // Update to uploading
                 setUploadFiles(prev => prev.map((f, idx) =>
                     idx === i ? { ...f, status: 'uploading' as const, progress: 0 } : f
@@ -228,20 +308,20 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                 if (subcategoryId) formData.append('subcategoryId', subcategoryId);
                 if (subcategoryName) formData.append('subcategoryName', subcategoryName);
 
-                console.log('Uploading file with:', {
+                console.log('Uploading file:', {
                     filename: file.name,
+                    fileSize: file.size,
+                    fileType: file.type,
                     projectId,
                     categoryId,
                     subcategoryId,
                     subcategoryName
                 });
 
-                const res = await fetch('/api/documents', {
-                    method: 'POST',
-                    body: formData,
-                });
+                // Upload with automatic retry
+                const result = await uploadFileWithRetry(file, formData);
 
-                if (res.ok) {
+                if (result.success && result.response) {
                     localSuccessCount++;
                     // Update to completed
                     setUploadFiles(prev => prev.map((f, idx) =>
@@ -251,7 +331,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     // Capture document ID for Knowledge category RAG processing
                     if (isKnowledgeCategory) {
                         try {
-                            const responseData = await res.clone().json();
+                            const responseData = await result.response.clone().json();
                             // API returns { documentId: '...' } not { id: '...' }
                             if (responseData.documentId) {
                                 uploadedDocumentIds.push(responseData.documentId);
@@ -263,12 +343,13 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     }
                 } else {
                     localFailureCount++;
-                    const errorText = await res.text();
-                    console.error('Upload failed:', {
-                        status: res.status,
-                        statusText: res.statusText,
-                        error: errorText,
+                    const errorText = result.error || 'Upload failed';
+
+                    console.error('Upload failed after retries:', {
                         filename: file.name,
+                        fileSize: file.size,
+                        fileType: file.type,
+                        error: errorText,
                         categoryId,
                         subcategoryId
                     });
@@ -277,7 +358,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     try {
                         errorData = JSON.parse(errorText);
                     } catch {
-                        errorData = { error: errorText || 'Upload failed' };
+                        errorData = { error: errorText };
                     }
 
                     // Update to error
@@ -346,10 +427,21 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                 setUploadFiles([]);
             }, 3000);
         } catch (error) {
-            console.error('Upload error:', error);
+            // Capture full error details for debugging
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorName = error instanceof Error ? error.name : 'Unknown';
+            const errorStack = error instanceof Error ? error.stack : undefined;
+
+            console.error('Upload error details:', {
+                message: errorMessage,
+                name: errorName,
+                stack: errorStack,
+                raw: error,
+            });
+
             toast({
                 title: 'Upload error',
-                description: 'An unexpected error occurred during upload.',
+                description: errorMessage || 'An unexpected error occurred during upload.',
                 variant: 'destructive',
             });
         } finally {
@@ -359,22 +451,17 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
 
     return (
         <div className="h-full flex flex-col">
-            {/* Header */}
-            <div className="p-6 pb-4">
-                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] flex items-center gap-3 font-[var(--font-heading)]">
-                    <span className="w-1 h-6 rounded-full bg-[var(--color-accent-yellow)]"></span>
-                    Documents
-                </h2>
-            </div>
-
             {/* Category Upload Tiles */}
-            <div className="px-6 py-4">
+            <div className="px-6 pt-4 pb-4">
                 <CategoryUploadTiles
                     projectId={projectId}
                     onFilesDropped={handleFilesSelected}
                     selectedDocumentIds={Array.from(selectedIds)}
                     onBulkSelectCategory={handleBulkSelectCategory}
                     onKnowledgeAction={handleKnowledgeAction}
+                    filterCategoryId={filterCategoryId}
+                    filterSubcategoryId={filterSubcategoryId}
+                    onFilterChange={handleFilterChange}
                 />
             </div>
 
@@ -386,6 +473,8 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     selectedIds={selectedIds}
                     onSelectionChange={onSelectionChange}
                     scrollContainerRef={scrollContainerRef}
+                    filterCategoryId={filterCategoryId}
+                    filterSubcategoryId={filterSubcategoryId}
                 />
             </div>
         </div>

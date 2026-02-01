@@ -77,13 +77,21 @@ export async function GET(
                         documentName: 'Unknown',
                         revision: 1,
                         addedAt: transmittal.addedAt,
+                        // Drawing extraction fields
+                        drawingNumber: null,
+                        drawingName: null,
+                        drawingRevision: null,
+                        drawingExtractionStatus: null,
                     };
                 }
 
-                // Get version and file info
+                // Get version and file info (including drawing extraction fields)
                 const [versionInfo] = document.latestVersionId
                     ? await db
-                        .select({ version: versions, fileAsset: fileAssets })
+                        .select({
+                            version: versions,
+                            fileAsset: fileAssets,
+                        })
                         .from(versions)
                         .leftJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
                         .where(eq(versions.id, document.latestVersionId))
@@ -119,9 +127,14 @@ export async function GET(
                     subcategoryId: document.subcategoryId,
                     categoryName,
                     subcategoryName,
-                    documentName: versionInfo?.fileAsset?.originalName || 'Unknown',
+                    documentName: versionInfo?.fileAsset?.drawingName || versionInfo?.fileAsset?.originalName || 'Unknown',
                     revision: versionInfo?.version?.versionNumber || 1,
                     addedAt: transmittal.addedAt,
+                    // Drawing extraction fields
+                    drawingNumber: versionInfo?.fileAsset?.drawingNumber || null,
+                    drawingName: versionInfo?.fileAsset?.drawingName || null,
+                    drawingRevision: versionInfo?.fileAsset?.drawingRevision || null,
+                    drawingExtractionStatus: versionInfo?.fileAsset?.drawingExtractionStatus || null,
                 };
             })
         );

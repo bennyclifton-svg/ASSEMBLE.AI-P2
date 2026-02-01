@@ -17,6 +17,16 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+
+  // Increase body size limit for file uploads (default is 10MB)
+  // Allows uploads up to 100MB for large PDF documents with multiple pages
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '100MB',  // Using uppercase MB as recommended
+    },
+    // Increase proxy body size limit for API routes in development
+    proxyClientMaxBodySize: '100MB',
+  },
 };
 
 export default nextConfig;

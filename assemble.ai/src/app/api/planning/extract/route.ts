@@ -107,10 +107,19 @@ export async function POST(request: NextRequest) {
     let extractedData;
     try {
       // Remove markdown code blocks if present
-      const cleanedResponse = aiResponse
+      let cleanedResponse = aiResponse
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
+
+      // Extract JSON object from response - handle cases where AI adds extra text
+      const jsonStartIndex = cleanedResponse.indexOf('{');
+      const jsonEndIndex = cleanedResponse.lastIndexOf('}');
+
+      if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+        cleanedResponse = cleanedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+      }
+
       extractedData = JSON.parse(cleanedResponse);
     } catch (error) {
       console.error('Failed to parse AI response:', aiResponse);

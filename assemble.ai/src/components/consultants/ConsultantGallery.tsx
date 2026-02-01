@@ -46,8 +46,8 @@ export function ConsultantGallery({
   const { consultants, isLoading, addConsultant, updateConsultant, deleteConsultant, toggleShortlist, toggleAward } = useConsultants(projectId, discipline);
   const { toast } = useToast();
 
-  // Accordion state - only one card expanded at a time
-  const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+  // Global firms expansion state - all firms expand/collapse together
+  const [isFirmsExpanded, setIsFirmsExpanded] = useState<boolean>(false);
 
   // New firm state - for creating a new firm
   const [newFirm, setNewFirm] = useState<FirmData | null>(null);
@@ -61,10 +61,6 @@ export function ConsultantGallery({
     id: '',
     name: '',
   });
-
-  const handleToggleExpand = (id: string) => {
-    setExpandedCardId(prev => prev === id ? null : id);
-  };
 
   const handleSave = async (id: string, data: Partial<FirmData>) => {
     try {
@@ -101,7 +97,6 @@ export function ConsultantGallery({
             description: 'Consultant added successfully',
           });
           setNewFirm(null);
-          setExpandedCardId(newConsultant.id);
         } else {
           // Just update local state for new firm
           setNewFirm({ ...newFirm, ...data });
@@ -123,7 +118,6 @@ export function ConsultantGallery({
   const handleDelete = async (id: string) => {
     if (id === 'new') {
       setNewFirm(null);
-      setExpandedCardId(null);
       return;
     }
 
@@ -133,9 +127,6 @@ export function ConsultantGallery({
         title: 'Success',
         description: 'Consultant deleted successfully',
       });
-      if (expandedCardId === id) {
-        setExpandedCardId(null);
-      }
     } catch (error) {
       toast({
         title: 'Error',
@@ -273,12 +264,11 @@ export function ConsultantGallery({
         }
       } else {
         // Add as new
-        const newConsultant = await addConsultant(formData);
+        await addConsultant(formData);
         toast({
           title: 'Success',
           description: 'New consultant added from extracted data',
         });
-        setExpandedCardId(newConsultant.id);
       }
     } catch {
       // Error already handled in handleFileExtraction
@@ -308,12 +298,11 @@ export function ConsultantGallery({
         notes: extractedData.notes || '',
         discipline,
       };
-      const newConsultant = await addConsultant(formData);
+      await addConsultant(formData);
       toast({
         title: 'Success',
         description: 'New consultant added from extracted data',
       });
-      setExpandedCardId(newConsultant.id);
     } catch {
       // Error already handled
     }
@@ -358,8 +347,6 @@ export function ConsultantGallery({
       companyId: null,
       discipline,
     });
-    // Collapse any expanded card
-    setExpandedCardId(null);
   };
 
   const openDeleteDialog = (id: string, name: string) => {
@@ -376,13 +363,31 @@ export function ConsultantGallery({
 
   return (
     <div className="space-y-6">
-      {/* Firms Section */}
-      <div>
-        <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Firms</h3>
-        <div className="relative">
+      {/* Firms Section - Unified Panel */}
+      <div className="border border-[var(--color-border)] rounded-lg overflow-hidden">
+        {/* Header with master toggle */}
+        <button
+          onClick={() => setIsFirmsExpanded(prev => !prev)}
+          className="w-full flex items-center gap-2 px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] hover:bg-[var(--color-bg-secondary)] transition-colors"
+        >
+          <svg
+            className={`w-3.5 h-3.5 text-[var(--color-text-muted)] transition-transform ${isFirmsExpanded ? 'rotate-90' : ''}`}
+            viewBox="0 0 12 12"
+            fill="currentColor"
+          >
+            <polygon points="2,0 12,6 2,12" />
+          </svg>
+          <span className="text-lg font-semibold text-[var(--color-text-primary)]">Firms</span>
+          <span className="text-sm text-[var(--color-text-muted)]">
+            ({consultants.length + (newFirm ? 1 : 0)})
+          </span>
+        </button>
+
+        {/* Content */}
+        <div className="relative bg-[var(--color-bg-primary)]">
           {/* Extraction Progress Overlay */}
           {isExtracting && (
-            <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 rounded-lg flex items-center justify-center">
+            <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 flex items-center justify-center">
               <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
                 <p className="text-[var(--color-text-primary)] font-semibold">Extracting consultant data...</p>
@@ -391,7 +396,7 @@ export function ConsultantGallery({
             </div>
           )}
 
-          <div className="flex gap-3 overflow-x-auto pt-3 pb-4 items-start" style={{ scrollbarWidth: 'thin' }}>
+          <div className="flex overflow-x-auto py-3 px-1 items-stretch" style={{ scrollbarWidth: 'thin' }}>
             {/* Existing consultants */}
             {consultants.map((consultant) => (
               <FirmCard
@@ -412,8 +417,7 @@ export function ConsultantGallery({
                   discipline: consultant.discipline,
                 }}
                 category={discipline}
-                isExpanded={expandedCardId === consultant.id}
-                onToggleExpand={() => handleToggleExpand(consultant.id)}
+                isExpanded={isFirmsExpanded}
                 onSave={(data) => handleSave(consultant.id, data)}
                 onDelete={() => openDeleteDialog(consultant.id, consultant.companyName)}
                 onShortlistToggle={(shortlisted) => handleShortlistToggle(consultant.id, shortlisted)}
@@ -429,8 +433,7 @@ export function ConsultantGallery({
                 type="consultant"
                 firm={newFirm}
                 category={discipline}
-                isExpanded={expandedCardId === 'new'}
-                onToggleExpand={() => handleToggleExpand('new')}
+                isExpanded={isFirmsExpanded}
                 onSave={(data) => handleSave('new', data)}
                 onDelete={() => handleDelete('new')}
                 onShortlistToggle={(shortlisted) => handleShortlistToggle('new', shortlisted)}
@@ -443,6 +446,7 @@ export function ConsultantGallery({
             <AddFirmButton
               onAdd={handleAddNew}
               onFileDrop={handleAddNewFileDrop}
+              isExpanded={isFirmsExpanded}
             />
           </div>
         </div>
