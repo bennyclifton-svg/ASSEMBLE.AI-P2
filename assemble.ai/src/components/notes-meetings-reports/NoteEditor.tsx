@@ -17,6 +17,8 @@ interface NoteEditorProps {
     placeholder?: string;
     debounceMs?: number;
     className?: string;
+    /** Use transparent background (inherits from parent) */
+    transparentBg?: boolean;
 }
 
 export function NoteEditor({
@@ -25,6 +27,7 @@ export function NoteEditor({
     placeholder = 'Type your notes here...',
     debounceMs = 500,
     className,
+    transparentBg = false,
 }: NoteEditorProps) {
     const [localContent, setLocalContent] = useState(content);
     const [isSaving, setIsSaving] = useState(false);
@@ -98,6 +101,7 @@ export function NoteEditor({
                 placeholder={placeholder}
                 variant="compact"
                 toolbarVariant="full"
+                transparentBg={transparentBg}
             />
 
             {/* Saving indicator */}

@@ -60,8 +60,8 @@ export function Logo({ size = 'md', className, showText = true }: LogoProps) {
         <span
           className={cn(
             config.fontSize,
-            'font-[family-name:var(--font-exo-2)] font-bold tracking-normal',
-            'text-[var(--color-accent-primary)]'
+            'font-[family-name:var(--font-exo-2)] font-bold italic tracking-normal',
+            'text-[var(--color-text-primary)]'
           )}
         >
           Foundry

@@ -18,10 +18,11 @@ import {
     projectStakeholders,
     tenderSubmissions,
 } from '@/lib/db';
-import { eq, and, asc, desc } from 'drizzle-orm';
+import { eq, and, asc, desc, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';
+import { versioning } from '@/lib/versioning';
 import { parseTenderForEvaluation } from '@/lib/services/tender-parser';
 import type { TenderParseResult } from '@/types/evaluation';
 
@@ -56,6 +57,7 @@ export async function POST(
         const formData = await request.formData();
         const file = formData.get('file') as File | null;
         const firmId = formData.get('firmId') as string | null;
+        const evaluationPriceId = formData.get('evaluationPriceId') as string | null;
 
         if (!file) {
             return NextResponse.json(
@@ -97,9 +99,17 @@ export async function POST(
             );
         }
 
-        // Get evaluation rows for mapping
+        // Get evaluation rows for mapping (filtered by evaluationPriceId if provided)
         const dbRows = await db.query.evaluationRows.findMany({
-            where: eq(evaluationRows.evaluationId, evaluation.id),
+            where: evaluationPriceId
+                ? and(
+                    eq(evaluationRows.evaluationId, evaluation.id),
+                    eq(evaluationRows.evaluationPriceId, evaluationPriceId)
+                )
+                : and(
+                    eq(evaluationRows.evaluationId, evaluation.id),
+                    isNull(evaluationRows.evaluationPriceId)
+                ),
             orderBy: [asc(evaluationRows.orderIndex)],
         });
 
@@ -174,14 +184,25 @@ export async function POST(
                 isSystem: true,
             }).onConflictDoNothing();
 
-            // Create document
-            const documentId = uuidv4();
-            await db.insert(documents).values({
-                id: documentId,
-                projectId,
-                categoryId,
-                subcategoryId,
-            });
+            // Check if a matching document exists (for versioning)
+            let documentId = await versioning.findMatchingDocument(file.name, projectId);
+            let versionNumber = 1;
+
+            if (documentId) {
+                // Existing document found - increment version
+                versionNumber = await versioning.getNextVersionNumber(documentId);
+                console.log(`[parse-route] Found existing document ${documentId}, creating version ${versionNumber}`);
+            } else {
+                // Create new document
+                documentId = uuidv4();
+                await db.insert(documents).values({
+                    id: documentId,
+                    projectId,
+                    categoryId,
+                    subcategoryId,
+                });
+                console.log(`[parse-route] Created new document ${documentId}`);
+            }
 
             // Create version
             const versionId = uuidv4();
@@ -189,7 +210,7 @@ export async function POST(
                 id: versionId,
                 documentId,
                 fileAssetId,
-                versionNumber: 1,
+                versionNumber,
                 uploadedBy: 'Tender Parse',
             });
 
@@ -304,12 +325,19 @@ export async function POST(
         if (unmappedItems.length > 0) {
             console.log(`[parse-route] Creating ${unmappedItems.length} new rows for unmapped items`);
 
-            // Get the highest order index for initial_price table
+            // Get the highest order index for initial_price table (filtered by evaluationPriceId)
             const existingMaxOrder = await db.query.evaluationRows.findMany({
-                where: and(
-                    eq(evaluationRows.evaluationId, evaluation.id),
-                    eq(evaluationRows.tableType, 'initial_price')
-                ),
+                where: evaluationPriceId
+                    ? and(
+                        eq(evaluationRows.evaluationId, evaluation.id),
+                        eq(evaluationRows.tableType, 'initial_price'),
+                        eq(evaluationRows.evaluationPriceId, evaluationPriceId)
+                    )
+                    : and(
+                        eq(evaluationRows.evaluationId, evaluation.id),
+                        eq(evaluationRows.tableType, 'initial_price'),
+                        isNull(evaluationRows.evaluationPriceId)
+                    ),
                 orderBy: [desc(evaluationRows.orderIndex)],
                 limit: 1,
             });
@@ -322,6 +350,7 @@ export async function POST(
                 await db.insert(evaluationRows).values({
                     id: newRowId,
                     evaluationId: evaluation.id,
+                    evaluationPriceId: evaluationPriceId || undefined,
                     tableType: 'initial_price',
                     description: item.description,
                     orderIndex: nextOrderIndex,

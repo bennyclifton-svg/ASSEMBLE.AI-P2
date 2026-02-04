@@ -115,7 +115,7 @@ export async function PATCH(
             updatedAt: sql`CURRENT_TIMESTAMP`,
         };
 
-        const { title, content, isStarred, reportingPeriodStart, reportingPeriodEnd } = validationResult.data;
+        const { title, content, isStarred, color, reportingPeriodStart, reportingPeriodEnd } = validationResult.data;
 
         if (title !== undefined) {
             updateData.title = title;
@@ -125,6 +125,9 @@ export async function PATCH(
         }
         if (isStarred !== undefined) {
             updateData.isStarred = isStarred;
+        }
+        if (color !== undefined) {
+            updateData.color = color;
         }
         if (reportingPeriodStart !== undefined) {
             updateData.reportingPeriodStart = reportingPeriodStart;

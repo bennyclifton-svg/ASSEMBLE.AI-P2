@@ -131,18 +131,18 @@ interface InlineRatingButtonsProps {
     readOnly?: boolean;
 }
 
-// Muted background colors for unselected state (increased intensity from /40 to /70)
-const MUTED_COLORS: Record<QualityRating, string> = {
-    good: 'bg-green-900/70',
-    average: 'bg-yellow-900/70',
-    poor: 'bg-red-900/70',
+// Faded colors for deselected state
+const FADED_COLORS: Record<QualityRating, string> = {
+    good: 'bg-green-500/30',
+    average: 'bg-yellow-500/30',
+    poor: 'bg-red-500/30',
 };
 
-// Highlight border colors for selected state (reduced from ring-2 to ring-1)
-const HIGHLIGHT_BORDERS: Record<QualityRating, string> = {
-    good: 'ring-1 ring-green-400',
-    average: 'ring-1 ring-yellow-400',
-    poor: 'ring-1 ring-red-400',
+// Solid colors for selected state (ring-inset prevents layout shift)
+const SOLID_COLORS: Record<QualityRating, string> = {
+    good: 'bg-green-500 ring-2 ring-inset ring-green-300',
+    average: 'bg-yellow-500 ring-2 ring-inset ring-yellow-300',
+    poor: 'bg-red-500 ring-2 ring-inset ring-red-300',
 };
 
 export function InlineRatingButtons({ value, onChange, disabled, saving, readOnly }: InlineRatingButtonsProps) {
@@ -164,10 +164,9 @@ export function InlineRatingButtons({ value, onChange, disabled, saving, readOnl
                         disabled={disabled || saving || readOnly}
                         title={QUALITY_RATING_LABELS[rating]}
                         className={cn(
-                            'w-5 h-5 transition-all',
+                            'w-2.5 h-2.5 rounded-full transition-all',
                             'focus:outline-none',
-                            MUTED_COLORS[rating],
-                            isSelected && HIGHLIGHT_BORDERS[rating],
+                            isSelected ? SOLID_COLORS[rating] : FADED_COLORS[rating],
                             !readOnly && 'hover:opacity-80 cursor-pointer',
                             (disabled || saving) && 'opacity-50 cursor-not-allowed',
                             readOnly && 'cursor-default'

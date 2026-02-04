@@ -19,6 +19,7 @@ import type {
 interface UseEvaluationOptions {
     projectId: string;
     stakeholderId?: string;
+    evaluationPriceId?: string; // For multi-instance price evaluation
 }
 
 // T048-T051: Parse result for UI feedback
@@ -59,6 +60,8 @@ interface UseEvaluationReturn {
     mergeRows: (rowIds: string[], newDescription: string, tableType: 'initial_price' | 'adds_subs') => Promise<MergeRowsResult>;
     // T088: Update row description
     updateRowDescription: (rowId: string, description: string) => Promise<boolean>;
+    // Reorder row within table
+    reorderRow: (rowId: string, newIndex: number, tableType: 'initial_price' | 'adds_subs') => Promise<boolean>;
 
     // Computed values
     shortlistedFirms: EvaluationFirm[];
@@ -72,6 +75,7 @@ const DEBOUNCE_DELAY = 500;
 export function useEvaluation({
     projectId,
     stakeholderId,
+    evaluationPriceId,
 }: UseEvaluationOptions): UseEvaluationReturn {
     const [data, setData] = useState<EvaluationData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -90,6 +94,9 @@ export function useEvaluation({
     const contextType = 'stakeholder';
     const contextId = stakeholderId;
 
+    // Build query params for evaluation price instance
+    const evalPriceParam = evaluationPriceId ? `?evaluationPriceId=${evaluationPriceId}` : '';
+
     // Determine firm type from loaded data (first firm's type)
     const firmType: 'consultant' | 'contractor' = data?.firms?.[0]?.firmType || 'consultant';
 
@@ -105,7 +112,7 @@ export function useEvaluation({
             setError(null);
 
             const response = await fetch(
-                `/api/evaluation/${projectId}/${contextType}/${contextId}`
+                `/api/evaluation/${projectId}/${contextType}/${contextId}${evalPriceParam}`
             );
 
             if (!response.ok) {
@@ -121,7 +128,7 @@ export function useEvaluation({
         } finally {
             setIsLoading(false);
         }
-    }, [projectId, contextType, contextId]);
+    }, [projectId, contextType, contextId, evalPriceParam]);
 
     // Initial fetch
     useEffect(() => {
@@ -142,13 +149,14 @@ export function useEvaluation({
             await Promise.all(
                 updates.map(async (request) => {
                     const response = await fetch(
-                        `/api/evaluation/${projectId}/${contextType}/${contextId}`,
+                        `/api/evaluation/${projectId}/${contextType}/${contextId}${evalPriceParam}`,
                         {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 action: 'updateCell',
                                 ...request,
+                                evaluationPriceId,
                             }),
                         }
                     );
@@ -164,7 +172,7 @@ export function useEvaluation({
         } finally {
             setIsSaving(false);
         }
-    }, [projectId, contextType, contextId]);
+    }, [projectId, contextType, contextId, evalPriceParam, evaluationPriceId]);
 
     // T032: Cleanup debounce timer on unmount
     useEffect(() => {
@@ -239,11 +247,11 @@ export function useEvaluation({
             setIsSaving(true);
 
             const response = await fetch(
-                `/api/evaluation/${projectId}/${contextType}/${contextId}/rows`,
+                `/api/evaluation/${projectId}/${contextType}/${contextId}/rows${evalPriceParam}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(request),
+                    body: JSON.stringify({ ...request, evaluationPriceId }),
                 }
             );
 
@@ -267,7 +275,7 @@ export function useEvaluation({
         } finally {
             setIsSaving(false);
         }
-    }, [projectId, contextType, contextId]);
+    }, [projectId, contextType, contextId, evalPriceParam, evaluationPriceId]);
 
     // Delete a row
     const deleteRow = useCallback(async (rowId: string): Promise<boolean> => {
@@ -326,8 +334,11 @@ export function useEvaluation({
             const formData = new FormData();
             formData.append('file', file);
             formData.append('firmId', firmId);
+            if (evaluationPriceId) {
+                formData.append('evaluationPriceId', evaluationPriceId);
+            }
 
-            const url = `/api/evaluation/${projectId}/${contextType}/${contextId}/parse`;
+            const url = `/api/evaluation/${projectId}/${contextType}/${contextId}/parse${evalPriceParam}`;
             console.log(`[use-evaluation] Calling POST ${url}`);
 
             const response = await fetch(url, {
@@ -371,7 +382,7 @@ export function useEvaluation({
             setIsParsing(false);
             setParsingFirmId(null);
         }
-    }, [projectId, contextType, contextId, fetchData]);
+    }, [projectId, contextType, contextId, fetchData, evalPriceParam, evaluationPriceId]);
 
     // T086: Merge rows
     const mergeRows = useCallback(async (
@@ -390,7 +401,7 @@ export function useEvaluation({
             setIsSaving(true);
 
             const response = await fetch(
-                `/api/evaluation/${projectId}/${contextType}/${contextId}/rows/merge`,
+                `/api/evaluation/${projectId}/${contextType}/${contextId}/rows/merge${evalPriceParam}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -398,6 +409,7 @@ export function useEvaluation({
                         rowIds,
                         newDescription,
                         tableType,
+                        evaluationPriceId,
                     }),
                 }
             );
@@ -426,7 +438,7 @@ export function useEvaluation({
         } finally {
             setIsSaving(false);
         }
-    }, [projectId, contextType, contextId, fetchData]);
+    }, [projectId, contextType, contextId, fetchData, evalPriceParam, evaluationPriceId]);
 
     // T088: Update row description with optimistic update
     const updateRowDescription = useCallback(async (
@@ -473,10 +485,85 @@ export function useEvaluation({
         }
     }, [projectId, contextType, contextId, fetchData]);
 
-    // Computed values
+    // Reorder row within a table
+    const reorderRow = useCallback(async (
+        rowId: string,
+        newIndex: number,
+        tableType: 'initial_price' | 'adds_subs'
+    ): Promise<boolean> => {
+        if (!contextId || !data) return false;
+
+        // Get current rows for this table type, sorted by orderIndex
+        const tableRows = data.rows
+            .filter(r => r.tableType === tableType)
+            .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+
+        const currentIndex = tableRows.findIndex(r => r.id === rowId);
+        if (currentIndex === -1 || currentIndex === newIndex) return false;
+
+        // Create new order array
+        const reorderedRows = [...tableRows];
+        const [movedRow] = reorderedRows.splice(currentIndex, 1);
+        reorderedRows.splice(newIndex, 0, movedRow);
+
+        // Calculate new orderIndex values
+        const updates = reorderedRows.map((row, idx) => ({
+            id: row.id,
+            orderIndex: idx,
+        }));
+
+        // Optimistic update
+        setData(prev => {
+            if (!prev) return prev;
+            const updatedRows = prev.rows.map(row => {
+                const update = updates.find(u => u.id === row.id);
+                if (update) {
+                    return { ...row, orderIndex: update.orderIndex };
+                }
+                return row;
+            });
+            return { ...prev, rows: updatedRows };
+        });
+
+        try {
+            setIsSaving(true);
+
+            // Update all affected rows on the server
+            await Promise.all(
+                updates
+                    .filter((u, idx) => tableRows[idx]?.orderIndex !== u.orderIndex)
+                    .map(async (update) => {
+                        const response = await fetch(
+                            `/api/evaluation/${projectId}/${contextType}/${contextId}/rows/${update.id}`,
+                            {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ orderIndex: update.orderIndex }),
+                            }
+                        );
+                        if (!response.ok) {
+                            throw new Error('Failed to update row order');
+                        }
+                    })
+            );
+
+            return true;
+        } catch (err) {
+            console.error('Error reordering row:', err);
+            // Revert on failure
+            await fetchData();
+            return false;
+        } finally {
+            setIsSaving(false);
+        }
+    }, [projectId, contextType, contextId, data, fetchData]);
+
+    // Computed values - sort by orderIndex
     const shortlistedFirms = data?.firms.filter(f => f.shortlisted) || [];
-    const initialPriceRows = data?.rows.filter(r => r.tableType === 'initial_price') || [];
-    const addSubsRows = data?.rows.filter(r => r.tableType === 'adds_subs') || [];
+    const initialPriceRows = (data?.rows.filter(r => r.tableType === 'initial_price') || [])
+        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    const addSubsRows = (data?.rows.filter(r => r.tableType === 'adds_subs') || [])
+        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
     return {
         data,
@@ -493,6 +580,7 @@ export function useEvaluation({
         parseTender,
         mergeRows,
         updateRowDescription,
+        reorderRow,
         shortlistedFirms,
         initialPriceRows,
         addSubsRows,

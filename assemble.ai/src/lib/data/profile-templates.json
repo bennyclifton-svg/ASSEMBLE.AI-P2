@@ -2,7 +2,7 @@
   "metadata": {
     "version": "1.0",
     "structure": "class → type → subclass → scale → complexity",
-    "source": "NCC/BCA, AIQS, Rawlinsons 2025"
+    "source": "NCC/BCA, AIQS"
   },
   "buildingClasses": {
     "residential": {
@@ -3240,7 +3240,7 @@
       "currency": "AUD",
       "unit": "sqm",
       "lastUpdated": "2025-01",
-      "source": "Rawlinsons 2025, AIQS"
+      "source": "AIQS"
     },
     "NZ": {
       "residential": {

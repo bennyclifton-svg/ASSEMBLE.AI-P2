@@ -76,11 +76,12 @@ export function TRRTabs({
                         <div
                             key={trr.id}
                             className={cn(
-                                'relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer',
+                                'relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer tab-aurora-sub',
                                 isActive
-                                    ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
+                                    ? 'text-[var(--color-accent-primary)] -mb-px'
                                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                             )}
+                            data-state={isActive ? 'active' : 'inactive'}
                             onClick={() => onSelectTrr(trr.id)}
                         >
                             <span>{label}</span>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
-import { Check, HelpCircle, Globe } from 'lucide-react';
+import { Check, HelpCircle, Globe, ChevronDown, ChevronUp } from 'lucide-react';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import {
   ContextChips,
@@ -43,7 +43,7 @@ interface ProfilerMiddlePanelProps {
     subclass?: string[];
     subclassOther?: string[];
     scaleData?: Record<string, number>;
-    complexity?: Record<string, string>;
+    complexity?: Record<string, string | string[]>;
     workScope?: string[];
   };
   onProfileComplete?: () => void;
@@ -73,8 +73,9 @@ export function ProfilerMiddlePanel({
   const [selectedSubclasses, setSelectedSubclasses] = useState<string[]>(initialData?.subclass || []);
   const [subclassOther, setSubclassOther] = useState<string[]>(initialData?.subclassOther || []);
   const [scaleData, setScaleData] = useState<Record<string, number>>(initialData?.scaleData || {});
-  const [complexity, setComplexity] = useState<Record<string, string>>(initialData?.complexity || {});
+  const [complexity, setComplexity] = useState<Record<string, string | string[]>>(initialData?.complexity || {});
   const [workScope, setWorkScope] = useState<string[]>(initialData?.workScope || []);
+  const [showOtherSubclasses, setShowOtherSubclasses] = useState<boolean>(false);
 
   // Track previous building class to detect actual changes
   const prevBuildingClassRef = useRef<BuildingClass | null>(buildingClass);
@@ -107,6 +108,20 @@ export function ProfilerMiddlePanel({
       setWorkScope(initialData.workScope || []);
     }
   }, [initialData]);
+
+  // Auto-expand "Others" if a secondary subclass (index >= 6) is selected
+  useEffect(() => {
+    if (buildingClass && selectedSubclasses.length > 0) {
+      const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[buildingClass];
+      if (config && config.subclasses.length > 6) {
+        const secondaryValues = config.subclasses.slice(6).map(s => s.value);
+        const hasSecondarySelected = selectedSubclasses.some(s => secondaryValues.includes(s));
+        if (hasSecondarySelected) {
+          setShowOtherSubclasses(true);
+        }
+      }
+    }
+  }, [buildingClass, selectedSubclasses]);
 
   // Get configuration for current class
   const getClassConfig = useCallback((): BuildingClassConfig | null => {
@@ -174,15 +189,36 @@ export function ProfilerMiddlePanel({
   };
 
   // Handle complexity selection (toggle on/off)
+  // site_conditions supports multi-select, other dimensions are single-select
   const handleComplexitySelect = (dimension: string, value: string) => {
     setComplexity((prev) => {
-      // If clicking the same value, deselect it
+      // Multi-select for site_conditions
+      if (dimension === 'site_conditions') {
+        const currentValue = prev[dimension];
+        const current: string[] = Array.isArray(currentValue)
+          ? currentValue
+          : currentValue ? [currentValue] : [];
+
+        if (current.includes(value)) {
+          // Deselect: remove from array
+          const filtered = current.filter(v => v !== value);
+          if (filtered.length === 0) {
+            const next = { ...prev };
+            delete next[dimension];
+            return next;
+          }
+          return { ...prev, [dimension]: filtered };
+        }
+        // Select: add to array
+        return { ...prev, [dimension]: [...current, value] };
+      }
+
+      // Single-select for other dimensions
       if (prev[dimension] === value) {
         const next = { ...prev };
         delete next[dimension];
         return next;
       }
-      // Otherwise select the new value
       return { ...prev, [dimension]: value };
     });
   };
@@ -347,97 +383,157 @@ export function ProfilerMiddlePanel({
         </div>
       </div>
 
-      {/* 3-Column Layout */}
+      {/* 2-Column Layout - Subclass/Scale (narrow) | Complexity (wide) */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-3 gap-6 min-h-0">
-          {/* Column 1: Subclass */}
-          <div className="flex flex-col">
-            <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">
-              Subclass
-              {buildingClass === 'mixed' && (
-                <span className="ml-2 text-xs text-[var(--color-text-muted)] font-normal">
-                  (select up to 4)
-                </span>
-              )}
-            </h3>
-            <div className="space-y-1.5">
-              {classConfig?.subclasses.map((sub: SubclassOption) => (
-                <button
-                  key={sub.value}
-                  onClick={() => handleSubclassToggle(sub.value)}
-                  className={`
-                    w-full flex items-center justify-between p-2 rounded-lg border text-xs transition-all text-left
-                    ${
-                      selectedSubclasses.includes(sub.value)
-                        ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-accent-copper)]/50 text-[var(--color-text-secondary)]'
-                    }
-                  `}
-                >
-                  <span>{sub.label}</span>
-                  {selectedSubclasses.includes(sub.value) && <Check className="w-3 h-3 flex-shrink-0" />}
-                </button>
-              ))}
-            </div>
-          </div>
+        <div className="grid gap-6 min-h-0" style={{ gridTemplateColumns: '1fr 3fr' }}>
+          {/* Column 1: Subclass + Scale stacked (narrow) */}
+          <div className="flex flex-col min-w-0 space-y-6">
+            {/* Subclass section */}
+            <div>
+              <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">
+                Subclass
+                {buildingClass === 'mixed' && (
+                  <span className="ml-2 text-xs text-[var(--color-text-muted)] font-normal">
+                    (select up to 4)
+                  </span>
+                )}
+              </h3>
+              <div className="space-y-1.5">
+                {/* Primary subclasses - first 6 always visible */}
+                {classConfig?.subclasses.slice(0, 6).map((sub: SubclassOption) => (
+                  <button
+                    key={sub.value}
+                    onClick={() => handleSubclassToggle(sub.value)}
+                    className={`
+                      w-full flex items-center justify-between p-2 rounded-lg border text-xs transition-all text-left
+                      ${
+                        selectedSubclasses.includes(sub.value)
+                          ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
+                          : 'border-[var(--color-border)] hover:border-[var(--color-accent-copper)]/50 text-[var(--color-text-secondary)]'
+                      }
+                    `}
+                  >
+                    <span className="truncate">{sub.label}</span>
+                    {selectedSubclasses.includes(sub.value) && <Check className="w-3 h-3 flex-shrink-0 ml-1" />}
+                  </button>
+                ))}
 
-          {/* Column 2: Complexity */}
-          <div className="flex flex-col">
-            <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">Complexity</h3>
-            <div className="space-y-3">
-              {Object.entries(complexityOptions).map(([dimension, options]) => (
-                <div
-                  key={dimension}
-                  className="bg-[var(--color-card-firm)] border border-[var(--color-card-firm-border)] px-3 py-2 shadow-sm transition-colors duration-150"
-                >
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-2 capitalize">
-                    {dimension.replace(/_/g, ' ')}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {options.map((option) => (
+                {/* Others toggle - only show if there are more than 6 subclasses */}
+                {classConfig && classConfig.subclasses.length > 6 && (
+                  <>
+                    <button
+                      onClick={() => setShowOtherSubclasses(!showOtherSubclasses)}
+                      className="w-full flex items-center justify-between p-2 rounded-lg border text-xs transition-all text-left border-[var(--color-border)] hover:border-[var(--color-text-muted)]/50 text-[var(--color-text-muted)]"
+                    >
+                      <span>Others</span>
+                      {showOtherSubclasses ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    {/* Secondary subclasses - shown when expanded */}
+                    {showOtherSubclasses && classConfig.subclasses.slice(6).map((sub: SubclassOption) => (
                       <button
-                        key={option.value}
-                        onClick={() => handleComplexitySelect(dimension, option.value)}
+                        key={sub.value}
+                        onClick={() => handleSubclassToggle(sub.value)}
                         className={`
-                          px-2.5 py-1.5 rounded text-xs font-medium transition-all
+                          w-full flex items-center justify-between p-2 rounded-lg border text-xs transition-all text-left
                           ${
-                            complexity[dimension] === option.value
-                              ? 'bg-[var(--color-accent-copper)] text-[var(--color-text-inverse)]'
-                              : 'bg-[var(--color-card-firm-field)] text-[var(--color-text-secondary)] hover:bg-[var(--color-card-firm-hover)]'
+                            selectedSubclasses.includes(sub.value)
+                              ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
+                              : 'border-[var(--color-border)] hover:border-[var(--color-accent-copper)]/50 text-[var(--color-text-secondary)]'
                           }
                         `}
                       >
-                        {option.label}
+                        <span className="truncate">{sub.label}</span>
+                        {selectedSubclasses.includes(sub.value) && <Check className="w-3 h-3 flex-shrink-0 ml-1" />}
                       </button>
                     ))}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Scale section */}
+            <div>
+              <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">Scale</h3>
+              {selectedSubclasses.length === 0 ? (
+                <p className="text-xs text-[var(--color-text-muted)]">Select a subclass to configure scale</p>
+              ) : (
+                <div className="space-y-3">
+                  {scaleFields.map((field) => (
+                    <div key={field.key}>
+                      <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">{field.label}</label>
+                      <NumberInput
+                        value={scaleData[field.key] ?? ''}
+                        onChange={(val) => handleScaleChange(field.key, val)}
+                        placeholder={field.placeholder}
+                        min={field.min}
+                        max={field.max}
+                        step={field.key.endsWith('_sqm') ? 20 : 1}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Column 2: Complexity (wide, sticky-note grid) */}
+          <div className="flex flex-col min-w-0 @container">
+            <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">Complexity</h3>
+            {/* Responsive grid: 2 cols minimum, up to 4 cols on wider containers */}
+            <div className="grid grid-cols-2 @[500px]:grid-cols-3 @[700px]:grid-cols-4 gap-4">
+              {Object.entries(complexityOptions).map(([dimension, options]) => (
+                <div
+                  key={dimension}
+                  className={`border border-[var(--color-card-firm-border)] p-3 shadow-md transition-colors duration-150 aspect-square flex flex-col ${
+                    dimension === 'procurement_route' ? '' : 'bg-[var(--color-card-firm)]'
+                  }`}
+                  style={dimension === 'procurement_route' ? { backgroundColor: '#e3dcee' } : undefined}
+                >
+                  <label className="block text-xs font-semibold text-[var(--color-text-primary)] mb-3 capitalize">
+                    {dimension.replace(/_/g, ' ')}
+                  </label>
+                  <div className="flex flex-col gap-0.5">
+                    {options.map((option) => {
+                      // Check if option is selected (supports both single value and array for site_conditions)
+                      const dimValue = complexity[dimension];
+                      const isSelected = dimension === 'site_conditions'
+                        ? Array.isArray(dimValue)
+                          ? dimValue.includes(option.value)
+                          : dimValue === option.value
+                        : dimValue === option.value;
+
+                      const isProcurementRoute = dimension === 'procurement_route';
+                      return (
+                        <button
+                          key={option.value}
+                          onClick={() => handleComplexitySelect(dimension, option.value)}
+                          className={`
+                            px-2 py-1 rounded text-xs font-medium transition-all text-left
+                            ${
+                              isProcurementRoute
+                                ? ''
+                                : isSelected
+                                  ? 'bg-amber-200'
+                                  : 'bg-[var(--color-card-firm)] hover:bg-amber-100'
+                            }
+                          `}
+                          style={{
+                            fontFamily: "'Ink Free', 'Lucida Handwriting', 'Segoe Print', cursive",
+                            color: 'var(--color-card-firm-text)',
+                            ...(isProcurementRoute && {
+                              backgroundColor: isSelected ? '#b6aaf8' : '#e3dcee',
+                            }),
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Column 3: Scale + Work Scope */}
-          <div className="flex flex-col">
-            <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">Scale</h3>
-            {selectedSubclasses.length === 0 ? (
-              <p className="text-xs text-[var(--color-text-muted)]">Select a subclass to configure scale</p>
-            ) : (
-              <div className="space-y-3">
-                {scaleFields.map((field) => (
-                  <div key={field.key}>
-                    <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">{field.label}</label>
-                    <NumberInput
-                      value={scaleData[field.key] ?? ''}
-                      onChange={(val) => handleScaleChange(field.key, val)}
-                      placeholder={field.placeholder}
-                      min={field.min}
-                      max={field.max}
-                      step={field.key.endsWith('_sqm') ? 20 : 1}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
 
             {/* Work Scope - shown for refurb/remediation/extend projects */}
             {projectType && buildingClass && (

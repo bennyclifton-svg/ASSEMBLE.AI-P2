@@ -14,21 +14,24 @@ import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useEvaluation } from '@/lib/hooks/use-evaluation';
 import { EvaluationSheet } from './EvaluationSheet';
 import { MergeRowsDialog } from './MergeRowsDialog';
-import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { DiamondIcon } from '@/components/ui/diamond-icon';
-import { Button } from '@/components/ui/button';
+import { Loader2, AlertCircle, CheckCircle2, Upload } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import type { EvaluationTotals, EvaluationRow } from '@/types/evaluation';
+import { EVALUATION_TABLE_COLUMNS, getEvaluationTableWidth } from '@/types/evaluation';
 
 interface EvaluationPriceTabProps {
     projectId: string;
     stakeholderId?: string;
     stakeholderName?: string;
+    evaluationPriceId?: string; // For multi-instance price evaluation
+    evaluationPriceNumber?: number; // Tab number (1, 2, etc.) for dynamic title
 }
 
 export function EvaluationPriceTab({
     projectId,
     stakeholderId,
+    evaluationPriceId,
+    evaluationPriceNumber = 1,
 }: EvaluationPriceTabProps) {
     const {
         isLoading,
@@ -43,12 +46,14 @@ export function EvaluationPriceTab({
         parseTender,
         mergeRows,
         updateRowDescription,
+        reorderRow,
         shortlistedFirms,
         initialPriceRows,
         addSubsRows,
     } = useEvaluation({
         projectId,
         stakeholderId,
+        evaluationPriceId,
     });
 
     const { toast } = useToast();
@@ -312,6 +317,15 @@ export function EvaluationPriceTab({
         return rows.filter(r => selectedRowIds.has(r.id));
     }, [mergeTableType, selectedInitialPriceRowIds, selectedAddSubsRowIds, visibleInitialPriceRows, visibleAddSubsRows]);
 
+    // Handle row reorder for each table
+    const handleRowReorder = useCallback((
+        rowId: string,
+        newIndex: number,
+        tableType: 'initial_price' | 'adds_subs'
+    ) => {
+        reorderRow(rowId, newIndex, tableType);
+    }, [reorderRow]);
+
     // Format currency
     const formatCurrency = (cents: number): string => {
         const dollars = cents / 100;
@@ -327,8 +341,8 @@ export function EvaluationPriceTab({
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-5 h-5 text-[var(--color-text-muted)] animate-spin" />
-                <span className="ml-2 text-sm text-[var(--color-text-muted)]">Loading evaluation data...</span>
+                <Loader2 className="w-5 h-5 text-black/40 animate-spin" />
+                <span className="ml-2 text-sm text-black/60">Loading evaluation data...</span>
             </div>
         );
     }
@@ -347,11 +361,11 @@ export function EvaluationPriceTab({
     if (shortlistedFirms.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-                <AlertCircle className="w-8 h-8 text-[var(--color-text-muted)] mb-3" />
-                <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
+                <AlertCircle className="w-8 h-8 text-black/40 mb-3" />
+                <h3 className="text-sm font-medium text-black mb-1">
                     No Short-listed Firms
                 </h3>
-                <p className="text-xs text-[var(--color-text-muted)] max-w-sm">
+                <p className="text-xs text-black/60 max-w-sm">
                     To use the evaluation tables, first short-list firms by toggling the
                     "Shortlisted" option on the firm cards above.
                 </p>
@@ -361,9 +375,15 @@ export function EvaluationPriceTab({
 
     return (
         <div className="space-y-6">
-            {/* Save Status & Actions */}
+            {/* Save Status & Upload Instruction */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                {/* Upload instruction - left side */}
+                <div className="flex items-center gap-1.5 text-xs text-black/60">
+                    <Upload className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+                    <span>Drag submission PDF onto firm column</span>
+                </div>
+                {/* Save status - right side */}
+                <div className="flex items-center gap-2 text-xs text-black/60">
                     {saveStatus === 'saving' && (
                         <>
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -377,16 +397,6 @@ export function EvaluationPriceTab({
                         </>
                     )}
                 </div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    style={{ color: 'var(--color-accent-copper)' }}
-                    disabled
-                >
-                    <DiamondIcon className="w-3 h-3 mr-1" />
-                    Evaluate All Submissions
-                </Button>
             </div>
 
             {/* Initial Price Table - with row selection and merge */}
@@ -402,9 +412,10 @@ export function EvaluationPriceTab({
                 selectedRowIds={selectedInitialPriceRowIds}
                 onRowSelect={(rowId, event) => handleRowSelect(rowId, event, 'initial_price', visibleInitialPriceRows)}
                 onMergeClick={() => handleMergeClick('initial_price')}
+                onRowReorder={(rowId, newIndex) => handleRowReorder(rowId, newIndex, 'initial_price')}
                 parsingFirmId={parsingFirmId}
                 subtotals={totals.initialPriceSubtotals}
-                title="Initial Price"
+                title={`Price ${String(evaluationPriceNumber).padStart(2, '0')}`}
             />
 
             {/* Adds & Subs Table - with row selection and merge */}
@@ -420,25 +431,38 @@ export function EvaluationPriceTab({
                 selectedRowIds={selectedAddSubsRowIds}
                 onRowSelect={(rowId, event) => handleRowSelect(rowId, event, 'adds_subs', visibleAddSubsRows)}
                 onMergeClick={() => handleMergeClick('adds_subs')}
+                onRowReorder={(rowId, newIndex) => handleRowReorder(rowId, newIndex, 'adds_subs')}
                 parsingFirmId={parsingFirmId}
                 subtotals={totals.addSubsSubtotals}
                 title="Adds & Subs"
+                showFirmHeaders={false}
             />
 
             {/* Grand Total */}
-            <div className="bg-[var(--color-bg-secondary)]">
-                <table className="w-full border-collapse table-fixed">
+            <div className="relative overflow-x-auto w-full">
+                <table className="border-collapse w-full">
                     <colgroup>
-                        <col style={{ width: '200px' }} />
+                        {/* Drag handle column (empty for grand total) */}
+                        <col style={{ width: `${EVALUATION_TABLE_COLUMNS.dragHandle}px` }} />
+                        {/* Description column */}
+                        <col style={{ width: `${EVALUATION_TABLE_COLUMNS.description}px` }} />
+                        {/* Firm columns */}
                         {shortlistedFirms.map(firm => (
-                            <col key={firm.id} style={{ width: '120px' }} />
+                            <col key={firm.id} style={{ width: `${EVALUATION_TABLE_COLUMNS.firmColumn}px` }} />
                         ))}
-                        <col style={{ width: '32px' }} />
+                        {/* AI indicator column */}
+                        <col style={{ width: `${EVALUATION_TABLE_COLUMNS.aiIndicator}px` }} />
+                        {/* Delete button column */}
+                        <col style={{ width: `${EVALUATION_TABLE_COLUMNS.deleteButton}px` }} />
                     </colgroup>
                     <tbody>
-                        <tr>
+                        <tr className="border-t border-[var(--color-border)]">
+                            {/* Empty drag handle cell */}
                             <td
-                                className="px-3 text-sm font-semibold text-[var(--color-text-primary)] border-r border-[var(--color-border)]"
+                                style={{ height: 28 }}
+                            />
+                            <td
+                                className="px-3 text-sm font-bold text-black"
                                 style={{ height: 28 }}
                             >
                                 GRAND TOTAL
@@ -446,13 +470,18 @@ export function EvaluationPriceTab({
                             {shortlistedFirms.map(firm => (
                                 <td
                                     key={firm.id}
-                                    className="px-3 text-right text-sm font-semibold text-[var(--color-accent-copper)] border-r border-[var(--color-border)]"
+                                    className="px-3 text-right text-sm font-bold text-[var(--color-accent-copper)]"
                                     style={{ height: 28 }}
                                 >
                                     {formatCurrency(totals.grandTotals[firm.id] || 0)}
                                 </td>
                             ))}
-                            <td style={{ height: 28 }}></td>
+                            {/* Empty AI indicator cell */}
+                            <td
+                                style={{ height: 28 }}
+                            />
+                            {/* Empty delete cell */}
+                            <td style={{ height: 28 }} />
                         </tr>
                     </tbody>
                 </table>

@@ -226,7 +226,7 @@ export function ColumnDropZone({
     return (
         <div
             ref={dropZoneRef}
-            className={`relative transition-all duration-150 h-full w-full ${
+            className={`relative h-full w-full ${
                 isDragOver ? 'ring-2 ring-[var(--color-accent-copper)] ring-inset bg-[var(--color-accent-copper)]/20' : ''
             } ${isProcessing ? 'opacity-50' : ''}`}
             onDragEnter={handleDragEnter}
@@ -346,7 +346,7 @@ export function ThDropZone({
 
     return (
         <th
-            className={`p-0 border-r border-[var(--color-border)] relative transition-all duration-150 ${
+            className={`p-0 border-r border-[var(--color-border)] relative ${
                 isDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
             }`}
             style={{ height }}
@@ -356,15 +356,13 @@ export function ThDropZone({
             onDrop={handleDrop}
         >
             <div
-                className={`px-3 text-right text-xs font-medium text-[var(--color-text-muted)] cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors flex items-center justify-end gap-1.5 ${
+                className={`px-3 text-right text-xs font-medium cursor-pointer flex items-center justify-end ${
                     isProcessing ? 'opacity-50' : ''
                 }`}
                 style={{ height, minWidth: '100px' }}
                 title={`Drop PDF to parse tender for ${firmName}`}
             >
                 <span className="truncate">{firmName}</span>
-                {/* Permanent drop icon */}
-                <Upload className="w-3 h-3 text-[var(--color-accent-copper)] flex-shrink-0 opacity-60" />
             </div>
 
             {/* Drag over indicator */}

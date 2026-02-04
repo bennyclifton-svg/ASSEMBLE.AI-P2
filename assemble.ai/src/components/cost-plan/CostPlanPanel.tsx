@@ -86,22 +86,22 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
                 onValueChange={setActiveTab}
                 className="flex-1 flex flex-col min-h-0"
             >
-                <TabsList className="w-full justify-start bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2">
+                <TabsList className="w-full justify-start bg-[#f0f0f0] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2">
                     <TabsTrigger
                         value="cost-plan"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-white"
                     >
                         Cost Plan
                     </TabsTrigger>
                     <TabsTrigger
                         value="variations"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-white"
                     >
                         Variations
                     </TabsTrigger>
                     <TabsTrigger
                         value="invoices"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-white"
                     >
                         Invoices
                     </TabsTrigger>
@@ -409,9 +409,21 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     // Update local state when costLines change
     useEffect(() => {
         const grouped = SECTIONS.reduce((acc, section) => {
-            acc[section] = costLines
-                .filter(line => line.section === section)
-                .sort((a, b) => a.sortOrder - b.sortOrder);
+            const sectionLines = costLines.filter(line => line.section === section);
+
+            if (section === 'CONSULTANTS') {
+                // Sort CONSULTANTS alphabetically by discipline name, then by sortOrder within each discipline
+                acc[section] = sectionLines.sort((a, b) => {
+                    const nameA = a.stakeholder?.disciplineOrTrade || a.stakeholder?.name || '';
+                    const nameB = b.stakeholder?.disciplineOrTrade || b.stakeholder?.name || '';
+                    const nameCompare = nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+                    if (nameCompare !== 0) return nameCompare;
+                    return a.sortOrder - b.sortOrder;
+                });
+            } else {
+                // Other sections: sort by sortOrder only
+                acc[section] = sectionLines.sort((a, b) => a.sortOrder - b.sortOrder);
+            }
             return acc;
         }, {} as Record<CostLineSection, CostLineWithCalculations[]>);
         setLocalLinesBySection(grouped);
@@ -679,19 +691,12 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             });
         });
 
-        // Sort: by discipline/trade order, with Unassigned last
+        // Sort: alphanumerically by name, with Unassigned last
         return groups.sort((a, b) => {
             if (a.groupId === null) return 1;
             if (b.groupId === null) return -1;
 
-            const getOrder = (id: string) => {
-                if (section === 'CONSULTANTS') {
-                    return disciplineOptions.find(d => d.id === id)?.order ?? 999;
-                }
-                return tradeOptions.find(t => t.id === id)?.order ?? 999;
-            };
-
-            return getOrder(a.groupId) - getOrder(b.groupId);
+            return a.groupName.localeCompare(b.groupName, undefined, { numeric: true, sensitivity: 'base' });
         });
     }, [disciplineOptions, tradeOptions]);
 
@@ -749,7 +754,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     return (
         <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
             {/* Toolbar */}
-            <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex-shrink-0">
+            <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[#f0f0f0] flex-shrink-0">
                 {/* Right side - Clear All + Month Selector */}
                 <div className="flex gap-2 items-center">
                     <button
@@ -1614,7 +1619,7 @@ function CollapsedGroupRow({ group, isExpanded, onToggle }: CollapsedGroupRowPro
 
     return (
         <tr
-            className="bg-[var(--color-bg-tertiary)]/70 hover:bg-[var(--color-bg-tertiary)] cursor-pointer transition-colors"
+            className="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] cursor-pointer transition-colors"
             onClick={onToggle}
         >
             {/* Chevron Column */}

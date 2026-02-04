@@ -30,27 +30,42 @@ export function TRRTenderProcessTable({
     const [rftDate, setRftDate] = useState<string | null>(null);
     const [firmDates, setFirmDates] = useState<Record<string, string>>({});
 
-    // Fetch RFT date for this stakeholder
+    // Fetch RFT date for this stakeholder (from the first/primary RFT)
     useEffect(() => {
         const fetchRftDate = async () => {
             try {
                 const params = new URLSearchParams({ projectId });
                 if (stakeholderId) params.set('stakeholderId', stakeholderId);
 
-                const response = await fetch(`/api/rft-new?${params.toString()}`);
+                const url = `/api/rft-new?${params.toString()}`;
+                console.log('[TRRTenderProcess] Fetching RFT date from:', url);
+                const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.rftDate) {
-                        setRftDate(data.rftDate);
+                    console.log('[TRRTenderProcess] RFT data received:', data);
+                    // API returns an array of RFTs - get the first one's date (RFT 01)
+                    if (Array.isArray(data) && data.length > 0) {
+                        const firstRftDate = data[0].rftDate;
+                        console.log('[TRRTenderProcess] First RFT date:', firstRftDate);
+                        if (firstRftDate) {
+                            setRftDate(firstRftDate);
+                        }
+                    } else {
+                        console.log('[TRRTenderProcess] No RFTs found for this stakeholder');
                     }
+                } else {
+                    console.error('[TRRTenderProcess] API response not OK:', response.status);
                 }
             } catch (error) {
-                console.error('Failed to fetch RFT date:', error);
+                console.error('[TRRTenderProcess] Failed to fetch RFT date:', error);
             }
         };
 
+        console.log('[TRRTenderProcess] useEffect triggered - projectId:', projectId, 'stakeholderId:', stakeholderId);
         if (projectId && stakeholderId) {
             fetchRftDate();
+        } else {
+            console.log('[TRRTenderProcess] Skipping fetch - missing projectId or stakeholderId');
         }
     }, [projectId, stakeholderId]);
 
@@ -73,28 +88,28 @@ export function TRRTenderProcessTable({
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                 Tender Process
             </h3>
-            <div className="border border-[var(--color-border)] rounded overflow-hidden">
+            <div className="overflow-hidden rounded-lg">
                 {firms.length > 0 ? (
                     <table className="w-full text-sm">
-                        <thead className="bg-[var(--color-bg-tertiary)]">
+                        <thead>
                             <tr className="border-b border-[var(--color-border)]">
-                                <th className="px-4 py-2.5 text-left text-[var(--color-text-muted)] font-medium w-[35%]">
+                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[35%]">
                                     Company Name
                                 </th>
-                                <th className="px-4 py-2.5 text-left text-[var(--color-text-muted)] font-medium w-[30%]">
+                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[30%]">
                                     Contact
                                 </th>
-                                <th className="px-4 py-2.5 text-center text-[var(--color-text-muted)] font-medium w-[10%]">
+                                <th className="px-4 py-2.5 text-center text-[var(--color-document-header)] font-medium w-[10%]">
                                     Short
                                 </th>
-                                <th className="px-4 py-2.5 text-left text-[var(--color-text-muted)] font-medium w-[25%]">
+                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[25%]">
                                     Tender Release
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
                             {firms.map((firm) => (
-                                <tr key={firm.id} className="border-b border-[var(--color-border)] last:border-0">
+                                <tr key={firm.id}>
                                     <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
                                         {firm.companyName}
                                     </td>

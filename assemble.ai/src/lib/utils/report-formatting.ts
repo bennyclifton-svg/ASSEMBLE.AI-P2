@@ -5,15 +5,16 @@
 
 import type { ReportSection } from '@/lib/hooks/use-report-generation';
 import type { TableOfContents } from '@/lib/langgraph/state';
+import { EXPORT_COLORS } from '@/lib/export/theme-config';
 
-// Single heading color (consistent, clean look) - matches Addendum styling
-export const HEADING_COLOR = '#4fc1ff'; // Highlight blue - matches Addendum reports
+// Single heading color (from shared theme config)
+export const HEADING_COLOR = EXPORT_COLORS.headings.h1;
 
-// Legacy export for compatibility (all same color now)
+// Heading colors (all use same color for consistency)
 export const HEADING_COLORS = {
-  H1: HEADING_COLOR,
-  H2: HEADING_COLOR,
-  H3: HEADING_COLOR,
+  H1: EXPORT_COLORS.headings.h1,
+  H2: EXPORT_COLORS.headings.h2,
+  H3: EXPORT_COLORS.headings.h3,
 } as const;
 
 /**

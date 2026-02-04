@@ -171,51 +171,49 @@ export function useConsultants(projectId: string, discipline?: string) {
     }
   };
 
-  const toggleAward = async (id: string, awarded: boolean) => {
+  const toggleAward = async (id: string, awarded: boolean, stakeholderId?: string) => {
     const consultant = consultants.find(c => c.id === id);
     if (!consultant) return;
 
-    let companyId = consultant.companyId;
+    // stakeholderId is required for the new award API
+    if (!stakeholderId) {
+      throw new Error('stakeholderId is required for award toggle');
+    }
 
     try {
-      if (awarded && !companyId) {
-        // Find or create company in master list
-        const response = await fetch('/api/cost-companies/find-or-create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: consultant.companyName,
-            abn: consultant.abn,
-            contactName: consultant.contactPerson,
-            contactEmail: consultant.email,
-            contactPhone: consultant.mobile || consultant.phone,
-            address: consultant.address,
-          }),
-        });
+      const response = await fetch('/api/firms/award', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          firmId: id,
+          firmType: 'consultant',
+          stakeholderId,
+          awarded,
+        }),
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to create company record');
-        }
-
-        const company = await response.json();
-        companyId = company.id;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update award status');
       }
 
-      // Update consultant with awarded status and companyId
-      await updateConsultant(id, {
-        companyName: consultant.companyName,
-        contactPerson: consultant.contactPerson || undefined,
-        discipline: consultant.discipline,
-        email: consultant.email,
-        phone: consultant.phone || undefined,
-        mobile: consultant.mobile || undefined,
-        address: consultant.address || undefined,
-        abn: consultant.abn || undefined,
-        notes: consultant.notes || undefined,
-        shortlisted: consultant.shortlisted,
-        awarded,
-        companyId,
-      });
+      const result = await response.json();
+
+      // Update local state
+      setConsultants(prev => prev.map(c => {
+        if (c.id === id) {
+          // Update the awarded firm
+          return { ...c, awarded, companyId: result.companyId };
+        }
+        if (result.deawardedFirmIds?.includes(c.id)) {
+          // De-award previously awarded firms
+          return { ...c, awarded: false };
+        }
+        return c;
+      }));
+
+      return result;
     } catch (err) {
       throw err;
     }

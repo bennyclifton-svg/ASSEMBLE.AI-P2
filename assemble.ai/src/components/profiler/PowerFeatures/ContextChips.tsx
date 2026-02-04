@@ -10,7 +10,7 @@ interface ContextChipsProps {
   projectType: ProjectType | null;
   subclass: string[];
   scaleData: Record<string, number>;
-  complexity: Record<string, string>;
+  complexity: Record<string, string | string[]>;
   region?: Region;
 }
 
@@ -149,7 +149,9 @@ export function ContextChips({
     });
 
     // Cost range chip - use region-specific benchmarks if available
-    const qualityTier = complexity.quality_tier || complexity.grade || 'standard';
+    // Note: quality_tier and grade are always single-select strings, not arrays
+    const qualityTierValue = complexity.quality_tier || complexity.grade;
+    const qualityTier = (Array.isArray(qualityTierValue) ? qualityTierValue[0] : qualityTierValue) || 'standard';
     const regionBenchmarks = costBenchmarks[region];
     let costRange: { low: number; mid: number; high: number } | null = null;
     let currencySymbol = currentRegionConfig?.currencySymbol || '$';

@@ -13,10 +13,10 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Trash2, Plus, AlertTriangle, Merge } from 'lucide-react';
+import { Trash, Plus, AlertTriangle, Merge, GripVertical } from 'lucide-react';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import type { EvaluationRow, EvaluationFirm, EvaluationRowSource } from '@/types/evaluation';
-import { ThDropZone } from './EvaluationDropZone';
+import { EVALUATION_TABLE_COLUMNS, getEvaluationTableWidth } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
 
 interface EvaluationSheetProps {
@@ -37,6 +37,10 @@ interface EvaluationSheetProps {
     parsingFirmId?: string | null;
     subtotals: { [firmId: string]: number };
     title: string;
+    // Whether to show firm names in header (default: true)
+    showFirmHeaders?: boolean;
+    // Row reordering
+    onRowReorder?: (rowId: string, newIndex: number) => void;
 }
 
 export function EvaluationSheet({
@@ -54,6 +58,8 @@ export function EvaluationSheet({
     parsingFirmId,
     subtotals,
     title,
+    showFirmHeaders = true,
+    onRowReorder,
 }: EvaluationSheetProps) {
     const [editingCell, setEditingCell] = useState<{ rowId: string; firmId: string } | null>(null);
     const [editValue, setEditValue] = useState('');
@@ -62,12 +68,17 @@ export function EvaluationSheet({
     const [editDescriptionValue, setEditDescriptionValue] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
     const descriptionInputRef = useRef<HTMLInputElement>(null);
+    // Row drag state
+    const [draggedRowId, setDraggedRowId] = useState<string | null>(null);
+    const [dragOverRowId, setDragOverRowId] = useState<string | null>(null);
+    // Column drop zone state
+    const [dragOverFirmId, setDragOverFirmId] = useState<string | null>(null);
+    const dragCounterRef = useRef<{ [key: string]: number }>({});
 
     // Focus input when editing starts
     useEffect(() => {
         if (editingCell && inputRef.current) {
             inputRef.current.focus();
-            inputRef.current.select();
         }
     }, [editingCell]);
 
@@ -75,7 +86,6 @@ export function EvaluationSheet({
     useEffect(() => {
         if (editingDescriptionRowId && descriptionInputRef.current) {
             descriptionInputRef.current.focus();
-            descriptionInputRef.current.select();
         }
     }, [editingDescriptionRowId]);
 
@@ -189,6 +199,97 @@ export function EvaluationSheet({
         await onDeleteRow(rowId);
     };
 
+    // Row drag handlers for reordering
+    const handleRowDragStart = useCallback((e: React.DragEvent, rowId: string) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', rowId);
+        setDraggedRowId(rowId);
+    }, []);
+
+    const handleRowDragEnd = useCallback(() => {
+        setDraggedRowId(null);
+        setDragOverRowId(null);
+    }, []);
+
+    const handleRowDragOver = useCallback((e: React.DragEvent, rowId: string) => {
+        e.preventDefault();
+        // Only handle row reorder drags (not file drops)
+        if (e.dataTransfer.types.includes('Files')) return;
+        e.dataTransfer.dropEffect = 'move';
+        setDragOverRowId(rowId);
+    }, []);
+
+    const handleRowDrop = useCallback((e: React.DragEvent, targetRowId: string) => {
+        e.preventDefault();
+        // Only handle row reorder drags (not file drops)
+        if (e.dataTransfer.types.includes('Files')) return;
+
+        const sourceRowId = e.dataTransfer.getData('text/plain');
+        if (sourceRowId && sourceRowId !== targetRowId && onRowReorder) {
+            const targetIndex = rows.findIndex(r => r.id === targetRowId);
+            if (targetIndex !== -1) {
+                onRowReorder(sourceRowId, targetIndex);
+            }
+        }
+        setDraggedRowId(null);
+        setDragOverRowId(null);
+    }, [rows, onRowReorder]);
+
+    // Column file drop handlers
+    const validateFile = useCallback((file: File): boolean => {
+        return file.name.toLowerCase().endsWith('.pdf');
+    }, []);
+
+    const handleColumnDragEnter = useCallback((e: React.DragEvent, firmId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!e.dataTransfer.types.includes('Files')) return;
+
+        if (!dragCounterRef.current[firmId]) {
+            dragCounterRef.current[firmId] = 0;
+        }
+        dragCounterRef.current[firmId]++;
+        if (dragCounterRef.current[firmId] === 1) {
+            setDragOverFirmId(firmId);
+        }
+    }, []);
+
+    const handleColumnDragLeave = useCallback((e: React.DragEvent, firmId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!dragCounterRef.current[firmId]) return;
+
+        dragCounterRef.current[firmId]--;
+        if (dragCounterRef.current[firmId] === 0) {
+            setDragOverFirmId(null);
+        }
+    }, []);
+
+    const handleColumnDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.dataTransfer.types.includes('Files')) {
+            e.dataTransfer.dropEffect = 'copy';
+        }
+    }, []);
+
+    const handleColumnDrop = useCallback(async (e: React.DragEvent, firmId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current[firmId] = 0;
+        setDragOverFirmId(null);
+
+        if (!onFileDrop) return;
+
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        const file = files[0];
+        if (!validateFile(file)) return;
+
+        await onFileDrop(file, firmId);
+    }, [onFileDrop, validateFile]);
+
     // Fixed cell height style
     const cellHeight = 28;
 
@@ -202,22 +303,46 @@ export function EvaluationSheet({
         return description;
     };
 
+    // Calculate fixed table width to ensure alignment with Grand Total
+    const tableWidth = getEvaluationTableWidth(firms.length);
+
     return (
-        <div className="relative overflow-x-auto">
-            <table className="w-full border-collapse table-fixed">
+        <div className="relative overflow-x-auto w-full">
+            <table className="border-collapse w-full">
                 <colgroup>
-                    <col style={{ width: '200px' }} />
+                    {/* Drag handle / add row column */}
+                    <col style={{ width: `${EVALUATION_TABLE_COLUMNS.dragHandle}px` }} />
+                    {/* Description column */}
+                    <col style={{ width: `${EVALUATION_TABLE_COLUMNS.description}px` }} />
+                    {/* Firm columns */}
                     {firms.map(firm => (
-                        <col key={firm.id} style={{ width: '120px' }} />
+                        <col key={firm.id} style={{ width: `${EVALUATION_TABLE_COLUMNS.firmColumn}px` }} />
                     ))}
-                    <col style={{ width: '32px' }} />
+                    {/* AI indicator column */}
+                    <col style={{ width: `${EVALUATION_TABLE_COLUMNS.aiIndicator}px` }} />
+                    {/* Delete button column */}
+                    <col style={{ width: `${EVALUATION_TABLE_COLUMNS.deleteButton}px` }} />
                 </colgroup>
 
-                {/* Header with T037-T039 drop zones and T098-T100 merge button */}
+                {/* Header with merge button and firm names */}
                 <thead>
-                    <tr className="bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)]">
+                    <tr className="border-b border-[var(--color-border)]">
+                        {/* Add row button column */}
                         <th
-                            className="px-3 text-left text-xs font-medium text-[var(--color-text-muted)] border-r border-[var(--color-border)]"
+                            className="px-2 text-center text-black"
+                            style={{ height: cellHeight }}
+                        >
+                            <button
+                                onClick={onAddRow}
+                                className="p-1 rounded-full text-black/50 hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/15 hover:scale-110 transition-all duration-150"
+                                title="Add row"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                            </button>
+                        </th>
+                        {/* Title / description column header */}
+                        <th
+                            className="px-3 text-left text-xs font-semibold text-black uppercase tracking-wide"
                             style={{ height: cellHeight }}
                         >
                             <div className="flex items-center gap-2">
@@ -236,41 +361,66 @@ export function EvaluationSheet({
                                 )}
                             </div>
                         </th>
-                        {firms.map(firm => (
-                            onFileDrop ? (
-                                <ThDropZone
-                                    key={firm.id}
-                                    firmId={firm.id}
-                                    firmName={firm.companyName}
-                                    onFileDrop={onFileDrop}
-                                    isProcessing={parsingFirmId === firm.id}
-                                    height={cellHeight}
-                                />
-                            ) : (
+                        {/* Firm column headers with drop zone support */}
+                        {firms.map(firm => {
+                            const isColumnDragOver = dragOverFirmId === firm.id;
+                            return showFirmHeaders ? (
                                 <th
                                     key={firm.id}
-                                    className="p-0 border-r border-[var(--color-border)]"
+                                    className={`p-0 relative ${
+                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                    }`}
                                     style={{ height: cellHeight }}
+                                    onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
+                                    onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
+                                    onDragOver={handleColumnDragOver}
+                                    onDrop={(e) => handleColumnDrop(e, firm.id)}
                                 >
                                     <div
-                                        className="px-3 text-right text-xs font-medium text-[var(--color-text-muted)] flex items-center justify-end"
+                                        className="px-3 text-right text-xs font-medium text-black flex items-center justify-end"
                                         style={{ height: cellHeight }}
                                     >
                                         <span className="truncate">{firm.companyName}</span>
                                     </div>
+                                    {/* Top and left/right borders of column drop zone */}
+                                    {isColumnDragOver && (
+                                        <>
+                                            <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                        </>
+                                    )}
                                 </th>
-                            )
-                        ))}
-                        {/* Add button column */}
-                        <th className="px-2 text-center" style={{ height: cellHeight }}>
-                            <button
-                                onClick={onAddRow}
-                                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                                title="Add row"
-                            >
-                                <Plus className="w-3.5 h-3.5" />
-                            </button>
-                        </th>
+                            ) : (
+                                <th
+                                    key={firm.id}
+                                    className={`p-0 relative ${
+                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                    }`}
+                                    style={{ height: cellHeight }}
+                                    onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
+                                    onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
+                                    onDragOver={handleColumnDragOver}
+                                    onDrop={(e) => handleColumnDrop(e, firm.id)}
+                                >
+                                    {isColumnDragOver && (
+                                        <>
+                                            <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                        </>
+                                    )}
+                                </th>
+                            );
+                        })}
+                        {/* AI indicator column header */}
+                        <th
+                            style={{ height: cellHeight }}
+                        />
+                        {/* Delete button column header */}
+                        <th
+                            style={{ height: cellHeight }}
+                        />
                     </tr>
                 </thead>
 
@@ -278,47 +428,69 @@ export function EvaluationSheet({
                 <tbody>
                     {rows.length === 0 ? (
                         <tr>
+                            {/* Empty drag handle cell */}
                             <td
-                                colSpan={firms.length + 2}
-                                className="px-3 text-center text-sm text-[var(--color-text-muted)] border-b border-[var(--color-border)]"
+                                style={{ height: cellHeight }}
+                            />
+                            <td
+                                colSpan={firms.length + 1}
+                                className="px-3 text-center text-sm text-black/40"
                                 style={{ height: cellHeight }}
                             >
                                 No line items
                             </td>
+                            {/* Empty AI indicator cell */}
+                            <td
+                                style={{ height: cellHeight }}
+                            />
+                            {/* Empty delete cell */}
+                            <td style={{ height: cellHeight }} />
                         </tr>
                     ) : (
-                        rows.map((row) => {
+                        rows.map((row, rowIndex) => {
                             const isSelected = selectedRowIds.has(row.id);
                             const isAIRow = isAIGeneratedRow(row.source);
                             const isEditingDescription = editingDescriptionRowId === row.id;
+                            const isDragging = draggedRowId === row.id;
+                            const isDragOver = dragOverRowId === row.id;
 
                             return (
                                 <tr
                                     key={row.id}
-                                    className={`border-b border-[var(--color-border)] group cursor-pointer ${
+                                    className={`group cursor-pointer ${
                                         // T093: Visual highlight for selected rows
                                         isSelected
                                             ? 'bg-[var(--color-accent-copper-tint)]'
-                                            : 'bg-[var(--color-bg-primary)] hover:bg-[var(--color-bg-secondary)]'
-                                    }`}
+                                            : 'hover:bg-black/5'
+                                    } ${isDragging ? 'opacity-50' : ''}`}
+                                    style={isDragOver ? { boxShadow: 'inset 0 2px 0 var(--color-accent-copper)' } : undefined}
                                     onClick={(e) => onRowSelect(row.id, e)}
+                                    onDragOver={(e) => handleRowDragOver(e, row.id)}
+                                    onDrop={(e) => handleRowDrop(e, row.id)}
+                                    onDragLeave={() => setDragOverRowId(null)}
                                 >
-                                    {/* Description cell with T104-T106 AI indicator and T101-T103 inline editing */}
+                                    {/* Drag handle cell */}
                                     <td
-                                        className="px-3 text-sm text-[var(--color-text-primary)] border-r border-[var(--color-border)] overflow-hidden"
+                                        className="px-1 text-center cursor-grab active:cursor-grabbing"
+                                        style={{ height: cellHeight }}
+                                        draggable
+                                        onDragStart={(e) => handleRowDragStart(e, row.id)}
+                                        onDragEnd={handleRowDragEnd}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <GripVertical className="w-3.5 h-3.5 text-black/30 opacity-40 group-hover:opacity-100 transition-opacity mx-auto" />
+                                    </td>
+
+                                    {/* Description cell with T101-T103 inline editing */}
+                                    <td
+                                        className="px-3 text-sm text-black overflow-hidden"
                                         style={{ height: cellHeight }}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleDescriptionClick(row, e);
                                         }}
                                     >
-                                        <div className="flex items-center gap-1.5 h-full">
-                                            {/* T104-T106: AI row indicator */}
-                                            {isAIRow && (
-                                                <span title="AI-generated row">
-                                                    <DiamondIcon className="w-3 h-3 text-[var(--color-accent-copper)] flex-shrink-0" />
-                                                </span>
-                                            )}
+                                        <div className="flex items-center h-full">
                                             {/* T101-T103: Inline description editing */}
                                             {isEditingDescription ? (
                                                 <input
@@ -329,7 +501,7 @@ export function EvaluationSheet({
                                                     onBlur={handleDescriptionBlur}
                                                     onKeyDown={handleDescriptionKeyDown}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="flex-1 bg-transparent text-sm text-[var(--color-text-primary)] outline-none border-b border-[var(--color-accent-copper)]"
+                                                    className="flex-1 bg-transparent text-sm text-black outline-none"
                                                 />
                                             ) : (
                                                 <span className="truncate">
@@ -339,27 +511,32 @@ export function EvaluationSheet({
                                         </div>
                                     </td>
 
-                                    {/* Firm amount cells with T048-T051 AI indicators */}
+                                    {/* Firm amount cells with full column drop zones */}
                                     {firms.map(firm => {
                                         const value = getCellValue(row, firm.id);
                                         const { isAI, confidence } = getCellInfo(row, firm.id);
                                         const lowConfidence = isLowConfidence(confidence);
                                         const isEditing = editingCell?.rowId === row.id && editingCell?.firmId === firm.id;
+                                        const isColumnDragOver = dragOverFirmId === firm.id;
 
                                         return (
                                             <td
                                                 key={firm.id}
-                                                className={`px-0 border-r cursor-pointer relative ${
+                                                className={`px-0 cursor-pointer relative ${
                                                     // Low confidence warning indicator only
                                                     isAI && lowConfidence
-                                                        ? 'border-l-2 border-l-yellow-500/50 border-[var(--color-border)]'
-                                                        : 'border-[var(--color-border)]'
-                                                }`}
+                                                        ? 'border-l-2 border-l-yellow-500/50'
+                                                        : ''
+                                                } ${isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''}`}
                                                 style={{ height: cellHeight }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleCellClick(row.id, firm.id, value, e);
                                                 }}
+                                                onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
+                                                onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
+                                                onDragOver={handleColumnDragOver}
+                                                onDrop={(e) => handleColumnDrop(e, firm.id)}
                                                 title={isAI ? `AI-extracted (${confidence || 0}% confidence)` : undefined}
                                             >
                                                 {isEditing ? (
@@ -370,7 +547,7 @@ export function EvaluationSheet({
                                                         onChange={(e) => setEditValue(e.target.value)}
                                                         onBlur={handleCellBlur}
                                                         onKeyDown={handleKeyDown}
-                                                        className="w-full px-3 text-right text-sm bg-transparent text-[var(--color-text-primary)] outline-none"
+                                                        className="w-full px-3 text-right text-sm bg-transparent text-black outline-none"
                                                         style={{ height: cellHeight, lineHeight: `${cellHeight}px` }}
                                                     />
                                                 ) : (
@@ -385,7 +562,7 @@ export function EvaluationSheet({
                                                         )}
                                                         <div
                                                             className={`px-2 text-right text-sm ${
-                                                                value ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-border)]'
+                                                                value ? 'text-black' : 'text-black/30'
                                                             }`}
                                                             style={{ height: cellHeight, lineHeight: `${cellHeight}px` }}
                                                         >
@@ -393,22 +570,42 @@ export function EvaluationSheet({
                                                         </div>
                                                     </div>
                                                 )}
+                                                {/* Column drag - left/right borders for unified rectangle */}
+                                                {isColumnDragOver && (
+                                                    <>
+                                                        <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                                        <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                                    </>
+                                                )}
                                             </td>
                                         );
                                     })}
 
-                                    {/* Delete button column */}
+                                    {/* AI indicator cell */}
                                     <td
-                                        className="px-2 text-center"
+                                        className="text-center"
+                                        style={{ height: cellHeight }}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {isAIRow && (
+                                            <span title="AI-generated row">
+                                                <DiamondIcon variant="empty" className="w-3 h-3 text-[var(--color-accent-copper)] mx-auto" />
+                                            </span>
+                                        )}
+                                    </td>
+
+                                    {/* Delete button cell */}
+                                    <td
+                                        className="text-center"
                                         style={{ height: cellHeight }}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <button
                                             onClick={() => handleDelete(row.id)}
-                                            className="opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-all"
+                                            className="opacity-0 group-hover:opacity-100 text-black/40 hover:text-[var(--color-accent-coral)] transition-all"
                                             title="Delete row"
                                         >
-                                            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                                            <Trash className="w-3 h-3 mx-auto" />
                                         </button>
                                     </td>
                                 </tr>
@@ -417,23 +614,49 @@ export function EvaluationSheet({
                     )}
 
                     {/* Subtotal row */}
-                    <tr className="bg-[var(--color-bg-secondary)]">
+                    <tr className="border-t border-[var(--color-border)]">
+                        {/* Empty drag handle cell */}
                         <td
-                            className="px-3 text-sm font-medium text-[var(--color-text-primary)] border-r border-[var(--color-border)]"
+                            style={{ height: cellHeight }}
+                        />
+                        <td
+                            className="px-3 text-sm font-semibold text-black"
                             style={{ height: cellHeight }}
                         >
                             Sub-Total
                         </td>
-                        {firms.map(firm => (
-                            <td
-                                key={firm.id}
-                                className="px-3 text-right text-sm font-medium text-[var(--color-accent-copper)] border-r border-[var(--color-border)]"
-                                style={{ height: cellHeight }}
-                            >
-                                {formatCurrency(subtotals[firm.id] || 0)}
-                            </td>
-                        ))}
-                        <td style={{ height: cellHeight }}></td>
+                        {firms.map(firm => {
+                            const isColumnDragOver = dragOverFirmId === firm.id;
+                            return (
+                                <td
+                                    key={firm.id}
+                                    className={`px-3 text-right text-sm font-semibold text-[var(--color-accent-copper)] relative ${
+                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                    }`}
+                                    style={{ height: cellHeight }}
+                                    onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
+                                    onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
+                                    onDragOver={handleColumnDragOver}
+                                    onDrop={(e) => handleColumnDrop(e, firm.id)}
+                                >
+                                    {formatCurrency(subtotals[firm.id] || 0)}
+                                    {/* Bottom border and left/right borders for unified rectangle */}
+                                    {isColumnDragOver && (
+                                        <>
+                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                        </>
+                                    )}
+                                </td>
+                            );
+                        })}
+                        {/* Empty AI indicator cell */}
+                        <td
+                            style={{ height: cellHeight }}
+                        />
+                        {/* Empty delete cell */}
+                        <td style={{ height: cellHeight }} />
                     </tr>
                 </tbody>
             </table>

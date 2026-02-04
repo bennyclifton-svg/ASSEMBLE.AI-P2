@@ -112,26 +112,27 @@ Project Context:
 
 ${profileContext}
 
-SHORT BULLET OBJECTIVES TO EXPAND:
+OBJECTIVES TO EXPAND (may contain HTML formatting):
 
 ${contentToPolish}
 
 INSTRUCTIONS - ITERATION 2:
-Expand each short bullet point to 10-15 words.
+Expand each bullet point to 10-15 words while preserving HTML structure.
 1. Add specific Australian standards references where relevant (NCC 2022, BCA, AS standards)
 2. Make objectives measurable where possible (quantities, percentages, ratings, timeframes)
-3. PRESERVE the user's structure - keep ALL headers and bullet order exactly as provided
+3. PRESERVE the HTML structure - keep <p><strong>Headers</strong></p> and <ul><li> format
 4. PRESERVE any user edits - do NOT change, remove, or reorder user-modified items
 5. Keep language professional, formal, and concise - suitable for tender documentation
 6. Do NOT add new categories or bullet points not present in the input
 7. Do NOT remove any items - every input bullet must have a corresponding expanded output
+8. OUTPUT FORMAT: Use HTML tags - <p><strong>Header</strong></p> for headers, <ul><li>item</li></ul> for bullets
 
 Example transformation:
-Input: "- NCC 2022 compliance"
-Output: "- Deliver design documentation compliant with NCC 2022 Volume One requirements"
+Input: "<li>NCC 2022 compliance</li>"
+Output: "<li>Deliver design documentation compliant with NCC 2022 Volume One requirements</li>"
 
-Input: "- Fire safety provisions"
-Output: "- Incorporate fire safety provisions per AS 1530.4 and AS 1668.1 standards"
+Input: "<li>Fire safety provisions</li>"
+Output: "<li>Incorporate fire safety provisions per AS 1530.4 and AS 1668.1 standards</li>"
 
 Respond in JSON format:
 ${responseFormat}`;

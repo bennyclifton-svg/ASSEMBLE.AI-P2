@@ -118,15 +118,15 @@ export async function POST(
 
     const responseFormat = generateBoth
       ? `{
-  "functionalQuality": "objectives as markdown with **Headers** and bullet points",
-  "planningCompliance": "objectives as markdown with **Headers** and bullet points"
+  "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points",
+  "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
 }`
       : section === 'functionalQuality'
       ? `{
-  "functionalQuality": "objectives as markdown with **Headers** and bullet points"
+  "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
 }`
       : `{
-  "planningCompliance": "objectives as markdown with **Headers** and bullet points"
+  "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
 }`;
 
     // Build work scope constraint for the AI prompt
@@ -161,23 +161,23 @@ ${workScopeConstraint}
 SECTION DEFINITIONS - CRITICAL:
 The two sections have DIFFERENT purposes. DO NOT mix content between them:
 
-**FUNCTIONAL & QUALITY** - What the building provides and how well:
+FUNCTIONAL & QUALITY - What the building provides and how well:
 - Physical attributes (bedrooms, floors, spaces, areas)
 - Design features (open plan, layout, configuration)
 - Operational requirements (storage, parking, amenities)
 - Quality/finish standards (premium finishes, materials, fixtures)
 - Performance requirements (acoustic, thermal, structural)
 - User experience (accessibility features, natural light)
-Headers to use: **Design Requirements**, **Quality Standards**, **Operational Requirements**
+Headers to use: Design Requirements, Quality Standards, Operational Requirements
 
-**PLANNING & COMPLIANCE** - Approvals, regulations, and certifications needed:
+PLANNING & COMPLIANCE - Approvals, regulations, and certifications needed:
 - Building codes (NCC, BCA classification)
 - Regulatory approvals (DA, CDC, permits)
 - Australian Standards (AS 2419.1, AS 3959, etc.)
 - Certifications required (BASIX, NatHERS, fire engineering)
 - Authority requirements (council, fire brigade, utilities)
 - Environmental compliance (contamination, stormwater)
-Headers to use: **Regulatory Compliance**, **Certification Requirements**, **Authority Approvals**
+Headers to use: Regulatory Compliance, Certification Requirements, Authority Approvals
 
 SUGGESTED ITEMS FROM PROJECT ANALYSIS:
 ${suggestedItemsSection.length > 0 ? suggestedItemsSection.join('\n\n') : '(No specific rules matched - generate based on project profile)'}
@@ -186,31 +186,18 @@ INSTRUCTIONS - ITERATION 1:
 Generate SHORT bullet points only (2-5 words each).
 1. Include suggested items ONLY in their correct section (functional items in functionalQuality, compliance items in planningCompliance)
 2. Add other relevant objectives for this ${buildingClass} ${projectType} project
-3. Group by category using **Headers** appropriate for each section (see definitions above)
+3. Group by category using bold headers on their own line, followed by a bullet list
 4. Each bullet: 2-5 words MAXIMUM (e.g., "Premium material selection", "NCC 2022 compliance")
 5. NO prose, NO sentences, NO detailed explanations
 6. Output 8-15 bullets per section
 7. DO NOT duplicate items between sections - each item belongs in only ONE section
+8. OUTPUT FORMAT: Use HTML tags - <p><strong>Header</strong></p> for headers on separate lines, <ul><li>item</li></ul> for bullets
 
-Example FUNCTIONAL & QUALITY output:
-**Design Requirements**
-- Multi-bedroom accommodation
-- Double garage provision
-- Open plan living
+Example FUNCTIONAL & QUALITY output (use this exact HTML structure):
+<p><strong>Design Requirements</strong></p><ul><li>Multi-bedroom accommodation</li><li>Double garage provision</li><li>Open plan living</li></ul><p><strong>Quality Standards</strong></p><ul><li>Premium specification level</li><li>Acoustic separation</li></ul>
 
-**Quality Standards**
-- Premium specification level
-- Acoustic separation
-
-Example PLANNING & COMPLIANCE output:
-**Regulatory Compliance**
-- NCC 2022 compliance
-- Fire safety provisions
-- DDA accessibility
-
-**Certification Requirements**
-- BASIX certification
-- Energy efficiency (NatHERS)
+Example PLANNING & COMPLIANCE output (use this exact HTML structure):
+<p><strong>Regulatory Compliance</strong></p><ul><li>NCC 2022 compliance</li><li>Fire safety provisions</li><li>DDA accessibility</li></ul><p><strong>Certification Requirements</strong></p><ul><li>BASIX certification</li><li>Energy efficiency (NatHERS)</li></ul>
 
 Respond in JSON format:
 ${responseFormat}`;
@@ -239,10 +226,10 @@ ${responseFormat}`;
       generated = JSON.parse(jsonText.trim());
     } catch (e) {
       console.error('Failed to parse AI response:', e);
-      // Fallback to base templates
+      // Fallback to empty content
       generated = {};
-      if (generateFunctional) generated.functionalQuality = baseFunctional;
-      if (generatePlanning) generated.planningCompliance = basePlanning;
+      if (generateFunctional) generated.functionalQuality = '';
+      if (generatePlanning) generated.planningCompliance = '';
     }
 
     // Create profile context snapshot

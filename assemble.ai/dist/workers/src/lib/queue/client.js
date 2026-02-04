@@ -59,9 +59,11 @@ exports.getConnection = getConnection;
 exports.getDocumentQueue = getDocumentQueue;
 exports.getChunkQueue = getChunkQueue;
 exports.getReportQueue = getReportQueue;
+exports.getDrawingQueue = getDrawingQueue;
 exports.addDocumentForProcessing = addDocumentForProcessing;
 exports.addChunkForEmbedding = addChunkForEmbedding;
 exports.addSectionForGeneration = addSectionForGeneration;
+exports.addDrawingForExtraction = addDrawingForExtraction;
 exports.getQueueStats = getQueueStats;
 exports.closeQueues = closeQueues;
 exports.drainQueue = drainQueue;
@@ -87,6 +89,7 @@ exports.QUEUE_NAMES = {
     DOCUMENT_PROCESSING: 'document-processing',
     CHUNK_EMBEDDING: 'chunk-embedding',
     REPORT_GENERATION: 'report-generation',
+    DRAWING_EXTRACTION: 'drawing-extraction',
 };
 // Queue configuration
 var DEFAULT_JOB_OPTIONS = {
@@ -107,6 +110,7 @@ var DEFAULT_JOB_OPTIONS = {
 var documentQueue = null;
 var chunkQueue = null;
 var reportQueue = null;
+var drawingQueue = null;
 var connection = null;
 /**
  * Get or create Redis connection
@@ -152,6 +156,18 @@ function getReportQueue() {
         });
     }
     return reportQueue;
+}
+/**
+ * Get or create drawing extraction queue
+ */
+function getDrawingQueue() {
+    if (!drawingQueue) {
+        drawingQueue = new bullmq_1.Queue(exports.QUEUE_NAMES.DRAWING_EXTRACTION, {
+            connection: getConnection(),
+            defaultJobOptions: __assign(__assign({}, DEFAULT_JOB_OPTIONS), { attempts: 3 }),
+        });
+    }
+    return drawingQueue;
 }
 /**
  * Add document for processing
@@ -225,28 +241,61 @@ function addSectionForGeneration(reportId, sectionIndex, query, documentSetIds) 
     });
 }
 /**
+ * Add document for drawing number extraction
+ */
+function addDrawingForExtraction(fileAssetId, storagePath, filename, mimeType) {
+    return __awaiter(this, void 0, void 0, function () {
+        var queue;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    queue = getDrawingQueue();
+                    return [4 /*yield*/, queue.isPaused()];
+                case 1:
+                    if (!_a.sent()) return [3 /*break*/, 3];
+                    return [4 /*yield*/, queue.resume()];
+                case 2:
+                    _a.sent();
+                    _a.label = 3;
+                case 3: return [2 /*return*/, queue.add('extract', {
+                        type: 'extract_drawing',
+                        fileAssetId: fileAssetId,
+                        storagePath: storagePath,
+                        filename: filename,
+                        mimeType: mimeType,
+                    }, {
+                        jobId: "drawing-".concat(fileAssetId, "-").concat(Date.now()),
+                    })];
+            }
+        });
+    });
+}
+/**
  * Get queue statistics
  */
 function getQueueStats() {
     return __awaiter(this, void 0, void 0, function () {
-        var docQueue, chunkQueueInstance, repQueue, _a, docCounts, chunkCounts, repCounts;
+        var docQueue, chunkQueueInstance, repQueue, drawQueue, _a, docCounts, chunkCounts, repCounts, drawCounts;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
                     docQueue = getDocumentQueue();
                     chunkQueueInstance = getChunkQueue();
                     repQueue = getReportQueue();
+                    drawQueue = getDrawingQueue();
                     return [4 /*yield*/, Promise.all([
                             docQueue.getJobCounts(),
                             chunkQueueInstance.getJobCounts(),
                             repQueue.getJobCounts(),
+                            drawQueue.getJobCounts(),
                         ])];
                 case 1:
-                    _a = _b.sent(), docCounts = _a[0], chunkCounts = _a[1], repCounts = _a[2];
+                    _a = _b.sent(), docCounts = _a[0], chunkCounts = _a[1], repCounts = _a[2], drawCounts = _a[3];
                     return [2 /*return*/, {
                             documentProcessing: docCounts,
                             chunkEmbedding: chunkCounts,
                             reportGeneration: repCounts,
+                            drawingExtraction: drawCounts,
                         }];
             }
         });
@@ -261,7 +310,7 @@ function closeQueues() {
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    queues = [documentQueue, chunkQueue, reportQueue].filter(Boolean);
+                    queues = [documentQueue, chunkQueue, reportQueue, drawingQueue].filter(Boolean);
                     return [4 /*yield*/, Promise.all(queues.map(function (q) { return q === null || q === void 0 ? void 0 : q.close(); }))];
                 case 1:
                     _a.sent();
@@ -275,6 +324,7 @@ function closeQueues() {
                     documentQueue = null;
                     chunkQueue = null;
                     reportQueue = null;
+                    drawingQueue = null;
                     return [2 /*return*/];
             }
         });

@@ -10,6 +10,7 @@ export const projectDetailsSchema = z.object({
     lotArea: z.union([z.number().positive(), z.string()]).optional(),
     numberOfStories: z.union([z.number().int().positive(), z.string()]).optional(),
     buildingClass: z.string().optional(),
+    tenderReleaseDate: z.string().optional(),
 });
 
 // Project Objectives Schema

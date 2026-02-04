@@ -9,7 +9,7 @@ interface MarketContextProps {
   projectType: ProjectType | null;
   subclass: string[];
   scaleData: Record<string, number>;
-  complexity: Record<string, string>;
+  complexity: Record<string, string | string[]>;
 }
 
 interface MarketBenchmark {
@@ -19,17 +19,17 @@ interface MarketBenchmark {
   icon: React.ReactNode;
 }
 
-// Market benchmarks from Rawlinsons 2025 / AIQS / Industry data
+// Market benchmarks from AIQS / Industry data
 const BENCHMARKS: Record<string, Record<string, MarketBenchmark[]>> = {
   residential: {
     house: [
-      { metric: 'Typical GFA', value: '150-350 m\u00b2', source: 'Rawlinsons 2025', icon: <Building2 className="w-3 h-3" /> },
-      { metric: 'Cost Range', value: '$2,500-5,500/m\u00b2', source: 'Rawlinsons 2025', icon: <TrendingUp className="w-3 h-3" /> },
+      { metric: 'Typical GFA', value: '150-350 m\u00b2', source: 'Industry data', icon: <Building2 className="w-3 h-3" /> },
+      { metric: 'Cost Range', value: '$2,500-5,500/m\u00b2', source: 'Industry data', icon: <TrendingUp className="w-3 h-3" /> },
       { metric: 'Build Duration', value: '6-12 months', source: 'Industry average', icon: <Clock className="w-3 h-3" /> },
     ],
     apartments: [
-      { metric: 'Typical GFA', value: '5,000-50,000 m\u00b2', source: 'Rawlinsons 2025', icon: <Building2 className="w-3 h-3" /> },
-      { metric: 'Cost Range', value: '$3,200-5,800/m\u00b2', source: 'Rawlinsons 2025', icon: <TrendingUp className="w-3 h-3" /> },
+      { metric: 'Typical GFA', value: '5,000-50,000 m\u00b2', source: 'Industry data', icon: <Building2 className="w-3 h-3" /> },
+      { metric: 'Cost Range', value: '$3,200-5,800/m\u00b2', source: 'Industry data', icon: <TrendingUp className="w-3 h-3" /> },
       { metric: 'Build Duration', value: '18-30 months', source: 'Industry average', icon: <Clock className="w-3 h-3" /> },
     ],
     aged_care_9c: [
@@ -46,8 +46,8 @@ const BENCHMARKS: Record<string, Record<string, MarketBenchmark[]>> = {
   },
   commercial: {
     office: [
-      { metric: 'Typical NLA', value: '5,000-50,000 m\u00b2', source: 'Rawlinsons 2025', icon: <Building2 className="w-3 h-3" /> },
-      { metric: 'A-Grade Rate', value: '$3,500-4,500/m\u00b2', source: 'Rawlinsons 2025', icon: <TrendingUp className="w-3 h-3" /> },
+      { metric: 'Typical NLA', value: '5,000-50,000 m\u00b2', source: 'Industry data', icon: <Building2 className="w-3 h-3" /> },
+      { metric: 'A-Grade Rate', value: '$3,500-4,500/m\u00b2', source: 'Industry data', icon: <TrendingUp className="w-3 h-3" /> },
       { metric: 'Floor Plate', value: '1,000-2,500 m\u00b2', source: 'Industry typical', icon: <BarChart3 className="w-3 h-3" /> },
     ],
     hotel: [
@@ -57,14 +57,14 @@ const BENCHMARKS: Record<string, Record<string, MarketBenchmark[]>> = {
     ],
     retail_shopping: [
       { metric: 'Sub-regional GLA', value: '20,000-50,000 m\u00b2', source: 'SCCA', icon: <Building2 className="w-3 h-3" /> },
-      { metric: 'Cost Range', value: '$3,000-6,000/m\u00b2', source: 'Rawlinsons 2025', icon: <TrendingUp className="w-3 h-3" /> },
+      { metric: 'Cost Range', value: '$3,000-6,000/m\u00b2', source: 'Industry data', icon: <TrendingUp className="w-3 h-3" /> },
       { metric: 'Car Park Ratio', value: '5-7 spaces/100m\u00b2', source: 'Council typical', icon: <BarChart3 className="w-3 h-3" /> },
     ],
   },
   industrial: {
     warehouse: [
-      { metric: 'Typical GFA', value: '5,000-50,000 m\u00b2', source: 'Rawlinsons 2025', icon: <Building2 className="w-3 h-3" /> },
-      { metric: 'Cost Range', value: '$800-1,500/m\u00b2', source: 'Rawlinsons 2025', icon: <TrendingUp className="w-3 h-3" /> },
+      { metric: 'Typical GFA', value: '5,000-50,000 m\u00b2', source: 'Industry data', icon: <Building2 className="w-3 h-3" /> },
+      { metric: 'Cost Range', value: '$800-1,500/m\u00b2', source: 'Industry data', icon: <TrendingUp className="w-3 h-3" /> },
       { metric: 'Clear Height', value: '10-14m', source: 'Industry typical', icon: <BarChart3 className="w-3 h-3" /> },
     ],
     data_centre: [
@@ -76,12 +76,12 @@ const BENCHMARKS: Record<string, Record<string, MarketBenchmark[]>> = {
   institution: {
     healthcare_hospital: [
       { metric: 'Tertiary GFA', value: '30,000-100,000 m\u00b2', source: 'AIHW', icon: <Building2 className="w-3 h-3" /> },
-      { metric: 'Cost Range', value: '$8k-18k/m\u00b2', source: 'Rawlinsons 2025', icon: <TrendingUp className="w-3 h-3" /> },
+      { metric: 'Cost Range', value: '$8k-18k/m\u00b2', source: 'Industry data', icon: <TrendingUp className="w-3 h-3" /> },
       { metric: 'GFA per Bed', value: '120-180 m\u00b2', source: 'AIHW', icon: <BarChart3 className="w-3 h-3" /> },
     ],
     education_school: [
       { metric: 'Typical Students', value: '300-1,500', source: 'DET', icon: <Building2 className="w-3 h-3" /> },
-      { metric: 'Cost Range', value: '$3,500-6,000/m\u00b2', source: 'Rawlinsons 2025', icon: <TrendingUp className="w-3 h-3" /> },
+      { metric: 'Cost Range', value: '$3,500-6,000/m\u00b2', source: 'Industry data', icon: <TrendingUp className="w-3 h-3" /> },
       { metric: 'GFA per Student', value: '10-15 m\u00b2', source: 'DET guidelines', icon: <BarChart3 className="w-3 h-3" /> },
     ],
   },

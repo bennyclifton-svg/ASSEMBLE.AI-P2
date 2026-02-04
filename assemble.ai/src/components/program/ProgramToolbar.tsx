@@ -90,7 +90,7 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
     };
 
     return (
-        <div className="flex items-center gap-2 border-b border-[var(--color-accent-copper)] bg-[var(--color-bg-secondary)] px-3 py-2">
+        <div className="flex items-center gap-2 border-b border-[var(--color-accent-copper)] bg-[#f0f0f0] px-3 py-2">
             {/* Week/Month Toggle - Segmented Control */}
             <div className="relative flex rounded-full bg-[var(--color-bg-tertiary)] p-0.5">
                 {/* Sliding background indicator */}

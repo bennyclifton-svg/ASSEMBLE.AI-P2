@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Plus, X, Trash } from 'lucide-react';
 import { useStakeholders } from '@/lib/hooks/use-stakeholders';
 import { StakeholderRow } from './StakeholderRow';
-import { AddStakeholderRow } from './AddStakeholderRow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
@@ -185,8 +184,6 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
             );
           })}
 
-          {/* Add Row */}
-          <AddStakeholderRow onAdd={createStakeholder} />
         </div>
       </div>
 

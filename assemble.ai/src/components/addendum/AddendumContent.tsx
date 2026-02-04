@@ -8,20 +8,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import { type Addendum } from '@/lib/hooks/use-addenda';
-import { Trash2, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 
 function formatDisplayDate(dateString: string): string {
     if (!dateString) return '';
@@ -39,7 +26,6 @@ interface AddendumContentProps {
     addendum: Addendum;
     onUpdateContent: (addendumId: string, content: string) => Promise<boolean>;
     onUpdateDate: (addendumId: string, date: string) => Promise<boolean>;
-    onDelete: () => void;
 }
 
 const fetcher = async (url: string): Promise<ProjectDetails> => {
@@ -57,7 +43,6 @@ export function AddendumContent({
     addendum,
     onUpdateContent,
     onUpdateDate,
-    onDelete,
 }: AddendumContentProps) {
     const [content, setContent] = useState(addendum.content || '');
     const [isSaving, setIsSaving] = useState(false);
@@ -104,11 +89,11 @@ export function AddendumContent({
     return (
         <div className="space-y-4">
             {/* Project Info Table */}
-            <div className="border border-[var(--color-border)] rounded overflow-hidden">
+            <div className="overflow-hidden rounded-lg">
                 <table className="w-full text-sm">
                     <tbody>
                         <tr className="border-b border-[var(--color-border)]">
-                            <td className="w-36 px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--primitive-copper-darker)] font-medium">
+                            <td className="w-36 px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                                 Project Name
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -116,7 +101,7 @@ export function AddendumContent({
                             </td>
                         </tr>
                         <tr className="border-b border-[var(--color-border)]">
-                            <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--primitive-copper-darker)] font-medium">
+                            <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                                 Address
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -124,17 +109,17 @@ export function AddendumContent({
                             </td>
                         </tr>
                         <tr>
-                            <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--primitive-copper-darker)] font-medium">
+                            <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                                 Document
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
                                 {addendumLabel}
                             </td>
                             <td
-                                className="w-36 px-4 py-2.5 text-[var(--primitive-copper-darker)] font-medium border-l border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative"
+                                className="w-44 px-4 py-2.5 text-[var(--color-document-header)] font-medium cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative text-right"
                                 onClick={handleDateClick}
                             >
-                                <span className="select-none">{formatDisplayDate(addendumDate)}</span>
+                                <span className="select-none">Issued {formatDisplayDate(addendumDate)}</span>
                                 <input
                                     ref={dateInputRef}
                                     type="date"
@@ -155,46 +140,9 @@ export function AddendumContent({
                     <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         Addendum Details
                     </h3>
-                    <div className="flex items-center gap-2">
-                        {isSaving && (
-                            <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
-                        )}
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 px-2 text-xs text-red-500 hover:text-red-400 hover:bg-red-500/10"
-                                >
-                                    <Trash2 className="w-3 h-3 mr-1" />
-                                    Delete
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent className="bg-[var(--color-bg-secondary)] border-[var(--color-border)]">
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle className="flex items-center gap-2 text-[var(--color-text-primary)]">
-                                        <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                                        Delete {addendumLabel}?
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription className="text-[var(--color-text-muted)]">
-                                        This will permanently delete the addendum and all its associated transmittal documents.
-                                        This action cannot be undone.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel className="bg-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] border-[var(--color-border)]">
-                                        Cancel
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                        onClick={onDelete}
-                                        className="bg-red-600 text-white hover:bg-red-700"
-                                    >
-                                        Delete
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
+                    {isSaving && (
+                        <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
+                    )}
                 </div>
                 <div className="border border-[var(--color-border)] rounded overflow-hidden">
                     <Textarea

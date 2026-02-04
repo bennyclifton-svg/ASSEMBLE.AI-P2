@@ -152,11 +152,8 @@ export function FirmCardExpanded({
   useEffect(() => {
     if (isEditingName && nameInputRef.current) {
       nameInputRef.current.focus();
-      if (!isNew) {
-        nameInputRef.current.select();
-      }
     }
-  }, [isEditingName, isNew]);
+  }, [isEditingName]);
 
   const handleNameSave = async () => {
     if (editName === firm.companyName) {
@@ -261,7 +258,7 @@ export function FirmCardExpanded({
             onClick={handleStarClick}
             className={`
               flex items-center gap-1 p-0.5 rounded transition-colors
-              ${firm.shortlisted ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
+              ${firm.shortlisted ? 'text-[var(--color-accent-blue)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
             `}
             title={firm.shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
           >
@@ -291,10 +288,10 @@ export function FirmCardExpanded({
             {/* Collapse chevron */}
             <button
               onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
-              className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-black/10 transition-colors"
+              className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
               title="Collapse card"
             >
-              <ChevronUp className="w-7 h-7" />
+              <ChevronUp className="w-5 h-5" />
             </button>
           </div>
         </div>

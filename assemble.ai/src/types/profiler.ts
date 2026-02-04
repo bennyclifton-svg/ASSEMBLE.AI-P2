@@ -90,7 +90,7 @@ export interface ProfileInput {
   subclass: string[];
   subclassOther?: string[] | null;
   scaleData: Record<string, number>;
-  complexity: Record<string, string>;
+  complexity: Record<string, string | string[]>;
   workScope?: string[];
   region?: Region;
 }
@@ -168,7 +168,7 @@ export interface ProfileContext {
   projectType: string;
   subclass: string[];
   scale: Record<string, number>;
-  complexity: Record<string, string>;
+  complexity: Record<string, string | string[]>;
 }
 
 export interface ProfilerObjectives {

@@ -70,8 +70,8 @@ export function useNonPriceEvaluation({
     const contextType = 'stakeholder';
     const contextId = stakeholderId;
 
-    // Determine firm type from loaded data (first firm's type)
-    const firmType: 'consultant' | 'contractor' = data?.firms?.[0]?.firmType || 'consultant';
+    // Use firmType from API response (derived from stakeholder group)
+    const firmType: 'consultant' | 'contractor' = data?.firmType ?? 'consultant';
 
     // Fetch non-price evaluation data
     const fetchData = useCallback(async () => {

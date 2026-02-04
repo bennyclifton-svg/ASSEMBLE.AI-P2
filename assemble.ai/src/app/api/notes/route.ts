@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { projectId, title, content } = validationResult.data;
+        const { projectId, title, content, color } = validationResult.data;
 
         // Create new note
         const id = uuidv4();
@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
             title: title || 'New Note',
             content: content || null,
             isStarred: false,
+            color: color || 'yellow',
             createdAt: now,
             updatedAt: now,
         });

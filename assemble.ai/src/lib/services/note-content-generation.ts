@@ -23,9 +23,7 @@ import {
     projectDetails,
     projectObjectives,
 } from '@/lib/db';
-import { ragDb } from '@/lib/db/rag-client';
-import { eq, and, inArray } from 'drizzle-orm';
-import { documentSets } from '@/lib/db/rag-schema';
+import { eq, inArray } from 'drizzle-orm';
 import { retrieve, type RetrievalResult } from '@/lib/rag/retrieval';
 import type {
     GenerateNoteContentRequest,
@@ -165,26 +163,6 @@ async function fetchProjectContext(projectId: string): Promise<ProjectContext> {
     }
 }
 
-/**
- * Get default document set ID for a project (for RAG queries)
- */
-async function getProjectDocumentSetId(projectId: string): Promise<string | null> {
-    try {
-        const [docSet] = await ragDb
-            .select({ id: documentSets.id })
-            .from(documentSets)
-            .where(and(
-                eq(documentSets.projectId, projectId),
-                eq(documentSets.isDefault, true)
-            ));
-
-        return docSet?.id || null;
-    } catch (error) {
-        console.error('[note-content-generation] Error fetching document set:', error);
-        return null;
-    }
-}
-
 // ============================================================================
 // CONTEXT BUILDING
 // ============================================================================
@@ -260,30 +238,37 @@ export async function generateNoteContent(
     console.log(`[note-content-generation] Generating content for note ${noteId}`);
 
     // Fetch context data in parallel
-    const [attachedDocs, projectContext, documentSetId] = await Promise.all([
+    const [attachedDocs, projectContext] = await Promise.all([
         fetchAttachedDocuments(noteId),
         fetchProjectContext(projectId),
-        getProjectDocumentSetId(projectId),
     ]);
 
     // Build query for RAG from note content or title
-    const queryText = existingContent?.trim() || existingTitle || '';
+    // Strip HTML tags for better embedding quality
+    const rawQueryText = existingContent?.trim() || existingTitle || '';
+    const queryText = rawQueryText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
-    // Fetch RAG results if we have a document set and query
+    // Get document IDs from attachments for RAG retrieval
+    const attachedDocumentIds = attachedDocs.map(d => d.documentId);
+
+    // Fetch RAG results if we have attached documents and a query
     let ragResults: RetrievalResult[] = [];
-    if (documentSetId && queryText.length > 10) {
+    if (attachedDocumentIds.length > 0 && queryText.length > 10) {
         try {
+            console.log(`[note-content-generation] Searching ${attachedDocumentIds.length} attached documents for: "${queryText.substring(0, 50)}..."`);
             ragResults = await retrieve(queryText, {
-                documentSetIds: [documentSetId],
-                topK: 20,
-                rerankTopK: 5,
+                documentIds: attachedDocumentIds,
+                topK: 30,
+                rerankTopK: 15,
                 includeParentContext: true,
-                minRelevanceScore: 0.3,
+                minRelevanceScore: 0.2,
             });
             console.log(`[note-content-generation] Retrieved ${ragResults.length} RAG results`);
         } catch (error) {
             console.error('[note-content-generation] RAG retrieval failed:', error);
         }
+    } else if (attachedDocumentIds.length === 0) {
+        console.log('[note-content-generation] No attached documents to search');
     }
 
     // Build context string
@@ -331,9 +316,23 @@ First, analyze the note content to determine the user's intent:
 - Bullet point lists of observations
 - Paragraphs describing project activities
 
-Generate professional, well-structured content. Use bullet points where appropriate for clarity.
-Do not include headers, meta-commentary, or explanations of what you're doing.
-Output only the generated content.`;
+## Critical Rules
+
+1. **ONLY use information explicitly stated in the Retrieved Project Context above**
+2. **DO NOT invent, fabricate, or hallucinate any information** - no made-up names, addresses, dates, or details
+3. If the retrieved context doesn't contain the requested information, clearly state what was found and what is missing
+4. Quote or paraphrase directly from the source material when possible
+
+## Formatting Rules
+
+- Use compact formatting with NO extra blank lines between items
+- Use consistent bullet points (• or -) for lists
+- Keep related information together on the same line or consecutive lines
+- Format contact details inline: "Company Name - Contact: Name, Tel: XXX"
+- NO double line breaks - single line breaks only between sections
+- Output clean, readable content without excessive whitespace
+
+Output only the generated content with no headers or meta-commentary.`;
 
     // Call Claude API
     const anthropic = new Anthropic();

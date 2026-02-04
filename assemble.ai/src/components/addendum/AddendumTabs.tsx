@@ -73,35 +73,30 @@ export function AddendumTabs({
                         <div
                             key={addendum.id}
                             className={cn(
-                                'relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer',
+                                'relative group flex items-center justify-center min-w-[48px] px-3 py-1 text-sm transition-colors cursor-pointer',
                                 isActive
                                     ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
                                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                             )}
                             onClick={() => onSelectAddendum(addendum.id)}
                         >
-                            <span>{label}</span>
+                            <span className="mr-1">{label}</span>
 
                             {/* Indicator dot for content/transmittal (only when inactive) */}
                             {(hasContent || hasTransmittal) && !isActive && (
                                 <span
                                     className={cn(
-                                        'absolute top-1 right-1 w-1.5 h-1.5 rounded-full',
+                                        'absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full',
                                         hasTransmittal ? 'bg-[#3fb950]' : 'bg-[#4fc1ff]'
                                     )}
                                 />
                             )}
 
-                            {/* Delete button - always visible when active, hover when inactive */}
+                            {/* Delete button - only visible on hover */}
                             {onDeleteAddendum && (
                                 <button
                                     onClick={(e) => handleDeleteClick(e, addendum.id)}
-                                    className={cn(
-                                        'ml-1 p-0.5 rounded hover:bg-[var(--color-border)] transition-all',
-                                        isActive
-                                            ? 'opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                            : 'opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                    )}
+                                    className="absolute right-0 p-0.5 rounded hover:bg-[var(--color-border)] transition-all opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                                     title={`Delete Addendum ${label}`}
                                 >
                                     <X className="w-3.5 h-3.5" />
@@ -115,7 +110,7 @@ export function AddendumTabs({
                 <button
                     onClick={onCreateAddendum}
                     disabled={isLoading}
-                    className="flex items-center justify-center px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-2 py-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Create new addendum"
                 >
                     {isLoading ? (

@@ -12,16 +12,20 @@ import { z } from 'zod';
 // NOTES VALIDATION
 // ============================================================================
 
+export const noteColorSchema = z.enum(['yellow', 'blue', 'green', 'pink']);
+
 export const createNoteSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1).max(200).optional(),
   content: z.string().optional(),
+  color: noteColorSchema.optional(),
 });
 
 export const updateNoteSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   content: z.string().optional(),
   isStarred: z.boolean().optional(),
+  color: noteColorSchema.optional(),
   reportingPeriodStart: z.string().nullable().optional(),
   reportingPeriodEnd: z.string().nullable().optional(),
 });
@@ -187,3 +191,4 @@ export type ContextType = z.infer<typeof contextTypeSchema>;
 export type Tone = z.infer<typeof toneSchema>;
 export type ExportFormat = z.infer<typeof exportFormatSchema>;
 export type GenerateNoteContentInput = z.infer<typeof generateNoteContentSchema>;
+export type NoteColorInput = z.infer<typeof noteColorSchema>;

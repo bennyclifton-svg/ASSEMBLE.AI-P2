@@ -11,12 +11,13 @@ import { useTRR } from '@/lib/hooks/use-trr';
 import { useTRRSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { TRRShortTab } from './TRRShortTab';
 import { TRRTabs } from './TRRTabs';
-import { FileText, Loader2 } from 'lucide-react';
+import { FileText, Loader2, MoreHorizontal, MoreVertical } from 'lucide-react';
+import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
-// Procurement section accent color (copper from design system)
-const SECTION_ACCENT = 'var(--primitive-copper-darker)';
+// Procurement section accent color (aurora blue from design system)
+const SECTION_ACCENT = 'var(--color-accent-copper)';
 
 interface TRRSectionProps {
     projectId: string;
@@ -40,6 +41,7 @@ export function TRRSection({
     const [isExporting, setIsExporting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [isMenuExpanded, setIsMenuExpanded] = useState(false);
 
     // Use context for expanded state persistence across tab navigation
     const { isExpanded, activeTrrId, setExpanded: setIsExpanded, setActiveTrrId } = useTRRSectionUI(stakeholderId);
@@ -227,89 +229,86 @@ export function TRRSection({
 
     const contextName = stakeholderName || 'Unknown';
 
-    // Solid triangle icons
-    const TriangleRight = () => (
-        <svg
-            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
-            viewBox="0 0 12 12"
-            fill="currentColor"
-        >
-            <polygon points="2,0 12,6 2,12" />
-        </svg>
-    );
-
-    const TriangleDown = () => (
-        <svg
-            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
-            viewBox="0 0 12 12"
-            fill="currentColor"
-        >
-            <polygon points="0,2 12,2 6,12" />
-        </svg>
-    );
-
     return (
-        <div className="mt-6 border border-[var(--color-border)] rounded-lg overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
-                <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                >
+        <div className="mt-6">
+            {/* Header - Segmented white ribbons with grey surround */}
+            <div className="flex items-stretch gap-0.5 p-2">
+                {/* TRR segment */}
+                <div className="flex items-center w-[220px] px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
                     <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
-                    <span className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+                    <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         TRR
                     </span>
-                    {isExpanded ? <TriangleDown /> : <TriangleRight />}
+                </div>
+                {/* Corner bracket segment - square, points out to expand, in to collapse */}
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="flex items-center justify-center p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    title={isExpanded ? 'Collapse' : 'Expand'}
+                >
+                    <CornerBracketIcon
+                        direction={isExpanded ? 'right' : 'left'}
+                        className="w-4 h-4"
+                    />
                 </button>
+                {/* More options segment - expandable to show tabs and export buttons */}
+                <div className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md transition-all">
+                    <button
+                        onClick={() => setIsMenuExpanded(!isMenuExpanded)}
+                        className="flex items-center justify-center w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                        title={isMenuExpanded ? 'Hide options' : 'Show options'}
+                    >
+                        {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
+                    </button>
+                    {/* Expanded content: tabs and export buttons */}
+                    {isMenuExpanded && (
+                        <>
+                            <div className="ml-1 mr-2 h-5 w-px bg-[var(--color-border)]" />
+                            <TRRTabs
+                                trrs={trrs}
+                                activeTrrId={activeTrr?.id || null}
+                                onSelectTrr={handleSelectTrr}
+                                onCreateTrr={handleCreateTrr}
+                                onDeleteTrr={handleDeleteTrr}
+                                isLoading={isCreating}
+                            />
+                            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
+                            <div className="flex items-center gap-1 pr-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleExport('pdf')}
+                                    disabled={!activeTrr || isExporting}
+                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
+                                    title="Export PDF"
+                                >
+                                    {isExporting ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <PdfIcon size={20} />
+                                    )}
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleExport('docx')}
+                                    disabled={!activeTrr || isExporting}
+                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
+                                    title="Export Word"
+                                >
+                                    <DocxIcon size={20} />
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Content Area */}
-            <div className="bg-[var(--color-bg-secondary)]">
-                {/* Tabs and Export Actions Row */}
-                <div className="flex items-center justify-between px-4 pt-2">
-                    {/* TRR Tabs (01, 02, etc. with + button) */}
-                    <TRRTabs
-                        trrs={trrs}
-                        activeTrrId={activeTrr?.id || null}
-                        onSelectTrr={handleSelectTrr}
-                        onCreateTrr={handleCreateTrr}
-                        onDeleteTrr={handleDeleteTrr}
-                        isLoading={isCreating}
-                    />
-
-                    {/* Export Buttons - Icon Only */}
-                    <div className="flex items-center gap-2 pb-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleExport('pdf')}
-                            disabled={!activeTrr || isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
-                            title="Export PDF"
-                        >
-                            {isExporting ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <PdfIcon size={22} />
-                            )}
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleExport('docx')}
-                            disabled={!activeTrr || isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
-                            title="Export Word"
-                        >
-                            <DocxIcon size={22} />
-                        </Button>
-                    </div>
-                </div>
-
+            <div>
                 {/* Tab Content - only shown when expanded */}
                 {isExpanded && (
-                    <div className="p-4 bg-[var(--color-bg-primary)]">
+                    <div className="mx-2 p-4 bg-[var(--color-bg-secondary)] rounded-md shadow-sm">
                         {isLoading ? (
                             <div className="p-8 text-center text-[var(--color-text-muted)]">
                                 <p>Loading TRRs...</p>

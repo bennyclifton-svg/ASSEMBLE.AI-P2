@@ -168,50 +168,49 @@ export function useContractors(projectId: string, trade?: string) {
     }
   };
 
-  const toggleAward = async (id: string, awarded: boolean) => {
+  const toggleAward = async (id: string, awarded: boolean, stakeholderId?: string) => {
     const contractor = contractors.find(c => c.id === id);
     if (!contractor) return;
 
-    let companyId = contractor.companyId;
+    // stakeholderId is required for the new award API
+    if (!stakeholderId) {
+      throw new Error('stakeholderId is required for award toggle');
+    }
 
     try {
-      if (awarded && !companyId) {
-        // Find or create company in master list
-        const response = await fetch('/api/cost-companies/find-or-create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: contractor.companyName,
-            abn: contractor.abn,
-            contactName: contractor.contactPerson,
-            contactEmail: contractor.email,
-            contactPhone: contractor.phone,
-            address: contractor.address,
-          }),
-        });
+      const response = await fetch('/api/firms/award', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          firmId: id,
+          firmType: 'contractor',
+          stakeholderId,
+          awarded,
+        }),
+      });
 
-        if (!response.ok) {
-          throw new Error('Failed to create company record');
-        }
-
-        const company = await response.json();
-        companyId = company.id;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update award status');
       }
 
-      // Update contractor with awarded status and companyId
-      await updateContractor(id, {
-        companyName: contractor.companyName,
-        contactPerson: contractor.contactPerson || undefined,
-        trade: contractor.trade,
-        email: contractor.email,
-        phone: contractor.phone || undefined,
-        address: contractor.address || undefined,
-        abn: contractor.abn || undefined,
-        notes: contractor.notes || undefined,
-        shortlisted: contractor.shortlisted,
-        awarded,
-        companyId,
-      });
+      const result = await response.json();
+
+      // Update local state
+      setContractors(prev => prev.map(c => {
+        if (c.id === id) {
+          // Update the awarded firm
+          return { ...c, awarded, companyId: result.companyId };
+        }
+        if (result.deawardedFirmIds?.includes(c.id)) {
+          // De-award previously awarded firms
+          return { ...c, awarded: false };
+        }
+        return c;
+      }));
+
+      return result;
     } catch (err) {
       throw err;
     }

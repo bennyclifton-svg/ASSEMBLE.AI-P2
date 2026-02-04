@@ -19,7 +19,7 @@ import {
     consultants,
     contractors,
 } from '@/lib/db';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 interface RouteParams {
@@ -37,6 +37,10 @@ export async function GET(
 ) {
     try {
         const { projectId, contextType, contextId } = await params;
+
+        // Extract evaluationPriceId from query params for multi-instance support
+        const { searchParams } = new URL(request.url);
+        const evaluationPriceId = searchParams.get('evaluationPriceId');
 
         // contextId is now the stakeholderId
         const stakeholderId = contextId;
@@ -79,6 +83,7 @@ export async function GET(
             const addSubsRowsData = [1, 2, 3].map((n, i) => ({
                 id: nanoid(),
                 evaluationId: evalId,
+                evaluationPriceId: evaluationPriceId || undefined,
                 tableType: 'adds_subs' as const,
                 description: '',
                 orderIndex: i,
@@ -91,17 +96,53 @@ export async function GET(
         }
 
         // Sync evaluation rows with current cost lines for this stakeholder
+        // Filter by section based on stakeholder group:
+        // - consultant stakeholders use CONSULTANTS section
+        // - contractor stakeholders use CONSTRUCTION section
+        const expectedSection = stakeholder.stakeholderGroup === 'consultant' ? 'CONSULTANTS' : 'CONSTRUCTION';
         const currentCostLines = await db.query.costLines.findMany({
             where: and(
                 eq(costLines.projectId, projectId),
-                eq(costLines.stakeholderId, stakeholderId)
+                eq(costLines.stakeholderId, stakeholderId),
+                eq(costLines.section, expectedSection)
             ),
             orderBy: [asc(costLines.sortOrder)],
         });
 
-        // Get existing evaluation rows
+        // Debug logging - remove after fixing
+        console.log('[Evaluation API] stakeholder:', stakeholder.name, 'group:', stakeholder.stakeholderGroup);
+        console.log('[Evaluation API] expectedSection:', expectedSection);
+        console.log('[Evaluation API] costLines count:', currentCostLines.length);
+        console.log('[Evaluation API] costLines:', currentCostLines.map(l => ({ activity: l.activity, section: l.section })));
+
+        // Parse deleted cost line IDs to skip during sync
+        // deletedCostLineIds is now keyed by evaluationPriceId (or "null" for legacy)
+        // This allows each evaluation price instance to independently track deletions
+        const rawDeletedIds = JSON.parse(evaluation?.deletedCostLineIds || '[]');
+        let deletedCostLineIds: Set<string>;
+
+        if (Array.isArray(rawDeletedIds)) {
+            // Legacy format: simple array - applies only to null evaluationPriceId (original tab)
+            deletedCostLineIds = evaluationPriceId
+                ? new Set<string>() // New instances start fresh
+                : new Set<string>(rawDeletedIds);
+        } else {
+            // New format: object keyed by evaluationPriceId
+            const key = evaluationPriceId || 'null';
+            deletedCostLineIds = new Set<string>(rawDeletedIds[key] || []);
+        }
+
+        // Get existing evaluation rows (filtered by evaluationPriceId if provided)
         const existingRows = await db.query.evaluationRows.findMany({
-            where: eq(evaluationRows.evaluationId, evaluation!.id),
+            where: evaluationPriceId
+                ? and(
+                    eq(evaluationRows.evaluationId, evaluation!.id),
+                    eq(evaluationRows.evaluationPriceId, evaluationPriceId)
+                )
+                : and(
+                    eq(evaluationRows.evaluationId, evaluation!.id),
+                    isNull(evaluationRows.evaluationPriceId)
+                ),
         });
 
         // Find which cost lines need new rows and which need updates
@@ -112,6 +153,7 @@ export async function GET(
         const rowsToCreate: Array<{
             id: string;
             evaluationId: string;
+            evaluationPriceId?: string;
             tableType: 'initial_price';
             description: string;
             orderIndex: number;
@@ -127,11 +169,17 @@ export async function GET(
         );
 
         currentCostLines.forEach((line, i) => {
+            // Skip cost lines that user has explicitly deleted
+            if (deletedCostLineIds.has(line.id)) {
+                return;
+            }
+
             if (!existingCostLineIds.has(line.id)) {
                 // New cost line - create evaluation row
                 rowsToCreate.push({
                     id: nanoid(),
                     evaluationId: evaluation!.id,
+                    evaluationPriceId: evaluationPriceId || undefined,
                     tableType: 'initial_price' as const,
                     description: line.activity,
                     orderIndex: i,
@@ -163,9 +211,17 @@ export async function GET(
                 .where(eq(evaluationRows.id, update.id));
         }
 
-        // Fetch all rows with cells
+        // Fetch rows with cells (filtered by evaluationPriceId if provided)
         const rows = await db.query.evaluationRows.findMany({
-            where: eq(evaluationRows.evaluationId, evaluation!.id),
+            where: evaluationPriceId
+                ? and(
+                    eq(evaluationRows.evaluationId, evaluation!.id),
+                    eq(evaluationRows.evaluationPriceId, evaluationPriceId)
+                )
+                : and(
+                    eq(evaluationRows.evaluationId, evaluation!.id),
+                    isNull(evaluationRows.evaluationPriceId)
+                ),
             orderBy: [asc(evaluationRows.orderIndex)],
             with: {
                 cells: true,
@@ -177,11 +233,13 @@ export async function GET(
 
         if (stakeholder.stakeholderGroup === 'consultant') {
             // Query consultants table matching the stakeholder's discipline
+            // Order by createdAt to match firm tiles display order
             const stakeholderConsultants = await db.query.consultants.findMany({
                 where: and(
                     eq(consultants.projectId, projectId),
                     eq(consultants.discipline, stakeholder.name)
                 ),
+                orderBy: [asc(consultants.createdAt)],
             });
 
             firms = stakeholderConsultants.map(c => ({
@@ -193,11 +251,13 @@ export async function GET(
             }));
         } else {
             // Query contractors table matching the stakeholder's trade
+            // Order by createdAt to match firm tiles display order
             const stakeholderContractors = await db.query.contractors.findMany({
                 where: and(
                     eq(contractors.projectId, projectId),
                     eq(contractors.trade, stakeholder.name)
                 ),
+                orderBy: [asc(contractors.createdAt)],
             });
 
             firms = stakeholderContractors.map(c => ({

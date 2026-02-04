@@ -10,7 +10,7 @@ interface RiskFlagsProps {
   projectType: ProjectType | null;
   subclass: string[];
   scaleData: Record<string, number>;
-  complexity: Record<string, string>;
+  complexity: Record<string, string | string[]>;
   workScope?: string[];
 }
 
@@ -86,6 +86,12 @@ export function RiskFlags({
     const riskDefinitions = workScopeOptions?.riskDefinitions || {};
     const addedRisks = new Set<string>();
 
+    // Normalize site_conditions to array (supports both string and string[])
+    const siteConditionsValue = complexity.site_conditions;
+    const siteConditions: string[] = Array.isArray(siteConditionsValue)
+      ? siteConditionsValue
+      : siteConditionsValue ? [siteConditionsValue] : [];
+
     workScope.forEach((scopeValue) => {
       const scopeItem = findWorkScopeItem(scopeValue, projectType);
       if (scopeItem?.riskFlag && !addedRisks.has(scopeItem.riskFlag)) {
@@ -104,7 +110,7 @@ export function RiskFlags({
     });
 
     // Bushfire + Class 9c warning (POWER-016)
-    if (complexity.site_conditions === 'bushfire' && subclass.includes('aged_care_9c')) {
+    if (siteConditions.includes('bushfire') && subclass.includes('aged_care_9c')) {
       result.push({
         id: 'bushfire-9c',
         severity: 'critical',
@@ -115,7 +121,7 @@ export function RiskFlags({
     }
 
     // Generic bushfire warning
-    if (complexity.site_conditions === 'bushfire') {
+    if (siteConditions.includes('bushfire')) {
       result.push({
         id: 'bushfire-general',
         severity: 'warning',
@@ -126,13 +132,35 @@ export function RiskFlags({
     }
 
     // Flood overlay warning
-    if (complexity.site_conditions === 'flood') {
+    if (siteConditions.includes('flood')) {
       result.push({
         id: 'flood',
         severity: 'warning',
         title: 'Flood Overlay Zone',
         description: 'Flood planning controls may require elevated floor levels, flood-resistant materials, and stormwater management.',
         icon: <Droplets className="w-4 h-4" />,
+      });
+    }
+
+    // Coastal site warning
+    if (siteConditions.includes('coastal')) {
+      result.push({
+        id: 'coastal',
+        severity: 'warning',
+        title: 'Coastal Site',
+        description: 'Coastal areas require consideration of sea level rise, storm surge, and corrosive marine environment on materials.',
+        icon: <Droplets className="w-4 h-4" />,
+      });
+    }
+
+    // Sloping site warning
+    if (siteConditions.includes('sloping')) {
+      result.push({
+        id: 'sloping',
+        severity: 'info',
+        title: 'Sloping Site (>15%)',
+        description: 'Steep gradients may require retaining walls, specialized foundations, and additional excavation/fill.',
+        icon: <AlertTriangle className="w-4 h-4" />,
       });
     }
 

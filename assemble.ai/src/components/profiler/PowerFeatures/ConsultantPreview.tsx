@@ -10,7 +10,7 @@ interface ConsultantPreviewProps {
   projectType: ProjectType | null;
   subclass: string[];
   scaleData: Record<string, number>;
-  complexity: Record<string, string>;
+  complexity: Record<string, string | string[]>;
   workScope?: string[];
 }
 
@@ -198,10 +198,14 @@ export function ConsultantPreview({
 
     // Add complexity-triggered disciplines
     Object.entries(complexity).forEach(([_, value]) => {
-      const complexityDiscipline = COMPLEXITY_DISCIPLINES[value];
-      if (complexityDiscipline && !disciplineMap.has(complexityDiscipline.name)) {
-        disciplineMap.set(complexityDiscipline.name, complexityDiscipline);
-      }
+      // Handle array values (site_conditions supports multi-select)
+      const values = Array.isArray(value) ? value : [value];
+      values.forEach((v) => {
+        const complexityDiscipline = COMPLEXITY_DISCIPLINES[v];
+        if (complexityDiscipline && !disciplineMap.has(complexityDiscipline.name)) {
+          disciplineMap.set(complexityDiscipline.name, complexityDiscipline);
+        }
+      });
     });
 
     // Add scale-triggered disciplines

@@ -27,7 +27,7 @@ export function ObjectivesNav({ projectId, data, profileData, onShowObjectives, 
                         data?.functionalQuality?.source === 'ai_polished';
 
   return (
-    <div className={`nav-panel-section py-3 pl-2 pr-3 ${isActive ? 'nav-panel-active' : ''}`}>
+    <div className={`nav-panel-section py-3 ${isActive ? 'nav-panel-active' : ''}`}>
       <button
         onClick={onShowObjectives}
         className="nav-panel-header w-full"
@@ -50,7 +50,7 @@ export function ObjectivesNav({ projectId, data, profileData, onShowObjectives, 
       </button>
 
       {/* Summary of current state */}
-      <div className="mt-2 space-y-1.5">
+      <div className="nav-panel-content mt-2 space-y-1.5">
         {hasAnyContent ? (
           <>
             {/* Preview of objectives */}

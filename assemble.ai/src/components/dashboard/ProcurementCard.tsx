@@ -48,7 +48,7 @@ interface ProfileData {
     subclass: string[];
     subclassOther: string[] | null;
     scaleData: Record<string, number>;
-    complexity: Record<string, string>;
+    complexity: Record<string, string | string[]>;
     workScope: string[];
 }
 
@@ -353,13 +353,13 @@ export function ProcurementCard({
                             onValueChange={(value) => setActiveTab(value)}
                             className="flex-1 flex flex-col min-h-0"
                         >
-                            <TabsList className="w-full justify-start bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2 flex-wrap">
+                            <TabsList className="w-full justify-start bg-[#f0f0f0] dark:bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 flex-wrap">
                                 {/* Consultant tabs */}
                                 {consultantStakeholders.map(s => (
                                     <TabsTrigger
                                         key={`consultant-${s.id}`}
                                         value={`consultant-${s.id}`}
-                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-[var(--color-bg-primary)]"
                                     >
                                         {s.disciplineOrTrade || s.name}
                                     </TabsTrigger>
@@ -370,7 +370,7 @@ export function ProcurementCard({
                                     <TabsTrigger
                                         key={`contractor-${s.id}`}
                                         value={`contractor-${s.id}`}
-                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50"
+                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-[var(--color-bg-primary)]"
                                     >
                                         {s.disciplineOrTrade || s.name}
                                     </TabsTrigger>

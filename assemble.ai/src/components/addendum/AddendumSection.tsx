@@ -12,14 +12,13 @@ import { useAddendumTransmittal } from '@/lib/hooks/use-addendum-transmittal';
 import { AddendumTabs } from './AddendumTabs';
 import { AddendumContent } from './AddendumContent';
 import { AddendumTransmittalSchedule } from './AddendumTransmittalSchedule';
-import { FileText } from 'lucide-react';
+import { FileText, MoreHorizontal, MoreVertical } from 'lucide-react';
+import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 
-// Procurement section accent color (copper from design system)
-const SECTION_ACCENT = 'var(--primitive-copper-darker)'; // Warm bronze for icons
-const SECTION_TINT = 'var(--color-accent-copper-tint)';
-const SECTION_TEXT = 'var(--primitive-copper-darker)'; // Bronze text on copper-tint bg
+// Procurement section accent color (aurora blue from design system)
+const SECTION_ACCENT = 'var(--color-accent-copper)'; // Aurora blue for icons
 
 interface AddendumSectionProps {
     projectId: string;
@@ -40,6 +39,7 @@ export function AddendumSection({
 }: AddendumSectionProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isMenuExpanded, setIsMenuExpanded] = useState(false);
 
     // Use context for expanded state persistence across tab navigation
     const {
@@ -203,89 +203,88 @@ export function AddendumSection({
 
     const contextName = stakeholderName || 'Unknown';
 
-    // Solid triangle icons - matching Firm Cards style
-    const TriangleRight = () => (
-        <svg
-            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
-            viewBox="0 0 12 12"
-            fill="currentColor"
-        >
-            <polygon points="2,0 12,6 2,12" />
-        </svg>
-    );
-
-    const TriangleDown = () => (
-        <svg
-            className="w-3.5 h-3.5 text-[var(--color-text-muted)]"
-            viewBox="0 0 12 12"
-            fill="currentColor"
-        >
-            <polygon points="0,2 12,2 6,12" />
-        </svg>
-    );
-
     return (
-        <div className="mt-6 border border-[var(--color-border)] rounded-lg overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
-                <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                >
+        <div className="mt-6">
+            {/* Header - Segmented white ribbons with grey surround */}
+            <div className="flex items-stretch gap-0.5 p-2">
+                {/* Addendum segment */}
+                <div className="flex items-center w-[220px] px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
                     <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
-                    <span className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+                    <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         Addendum
                     </span>
-                    {isExpanded ? <TriangleDown /> : <TriangleRight />}
+                </div>
+                {/* Corner bracket segment - square, points out to expand, in to collapse */}
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="flex items-center justify-center p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    title={isExpanded ? 'Collapse' : 'Expand'}
+                >
+                    <CornerBracketIcon
+                        direction={isExpanded ? 'right' : 'left'}
+                        className="w-4 h-4"
+                    />
                 </button>
+                {/* More options segment - expandable to show tabs and export buttons */}
+                <div className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md transition-all">
+                    <button
+                        onClick={() => setIsMenuExpanded(!isMenuExpanded)}
+                        className="flex items-center justify-center w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                        title={isMenuExpanded ? 'Hide options' : 'Show options'}
+                    >
+                        {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
+                    </button>
+                    {/* Expanded content: tabs and export buttons */}
+                    {isMenuExpanded && (
+                        <>
+                            <div className="ml-1 mr-2 h-5 w-px bg-[var(--color-border)]" />
+                            <AddendumTabs
+                                addenda={addenda}
+                                activeAddendumId={activeAddendumId}
+                                onSelectAddendum={handleSelectAddendum}
+                                onCreateAddendum={handleCreateAddendumWithExpand}
+                                onDeleteAddendum={handleDeleteAddendum}
+                                isLoading={isLoading}
+                            />
+                            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
+                            <div className="flex items-center gap-1 pr-2">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleExport('pdf')}
+                                    disabled={!activeAddendumId || isExporting}
+                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
+                                    title="Export PDF"
+                                >
+                                    <PdfIcon size={20} />
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleExport('docx')}
+                                    disabled={!activeAddendumId || isExporting}
+                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
+                                    title="Export Word"
+                                >
+                                    <DocxIcon size={20} />
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
 
-            {/* Tabs - always visible */}
-            <div className="bg-[var(--color-bg-secondary)]">
-                {/* Tabs and Actions Row */}
-                <div className="flex items-center justify-between px-4 pt-2 border-b border-[var(--color-border)]">
-                    <AddendumTabs
-                        addenda={addenda}
-                        activeAddendumId={activeAddendumId}
-                        onSelectAddendum={handleSelectAddendum}
-                        onCreateAddendum={handleCreateAddendumWithExpand}
-                        onDeleteAddendum={handleDeleteAddendum}
-                        isLoading={isLoading}
-                    />
-                    <div className="flex items-center gap-2 pb-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleExport('pdf')}
-                            disabled={!activeAddendumId || isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
-                            title="Export PDF"
-                        >
-                            <PdfIcon size={22} />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleExport('docx')}
-                            disabled={!activeAddendumId || isExporting}
-                            className="h-8 w-8 p-0 hover:bg-[var(--color-border)]"
-                            title="Export Word"
-                        >
-                            <DocxIcon size={22} />
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Content Area - only shown when expanded */}
+            {/* Content Area */}
+            <div>
+                {/* Content - only shown when expanded */}
                 {isExpanded && (
                     activeAddendum ? (
-                        <div className="p-4 bg-[var(--color-bg-primary)]">
+                        <div className="mx-2 p-4 bg-[var(--color-bg-secondary)] rounded-md shadow-sm">
                             <AddendumContent
                                 projectId={projectId}
                                 addendum={activeAddendum}
                                 onUpdateContent={updateContent}
                                 onUpdateDate={updateDate}
-                                onDelete={() => handleDeleteAddendum(activeAddendum.id)}
                             />
 
                             <AddendumTransmittalSchedule
@@ -300,7 +299,7 @@ export function AddendumSection({
                             />
                         </div>
                     ) : (
-                        <div className="p-8 text-center text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
+                        <div className="mx-2 p-8 text-center text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] rounded-md shadow-sm">
                             {isLoading ? (
                                 <p>Loading addenda...</p>
                             ) : (

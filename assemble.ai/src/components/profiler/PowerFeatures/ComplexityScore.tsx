@@ -10,7 +10,7 @@ interface ComplexityScorecardProps {
   projectType?: ProjectType | null;
   subclass: string[];
   scaleData: Record<string, number>;
-  complexity: Record<string, string>;
+  complexity: Record<string, string | string[]>;
   workScope?: string[];
 }
 
@@ -168,25 +168,30 @@ export function ComplexityScore({
 
     // Base score from complexity selections
     Object.entries(complexity).forEach(([dimension, value]) => {
-      const multiplier = COMPLEXITY_MULTIPLIERS[value] ?? 0;
-      const points = Math.round(multiplier * 10) / 10;
+      // Handle array values (site_conditions supports multi-select)
+      const values = Array.isArray(value) ? value : [value];
 
-      if (points > 0) {
-        let impact: 'low' | 'medium' | 'high' = 'low';
-        if (points >= 2) impact = 'high';
-        else if (points >= 1) impact = 'medium';
+      values.forEach((v) => {
+        const multiplier = COMPLEXITY_MULTIPLIERS[v] ?? 0;
+        const points = Math.round(multiplier * 10) / 10;
 
-        const dimensionLabel = dimension.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
-        const valueLabel = value.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+        if (points > 0) {
+          let impact: 'low' | 'medium' | 'high' = 'low';
+          if (points >= 2) impact = 'high';
+          else if (points >= 1) impact = 'medium';
 
-        contributingFactors.push({
-          label: dimensionLabel,
-          impact,
-          points,
-          description: valueLabel,
-        });
-        totalPoints += points;
-      }
+          const dimensionLabel = dimension.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+          const valueLabel = v.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+
+          contributingFactors.push({
+            label: dimensionLabel,
+            impact,
+            points,
+            description: valueLabel,
+          });
+          totalPoints += points;
+        }
+      });
     });
 
     // Scale-based complexity

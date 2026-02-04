@@ -23,18 +23,18 @@ const spectral = Spectral({
 });
 
 export const metadata: Metadata = {
-    title: 'ASSEMBLE.AI - AI-Powered Construction Project Management',
-    description: 'Build faster. Save time. Stand out. ASSEMBLE.AI is the AI platform that turns project chaos into an ongoing way of working for AEC firms.',
+    title: 'Foundry - AI-Powered Construction Project Management',
+    description: 'Build faster. Save time. Stand out. Foundry is the AI platform that turns project chaos into an ongoing way of working for AEC firms.',
     openGraph: {
-        title: 'ASSEMBLE.AI - AI-Powered Construction Project Management',
+        title: 'Foundry - AI-Powered Construction Project Management',
         description: 'Build faster. Save time. Stand out. The AI platform for architecture, engineering, and construction firms.',
         type: 'website',
         locale: 'en_AU',
-        siteName: 'ASSEMBLE.AI',
+        siteName: 'Foundry',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'ASSEMBLE.AI',
+        title: 'Foundry',
         description: 'AI-Powered Construction Project Management',
     },
     robots: {

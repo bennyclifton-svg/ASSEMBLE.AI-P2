@@ -10,12 +10,13 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { JSDOM } from 'jsdom';
+import { EXPORT_COLORS } from './theme-config';
 
-// Heading colors (same as editor)
+// Heading colors (from shared theme config)
 const HEADING_COLORS = {
-  H1: '#5B9BD5', // Professional Blue
-  H2: '#70AD47', // Fresh Green
-  H3: '#ED7D31', // Warm Amber
+  H1: EXPORT_COLORS.headings.h1,
+  H2: EXPORT_COLORS.headings.h2,
+  H3: EXPORT_COLORS.headings.h3,
 } as const;
 
 /**

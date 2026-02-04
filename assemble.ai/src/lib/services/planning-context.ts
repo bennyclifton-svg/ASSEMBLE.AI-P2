@@ -952,9 +952,15 @@ export function getRecommendedDisciplines(
     buildingClass: string,
     projectType: string,
     subclass: string[],
-    complexity: Record<string, string>
+    complexity: Record<string, string | string[]>
 ): RecommendedDiscipline[] {
     const disciplines: RecommendedDiscipline[] = [];
+
+    // Normalize site_conditions to array (supports both string and string[])
+    const siteConditionsValue = complexity.site_conditions;
+    const siteConditions: string[] = Array.isArray(siteConditionsValue)
+        ? siteConditionsValue
+        : siteConditionsValue ? [siteConditionsValue] : [];
 
     // Base disciplines
     for (const name of BASE_DISCIPLINES) {
@@ -973,11 +979,17 @@ export function getRecommendedDisciplines(
     if (complexity.heritage === 'listed' || complexity.heritage === 'conservation') {
         disciplines.push({ name: 'Heritage Consultant', required: true, reason: 'Heritage requirements' });
     }
-    if (complexity.site_conditions === 'bushfire') {
+    if (siteConditions.includes('bushfire')) {
         disciplines.push({ name: 'Bushfire Consultant (BPAD)', required: true, reason: 'BAL compliance' });
     }
-    if (complexity.site_conditions === 'flood') {
+    if (siteConditions.includes('flood')) {
         disciplines.push({ name: 'Flood Engineer', required: true, reason: 'Flood planning requirements' });
+    }
+    if (siteConditions.includes('coastal')) {
+        disciplines.push({ name: 'Coastal Engineer', required: true, reason: 'Coastal hazard management' });
+    }
+    if (siteConditions.includes('sloping')) {
+        disciplines.push({ name: 'Geotechnical Engineer', required: true, reason: 'Steep site assessment' });
     }
     if (complexity.approval_pathway === 'state_significant') {
         disciplines.push({ name: 'Planning Consultant', required: true, reason: 'SSD pathway' });

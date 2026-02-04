@@ -75,7 +75,7 @@ export function PlanningCard({
     }
 
     return (
-        <div className="h-full overflow-y-auto p-3 section-planning" style={{ scrollbarGutter: 'stable both-edges' }}>
+        <div className="h-full overflow-y-auto section-planning">
             <div className="nav-panel-unified">
                 <DetailsSection
                     key={projectId}

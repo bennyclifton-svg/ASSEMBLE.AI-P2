@@ -6,16 +6,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { InlineRatingButtons } from './RatingBadge';
 import type { EvaluationNonPriceCell, QualityRating } from '@/types/evaluation';
 import {
     getDisplayContent,
     getDisplayRating,
-    isAIGenerated,
-    isLowConfidence,
-    isUserEdited,
 } from '@/types/evaluation';
 import { cn } from '@/lib/utils';
 
@@ -40,9 +35,6 @@ export function NonPriceCell({
 
     const content = cell ? getDisplayContent(cell) : null;
     const rating = cell ? getDisplayRating(cell) : null;
-    const aiGenerated = cell ? isAIGenerated(cell) : false;
-    const lowConfidence = cell ? isLowConfidence(cell) : false;
-    const userEdited = cell ? isUserEdited(cell) : false;
 
     // Auto-resize textarea to fit content
     const autoResize = () => {
@@ -55,9 +47,7 @@ export function NonPriceCell({
     // Focus textarea when entering edit mode and auto-resize
     useEffect(() => {
         if (isEditing && textareaRef.current) {
-            textareaRef.current.focus();
-            textareaRef.current.select();
-            // Auto-resize after focus
+            // Auto-resize after render
             setTimeout(autoResize, 0);
         }
     }, [isEditing]);
@@ -110,19 +100,14 @@ export function NonPriceCell({
     return (
         <div
             className={cn(
-                'flex flex-col h-full min-h-[80px] border-r border-[var(--color-border)]',
+                'flex flex-col h-full min-h-[80px]',
                 disabled && 'opacity-60'
             )}
         >
             {/* Content area - top section */}
             <div
                 onClick={handleContentClick}
-                className={cn(
-                    'flex-1 p-2 cursor-text transition-colors min-h-[60px]',
-                    'hover:bg-[var(--color-bg-tertiary)]',
-                    isEditing && 'bg-[var(--color-bg-tertiary)]',
-                    !content && !isEditing && 'bg-[var(--color-bg-secondary)]'
-                )}
+                className="flex-1 p-2 cursor-text min-h-[60px]"
             >
                 {isEditing ? (
                     <textarea
@@ -136,14 +121,15 @@ export function NonPriceCell({
                         onKeyDown={handleKeyDown}
                         placeholder="Enter assessment..."
                         maxLength={200}
+                        autoFocus
                         className={cn(
                             'w-full min-h-[44px] text-xs text-[var(--color-text-primary)] leading-relaxed',
-                            'bg-transparent resize-none outline-none',
+                            'bg-transparent resize-none outline-none border-none',
                             'placeholder:text-[var(--color-text-muted)] placeholder:italic'
                         )}
                     />
                 ) : (
-                    <div className="text-xs text-[var(--color-text-primary)] leading-relaxed min-h-[44px]">
+                    <div className="text-xs text-[var(--color-text-primary)] leading-relaxed min-h-[44px] whitespace-pre-line">
                         {content ? (
                             <>
                                 {content}
@@ -158,29 +144,14 @@ export function NonPriceCell({
                 )}
             </div>
 
-            {/* Bottom row: Rating buttons + AI indicators */}
-            <div className="flex items-center justify-between px-2 py-1.5 bg-[var(--color-bg-secondary)] border-t border-[var(--color-border)]">
-                {/* Rating buttons - always visible */}
+            {/* Bottom row: Rating buttons */}
+            <div className="flex items-center px-2 py-1.5">
                 <InlineRatingButtons
                     value={rating}
                     onChange={handleRatingChange}
                     disabled={disabled}
                     saving={isSavingRating}
                 />
-
-                {/* AI indicators */}
-                <div className="flex items-center gap-1">
-                    {aiGenerated && !userEdited && (
-                        <span title="AI-extracted content">
-                            <DiamondIcon className="w-3 h-3 text-[var(--color-accent-copper)]" />
-                        </span>
-                    )}
-                    {lowConfidence && !userEdited && (
-                        <span title="Low confidence - review suggested">
-                            <AlertTriangle className="w-3 h-3 text-yellow-500" />
-                        </span>
-                    )}
-                </div>
             </div>
         </div>
     );

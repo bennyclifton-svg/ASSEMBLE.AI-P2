@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { contractors } from '@/lib/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, asc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
 // GET /api/contractors/firms?projectId=X&trade=Y
@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
           eq(contractors.projectId, projectId),
           eq(contractors.trade, trade)
         )
-      );
+      ).orderBy(asc(contractors.createdAt));
     } else {
-      result = await db.select().from(contractors).where(eq(contractors.projectId, projectId));
+      result = await db.select().from(contractors).where(eq(contractors.projectId, projectId)).orderBy(asc(contractors.createdAt));
     }
 
     return NextResponse.json(result);

@@ -117,6 +117,7 @@ export const projectDetails = pgTable('project_details', {
     lotArea: integer('lot_area'),
     numberOfStories: integer('number_of_stories'),
     buildingClass: text('building_class'),
+    tenderReleaseDate: text('tender_release_date'),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
 
@@ -546,10 +547,22 @@ export const rftNewTransmittals = pgTable('rft_new_transmittals', {
 // EVALUATION SCHEMA
 // ============================================================================
 
+// Evaluation Price instances (multi-instance with numbered tabs like RFT/TRR)
+export const evaluationPrice = pgTable('evaluation_price', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    evaluationPriceNumber: integer('evaluation_price_number').notNull().default(1),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Evaluations (now used for non-price evaluation only)
 export const evaluations = pgTable('evaluations', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
     stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    deletedCostLineIds: text('deleted_cost_line_ids').default('[]'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -573,8 +586,9 @@ export const tenderSubmissions = pgTable('tender_submissions', {
 export const evaluationRows = pgTable('evaluation_rows', {
     id: text('id').primaryKey(),
     evaluationId: text('evaluation_id')
-        .references(() => evaluations.id, { onDelete: 'cascade' })
-        .notNull(),
+        .references(() => evaluations.id, { onDelete: 'cascade' }),
+    evaluationPriceId: text('evaluation_price_id')
+        .references(() => evaluationPrice.id, { onDelete: 'cascade' }),
     tableType: text('table_type').notNull(),
     description: text('description').notNull(),
     orderIndex: integer('order_index').notNull(),
@@ -918,6 +932,18 @@ export const rftNewTransmittalsRelations = relations(rftNewTransmittals, ({ one 
     }),
 }));
 
+export const evaluationPriceRelations = relations(evaluationPrice, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [evaluationPrice.projectId],
+        references: [projects.id],
+    }),
+    stakeholder: one(projectStakeholders, {
+        fields: [evaluationPrice.stakeholderId],
+        references: [projectStakeholders.id],
+    }),
+    rows: many(evaluationRows),
+}));
+
 export const evaluationsRelations = relations(evaluations, ({ one, many }) => ({
     project: one(projects, {
         fields: [evaluations.projectId],
@@ -946,6 +972,10 @@ export const evaluationRowsRelations = relations(evaluationRows, ({ one, many })
     evaluation: one(evaluations, {
         fields: [evaluationRows.evaluationId],
         references: [evaluations.id],
+    }),
+    evaluationPriceInstance: one(evaluationPrice, {
+        fields: [evaluationRows.evaluationPriceId],
+        references: [evaluationPrice.id],
     }),
     costLine: one(costLines, {
         fields: [evaluationRows.costLineId],
@@ -1256,6 +1286,7 @@ export const notes = pgTable('notes', {
     title: text('title').notNull().default('New Note'),
     content: text('content'),
     isStarred: boolean('is_starred').default(false),
+    color: text('color').default('yellow'), // 'yellow' | 'blue' | 'green' | 'pink'
     reportingPeriodStart: text('reporting_period_start'),
     reportingPeriodEnd: text('reporting_period_end'),
     createdAt: text('created_at'),

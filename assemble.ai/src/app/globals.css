@@ -113,7 +113,7 @@
 
   /* Cool Gray Palette (Clean/Tech) */
   /* Cool Gray Palette (Slate - Colder/Bluer) */
-  --primitive-cool-gray-50: #f8fafc;
+  --primitive-cool-gray-50: #f5f5f7;
   --primitive-cool-gray-100: #f1f5f9;
   --primitive-cool-gray-200: #e2e8f0;
   --primitive-cool-gray-300: #cbd5e1;
@@ -222,11 +222,17 @@
   --scrollbar-thumb: var(--primitive-slate-700);
   --scrollbar-thumb-hover: var(--primitive-slate-600);
 
-  /* Firm Card Colors - subtle yellow tint for dark mode */
-  --color-card-firm: rgba(232, 185, 49, 0.08);
-  --color-card-firm-hover: rgba(232, 185, 49, 0.12);
-  --color-card-firm-border: rgba(232, 185, 49, 0.18);
-  --color-card-firm-field: rgba(232, 185, 49, 0.15);
+  /* Firm Card Colors - subtle white tint for dark mode */
+  --color-card-firm: rgba(255, 255, 255, 0.08);
+  --color-card-firm-hover: rgba(255, 255, 255, 0.12);
+  --color-card-firm-border: rgba(255, 255, 255, 0.18);
+  --color-card-firm-field: rgba(255, 255, 255, 0.15);
+  --color-card-firm-text: #E8E6E3;
+
+  /* Work Scope Card Colors - green tint for dark mode */
+  --color-card-scope: rgba(74, 222, 128, 0.15);
+  --color-card-scope-selected: rgba(74, 222, 128, 0.25);
+  --color-card-scope-text: #86efac;
 
   /* Tailwind CSS Theme Integration */
   --background: var(--color-bg-primary);
@@ -256,9 +262,9 @@
    ============================================ */
 [data-theme="precision-light"] {
   /* Backgrounds - Cool tech aesthetic */
-  --color-bg-primary: var(--primitive-cool-gray-50);
-  --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: var(--primitive-cool-gray-100);
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #ffffff;
+  --color-bg-tertiary: #f0f0f0;
   --color-bg-elevated: #FFFFFF;
   --color-bg-inverse: var(--primitive-cool-gray-900);
 
@@ -349,6 +355,12 @@
   --color-card-firm-hover: #FEF08A;
   --color-card-firm-border: transparent;
   --color-card-firm-field: #FEF3C7;
+  --color-card-firm-text: #000000;
+
+  /* Work Scope Card Colors - green for light mode */
+  --color-card-scope: #98f5b8;
+  --color-card-scope-selected: #c8ffd8;
+  --color-card-scope-text: #000000;
 
   /* Tailwind CSS Theme Integration */
   --background: var(--color-bg-primary);
@@ -1199,11 +1211,12 @@ textarea:-webkit-autofill:active {
 /* Light theme - Sub tabs with solid color */
 [data-theme="precision-light"] .tab-aurora-sub {
   position: relative;
+  background: #f0f0f0;
 }
 
 [data-theme="precision-light"] .tab-aurora-sub[data-state="active"] {
   color: #0066CC;
-  background: transparent;
+  background: white;
 }
 
 [data-theme="precision-light"] .tab-aurora-sub[data-state="active"]::after {
@@ -1460,8 +1473,6 @@ textarea:-webkit-autofill:active {
 .nav-panel-unified {
   background: rgba(20, 22, 24, 0.85);
   /* More opaque base */
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 
 /* Internal section within unified panel */
@@ -1475,7 +1486,7 @@ textarea:-webkit-autofill:active {
 
 /* Section divider (not on last section) */
 .nav-panel-section:not(:last-child) {
-  border-bottom: 1px solid var(--color-border);
+  /* No border between sections */
 }
 
 /* Section hover state - very transparent Aurora tint */
@@ -1495,13 +1506,13 @@ textarea:-webkit-autofill:active {
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
+  height: 1px;
   background: linear-gradient(90deg,
       #0080FF 0%,
       #00FFFF 50%,
       #8B5CF6 100%);
   border-radius: 0;
-  opacity: 0.9;
+  opacity: 0.8;
 }
 
 /* Active section bottom accent line - Aurora gradient */
@@ -1538,8 +1549,7 @@ textarea:-webkit-autofill:active {
 
 /* Light theme adjustments for unified sections */
 [data-theme="precision-light"] .nav-panel-unified {
-  background: rgba(248, 250, 252, 0.9);
-  /* Cool gray base */
+  background: #ffffff;
 }
 
 [data-theme="precision-light"] .nav-panel-section {
@@ -1643,6 +1653,14 @@ textarea:-webkit-autofill:active {
   justify-content: space-between;
   cursor: pointer;
   transition: all 0.15s ease;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+/* Nav panel content area */
+.nav-panel-content {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
 }
 
 .nav-panel-header:hover .nav-panel-title {
@@ -1665,9 +1683,21 @@ textarea:-webkit-autofill:active {
 
 /* Nav panel chevron icon */
 .nav-panel-chevron {
+  opacity: 0;
   transition:
     color 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+/* Show chevron on section hover */
+.nav-panel-section:hover .nav-panel-chevron {
+  opacity: 1;
+}
+
+/* Active state: always show chevron */
+.nav-panel-section.nav-panel-active .nav-panel-chevron {
+  opacity: 1;
 }
 
 /* Light theme adjustments - Aurora */
@@ -2059,4 +2089,176 @@ textarea:-webkit-autofill:active {
   .col-priority-3 {
     display: none;
   }
+}
+
+/* ============================================
+   AURORA TABLE HEADERS
+   Gradient header styling for evaluation tables
+   ============================================ */
+
+/* Dark theme - Aurora gradient headers */
+[data-theme="precision"] .table-header-aurora {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 128, 255, 0.12) 0%,
+    rgba(0, 255, 255, 0.08) 50%,
+    rgba(139, 92, 246, 0.10) 100%
+  );
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+  position: relative;
+}
+
+[data-theme="precision"] .table-header-aurora::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 128, 255, 0.4) 20%,
+    rgba(0, 255, 255, 0.5) 50%,
+    rgba(139, 92, 246, 0.4) 80%,
+    transparent 100%
+  );
+}
+
+/* Dark theme - Aurora header text */
+[data-theme="precision"] .table-header-aurora th {
+  color: rgba(0, 255, 255, 0.9);
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+/* Dark theme - Subtle hover glow on header cells */
+[data-theme="precision"] .table-header-aurora th:hover {
+  background: rgba(0, 255, 255, 0.08);
+}
+
+/* Light theme - Aurora gradient headers */
+[data-theme="precision-light"] .table-header-aurora {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 102, 204, 0.08) 0%,
+    rgba(8, 145, 178, 0.05) 50%,
+    rgba(109, 40, 217, 0.06) 100%
+  );
+  border-bottom: 1px solid rgba(0, 102, 204, 0.15);
+  position: relative;
+}
+
+[data-theme="precision-light"] .table-header-aurora::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 102, 204, 0.3) 20%,
+    rgba(8, 145, 178, 0.4) 50%,
+    rgba(109, 40, 217, 0.3) 80%,
+    transparent 100%
+  );
+}
+
+/* Light theme - Aurora header text */
+[data-theme="precision-light"] .table-header-aurora th {
+  color: #0066CC;
+}
+
+/* Light theme - Subtle hover on header cells */
+[data-theme="precision-light"] .table-header-aurora th:hover {
+  background: rgba(0, 102, 204, 0.06);
+}
+
+/* Default/fallback (no theme attribute) - Dark theme */
+:root:not([data-theme]) .table-header-aurora {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 128, 255, 0.12) 0%,
+    rgba(0, 255, 255, 0.08) 50%,
+    rgba(139, 92, 246, 0.10) 100%
+  );
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+  position: relative;
+}
+
+:root:not([data-theme]) .table-header-aurora::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 128, 255, 0.4) 20%,
+    rgba(0, 255, 255, 0.5) 50%,
+    rgba(139, 92, 246, 0.4) 80%,
+    transparent 100%
+  );
+}
+
+:root:not([data-theme]) .table-header-aurora th {
+  color: rgba(0, 255, 255, 0.9);
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+:root:not([data-theme]) .table-header-aurora th:hover {
+  background: rgba(0, 255, 255, 0.08);
+}
+
+/* ============================================
+   EVALUATION TABLE SECTION HEADERS
+   Prominent styling for Initial Price and Adds & Subs section titles
+   ============================================ */
+
+/* Dark theme - Section header title cell */
+[data-theme="precision"] .table-section-header {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 128, 255, 0.18) 0%,
+    rgba(0, 255, 255, 0.12) 100%
+  );
+  font-weight: 600 !important;
+  font-size: 0.8125rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(0, 255, 255, 0.95) !important;
+  border-bottom: 2px solid rgba(0, 255, 255, 0.3) !important;
+}
+
+/* Light theme - Section header title cell */
+[data-theme="precision-light"] .table-section-header {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 102, 204, 0.12) 0%,
+    rgba(8, 145, 178, 0.08) 100%
+  );
+  font-weight: 600 !important;
+  font-size: 0.8125rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0066CC !important;
+  border-bottom: 2px solid rgba(0, 102, 204, 0.25) !important;
+}
+
+/* Default/fallback - Section header */
+:root:not([data-theme]) .table-section-header {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 128, 255, 0.18) 0%,
+    rgba(0, 255, 255, 0.12) 100%
+  );
+  font-weight: 600 !important;
+  font-size: 0.8125rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(0, 255, 255, 0.95) !important;
+  border-bottom: 2px solid rgba(0, 255, 255, 0.3) !important;
 }

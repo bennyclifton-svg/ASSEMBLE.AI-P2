@@ -36,11 +36,11 @@ export function TRRHeaderTable({
     };
 
     return (
-        <div className="border border-[var(--color-border)] rounded overflow-hidden">
+        <div className="overflow-hidden rounded-lg">
             <table className="w-full text-sm">
                 <tbody>
                     <tr className="border-b border-[var(--color-border)]">
-                        <td className="w-36 px-4 py-2.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] font-medium">
+                        <td className="w-36 px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                             Project Name
                         </td>
                         <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -48,7 +48,7 @@ export function TRRHeaderTable({
                         </td>
                     </tr>
                     <tr className="border-b border-[var(--color-border)]">
-                        <td className="px-4 py-2.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] font-medium">
+                        <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                             Address
                         </td>
                         <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -56,17 +56,20 @@ export function TRRHeaderTable({
                         </td>
                     </tr>
                     <tr>
-                        <td className="px-4 py-2.5 bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] font-medium">
+                        <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                             Document
                         </td>
                         <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
                             {documentTitle}
                         </td>
                         <td
-                            className="w-36 px-4 py-2.5 text-[var(--color-text-primary)] border-l border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors relative"
+                            className="px-4 py-2.5 text-[var(--color-document-header)] font-medium cursor-pointer relative whitespace-nowrap text-right"
                             onClick={handleDateClick}
                         >
-                            <span className="select-none">{formatDisplayDate(reportDate)}</span>
+                            <span className="select-none">
+                                <span className="text-[var(--color-document-header)] font-medium">Issued</span>
+                                <span className="ml-4">{formatDisplayDate(reportDate)}</span>
+                            </span>
                             <input
                                 ref={dateInputRef}
                                 type="date"

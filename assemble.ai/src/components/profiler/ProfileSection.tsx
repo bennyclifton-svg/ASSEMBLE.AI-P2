@@ -76,7 +76,7 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
 
   return (
     <div
-      className={`nav-panel-section py-3 pl-2 pr-3 ${isActive ? 'nav-panel-active' : ''} ${isClassTypeComplete ? 'cursor-pointer' : ''}`}
+      className={`nav-panel-section py-3 ${isActive ? 'nav-panel-active' : ''} ${isClassTypeComplete ? 'cursor-pointer' : ''}`}
       onClick={isClassTypeComplete ? onShowProfiler : undefined}
     >
       <div className="nav-panel-header w-full mb-2">
@@ -91,85 +91,81 @@ export function ProfileSection({ projectId, data, onUpdate, onProfileChange, onS
       </div>
 
       {/* Building Class and Project Type side by side */}
-      <div className="grid grid-cols-2 gap-2">
+      <div className="nav-panel-content grid grid-cols-2 gap-1">
         {/* Building Class selection */}
-        <div>
-          <div className="space-y-1">
-            {/* Primary classes - always visible */}
-            {PRIMARY_CLASSES.map((key) => {
-              const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key];
-              return (
-                <button
-                  key={key}
-                  onClick={(e) => { e.stopPropagation(); handleClassSelect(key); }}
-                  className={`
-                    w-full flex items-center gap-1.5 p-2 rounded-lg border text-xs transition-all
-                    ${
-                      buildingClass === key
-                        ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-accent-copper)]/50 text-[var(--color-text-secondary)]'
-                    }
-                  `}
-                >
-                  {BUILDING_CLASS_ICONS[key]}
-                  <span className="truncate">{config.label}</span>
-                </button>
-              );
-            })}
-
-            {/* Others toggle button */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowOtherClasses(!showOtherClasses); }}
-              className="w-full flex items-center justify-between gap-1.5 p-2 rounded-lg border text-xs transition-all border-[var(--color-border)] hover:border-[var(--color-text-muted)]/50 text-[var(--color-text-muted)]"
-            >
-              <span>Others</span>
-              {showOtherClasses ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-
-            {/* Secondary classes - shown when expanded */}
-            {showOtherClasses && SECONDARY_CLASSES.map((key) => {
-              const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key];
-              return (
-                <button
-                  key={key}
-                  onClick={(e) => { e.stopPropagation(); handleClassSelect(key); }}
-                  className={`
-                    w-full flex items-center gap-1.5 p-2 rounded-lg border text-xs transition-all
-                    ${
-                      buildingClass === key
-                        ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
-                        : 'border-[var(--color-border)] hover:border-[var(--color-accent-copper)]/50 text-[var(--color-text-secondary)]'
-                    }
-                  `}
-                >
-                  {BUILDING_CLASS_ICONS[key]}
-                  <span className="truncate">{config.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Project Type selection */}
-        <div>
-          <div className="space-y-1">
-            {profileTemplates.projectTypes.map((type) => (
+        <div className="space-y-0.5">
+          {/* Primary classes - always visible */}
+          {PRIMARY_CLASSES.map((key) => {
+            const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key];
+            return (
               <button
-                key={type.value}
-                onClick={(e) => { e.stopPropagation(); handleTypeSelect(type.value as ProjectType); }}
+                key={key}
+                onClick={(e) => { e.stopPropagation(); handleClassSelect(key); }}
                 className={`
-                  w-full px-2.5 py-2 rounded-lg text-xs font-medium transition-all text-left border
+                  w-full flex items-center gap-1.5 px-2 py-1.5 rounded text-xs transition-all
                   ${
-                    projectType === type.value
-                      ? 'bg-[var(--color-accent-copper)] text-[var(--color-text-inverse)] border-[var(--color-accent-copper)]'
-                      : 'bg-[var(--color-bg-secondary)] border-[var(--color-border-strong)] text-[var(--color-text-secondary)] hover:bg-[var(--color-accent-copper-tint)] hover:border-[var(--color-accent-copper)]/50'
+                    buildingClass === key
+                      ? 'bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
+                      : 'hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'
                   }
                 `}
               >
-                {type.label}
+                {BUILDING_CLASS_ICONS[key]}
+                <span className="truncate">{config.label}</span>
               </button>
-            ))}
-          </div>
+            );
+          })}
+
+          {/* Others toggle button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowOtherClasses(!showOtherClasses); }}
+            className="w-full flex items-center justify-between gap-1.5 px-2 py-1.5 rounded text-xs transition-all hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]"
+          >
+            <span>Others</span>
+            {showOtherClasses ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+
+          {/* Secondary classes - shown when expanded */}
+          {showOtherClasses && SECONDARY_CLASSES.map((key) => {
+            const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key];
+            return (
+              <button
+                key={key}
+                onClick={(e) => { e.stopPropagation(); handleClassSelect(key); }}
+                className={`
+                  w-full flex items-center gap-1.5 px-2 py-1.5 rounded text-xs transition-all
+                  ${
+                    buildingClass === key
+                      ? 'bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
+                      : 'hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]'
+                  }
+                `}
+              >
+                {BUILDING_CLASS_ICONS[key]}
+                <span className="truncate">{config.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Project Type selection */}
+        <div className="space-y-0.5">
+          {profileTemplates.projectTypes.map((type) => (
+            <button
+              key={type.value}
+              onClick={(e) => { e.stopPropagation(); handleTypeSelect(type.value as ProjectType); }}
+              className={`
+                w-full px-2.5 py-1.5 rounded text-xs font-medium transition-all text-left overflow-hidden
+                ${
+                  projectType === type.value
+                    ? 'bg-[var(--color-accent-copper)] text-[var(--color-text-inverse)]'
+                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'
+                }
+              `}
+            >
+              <span className="block truncate">{type.label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

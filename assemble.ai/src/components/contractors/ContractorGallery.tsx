@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useContractors } from '@/lib/hooks/use-contractors';
 import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
 import { useToast } from '@/lib/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils/currency';
 
 import { RFTNewSection } from '@/components/rft-new';
 import { AddendumSection } from '@/components/addendum';
-import { EvaluationSection } from '@/components/evaluation';
+import { EvaluationPriceSection, EvaluationNonPriceSection } from '@/components/evaluation';
 import { TRRSection } from '@/components/trr';
 import {
   AlertDialog,
@@ -149,12 +150,25 @@ export function ContractorGallery({
   };
 
   const handleAwardToggle = async (id: string, awarded: boolean) => {
+    if (!tradeId) {
+      toast({
+        title: 'Error',
+        description: 'Trade ID is required for award toggle',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      await toggleAward(id, awarded);
+      const result = await toggleAward(id, awarded, tradeId);
+      const contractValue = result?.contractValueCents;
+
       toast({
         title: awarded ? 'Contract Awarded' : 'Award Removed',
         description: awarded
-          ? 'Company has been added to the master list and is now available in Cost Planning.'
+          ? contractValue
+            ? `Contract value of ${formatCurrency(contractValue)} recorded in Cost Plan.`
+            : 'Company has been added to the master list and is now available in Cost Planning.'
           : 'Award status has been removed.',
       });
     } catch (error) {
@@ -353,10 +367,10 @@ export function ContractorGallery({
   return (
     <div className="space-y-6">
       {/* Firms Section */}
-      <div className="relative">
+      <div className={`relative ${isExtracting ? 'z-[200]' : ''}`}>
         {/* Extraction Progress Overlay */}
         {isExtracting && (
-          <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 flex items-center justify-center rounded-lg">
+          <div className="absolute inset-0 z-[200] bg-[var(--color-bg-primary)]/80 flex items-center justify-center rounded-lg">
             <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
               <p className="text-[var(--color-text-primary)] font-semibold">Extracting contractor data...</p>
@@ -365,7 +379,7 @@ export function ContractorGallery({
           </div>
         )}
 
-        <div className="flex overflow-x-auto py-3 px-1 items-stretch gap-4" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex overflow-x-auto py-3 px-1 items-start gap-4" style={{ scrollbarWidth: 'thin' }}>
           {/* Existing contractors */}
           {contractors.map((contractor) => (
             <FirmCard
@@ -442,9 +456,18 @@ export function ContractorGallery({
         />
       )}
 
-      {/* Evaluation Section - tender price/non-price evaluation */}
+      {/* Evaluation Price Section - tender price evaluation with numbered tabs */}
       {tradeId && (
-        <EvaluationSection
+        <EvaluationPriceSection
+          projectId={projectId}
+          stakeholderId={tradeId}
+          stakeholderName={trade}
+        />
+      )}
+
+      {/* Evaluation Non-Price Section - non-price evaluation criteria */}
+      {tradeId && (
+        <EvaluationNonPriceSection
           projectId={projectId}
           stakeholderId={tradeId}
           stakeholderName={trade}

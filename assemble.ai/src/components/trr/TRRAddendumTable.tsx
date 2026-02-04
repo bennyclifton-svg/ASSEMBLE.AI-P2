@@ -32,25 +32,25 @@ export function TRRAddendumTable({ addenda }: TRRAddendumTableProps) {
             <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                 Addendum Table
             </h3>
-            <div className="border border-[var(--color-border)] rounded overflow-hidden">
+            <div className="overflow-hidden rounded-lg">
                 {addenda.length > 0 ? (
                     <table className="w-full text-sm">
-                        <thead className="bg-[#2d2d30]">
+                        <thead>
                             <tr className="border-b border-[var(--color-border)]">
-                                <th className="px-4 py-2.5 text-left text-[var(--color-text-muted)] font-medium w-[15%]">
+                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[15%]">
                                     Addendum #
                                 </th>
-                                <th className="px-4 py-2.5 text-left text-[var(--color-text-muted)] font-medium w-[60%]">
+                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[60%]">
                                     Summary
                                 </th>
-                                <th className="px-4 py-2.5 text-left text-[var(--color-text-muted)] font-medium w-[25%]">
+                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[25%]">
                                     Date
                                 </th>
                             </tr>
                         </thead>
                         <tbody>
                             {addenda.map((addendum) => (
-                                <tr key={addendum.id} className="border-b border-[var(--color-border)] last:border-0">
+                                <tr key={addendum.id}>
                                     <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
                                         {String(addendum.addendumNumber).padStart(2, '0')}
                                     </td>

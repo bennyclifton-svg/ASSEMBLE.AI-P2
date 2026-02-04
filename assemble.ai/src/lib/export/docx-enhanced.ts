@@ -23,12 +23,13 @@ import {
   ShadingType,
 } from 'docx';
 import { JSDOM } from 'jsdom';
+import { EXPORT_COLORS, stripHash } from './theme-config';
 
-// Heading colors (same as editor)
+// Heading colors (from shared theme config)
 const HEADING_COLORS = {
-  H1: '5B9BD5', // Professional Blue (without #)
-  H2: '70AD47', // Fresh Green
-  H3: 'C65D00', // Orange (matching transmittal section)
+  H1: stripHash(EXPORT_COLORS.headings.h1),
+  H2: stripHash(EXPORT_COLORS.headings.h2),
+  H3: stripHash(EXPORT_COLORS.headings.h3),
 } as const;
 
 /**

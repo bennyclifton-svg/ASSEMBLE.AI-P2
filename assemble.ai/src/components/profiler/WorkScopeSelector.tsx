@@ -142,95 +142,61 @@ export function WorkScopeSelector({
 
   return (
     <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
           Work Scope
         </h3>
         {totalSelections > 0 && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]">
+          <span
+            className="text-xs px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: 'var(--color-card-scope)', color: 'var(--color-card-scope-text)' }}
+          >
             {totalSelections} selected
           </span>
         )}
       </div>
 
-      <div className="space-y-1">
+      {/* Sticky-note grid layout matching complexity tiles */}
+      <div className="grid grid-cols-2 @[500px]:grid-cols-3 @[700px]:grid-cols-4 gap-4">
         {categories.map((category) => {
-          const isExpanded = expandedCategories.has(category.key);
           const selectionCount = getCategorySelectionCount(category);
 
           return (
-            <div key={category.key} className="border border-[var(--color-border)] rounded-lg overflow-hidden">
-              {/* Category Header */}
-              <button
-                onClick={() => toggleCategory(category.key)}
-                className="w-full flex items-center justify-between p-2.5 text-left hover:bg-[var(--color-bg-tertiary)] transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  {isExpanded ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                  )}
-                  <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                    {category.label}
-                  </span>
-                </div>
-                {selectionCount > 0 && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-accent-copper)] text-white">
-                    {selectionCount}
-                  </span>
-                )}
-              </button>
+            <div
+              key={category.key}
+              className="p-3 shadow-md transition-colors duration-150 aspect-square flex flex-col"
+              style={{ backgroundColor: 'var(--color-card-scope)' }}
+            >
+              <label className="block text-xs font-semibold mb-3 capitalize" style={{ color: 'var(--color-card-scope-text)' }}>
+                {category.label}
+              </label>
+              <div className="flex flex-col gap-0.5">
+                {category.items.map((item) => {
+                  const isSelected = selectedScopes.includes(item.value);
+                  const riskIcon = getRiskIcon(item);
 
-              {/* Category Items */}
-              {isExpanded && (
-                <div className="px-2 pb-2 space-y-1">
-                  {category.items.map((item) => {
-                    const isSelected = selectedScopes.includes(item.value);
-                    const riskIcon = getRiskIcon(item);
-
-                    return (
-                      <button
-                        key={item.value}
-                        onClick={() => toggleScope(item.value)}
-                        className={`
-                          w-full flex items-center justify-between p-2 rounded text-left text-xs transition-all
-                          ${isSelected
-                            ? 'bg-[var(--color-accent-copper-tint)] border border-[var(--color-accent-copper)]'
-                            : 'bg-[var(--color-bg-secondary)] border border-transparent hover:border-[var(--color-border)]'
-                          }
-                        `}
-                        title={item.consultants?.length ? `Consultants: ${item.consultants.join(', ')}` : undefined}
-                      >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className={`
-                            w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0
-                            ${isSelected
-                              ? 'bg-[var(--color-accent-copper)] border-[var(--color-accent-copper)]'
-                              : 'border-[var(--color-border)]'
-                            }
-                          `}>
-                            {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
-                          </div>
-                          <span className={`truncate ${isSelected ? 'text-[var(--color-accent-copper)]' : 'text-[var(--color-text-secondary)]'}`}>
-                            {item.label}
-                          </span>
-                        </div>
-                        {riskIcon}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                  return (
+                    <button
+                      key={item.value}
+                      onClick={() => toggleScope(item.value)}
+                      className="px-2 py-1 rounded text-xs font-medium transition-all text-left flex items-center justify-between"
+                      style={{
+                        fontFamily: "'Ink Free', 'Lucida Handwriting', 'Segoe Print', cursive",
+                        backgroundColor: isSelected ? 'var(--color-card-scope-selected)' : 'var(--color-card-scope)',
+                        color: 'var(--color-card-scope-text)'
+                      }}
+                      title={item.consultants?.length ? `Consultants: ${item.consultants.join(', ')}` : undefined}
+                    >
+                      <span className="truncate">{item.label}</span>
+                      {riskIcon}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           );
         })}
       </div>
-
-      {/* Helper text */}
-      <p className="mt-2 text-[10px] text-[var(--color-text-muted)]">
-        Select applicable work items. Hover for consultant requirements.
-      </p>
     </div>
   );
 }

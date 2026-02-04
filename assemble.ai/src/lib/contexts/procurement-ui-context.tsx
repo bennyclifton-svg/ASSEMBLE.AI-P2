@@ -9,7 +9,7 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 // Section types that can be expanded
-type SectionType = 'rft' | 'trr' | 'addendum' | 'evaluation';
+type SectionType = 'rft' | 'trr' | 'addendum' | 'evaluationPrice' | 'evaluationNonPrice' | 'notes' | 'meetings' | 'reports';
 
 // State for each section type
 interface RFTState {
@@ -27,17 +27,55 @@ interface AddendumState {
     activeAddendumId: string | null;
 }
 
-interface EvaluationState {
+interface EvaluationPriceState {
     isExpanded: boolean;
-    activeTab: 'price' | 'non-price';
+    activeEvaluationPriceId: string | null;
 }
+
+interface EvaluationNonPriceState {
+    isExpanded: boolean;
+}
+
+// Notes, Meetings, Reports state (keyed by projectId)
+interface NotesState {
+    isExpanded: boolean;
+    isMenuExpanded: boolean;
+    activeNoteId: string | null;
+}
+
+interface MeetingsState {
+    isExpanded: boolean;
+    isMenuExpanded: boolean;
+    activeMeetingId: string | null;
+}
+
+interface ReportsState {
+    isExpanded: boolean;
+    isMenuExpanded: boolean;
+    activeReportId: string | null;
+}
+
+// Combined state for Notes/Meetings/Reports (keyed by projectId)
+interface ProjectUIState {
+    notes: NotesState;
+    meetings: MeetingsState;
+    reports: ReportsState;
+}
+
+// Default state for a new project
+const defaultProjectUIState: ProjectUIState = {
+    notes: { isExpanded: false, isMenuExpanded: false, activeNoteId: null },
+    meetings: { isExpanded: false, isMenuExpanded: false, activeMeetingId: null },
+    reports: { isExpanded: false, isMenuExpanded: false, activeReportId: null },
+};
 
 // Combined state for a stakeholder
 interface StakeholderUIState {
     rft: RFTState;
     trr: TRRState;
     addendum: AddendumState;
-    evaluation: EvaluationState;
+    evaluationPrice: EvaluationPriceState;
+    evaluationNonPrice: EvaluationNonPriceState;
 }
 
 // Default state for a new stakeholder
@@ -45,7 +83,8 @@ const defaultStakeholderState: StakeholderUIState = {
     rft: { isExpanded: false, activeRftId: null },
     trr: { isExpanded: false, activeTrrId: null },
     addendum: { isExpanded: false, activeAddendumId: null },
-    evaluation: { isExpanded: false, activeTab: 'price' },
+    evaluationPrice: { isExpanded: false, activeEvaluationPriceId: null },
+    evaluationNonPrice: { isExpanded: false },
 };
 
 // Context value type
@@ -65,10 +104,32 @@ interface ProcurementUIContextValue {
     setAddendumExpanded: (stakeholderId: string, expanded: boolean) => void;
     setAddendumActiveId: (stakeholderId: string, id: string | null) => void;
 
-    // Evaluation section
-    getEvaluationState: (stakeholderId: string) => EvaluationState;
-    setEvaluationExpanded: (stakeholderId: string, expanded: boolean) => void;
-    setEvaluationActiveTab: (stakeholderId: string, tab: 'price' | 'non-price') => void;
+    // Evaluation Price section (multi-instance with tabs)
+    getEvaluationPriceState: (stakeholderId: string) => EvaluationPriceState;
+    setEvaluationPriceExpanded: (stakeholderId: string, expanded: boolean) => void;
+    setEvaluationPriceActiveId: (stakeholderId: string, id: string | null) => void;
+
+    // Evaluation Non-Price section (single instance)
+    getEvaluationNonPriceState: (stakeholderId: string) => EvaluationNonPriceState;
+    setEvaluationNonPriceExpanded: (stakeholderId: string, expanded: boolean) => void;
+
+    // Notes section (keyed by projectId)
+    getNotesState: (projectId: string) => NotesState;
+    setNotesExpanded: (projectId: string, expanded: boolean) => void;
+    setNotesMenuExpanded: (projectId: string, expanded: boolean) => void;
+    setNotesActiveId: (projectId: string, id: string | null) => void;
+
+    // Meetings section (keyed by projectId)
+    getMeetingsState: (projectId: string) => MeetingsState;
+    setMeetingsExpanded: (projectId: string, expanded: boolean) => void;
+    setMeetingsMenuExpanded: (projectId: string, expanded: boolean) => void;
+    setMeetingsActiveId: (projectId: string, id: string | null) => void;
+
+    // Reports section (keyed by projectId)
+    getReportsState: (projectId: string) => ReportsState;
+    setReportsExpanded: (projectId: string, expanded: boolean) => void;
+    setReportsMenuExpanded: (projectId: string, expanded: boolean) => void;
+    setReportsActiveId: (projectId: string, id: string | null) => void;
 }
 
 const ProcurementUIContext = createContext<ProcurementUIContextValue | null>(null);
@@ -76,6 +137,9 @@ const ProcurementUIContext = createContext<ProcurementUIContextValue | null>(nul
 export function ProcurementUIProvider({ children }: { children: ReactNode }) {
     // Map of stakeholder ID to their UI state
     const [stateMap, setStateMap] = useState<Record<string, StakeholderUIState>>({});
+
+    // Map of project ID to Notes/Meetings/Reports UI state
+    const [projectStateMap, setProjectStateMap] = useState<Record<string, ProjectUIState>>({});
 
     // Helper to get state for a stakeholder, returning defaults if not set
     const getStakeholderState = useCallback((stakeholderId: string): StakeholderUIState => {
@@ -150,24 +214,130 @@ export function ProcurementUIProvider({ children }: { children: ReactNode }) {
         }));
     }, [updateStakeholderState]);
 
-    // Evaluation section methods
-    const getEvaluationState = useCallback((stakeholderId: string): EvaluationState => {
-        return getStakeholderState(stakeholderId).evaluation;
+    // Evaluation Price section methods (multi-instance with tabs)
+    const getEvaluationPriceState = useCallback((stakeholderId: string): EvaluationPriceState => {
+        return getStakeholderState(stakeholderId).evaluationPrice;
     }, [getStakeholderState]);
 
-    const setEvaluationExpanded = useCallback((stakeholderId: string, expanded: boolean) => {
+    const setEvaluationPriceExpanded = useCallback((stakeholderId: string, expanded: boolean) => {
         updateStakeholderState(stakeholderId, prev => ({
             ...prev,
-            evaluation: { ...prev.evaluation, isExpanded: expanded },
+            evaluationPrice: { ...prev.evaluationPrice, isExpanded: expanded },
         }));
     }, [updateStakeholderState]);
 
-    const setEvaluationActiveTab = useCallback((stakeholderId: string, tab: 'price' | 'non-price') => {
+    const setEvaluationPriceActiveId = useCallback((stakeholderId: string, id: string | null) => {
         updateStakeholderState(stakeholderId, prev => ({
             ...prev,
-            evaluation: { ...prev.evaluation, activeTab: tab },
+            evaluationPrice: { ...prev.evaluationPrice, activeEvaluationPriceId: id },
         }));
     }, [updateStakeholderState]);
+
+    // Evaluation Non-Price section methods (single instance)
+    const getEvaluationNonPriceState = useCallback((stakeholderId: string): EvaluationNonPriceState => {
+        return getStakeholderState(stakeholderId).evaluationNonPrice;
+    }, [getStakeholderState]);
+
+    const setEvaluationNonPriceExpanded = useCallback((stakeholderId: string, expanded: boolean) => {
+        updateStakeholderState(stakeholderId, prev => ({
+            ...prev,
+            evaluationNonPrice: { ...prev.evaluationNonPrice, isExpanded: expanded },
+        }));
+    }, [updateStakeholderState]);
+
+    // Helper to get project state, returning defaults if not set
+    const getProjectState = useCallback((projectId: string): ProjectUIState => {
+        return projectStateMap[projectId] || defaultProjectUIState;
+    }, [projectStateMap]);
+
+    // Helper to update project state
+    const updateProjectState = useCallback((
+        projectId: string,
+        updater: (prev: ProjectUIState) => ProjectUIState
+    ) => {
+        setProjectStateMap(prev => ({
+            ...prev,
+            [projectId]: updater(prev[projectId] || defaultProjectUIState),
+        }));
+    }, []);
+
+    // Notes section methods
+    const getNotesState = useCallback((projectId: string): NotesState => {
+        return getProjectState(projectId).notes;
+    }, [getProjectState]);
+
+    const setNotesExpanded = useCallback((projectId: string, expanded: boolean) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            notes: { ...prev.notes, isExpanded: expanded },
+        }));
+    }, [updateProjectState]);
+
+    const setNotesMenuExpanded = useCallback((projectId: string, expanded: boolean) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            notes: { ...prev.notes, isMenuExpanded: expanded },
+        }));
+    }, [updateProjectState]);
+
+    const setNotesActiveId = useCallback((projectId: string, id: string | null) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            notes: { ...prev.notes, activeNoteId: id },
+        }));
+    }, [updateProjectState]);
+
+    // Meetings section methods
+    const getMeetingsState = useCallback((projectId: string): MeetingsState => {
+        return getProjectState(projectId).meetings;
+    }, [getProjectState]);
+
+    const setMeetingsExpanded = useCallback((projectId: string, expanded: boolean) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            meetings: { ...prev.meetings, isExpanded: expanded },
+        }));
+    }, [updateProjectState]);
+
+    const setMeetingsMenuExpanded = useCallback((projectId: string, expanded: boolean) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            meetings: { ...prev.meetings, isMenuExpanded: expanded },
+        }));
+    }, [updateProjectState]);
+
+    const setMeetingsActiveId = useCallback((projectId: string, id: string | null) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            meetings: { ...prev.meetings, activeMeetingId: id },
+        }));
+    }, [updateProjectState]);
+
+    // Reports section methods
+    const getReportsState = useCallback((projectId: string): ReportsState => {
+        return getProjectState(projectId).reports;
+    }, [getProjectState]);
+
+    const setReportsExpanded = useCallback((projectId: string, expanded: boolean) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            reports: { ...prev.reports, isExpanded: expanded },
+        }));
+    }, [updateProjectState]);
+
+    const setReportsMenuExpanded = useCallback((projectId: string, expanded: boolean) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            reports: { ...prev.reports, isMenuExpanded: expanded },
+        }));
+    }, [updateProjectState]);
+
+    const setReportsActiveId = useCallback((projectId: string, id: string | null) => {
+        updateProjectState(projectId, prev => ({
+            ...prev,
+            reports: { ...prev.reports, activeReportId: id },
+        }));
+    }, [updateProjectState]);
 
     const value: ProcurementUIContextValue = {
         getRFTState,
@@ -179,9 +349,24 @@ export function ProcurementUIProvider({ children }: { children: ReactNode }) {
         getAddendumState,
         setAddendumExpanded,
         setAddendumActiveId,
-        getEvaluationState,
-        setEvaluationExpanded,
-        setEvaluationActiveTab,
+        getEvaluationPriceState,
+        setEvaluationPriceExpanded,
+        setEvaluationPriceActiveId,
+        getEvaluationNonPriceState,
+        setEvaluationNonPriceExpanded,
+        // Notes, Meetings, Reports
+        getNotesState,
+        setNotesExpanded,
+        setNotesMenuExpanded,
+        setNotesActiveId,
+        getMeetingsState,
+        setMeetingsExpanded,
+        setMeetingsMenuExpanded,
+        setMeetingsActiveId,
+        getReportsState,
+        setReportsExpanded,
+        setReportsMenuExpanded,
+        setReportsActiveId,
     };
 
     return (
@@ -239,15 +424,102 @@ export function useAddendumSectionUI(stakeholderId: string | undefined) {
     };
 }
 
-export function useEvaluationSectionUI(stakeholderId: string | undefined) {
+export function useEvaluationPriceSectionUI(stakeholderId: string | undefined) {
     const ctx = useProcurementUI();
     const id = stakeholderId || '';
-    const state = ctx.getEvaluationState(id);
+    const state = ctx.getEvaluationPriceState(id);
 
     return {
         isExpanded: state.isExpanded,
-        activeTab: state.activeTab,
-        setExpanded: (expanded: boolean) => ctx.setEvaluationExpanded(id, expanded),
-        setActiveTab: (tab: 'price' | 'non-price') => ctx.setEvaluationActiveTab(id, tab),
+        activeEvaluationPriceId: state.activeEvaluationPriceId,
+        setExpanded: (expanded: boolean) => ctx.setEvaluationPriceExpanded(id, expanded),
+        setActiveEvaluationPriceId: (evalPriceId: string | null) => ctx.setEvaluationPriceActiveId(id, evalPriceId),
+    };
+}
+
+export function useEvaluationNonPriceSectionUI(stakeholderId: string | undefined) {
+    const ctx = useProcurementUI();
+    const id = stakeholderId || '';
+    const state = ctx.getEvaluationNonPriceState(id);
+
+    return {
+        isExpanded: state.isExpanded,
+        setExpanded: (expanded: boolean) => ctx.setEvaluationNonPriceExpanded(id, expanded),
+    };
+}
+
+/**
+ * @deprecated Use useEvaluationPriceSectionUI or useEvaluationNonPriceSectionUI instead.
+ * This hook is maintained for backward compatibility with the legacy EvaluationSection component.
+ */
+export function useEvaluationSectionUI(stakeholderId: string | undefined) {
+    const ctx = useProcurementUI();
+    const id = stakeholderId || '';
+    const priceState = ctx.getEvaluationPriceState(id);
+    const nonPriceState = ctx.getEvaluationNonPriceState(id);
+
+    // Track which tab is active using a simple state-like approach
+    // Default to 'price' tab, stored as part of the price state expansion
+    const [activeTab, setActiveTabState] = useState<'price' | 'non-price'>('price');
+
+    // Combined expanded state - expand if either section was expanded
+    const isExpanded = priceState.isExpanded || nonPriceState.isExpanded;
+
+    return {
+        isExpanded,
+        activeTab,
+        setExpanded: (expanded: boolean) => {
+            ctx.setEvaluationPriceExpanded(id, expanded);
+            ctx.setEvaluationNonPriceExpanded(id, expanded);
+        },
+        setActiveTab: (tab: 'price' | 'non-price') => {
+            setActiveTabState(tab);
+        },
+    };
+}
+
+// Convenience hooks for Notes, Meetings, Reports sections
+export function useNotesSectionUI(projectId: string | undefined) {
+    const ctx = useProcurementUI();
+    const id = projectId || '';
+    const state = ctx.getNotesState(id);
+
+    return {
+        isExpanded: state.isExpanded,
+        isMenuExpanded: state.isMenuExpanded,
+        activeNoteId: state.activeNoteId,
+        setExpanded: (expanded: boolean) => ctx.setNotesExpanded(id, expanded),
+        setMenuExpanded: (expanded: boolean) => ctx.setNotesMenuExpanded(id, expanded),
+        setActiveNoteId: (noteId: string | null) => ctx.setNotesActiveId(id, noteId),
+    };
+}
+
+export function useMeetingsSectionUI(projectId: string | undefined) {
+    const ctx = useProcurementUI();
+    const id = projectId || '';
+    const state = ctx.getMeetingsState(id);
+
+    return {
+        isExpanded: state.isExpanded,
+        isMenuExpanded: state.isMenuExpanded,
+        activeMeetingId: state.activeMeetingId,
+        setExpanded: (expanded: boolean) => ctx.setMeetingsExpanded(id, expanded),
+        setMenuExpanded: (expanded: boolean) => ctx.setMeetingsMenuExpanded(id, expanded),
+        setActiveMeetingId: (meetingId: string | null) => ctx.setMeetingsActiveId(id, meetingId),
+    };
+}
+
+export function useReportsSectionUI(projectId: string | undefined) {
+    const ctx = useProcurementUI();
+    const id = projectId || '';
+    const state = ctx.getReportsState(id);
+
+    return {
+        isExpanded: state.isExpanded,
+        isMenuExpanded: state.isMenuExpanded,
+        activeReportId: state.activeReportId,
+        setExpanded: (expanded: boolean) => ctx.setReportsExpanded(id, expanded),
+        setMenuExpanded: (expanded: boolean) => ctx.setReportsMenuExpanded(id, expanded),
+        setActiveReportId: (reportId: string | null) => ctx.setReportsActiveId(id, reportId),
     };
 }

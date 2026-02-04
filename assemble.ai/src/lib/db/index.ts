@@ -76,6 +76,7 @@ export const {
     rftNewTransmittals,
     evaluations,
     tenderSubmissions,
+    evaluationPrice,
     evaluationRows,
     evaluationCells,
     evaluationNonPriceCriteria,

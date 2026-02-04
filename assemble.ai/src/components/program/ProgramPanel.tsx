@@ -99,7 +99,9 @@ export function ProgramPanel({ projectId }: ProgramPanelProps) {
 
     return (
         <RefetchContext.Provider value={refetch}>
-            <div className="flex h-full flex-col bg-[var(--color-bg-primary)] pt-10">
+            <div className="flex h-full flex-col bg-[var(--color-bg-primary)]">
+                {/* Grey spacer above toolbar */}
+                <div className="h-10 shrink-0 bg-[#f0f0f0]" />
                 <ProgramToolbar
                     projectId={projectId}
                     zoomLevel={zoomLevel}

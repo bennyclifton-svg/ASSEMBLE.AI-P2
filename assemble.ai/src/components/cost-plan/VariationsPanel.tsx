@@ -158,7 +158,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
         <VariationDropZone projectId={projectId} onUploadComplete={handleUploadComplete}>
             <div className="h-full flex flex-col bg-[var(--color-bg-primary)] text-xs">
                 {/* Toolbar */}
-                <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[#f0f0f0]">
                     <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
                         <Upload className="h-3 w-3" />
                         Drop Variation

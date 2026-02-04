@@ -11,6 +11,7 @@ import {
   CLASS_DISCIPLINES,
   COMPLEXITY_DISCIPLINES,
   SUBCLASS_DISCIPLINES,
+  SCALE_THRESHOLDS,
   CORE_TRADES,
   CLASS_TRADES,
   WORK_SCOPE_TRADES,
@@ -25,6 +26,8 @@ import {
   type TradeDef,
   type AuthorityDef,
 } from '../data/default-stakeholders';
+import profileTemplates from '@/lib/data/profile-templates.json';
+import type { ProjectType, WorkScopeItem, WorkScopeCategory } from '@/types/profiler';
 import {
   getStakeholders,
   bulkCreateStakeholders,
@@ -47,15 +50,32 @@ interface ProfileContext {
   buildingClass: string;
   projectType: string;
   subclass: string[];
-  complexity: Record<string, string>;
+  complexity: Record<string, string | string[]>;
   complexityScore: number;
+  scaleData?: Record<string, number>; // For scale-based discipline generation
   state?: string; // For authority selection
-  workScope?: string[]; // For work scope-based contractor generation
+  workScope?: string[]; // For work scope-based generation
 }
 
 // ============================================
 // Helper Functions
 // ============================================
+
+/**
+ * Find a work scope item by value from profile-templates.json
+ */
+function findWorkScopeItem(scopeValue: string, projectType: string | null): WorkScopeItem | null {
+  if (!projectType) return null;
+  const workScopeOptions = (profileTemplates as any).workScopeOptions;
+  const typeConfig = workScopeOptions?.[projectType];
+  if (!typeConfig) return null;
+
+  for (const category of Object.values(typeConfig) as WorkScopeCategory[]) {
+    const item = category.items.find((i: WorkScopeItem) => i.value === scopeValue);
+    if (item) return item;
+  }
+  return null;
+}
 
 /**
  * Check if a discipline matches the profile conditions
@@ -192,7 +212,91 @@ function generateConsultants(profile: ProfileContext): GeneratedStakeholder[] {
     }
   }
 
-  return result;
+  // Add scale-triggered disciplines
+  if (profile.scaleData) {
+    for (const threshold of SCALE_THRESHOLDS) {
+      const value = profile.scaleData[threshold.key];
+      if (value !== undefined && value >= threshold.threshold) {
+        const def = threshold.discipline;
+        if (!addedDisciplines.has(def.disciplineOrTrade)) {
+          result.push({
+            stakeholderGroup: 'consultant',
+            name: def.name,
+            disciplineOrTrade: def.disciplineOrTrade,
+            reason: def.reason,
+          });
+          addedDisciplines.add(def.disciplineOrTrade);
+        }
+      }
+    }
+  }
+
+  // Add work scope-triggered disciplines (from profile-templates.json)
+  if (profile.workScope && profile.workScope.length > 0) {
+    for (const scopeValue of profile.workScope) {
+      const scopeItem = findWorkScopeItem(scopeValue, profile.projectType);
+      if (scopeItem?.consultants) {
+        for (const consultant of scopeItem.consultants) {
+          // Use the consultant name as both name and disciplineOrTrade
+          // Map common consultant names to discipline codes
+          const disciplineCode = mapConsultantToDiscipline(consultant);
+          if (!addedDisciplines.has(disciplineCode)) {
+            result.push({
+              stakeholderGroup: 'consultant',
+              name: consultant,
+              disciplineOrTrade: disciplineCode,
+              reason: `Required for ${scopeItem.label}`,
+            });
+            addedDisciplines.add(disciplineCode);
+          }
+        }
+      }
+    }
+  }
+
+  // Sort alphabetically by disciplineOrTrade
+  return result.sort((a, b) =>
+    (a.disciplineOrTrade || '').localeCompare(b.disciplineOrTrade || '')
+  );
+}
+
+/**
+ * Map consultant names from profile-templates.json to discipline codes
+ */
+function mapConsultantToDiscipline(consultantName: string): string {
+  const mappings: Record<string, string> = {
+    'Architect': 'Architecture',
+    'Structural Engineer': 'Structural',
+    'Civil Engineer': 'Civil',
+    'Services Engineer (Mechanical)': 'Mechanical',
+    'Services Engineer (Electrical)': 'Electrical',
+    'Services Engineer (Hydraulic)': 'Hydraulic',
+    'Fire Engineer': 'Fire',
+    'Facade Engineer': 'Facade',
+    'ESD Consultant': 'ESD',
+    'Acoustic Consultant': 'Acoustic',
+    'Traffic Engineer': 'Traffic',
+    'Geotechnical Engineer': 'Geotechnical',
+    'Environmental Consultant': 'Environmental',
+    'Heritage Consultant': 'Heritage',
+    'Bushfire Consultant (BPAD)': 'Bushfire',
+    'Flood Engineer': 'Flood',
+    'Wind Engineer': 'Wind',
+    'Quantity Surveyor': 'Cost Planning',
+    'Waterproofing Consultant': 'Waterproofing',
+    'Hazmat Consultant': 'Hazmat',
+    'Occupational Hygienist': 'Occupational Hygiene',
+    'Contamination Specialist': 'Contamination',
+    'Concrete Technologist': 'Concrete Technology',
+    'Corrosion Specialist': 'Corrosion',
+    'Vertical Transport Consultant': 'Vertical Transport',
+    'Accessibility Consultant': 'Access',
+    'Lighting Designer': 'Lighting',
+    'Security Consultant': 'Security',
+    'PFAS Specialist': 'PFAS',
+    'Hydrogeologist': 'Hydrogeology',
+  };
+  return mappings[consultantName] || consultantName;
 }
 
 /**
@@ -254,19 +358,24 @@ function generateContractors(profile: ProfileContext): GeneratedStakeholder[] {
     }
   }
 
-  return result;
+  // Sort alphabetically by disciplineOrTrade
+  return result.sort((a, b) =>
+    (a.disciplineOrTrade || '').localeCompare(b.disciplineOrTrade || '')
+  );
 }
 
 /**
  * Generate client stakeholders
  */
 function generateClients(): GeneratedStakeholder[] {
-  return DEFAULT_CLIENT_STAKEHOLDERS.map(def => ({
-    stakeholderGroup: 'client' as StakeholderGroup,
-    name: def.name,
-    role: def.role,
-    reason: def.description,
-  }));
+  return DEFAULT_CLIENT_STAKEHOLDERS
+    .map(def => ({
+      stakeholderGroup: 'client' as StakeholderGroup,
+      name: def.name,
+      role: def.role,
+      reason: def.description,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
@@ -284,7 +393,8 @@ function generateAuthorities(profile: ProfileContext): GeneratedStakeholder[] {
       name: def.name,
       role: def.role,
       reason: def.submissionType,
-    }));
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // ============================================
@@ -309,6 +419,7 @@ export async function generateStakeholders(
         subclass: profileData.subclass,
         complexity: profileData.complexity,
         complexityScore: profileData.complexityScore,
+        scaleData: profileData.scaleData,
         workScope: profileData.workScope,
       }
     : {
@@ -317,6 +428,7 @@ export async function generateStakeholders(
         subclass: [],
         complexity: {},
         complexityScore: 5,
+        scaleData: {},
         workScope: [],
       };
 

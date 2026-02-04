@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { evaluations, evaluationRows } from '@/lib/db';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 interface RouteParams {
@@ -26,7 +26,7 @@ export async function POST(
     try {
         const { projectId, contextType, contextId } = await params;
         const body = await request.json();
-        const { tableType, description } = body;
+        const { tableType, description, evaluationPriceId } = body;
 
         // Validate
         if (!tableType || !['initial_price', 'adds_subs'].includes(tableType)) {
@@ -51,12 +51,19 @@ export async function POST(
             );
         }
 
-        // Get the highest order index for this table type
+        // Get the highest order index for this table type (filtered by evaluationPriceId)
         const existingRows = await db.query.evaluationRows.findMany({
-            where: and(
-                eq(evaluationRows.evaluationId, evaluation.id),
-                eq(evaluationRows.tableType, tableType)
-            ),
+            where: evaluationPriceId
+                ? and(
+                    eq(evaluationRows.evaluationId, evaluation.id),
+                    eq(evaluationRows.tableType, tableType),
+                    eq(evaluationRows.evaluationPriceId, evaluationPriceId)
+                )
+                : and(
+                    eq(evaluationRows.evaluationId, evaluation.id),
+                    eq(evaluationRows.tableType, tableType),
+                    isNull(evaluationRows.evaluationPriceId)
+                ),
             orderBy: [desc(evaluationRows.orderIndex)],
             limit: 1,
         });
@@ -70,6 +77,7 @@ export async function POST(
         await db.insert(evaluationRows).values({
             id: newRowId,
             evaluationId: evaluation.id,
+            evaluationPriceId: evaluationPriceId || undefined,
             tableType,
             description: description || '',
             orderIndex: nextOrderIndex,

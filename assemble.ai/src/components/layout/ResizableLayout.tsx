@@ -39,8 +39,8 @@ export function ResizableLayout({
     return (
         <div className="h-full w-full relative">
             <PanelGroup direction="horizontal" className="h-full w-full relative">
-                <Panel defaultSize={17} minSize={12} className="border-r border-[var(--color-border-accent)]">
-                <div className="h-full flex flex-col animate-slide-in-up">
+                <Panel defaultSize={17} minSize={12} className="shadow-xl z-10">
+                <div className="h-full flex flex-col animate-slide-in-up bg-[var(--color-bg-primary)]">
                     {/* Left Panel Header */}
                     <header className="flex items-center px-6 py-3 flex-shrink-0 min-h-[57px]">
                         <Link href="/" className="hover:opacity-80 transition-opacity">
@@ -54,7 +54,7 @@ export function ResizableLayout({
                 </div>
             </Panel>
             <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize h-full" />
-            <Panel defaultSize={58} minSize={20}>
+            <Panel defaultSize={58} minSize={20} className="bg-[var(--color-bg-tertiary)]">
                 <div className="h-full flex flex-col animate-slide-in-up animate-delay-100">
                     {/* Center Panel Content */}
                     <div className="flex-1 min-h-0 overflow-hidden">

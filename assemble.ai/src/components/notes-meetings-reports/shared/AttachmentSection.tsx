@@ -3,15 +3,21 @@
  * Feature 021 - Notes, Meetings & Reports
  *
  * Provides Save/Load functionality for document attachments.
+ * Styled to match RFT TransmittalSchedule format.
  */
 
 'use client';
 
 import React, { useState } from 'react';
-import { Save, FolderOpen, EyeOff, Eye } from 'lucide-react';
+import { Save, RotateCcw, EyeOff, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AttachmentTable, type AttachmentDocument } from './AttachmentTable';
 import { cn } from '@/lib/utils';
+
+// Aurora accent button styling - consistent with RFT TransmittalSchedule
+const BUTTON_BG = 'var(--color-accent-copper-tint)';
+const BUTTON_TEXT = 'var(--color-accent-copper)';
+const BUTTON_BORDER = 'rgba(0, 255, 255, 0.3)';
 
 interface AttachmentSectionProps {
     documents: AttachmentDocument[];
@@ -35,31 +41,29 @@ export function AttachmentSection({
     const documentCount = documents.length;
 
     return (
-        <div className={cn('border-t border-[var(--color-border)]', className)}>
-            {/* Section Header */}
-            <div className="flex items-center justify-between px-4 py-2 bg-[var(--color-bg-tertiary)]">
-                <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-[var(--color-text-secondary)]">
-                        Attachments
-                    </span>
-                    {documentCount > 0 && (
-                        <span className="text-xs bg-[var(--color-accent-primary-tint)] text-[var(--color-accent-primary)] px-2 py-0.5 rounded-full">
-                            {documentCount}
-                        </span>
-                    )}
-                </div>
+        <div className={cn('space-y-2', className)}>
+            {/* Section Header - matches RFT TransmittalSchedule format */}
+            <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+                    Attachments
+                </h3>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
                     {onSave && (
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2 text-xs"
+                            className="h-7 px-2 text-xs font-medium"
+                            style={{
+                                backgroundColor: BUTTON_BG,
+                                color: BUTTON_TEXT,
+                                border: `1px solid ${BUTTON_BORDER}`,
+                            }}
                             onClick={onSave}
                             disabled={isLoading}
                             title="Save transmittal - select documents from repository"
                         >
-                            <Save className="h-3.5 w-3.5 mr-1" />
+                            <Save className="w-3 h-3 mr-1" />
                             Save
                         </Button>
                     )}
@@ -68,13 +72,18 @@ export function AttachmentSection({
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-2 text-xs"
+                            className="h-7 px-2 text-xs font-medium"
+                            style={{
+                                backgroundColor: BUTTON_BG,
+                                color: BUTTON_TEXT,
+                                border: `1px solid ${BUTTON_BORDER}`,
+                            }}
                             onClick={onLoad}
                             disabled={isLoading}
                             title="Load transmittal - view and modify attached documents"
                         >
-                            <FolderOpen className="h-3.5 w-3.5 mr-1" />
-                            Load
+                            <RotateCcw className="w-3 h-3 mr-1" />
+                            Load {documentCount > 0 && `(${documentCount})`}
                         </Button>
                     )}
 
@@ -98,9 +107,9 @@ export function AttachmentSection({
 
             {/* Documents Table */}
             {isVisible && (
-                <div className="px-4 py-3">
+                <>
                     {isLoading ? (
-                        <div className="flex items-center justify-center py-6">
+                        <div className="flex items-center justify-center py-6 border border-black/10 rounded">
                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-accent-primary)]" />
                         </div>
                     ) : (
@@ -109,7 +118,7 @@ export function AttachmentSection({
                             emptyMessage="No documents attached. Click 'Save' to select documents from the repository."
                         />
                     )}
-                </div>
+                </>
             )}
         </div>
     );

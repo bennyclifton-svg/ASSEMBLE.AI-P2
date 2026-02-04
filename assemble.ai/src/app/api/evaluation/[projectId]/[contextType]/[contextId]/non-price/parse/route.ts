@@ -23,6 +23,7 @@ import { eq, and, asc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';
+import { versioning } from '@/lib/versioning';
 import { parseNonPriceTender } from '@/lib/services/non-price-parser';
 import { NON_PRICE_CRITERIA } from '@/lib/constants/non-price-criteria';
 import type { QualityRating } from '@/types/evaluation';
@@ -195,14 +196,25 @@ export async function POST(
                 isSystem: true,
             }).onConflictDoNothing();
 
-            // Create document
-            const documentId = uuidv4();
-            await db.insert(documents).values({
-                id: documentId,
-                projectId,
-                categoryId,
-                subcategoryId: contextId,
-            });
+            // Check if a matching document exists (for versioning)
+            let documentId = await versioning.findMatchingDocument(file.name, projectId);
+            let versionNumber = 1;
+
+            if (documentId) {
+                // Existing document found - increment version
+                versionNumber = await versioning.getNextVersionNumber(documentId);
+                console.log(`[non-price-parse] Found existing document ${documentId}, creating version ${versionNumber}`);
+            } else {
+                // Create new document
+                documentId = uuidv4();
+                await db.insert(documents).values({
+                    id: documentId,
+                    projectId,
+                    categoryId,
+                    subcategoryId: contextId,
+                });
+                console.log(`[non-price-parse] Created new document ${documentId}`);
+            }
 
             // Create version
             const versionId = uuidv4();
@@ -210,7 +222,7 @@ export async function POST(
                 id: versionId,
                 documentId,
                 fileAssetId,
-                versionNumber: 1,
+                versionNumber,
                 uploadedBy: 'Non-Price Parse',
             });
 

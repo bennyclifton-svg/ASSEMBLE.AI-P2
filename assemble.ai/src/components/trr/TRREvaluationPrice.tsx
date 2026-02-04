@@ -129,26 +129,26 @@ export function TRREvaluationPrice({
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-black uppercase tracking-wide">
                 Evaluation Price
             </h3>
-            <div className="border border-[var(--color-border)] rounded overflow-hidden">
+            <div className="overflow-hidden">
                 {isLoading ? (
-                    <div className="px-4 py-3 text-[var(--color-text-muted)] text-sm">
+                    <div className="px-4 py-3 text-black/60 text-sm">
                         Loading evaluation data...
                     </div>
                 ) : hasData ? (
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
-                            <thead className="bg-[var(--color-accent-copper-tint)]">
+                            <thead>
                                 <tr className="border-b border-[var(--color-border)]">
-                                    <th className="px-4 py-2.5 text-left text-[var(--primitive-copper-darker)] font-medium min-w-[200px]">
+                                    <th className="px-4 py-2.5 text-left text-black font-medium min-w-[200px]">
                                         Description
                                     </th>
                                     {firms.map((firm) => (
                                         <th
                                             key={firm.id}
-                                            className="px-4 py-2.5 text-right text-[var(--primitive-copper-darker)] font-medium min-w-[120px]"
+                                            className="px-4 py-2.5 text-right text-black font-medium min-w-[120px]"
                                         >
                                             {firm.companyName}
                                         </th>
@@ -156,19 +156,28 @@ export function TRREvaluationPrice({
                                 </tr>
                             </thead>
                             <tbody>
+                                {/* Initial Price Section Header */}
+                                {filteredRows.some((r) => r.tableType === 'initial_price') && (
+                                    <tr>
+                                        <td colSpan={firms.length + 1} className="table-section-header px-4 py-2">
+                                            Initial Price
+                                        </td>
+                                    </tr>
+                                )}
+
                                 {/* Initial Price rows */}
                                 {filteredRows
                                     .filter((r) => r.tableType === 'initial_price')
                                     .sort((a, b) => a.orderIndex - b.orderIndex)
                                     .map((row) => (
-                                        <tr key={row.id} className="border-b border-[var(--color-border)]">
-                                            <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
+                                        <tr key={row.id}>
+                                            <td className="px-4 py-2.5 text-black">
                                                 {row.description}
                                             </td>
                                             {firms.map((firm) => (
                                                 <td
                                                     key={firm.id}
-                                                    className="px-4 py-2.5 text-right text-[var(--color-text-primary)]"
+                                                    className="px-4 py-2.5 text-right text-black"
                                                 >
                                                     {formatCurrency(getCellAmount(row.id, firm.id))}
                                                 </td>
@@ -177,33 +186,42 @@ export function TRREvaluationPrice({
                                     ))}
 
                                 {/* Sub-total row */}
-                                <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-                                    <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
+                                <tr className="border-b border-[var(--color-border)]">
+                                    <td className="px-4 py-2.5 text-black font-semibold">
                                         SUB-TOTAL
                                     </td>
                                     {firms.map((firm) => (
                                         <td
                                             key={firm.id}
-                                            className="px-4 py-2.5 text-right text-[var(--color-text-primary)] font-semibold"
+                                            className="px-4 py-2.5 text-right text-black font-semibold"
                                         >
                                             {formatCurrency(calculateSubtotal(firm.id, 'initial_price', filteredRows))}
                                         </td>
                                     ))}
                                 </tr>
 
+                                {/* Adds & Subs Section Header */}
+                                {filteredRows.some((r) => r.tableType === 'adds_subs') && (
+                                    <tr>
+                                        <td colSpan={firms.length + 1} className="table-section-header px-4 py-2">
+                                            Adds & Subs
+                                        </td>
+                                    </tr>
+                                )}
+
                                 {/* Adds/Subs rows */}
                                 {filteredRows
                                     .filter((r) => r.tableType === 'adds_subs')
                                     .sort((a, b) => a.orderIndex - b.orderIndex)
                                     .map((row) => (
-                                        <tr key={row.id} className="border-b border-[var(--color-border)]">
-                                            <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
+                                        <tr key={row.id}>
+                                            <td className="px-4 py-2.5 text-black">
                                                 {row.description}
                                             </td>
                                             {firms.map((firm) => (
                                                 <td
                                                     key={firm.id}
-                                                    className="px-4 py-2.5 text-right text-[var(--color-text-primary)]"
+                                                    className="px-4 py-2.5 text-right text-black"
                                                 >
                                                     {formatCurrency(getCellAmount(row.id, firm.id))}
                                                 </td>
@@ -212,8 +230,8 @@ export function TRREvaluationPrice({
                                     ))}
 
                                 {/* Grand Total row */}
-                                <tr className="bg-[var(--color-accent-copper-tint)]">
-                                    <td className="px-4 py-2.5 text-[var(--primitive-copper-darker)] font-bold">
+                                <tr className="border-t border-[var(--color-border)]">
+                                    <td className="px-4 py-2.5 text-black font-bold">
                                         GRAND TOTAL
                                     </td>
                                     {firms.map((firm) => {
@@ -222,7 +240,7 @@ export function TRREvaluationPrice({
                                         return (
                                             <td
                                                 key={firm.id}
-                                                className="px-4 py-2.5 text-right text-[var(--color-text-primary)] font-bold"
+                                                className="px-4 py-2.5 text-right text-black font-bold"
                                             >
                                                 {formatCurrency(initialTotal + addSubsTotal)}
                                             </td>
@@ -233,7 +251,7 @@ export function TRREvaluationPrice({
                         </table>
                     </div>
                 ) : (
-                    <div className="px-4 py-3 text-[var(--color-text-muted)] text-sm">
+                    <div className="px-4 py-3 text-black/60 text-sm">
                         No price evaluation completed
                     </div>
                 )}

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { FileText } from 'lucide-react';
 import { useToast } from '@/lib/hooks/use-toast';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import type { ObjectiveContent, ObjectiveSource, ProfileContext } from '@/types/profiler';
 
 interface ObjectivesProfilerSectionProps {
@@ -23,34 +25,24 @@ interface ObjectiveEditorProps {
 }
 
 function ObjectiveEditor({ label, objective, onChange, isGenerating, isPolishing, headerActions }: ObjectiveEditorProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(objective?.content || '');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [localContent, setLocalContent] = useState(objective?.content || '');
+  const lastSavedRef = useRef(objective?.content || '');
 
   useEffect(() => {
-    setEditValue(objective?.content || '');
+    if (objective?.content !== lastSavedRef.current) {
+      setLocalContent(objective?.content || '');
+      lastSavedRef.current = objective?.content || '';
+    }
   }, [objective?.content]);
 
-  // Focus and position cursor at end only when entering edit mode
-  useLayoutEffect(() => {
-    if (isEditing && textareaRef.current) {
-      const textarea = textareaRef.current;
-      // Reset height to recalculate
-      textarea.style.height = 'auto';
-      // Set to scrollHeight with minimum of 100px
-      const newHeight = Math.max(textarea.scrollHeight, 100);
-      textarea.style.height = newHeight + 'px';
-      // Focus without selecting text - place cursor at end with no selection
-      textarea.focus({ preventScroll: true });
-      const len = textarea.value.length;
-      textarea.setSelectionRange(len, len);
-    }
-  }, [isEditing]);
+  const handleContentChange = useCallback((newContent: string) => {
+    setLocalContent(newContent);
+  }, []);
 
-  const handleSave = () => {
-    if (editValue.trim() !== objective?.content) {
+  const handleBlur = useCallback(() => {
+    if (localContent !== lastSavedRef.current) {
       const newObjective: ObjectiveContent = {
-        content: editValue.trim(),
+        content: localContent,
         source: 'manual' as ObjectiveSource,
         originalAi: objective?.originalAi || null,
         editHistory: objective?.editHistory
@@ -58,58 +50,36 @@ function ObjectiveEditor({ label, objective, onChange, isGenerating, isPolishing
           : objective?.content ? [objective.content] : null,
       };
       onChange(newObjective);
+      lastSavedRef.current = localContent;
     }
-    setIsEditing(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && e.ctrlKey) {
-      handleSave();
-    }
-  };
+  }, [localContent, objective, onChange]);
 
   return (
-    <div className="border border-[var(--color-border)] rounded overflow-hidden flex flex-col">
-      {/* Header with copper tint background - matches Brief section */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
-        <span className="text-[var(--color-accent-copper)] font-medium text-sm uppercase tracking-wide">{label}</span>
-        <div className="flex items-center gap-3">
+    <div className="rounded overflow-hidden flex flex-col">
+      {/* Segmented ribbon header - matches RFT/TRR/Evaluation style */}
+      <div className="flex items-stretch gap-0.5 p-2">
+        {/* Left segment: icon + label */}
+        <div className="flex items-center px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
+          <FileText className="w-4 h-4" style={{ color: 'var(--color-accent-copper)' }} />
+          <span className="ml-2 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">{label}</span>
+        </div>
+        {/* Right segment: action buttons */}
+        <div className="flex items-center gap-3 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md">
           {headerActions}
         </div>
       </div>
 
-      {/* Content area - matches Brief section textarea styling */}
-      <div className="flex-1">
-        {isEditing ? (
-          <textarea
-            ref={textareaRef}
-            value={editValue}
-            onChange={(e) => {
-              setEditValue(e.target.value);
-              e.target.style.height = 'auto';
-              e.target.style.height = Math.max(e.target.scrollHeight, 100) + 'px';
-            }}
-            onKeyDown={handleKeyDown}
-            onBlur={handleSave}
-            className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-sm"
-            style={{ fieldSizing: 'content' } as React.CSSProperties}
-            placeholder={`Enter ${label.toLowerCase()} objectives...`}
-          />
-        ) : objective?.content ? (
-          <div
-            className="w-full bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text text-sm whitespace-pre-wrap"
-            onClick={() => setIsEditing(true)}
-          >
-            {objective.content}
-          </div>
-        ) : (
-          <div
-            onClick={() => setIsEditing(true)}
-            className="w-full bg-[var(--color-bg-secondary)] min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text text-sm text-[var(--color-text-muted)]"
-          >
-            Enter {label.toLowerCase()} objectives...
-          </div>
-        )}
+      {/* Content area with drop shadow and rich text editor */}
+      <div className="flex-1 mx-2 mb-2">
+        <RichTextEditor
+          content={localContent}
+          onChange={handleContentChange}
+          onBlur={handleBlur}
+          placeholder={`Enter ${label.toLowerCase()} objectives...`}
+          variant="compact"
+          toolbarVariant="full"
+          className="shadow-sm"
+        />
       </div>
     </div>
   );
@@ -137,6 +107,47 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
       setPlanningCompliance(objectivesData.planningCompliance || null);
     }
   }, [objectivesData]);
+
+  // Save objectives to database
+  const saveObjectives = async (
+    fq: ObjectiveContent | null,
+    pc: ObjectiveContent | null
+  ) => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/objectives`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          functionalQuality: fq,
+          planningCompliance: pc,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Failed to save objectives');
+      }
+
+      onUpdate();
+    } catch (error) {
+      toast({
+        title: 'Save Failed',
+        description: error instanceof Error ? error.message : 'Failed to save objectives',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Handlers for manual edits that persist to database
+  const handleFunctionalQualityChange = (content: ObjectiveContent) => {
+    setFunctionalQuality(content);
+    saveObjectives(content, planningCompliance);
+  };
+
+  const handlePlanningComplianceChange = (content: ObjectiveContent) => {
+    setPlanningCompliance(content);
+    saveObjectives(functionalQuality, content);
+  };
 
   // Check if profile is complete for generation
   const canGenerate = profileData?.buildingClass && profileData?.projectType && profileData?.subclass?.length > 0;
@@ -345,7 +356,7 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
         <ObjectiveEditor
           label="Functional & Quality"
           objective={functionalQuality}
-          onChange={setFunctionalQuality}
+          onChange={handleFunctionalQualityChange}
           isGenerating={generatingSection === 'functionalQuality'}
           isPolishing={polishingSection === 'functionalQuality'}
           headerActions={createActionButtons('functionalQuality')}
@@ -355,7 +366,7 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
         <ObjectiveEditor
           label="Planning & Compliance"
           objective={planningCompliance}
-          onChange={setPlanningCompliance}
+          onChange={handlePlanningComplianceChange}
           isGenerating={generatingSection === 'planningCompliance'}
           isPolishing={polishingSection === 'planningCompliance'}
           headerActions={createActionButtons('planningCompliance')}

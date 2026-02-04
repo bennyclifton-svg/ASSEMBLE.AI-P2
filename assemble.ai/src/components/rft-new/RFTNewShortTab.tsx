@@ -741,11 +741,11 @@ export function RFTNewShortTab({
     return (
         <div className="space-y-6">
             {/* 1. Project Information Table */}
-            <div className="border border-[var(--color-border)] rounded overflow-hidden">
+            <div className="overflow-hidden rounded-lg">
                 <table className="w-full text-sm">
                     <tbody>
                         <tr className="border-b border-[var(--color-border)]">
-                            <td className="w-36 px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium">
+                            <td className="w-36 px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                                 Project Name
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -753,7 +753,7 @@ export function RFTNewShortTab({
                             </td>
                         </tr>
                         <tr className="border-b border-[var(--color-border)]">
-                            <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium">
+                            <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                                 Address
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -761,17 +761,17 @@ export function RFTNewShortTab({
                             </td>
                         </tr>
                         <tr>
-                            <td className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium">
+                            <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
                                 Document
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
                                 {rftLabel}
                             </td>
                             <td
-                                className="w-36 px-4 py-2.5 text-[var(--color-accent-copper)] font-medium border-l border-[var(--color-border)] cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative"
+                                className="w-44 px-4 py-2.5 text-[var(--color-document-header)] font-medium cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative text-right"
                                 onClick={handleDateClick}
                             >
-                                <span className="select-none">{formatDisplayDate(rftDate)}</span>
+                                <span className="select-none">Issued {formatDisplayDate(rftDate)}</span>
                                 <input
                                     ref={dateInputRef}
                                     type="date"
@@ -793,21 +793,39 @@ export function RFTNewShortTab({
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                     {/* Left: Functional & Quality */}
-                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                        <div className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium text-sm border-b border-[var(--color-border)]">
+                    <div className="overflow-hidden rounded-lg">
+                        <div className="px-4 py-2.5 text-[var(--color-document-header)] font-medium text-sm border-b border-[var(--color-border)]">
                             Functional & Quality
                         </div>
-                        <div className="px-4 py-2.5 text-[var(--color-text-primary)] text-sm whitespace-pre-wrap">
-                            {objectives.functionalQuality || '-'}
+                        <div className="px-4 py-2.5 text-[var(--color-text-primary)] text-sm">
+                            {objectives.functionalQuality ? (
+                                objectives.functionalQuality.includes('<') ? (
+                                    <div
+                                        className="[&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline"
+                                        dangerouslySetInnerHTML={{ __html: objectives.functionalQuality }}
+                                    />
+                                ) : (
+                                    <div className="whitespace-pre-wrap">{objectives.functionalQuality}</div>
+                                )
+                            ) : '-'}
                         </div>
                     </div>
                     {/* Right: Planning & Compliance */}
-                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                        <div className="px-4 py-2.5 bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)] font-medium text-sm border-b border-[var(--color-border)]">
+                    <div className="overflow-hidden rounded-lg">
+                        <div className="px-4 py-2.5 text-[var(--color-document-header)] font-medium text-sm border-b border-[var(--color-border)]">
                             Planning & Compliance
                         </div>
-                        <div className="px-4 py-2.5 text-[var(--color-text-primary)] text-sm whitespace-pre-wrap">
-                            {objectives.planningCompliance || '-'}
+                        <div className="px-4 py-2.5 text-[var(--color-text-primary)] text-sm">
+                            {objectives.planningCompliance ? (
+                                objectives.planningCompliance.includes('<') ? (
+                                    <div
+                                        className="[&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline"
+                                        dangerouslySetInnerHTML={{ __html: objectives.planningCompliance }}
+                                    />
+                                ) : (
+                                    <div className="whitespace-pre-wrap">{objectives.planningCompliance}</div>
+                                )
+                            ) : '-'}
                         </div>
                     </div>
                 </div>
@@ -820,9 +838,9 @@ export function RFTNewShortTab({
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                     {/* Left: Service */}
-                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
-                            <span className="text-[var(--color-accent-copper)] font-medium text-sm">Service</span>
+                    <div className="overflow-hidden rounded-lg">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--color-border)]">
+                            <span className="text-[var(--color-document-header)] font-medium text-sm">Service</span>
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={handleGenerateService}
@@ -871,9 +889,9 @@ export function RFTNewShortTab({
                         />
                     </div>
                     {/* Right: Deliverables */}
-                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
-                            <span className="text-[var(--color-accent-copper)] font-medium text-sm">Deliverables</span>
+                    <div className="overflow-hidden rounded-lg">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--color-border)]">
+                            <span className="text-[var(--color-document-header)] font-medium text-sm">Deliverables</span>
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={handleGenerateDeliverables}
@@ -935,18 +953,18 @@ export function RFTNewShortTab({
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     Fee
                 </h3>
-                <div className="border border-[var(--color-border)] rounded overflow-hidden">
+                <div className="overflow-hidden rounded-lg">
                     {costLines.length > 0 ? (
                         <table className="w-full text-sm table-fixed">
-                            <thead className="bg-[var(--color-accent-copper-tint)]">
+                            <thead>
                                 <tr className="border-b border-[var(--color-border)]">
-                                    <th className="px-4 py-2.5 text-left text-[var(--color-accent-copper)] font-medium" style={{ width: '66%' }}>Description</th>
-                                    <th className="px-4 py-2.5 text-left text-[var(--color-accent-copper)] font-medium" style={{ width: '34%' }}>Amount (Excl. GST)</th>
+                                    <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium" style={{ width: '66%' }}>Description</th>
+                                    <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium" style={{ width: '34%' }}>Amount (Excl. GST)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {costLines.map((line) => (
-                                    <tr key={line.id} className="border-b border-[var(--color-border)] last:border-b-0">
+                                    <tr key={line.id}>
                                         <td className="px-4 py-2.5 text-[var(--color-text-primary)]">{line.activity}</td>
                                         <td className="px-4 py-2.5 text-[var(--color-text-muted)] text-left">$</td>
                                     </tr>

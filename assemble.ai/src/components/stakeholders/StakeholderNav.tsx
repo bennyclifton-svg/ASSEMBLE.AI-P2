@@ -35,7 +35,7 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
 
   if (isLoading) {
     return (
-      <div className="nav-panel-section py-3 pl-2 pr-3">
+      <div className="nav-panel-section py-3">
         <Skeleton className="h-5 w-24 mb-2" />
         <div className="space-y-1">
           {[1, 2, 3, 4].map((i) => (
@@ -50,7 +50,7 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
     <div className={`nav-panel-section ${isActive ? 'nav-panel-active' : ''}`}>
       {/* Header */}
       <div
-        className="nav-panel-header pl-2 pr-3 py-2 border-b border-[var(--color-border)]"
+        className="nav-panel-header py-2"
         onClick={onNavigate}
       >
         <div className="flex items-center gap-1.5">
@@ -67,7 +67,7 @@ export function StakeholderNav({ projectId, onNavigate, isActive = false }: Stak
       </div>
 
       {/* Compact Group List */}
-      <div className="p-1.5">
+      <div className="nav-panel-content py-1.5">
         {GROUP_ORDER.map((group) => {
           const config = GROUP_CONFIG[group];
           const count = counts[group];

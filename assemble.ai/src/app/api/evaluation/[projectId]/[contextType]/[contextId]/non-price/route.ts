@@ -140,6 +140,7 @@ export async function GET(
 
         // Fetch shortlisted firms based on stakeholder
         let firms: Array<{ id: string; companyName: string; shortlisted: boolean; awarded: boolean }> = [];
+        let firmType: 'consultant' | 'contractor' = 'consultant';
 
         const stakeholder = await db.query.projectStakeholders.findFirst({
             where: eq(projectStakeholders.id, contextId),
@@ -147,11 +148,14 @@ export async function GET(
 
         if (stakeholder) {
             if (stakeholder.stakeholderGroup === 'consultant') {
+                firmType = 'consultant';
+                // Order by createdAt to match firm tiles display order
                 const stakeholderConsultants = await db.query.consultants.findMany({
                     where: and(
                         eq(consultants.projectId, projectId),
                         eq(consultants.discipline, stakeholder.name)
                     ),
+                    orderBy: [asc(consultants.createdAt)],
                 });
 
                 firms = stakeholderConsultants
@@ -163,11 +167,14 @@ export async function GET(
                         awarded: c.awarded ?? false,
                     }));
             } else {
+                firmType = 'contractor';
+                // Order by createdAt to match firm tiles display order
                 const stakeholderContractors = await db.query.contractors.findMany({
                     where: and(
                         eq(contractors.projectId, projectId),
                         eq(contractors.trade, stakeholder.name)
                     ),
+                    orderBy: [asc(contractors.createdAt)],
                 });
 
                 firms = stakeholderContractors
@@ -188,6 +195,7 @@ export async function GET(
                 criteria,
                 cells,
                 firms,
+                firmType,
             },
         });
     } catch (error) {

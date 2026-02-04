@@ -27,6 +27,17 @@ interface Project {
 // NOTES TYPES
 // ============================================================================
 
+export type NoteColor = 'yellow' | 'blue' | 'green' | 'pink';
+
+export const NOTE_COLORS: NoteColor[] = ['yellow', 'blue', 'green', 'pink'];
+
+export const NOTE_COLOR_MAP: Record<NoteColor, { bg: string; border: string }> = {
+    yellow: { bg: 'rgba(255, 217, 61, 0.4)', border: 'rgba(255, 217, 61, 0.6)' },
+    blue:   { bg: 'rgba(100, 180, 255, 0.4)', border: 'rgba(100, 180, 255, 0.6)' },
+    green:  { bg: 'rgba(122, 200, 130, 0.4)', border: 'rgba(122, 200, 130, 0.6)' },
+    pink:   { bg: 'rgba(255, 150, 180, 0.4)', border: 'rgba(255, 150, 180, 0.6)' },
+};
+
 export interface Note {
   id: string;
   projectId: string;
@@ -34,6 +45,7 @@ export interface Note {
   title: string;
   content: string | null;
   isStarred: boolean;
+  color: NoteColor;
   reportingPeriodStart: string | null;
   reportingPeriodEnd: string | null;
   createdAt: string;
@@ -57,12 +69,14 @@ export interface CreateNoteRequest {
   projectId: string;
   title?: string;
   content?: string;
+  color?: NoteColor;
 }
 
 export interface UpdateNoteRequest {
   title?: string;
   content?: string;
   isStarred?: boolean;
+  color?: NoteColor;
   reportingPeriodStart?: string | null;
   reportingPeriodEnd?: string | null;
 }

@@ -3,6 +3,31 @@
  * Types for the EVALUATION report in the Procurement section
  */
 
+// =============================================================================
+// Shared Column Width Constants
+// Used by EvaluationSheet, EvaluationPriceTab (Grand Total), and related tables
+// to ensure consistent horizontal alignment across all evaluation tables
+// =============================================================================
+export const EVALUATION_TABLE_COLUMNS = {
+    dragHandle: 32,      // Drag handle / add row button column
+    description: 200,    // Description/line item column
+    firmColumn: 120,     // Each firm amount column
+    aiIndicator: 28,     // AI sparkle indicator column
+    deleteButton: 28,    // Delete button column
+} as const;
+
+// Calculate total table width based on number of firms
+// This ensures all evaluation tables have identical widths for alignment
+export function getEvaluationTableWidth(firmCount: number): number {
+    return (
+        EVALUATION_TABLE_COLUMNS.dragHandle +
+        EVALUATION_TABLE_COLUMNS.description +
+        (firmCount * EVALUATION_TABLE_COLUMNS.firmColumn) +
+        EVALUATION_TABLE_COLUMNS.aiIndicator +
+        EVALUATION_TABLE_COLUMNS.deleteButton
+    );
+}
+
 // Evaluation entity
 export interface Evaluation {
     id: string;
@@ -237,10 +262,10 @@ export interface EvaluationNonPriceCell {
 // AI extraction result for a single criterion
 export interface NonPriceExtractionResult {
     criteriaKey: NonPriceCriteriaKey;
-    summary: string;
+    summary: string;  // Now formatted as bullet points: "• Point one\n• Point two"
     rating: QualityRating;
     confidence: number;
-    keyPoints: string[];
+    keyPoints?: string[];  // Optional - kept for backwards compatibility
     sourceChunks: string[];
 }
 
@@ -250,6 +275,7 @@ export interface NonPriceEvaluationData {
     criteria: EvaluationNonPriceCriteria[];
     cells: EvaluationNonPriceCell[];
     firms: EvaluationFirm[];
+    firmType: 'consultant' | 'contractor';
 }
 
 // API request types for non-price

@@ -68,7 +68,6 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.pool = exports.ragDb = void 0;
 exports.checkRagDbHealth = checkRagDbHealth;
@@ -77,10 +76,11 @@ var pg_1 = require("pg");
 var schema = __importStar(require("./rag-schema"));
 // Determine if we need SSL (production/Supabase) or not (local Docker)
 var isProduction = process.env.NODE_ENV === 'production';
-var isSupabase = (_a = process.env.SUPABASE_POSTGRES_URL) === null || _a === void 0 ? void 0 : _a.includes('supabase');
+var connectionString = process.env.DATABASE_URL || process.env.SUPABASE_POSTGRES_URL;
+var isSupabase = connectionString === null || connectionString === void 0 ? void 0 : connectionString.includes('supabase');
 // Create PostgreSQL pool
 var pool = new pg_1.Pool({
-    connectionString: process.env.SUPABASE_POSTGRES_URL,
+    connectionString: connectionString,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,

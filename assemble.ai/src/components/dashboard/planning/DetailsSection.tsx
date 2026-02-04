@@ -34,7 +34,7 @@ export function DetailsSection({
     refreshTrigger,
 }: DetailsSectionProps) {
     return (
-        <div className={`nav-panel-section py-3 pl-2 pr-3 ${isActive ? 'nav-panel-active' : ''}`}>
+        <div className={`nav-panel-section py-3 ${isActive ? 'nav-panel-active' : ''}`}>
             <button
                 onClick={onToggle}
                 className="nav-panel-header w-full mb-2"
@@ -49,7 +49,7 @@ export function DetailsSection({
                 />
             </button>
 
-            <div className="pl-1.5 pr-1">
+            <div className="nav-panel-content">
                 {onSelectProject ? (
                     <ProjectSwitcher
                         selectedProject={selectedProject ?? null}

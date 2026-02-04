@@ -56,10 +56,10 @@ export function AttachmentTable({
     }
 
     return (
-        <div className={cn('border border-[var(--color-border)] rounded overflow-hidden', className)}>
+        <div className={cn('border border-black/10 rounded overflow-hidden', className)}>
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                    <tr className="bg-black/5 text-[var(--color-text-primary)]">
                         <th className="text-left px-4 py-1.5 font-medium w-10">#</th>
                         <th className="text-left px-4 py-1.5 font-medium w-24">DWG #</th>
                         <th className="text-left px-4 py-1.5 font-medium">Name</th>
@@ -75,7 +75,7 @@ export function AttachmentTable({
                     {documents.map((doc, index) => (
                             <tr
                                 key={doc.id}
-                                className="border-t border-[var(--color-border)] hover:bg-[#2d2d30]/50"
+                                className="border-t border-black/10 hover:bg-black/5"
                             >
                                 <td className="px-4 py-1.5 text-[var(--color-text-muted)]">
                                     {index + 1}

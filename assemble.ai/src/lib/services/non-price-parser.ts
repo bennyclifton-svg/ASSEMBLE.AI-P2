@@ -43,10 +43,11 @@ Your task is to extract and assess qualitative criteria from tender documents.
 
 For each criterion, you will:
 1. Extract relevant content from the tender document
-2. Summarize the key points in 2-4 sentences (100-200 words max)
+2. Summarize as 2-3 bullet points, each 2-5 words ONLY (e.g., "Experienced project team", "Strong safety record")
 3. Assign a quality rating: "good", "average", or "poor"
 4. Provide a confidence score (0-100) for your extraction
-5. List 2-4 key points as bullet items
+
+CRITICAL: Keep summaries EXTREMELY brief - 2-3 bullet points, 2-5 words each. NO sentences, NO prose.
 
 IMPORTANT: Return ONLY a valid JSON object. No markdown, no explanation, just the JSON.`;
 
@@ -58,23 +59,27 @@ function buildExtractionPrompt(criteriaKey: NonPriceCriteriaKey, documentContent
 
 ${criteriaPrompt}
 
+CRITICAL FORMAT REQUIREMENTS:
+- summary: 2-3 bullet points, each 2-5 words ONLY
+- Format as "• Point one\\n• Point two\\n• Point three"
+- NO sentences, NO prose, NO detailed explanations
+- Example: "• Experienced project team\\n• Strong safety record\\n• Proven methodology"
+
 Return a JSON object with this exact structure:
 {
     "criteriaKey": "${criteriaKey}",
-    "summary": "2-4 sentence summary of the tenderer's ${criteria?.label?.toLowerCase() || criteriaKey}",
+    "summary": "• First point (2-5 words)\\n• Second point (2-5 words)\\n• Third point (2-5 words)",
     "rating": "good" | "average" | "poor",
     "confidence": 0-100,
-    "keyPoints": ["point 1", "point 2", "point 3"],
     "sourceChunks": ["relevant excerpt 1", "relevant excerpt 2"]
 }
 
 If no relevant content is found, return:
 {
     "criteriaKey": "${criteriaKey}",
-    "summary": "No relevant content found for ${criteria?.label?.toLowerCase() || criteriaKey} in the tender submission.",
+    "summary": "• No relevant content found",
     "rating": "poor",
     "confidence": 20,
-    "keyPoints": [],
     "sourceChunks": []
 }
 
@@ -136,10 +141,10 @@ async function extractCriterion(
         // Validate and normalize the response
         return {
             criteriaKey,
-            summary: extracted.summary || 'No content extracted',
+            summary: extracted.summary || '• No content extracted',
             rating: validateRating(extracted.rating),
             confidence: Math.min(100, Math.max(0, Number(extracted.confidence) || 50)),
-            keyPoints: Array.isArray(extracted.keyPoints) ? extracted.keyPoints : [],
+            keyPoints: [],  // Deprecated - bullet points now in summary
             sourceChunks: Array.isArray(extracted.sourceChunks) ? extracted.sourceChunks : [],
         };
     } catch (error) {
@@ -149,7 +154,7 @@ async function extractCriterion(
         const criteria = NON_PRICE_CRITERIA.find(c => c.key === criteriaKey);
         return {
             criteriaKey,
-            summary: `Failed to extract ${criteria?.label || criteriaKey} from the tender submission.`,
+            summary: `• Extraction failed`,
             rating: 'poor',
             confidence: 0,
             keyPoints: [],

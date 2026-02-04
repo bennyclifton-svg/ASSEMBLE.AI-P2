@@ -2,23 +2,18 @@
  * Notes, Meetings & Reports Container Component
  * Feature 021 - Notes, Meetings & Reports
  *
- * Main container with sub-tab navigation for Notes, Meetings, and Reports panels.
- * T097: Create tab container component with sub-tab navigation
- * T098: Implement sub-tab state management
+ * Main container displaying Notes, Meetings, and Reports sections
+ * with segmented ribbon headers matching procurement report styling.
  */
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { mutate as globalMutate } from 'swr';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NotesPanel } from './NotesPanel';
 import { MeetingsPanel } from './MeetingsPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { cn } from '@/lib/utils';
-
-// Sub-tab type
-type SubTab = 'notes' | 'meetings' | 'reports';
 
 interface NotesMeetingsReportsContainerProps {
     projectId: string;
@@ -33,19 +28,8 @@ export function NotesMeetingsReportsContainer({
     onSetSelectedDocumentIds,
     className,
 }: NotesMeetingsReportsContainerProps) {
-    // T098: Sub-tab state management
-    const [activeSubTab, setActiveSubTab] = useState<SubTab>('notes');
-
-    // Track active entity for transmittal operations
-    const [activeTransmittalContext, setActiveTransmittalContext] = useState<{
-        type: 'note' | 'meeting' | 'report';
-        id: string;
-    } | null>(null);
-
     // Handlers for Save Transmittal - save selected documents to an entity
     const handleSaveTransmittal = useCallback(async (type: 'note' | 'meeting' | 'report', id: string) => {
-        setActiveTransmittalContext({ type, id });
-
         // Only proceed if there are documents selected
         if (!selectedDocumentIds || selectedDocumentIds.length === 0) {
             console.warn(`[NotesMeetingsReportsContainer] No documents selected to save for ${type}`);
@@ -121,58 +105,28 @@ export function NotesMeetingsReportsContainer({
         }
     }, [onSetSelectedDocumentIds]);
 
-    // Sub-tab styling - matches the Cost Planning sub-tabs style
-    const subTabClassName = `
-        tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50
-    `;
-
     return (
-        <div className={cn('flex flex-col h-full', className)}>
-            <Tabs
-                value={activeSubTab}
-                onValueChange={(value) => setActiveSubTab(value as SubTab)}
-                className="flex-1 flex flex-col min-h-0"
-            >
-                {/* Sub-tab navigation bar */}
-                <TabsList className="w-full justify-start bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2">
-                    <TabsTrigger value="notes" className={subTabClassName}>
-                        Notes
-                    </TabsTrigger>
-                    <TabsTrigger value="meetings" className={subTabClassName}>
-                        Meetings
-                    </TabsTrigger>
-                    <TabsTrigger value="reports" className={subTabClassName}>
-                        Reports
-                    </TabsTrigger>
-                </TabsList>
+        <div className={cn('flex flex-col h-full overflow-y-auto', className)}>
+            {/* Notes Section */}
+            <NotesPanel
+                projectId={projectId}
+                onSaveTransmittal={(noteId) => handleSaveTransmittal('note', noteId)}
+                onLoadTransmittal={(noteId) => handleLoadTransmittal('note', noteId)}
+            />
 
-                {/* Notes Tab Content */}
-                <TabsContent value="notes" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <NotesPanel
-                        projectId={projectId}
-                        onSaveTransmittal={(noteId) => handleSaveTransmittal('note', noteId)}
-                        onLoadTransmittal={(noteId) => handleLoadTransmittal('note', noteId)}
-                    />
-                </TabsContent>
+            {/* Meetings Section */}
+            <MeetingsPanel
+                projectId={projectId}
+                onSaveTransmittal={(meetingId) => handleSaveTransmittal('meeting', meetingId)}
+                onLoadTransmittal={(meetingId) => handleLoadTransmittal('meeting', meetingId)}
+            />
 
-                {/* Meetings Tab Content */}
-                <TabsContent value="meetings" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <MeetingsPanel
-                        projectId={projectId}
-                        onSaveTransmittal={(meetingId) => handleSaveTransmittal('meeting', meetingId)}
-                        onLoadTransmittal={(meetingId) => handleLoadTransmittal('meeting', meetingId)}
-                    />
-                </TabsContent>
-
-                {/* Reports Tab Content */}
-                <TabsContent value="reports" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <ReportsPanel
-                        projectId={projectId}
-                        onSaveTransmittal={(reportId) => handleSaveTransmittal('report', reportId)}
-                        onLoadTransmittal={(reportId) => handleLoadTransmittal('report', reportId)}
-                    />
-                </TabsContent>
-            </Tabs>
+            {/* Reports Section */}
+            <ReportsPanel
+                projectId={projectId}
+                onSaveTransmittal={(reportId) => handleSaveTransmittal('report', reportId)}
+                onLoadTransmittal={(reportId) => handleLoadTransmittal('report', reportId)}
+            />
         </div>
     );
 }

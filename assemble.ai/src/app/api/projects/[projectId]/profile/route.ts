@@ -17,7 +17,7 @@ const profileSchema = z.object({
   subclass: z.array(z.string()).default([]),
   subclassOther: z.array(z.string()).nullable().optional(),
   scaleData: z.record(z.string(), z.number()).default({}),
-  complexity: z.record(z.string(), z.string()).default({}),
+  complexity: z.record(z.string(), z.union([z.string(), z.array(z.string())])).default({}),
   workScope: z.array(z.string()).nullable().optional(),
 });
 
@@ -201,7 +201,7 @@ export async function PUT(
 /**
  * Calculate a simplified complexity score (1-10) based on complexity selections
  */
-function calculateComplexityScore(complexity: Record<string, string>): number {
+function calculateComplexityScore(complexity: Record<string, string | string[]>): number {
   const complexityWeights: Record<string, Record<string, number>> = {
     quality_tier: { project_home: 1, standard: 2, premium: 3, luxury: 4, ultra_premium: 5 },
     grade: { b_grade: 1, a_grade: 2, premium: 3, trophy: 4 },
@@ -214,6 +214,8 @@ function calculateComplexityScore(complexity: Record<string, string>): number {
     significance: { local: 1, regional: 2, state_significant: 3, critical: 4 },
     heritage: { none: 0, overlay: 1, conservation: 2, listed: 3 },
     approval_pathway: { cdc_exempt: 1, low_rise_code: 2, standard_da: 3, complex_da: 4, state_significant: 5 },
+    // Site conditions: each condition adds complexity
+    site_conditions: { greenfield: 0, infill: 1, sloping: 2, bushfire: 3, flood: 3, coastal: 2 },
   };
 
   let totalWeight = 0;
@@ -221,7 +223,17 @@ function calculateComplexityScore(complexity: Record<string, string>): number {
 
   for (const [dimension, value] of Object.entries(complexity)) {
     const weights = complexityWeights[dimension];
-    if (weights && weights[value] !== undefined) {
+    if (!weights) continue;
+
+    // Handle array values (site_conditions) - sum all selected conditions
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        if (weights[v] !== undefined) {
+          totalScore += weights[v];
+          totalWeight += 3; // Weight per condition
+        }
+      }
+    } else if (weights[value] !== undefined) {
       totalScore += weights[value];
       totalWeight += Object.keys(weights).length > 3 ? 4 : 3;
     }

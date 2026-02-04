@@ -60,7 +60,6 @@ export function CornerBracketIcon({ className, direction = 'left', gradient = fa
             xmlns="http://www.w3.org/2000/svg"
             className={cn(
                 'inline-block',
-                direction === 'right' && 'rotate-180',
                 className
             )}
         >
@@ -75,22 +74,45 @@ export function CornerBracketIcon({ className, direction = 'left', gradient = fa
                     </linearGradient>
                 </defs>
             )}
-            {/* Top-right bracket pointing outward (up and right) */}
-            <path
-                d="M10 2H14V6"
-                stroke={gradient ? `url(#${gradientId})` : "currentColor"}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
-            {/* Bottom-left bracket pointing outward (down and left) */}
-            <path
-                d="M6 14H2V10"
-                stroke={gradient ? `url(#${gradientId})` : "currentColor"}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-            />
+            {direction === 'left' ? (
+                <>
+                    {/* Outward: Top-right bracket - vertex at outer corner (14,2), arms point left and down */}
+                    <path
+                        d="M10 2H14V6"
+                        stroke={gradient ? `url(#${gradientId})` : "currentColor"}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                    {/* Outward: Bottom-left bracket - vertex at outer corner (2,14), arms point right and up */}
+                    <path
+                        d="M6 14H2V10"
+                        stroke={gradient ? `url(#${gradientId})` : "currentColor"}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </>
+            ) : (
+                <>
+                    {/* Inward: Top-right bracket - vertex at inner point (10,6), arms point up and right */}
+                    <path
+                        d="M10 2V6H14"
+                        stroke={gradient ? `url(#${gradientId})` : "currentColor"}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                    {/* Inward: Bottom-left bracket - vertex at inner point (6,10), arms point down and left */}
+                    <path
+                        d="M6 14V10H2"
+                        stroke={gradient ? `url(#${gradientId})` : "currentColor"}
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </>
+            )}
         </svg>
     );
 }

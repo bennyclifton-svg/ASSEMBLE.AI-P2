@@ -61,6 +61,9 @@ export interface RichTextEditorProps {
 
   /** Additional class for the editor content area */
   editorClassName?: string;
+
+  /** Use transparent background (inherits from parent) */
+  transparentBg?: boolean;
 }
 
 const SIZE_CLASSES: Record<RichTextEditorVariant, string> = {
@@ -70,6 +73,57 @@ const SIZE_CLASSES: Record<RichTextEditorVariant, string> = {
 };
 
 const PROSE_BASE_CLASSES = 'prose prose-invert prose-sm max-w-none focus:outline-none px-3 py-2 [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_h3]:text-[var(--color-accent-teal)] [&_p]:mb-1 [&_p]:leading-normal [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:my-0';
+
+/**
+ * Convert markdown syntax to HTML for TipTap rendering
+ * Handles common patterns from AI-generated content
+ */
+function markdownToHtml(text: string): string {
+  // Skip if already HTML (contains tags)
+  if (/<[a-z][\s\S]*>/i.test(text) && !text.includes('**')) {
+    return text;
+  }
+
+  let html = text;
+
+  // Handle ## headings (must be at start of line or after newline)
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+
+  // Handle **bold** text
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+  // Handle *italic* text (but not ** which is bold)
+  html = html.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+
+  // Handle bullet points: • at start of line
+  html = html.replace(/^[•\-]\s*(.+)$/gm, '<li>$1</li>');
+
+  // Wrap consecutive <li> elements in <ul>
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`);
+
+  // Handle line breaks - convert double newlines to paragraph breaks
+  // and single newlines within text to <br>
+  const paragraphs = html.split(/\n\n+/);
+  if (paragraphs.length > 1) {
+    html = paragraphs
+      .map(p => {
+        // Don't wrap if already has block-level tags
+        if (/^<(h[1-6]|ul|ol|li|p|div)/i.test(p.trim())) {
+          return p;
+        }
+        // Replace single newlines with <br> within paragraphs
+        const withBreaks = p.replace(/\n/g, '<br>');
+        return `<p>${withBreaks}</p>`;
+      })
+      .join('');
+  } else if (!/<(h[1-6]|ul|ol|p|div)/i.test(html)) {
+    // Single block without paragraphs - wrap in <p> if not already block-level
+    html = `<p>${html.replace(/\n/g, '<br>')}</p>`;
+  }
+
+  return html;
+}
 
 interface ToolbarButtonProps {
   onClick: () => void;
@@ -113,7 +167,11 @@ export function RichTextEditor({
   disabled = false,
   className,
   editorClassName,
+  transparentBg = false,
 }: RichTextEditorProps) {
+  // Convert markdown to HTML for initial content
+  const processedContent = React.useMemo(() => markdownToHtml(content), [content]);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -134,7 +192,7 @@ export function RichTextEditor({
       TextStyle,
       Color,
     ],
-    content,
+    content: processedContent,
     editable: !disabled,
     immediatelyRender: false, // Prevent SSR hydration mismatch
     editorProps: {
@@ -156,8 +214,13 @@ export function RichTextEditor({
 
   // Update editor content when prop changes (external updates)
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
+    if (editor) {
+      const currentHtml = editor.getHTML();
+      const newProcessedContent = markdownToHtml(content);
+      // Only update if content is actually different (comparing processed versions)
+      if (newProcessedContent !== currentHtml && content !== currentHtml) {
+        editor.commands.setContent(newProcessedContent);
+      }
     }
   }, [content, editor]);
 
@@ -209,7 +272,12 @@ export function RichTextEditor({
 
   if (!editor) {
     return (
-      <div className={cn('rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)]', className)}>
+      <div className={cn(
+        'rounded-md',
+        !transparentBg && 'border border-[var(--color-border)] bg-[var(--color-bg-primary)]',
+        transparentBg && 'bg-transparent',
+        className
+      )}>
         <div className={cn('p-3 text-[var(--color-text-muted)]', SIZE_CLASSES[variant])}>
           Loading editor...
         </div>
@@ -217,14 +285,23 @@ export function RichTextEditor({
     );
   }
 
-  const iconSize = toolbarVariant === 'mini' ? 'w-3.5 h-3.5' : 'w-4 h-4';
+  const iconSize = toolbarVariant === 'mini' ? 'w-3.5 h-3.5 text-[var(--color-text-muted)]' : 'w-4 h-4 text-[var(--color-text-muted)]';
   const isSmall = toolbarVariant === 'mini';
 
   return (
-    <div className={cn('flex flex-col rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] overflow-hidden', className)}>
+    <div className={cn(
+      'flex flex-col rounded-md overflow-hidden',
+      !transparentBg && 'border border-[var(--color-border)] bg-[var(--color-bg-primary)]',
+      transparentBg && 'bg-transparent',
+      className
+    )}>
       {/* Toolbar */}
       {toolbarVariant !== 'none' && (
-        <div className="flex items-center gap-0.5 px-2 py-1 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex-wrap">
+        <div className={cn(
+          "flex items-center gap-0.5 px-2 py-1 flex-wrap",
+          !transparentBg && "border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]",
+          transparentBg && "border-b border-black/10"
+        )}>
           <ToolbarButton
             onClick={toggleBold}
             isActive={editor.isActive('bold')}

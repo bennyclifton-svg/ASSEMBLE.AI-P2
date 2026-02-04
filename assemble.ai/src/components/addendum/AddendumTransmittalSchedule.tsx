@@ -98,14 +98,14 @@ export function AddendumTransmittalSchedule({
                 </div>
             </div>
 
-            <div className="border border-[var(--color-border)] rounded overflow-hidden">
+            <div className="overflow-hidden rounded-lg">
                 {isLoading ? (
                     <div className="flex items-center justify-center py-8 text-[var(--color-text-muted)]">
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Loading transmittal...
                     </div>
                 ) : !hasTransmittal ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-[#6e6e6e]">
+                    <div className="flex flex-col items-center justify-center py-8 text-[var(--color-text-muted)]">
                         <FileText className="w-8 h-8 mb-2 opacity-50" />
                         <p className="text-sm">No transmittal documents</p>
                         <p className="text-xs mt-1">
@@ -115,22 +115,22 @@ export function AddendumTransmittalSchedule({
                 ) : (
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                                <th className="text-left px-4 py-1.5 font-medium w-10">#</th>
-                                <th className="text-left px-4 py-1.5 font-medium w-24">DWG #</th>
-                                <th className="text-left px-4 py-1.5 font-medium">Name</th>
-                                <th className="text-center px-4 py-1.5 font-medium w-16">Rev</th>
-                                <th className="text-left px-4 py-1.5 font-medium w-36">Category</th>
-                                <th className="text-left px-4 py-1.5 font-medium w-40">Subcategory</th>
+                            <tr className="border-b border-[var(--color-border)]">
+                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium w-10">#</th>
+                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium w-24">DWG #</th>
+                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium">Name</th>
+                                <th className="text-center text-[var(--color-document-header)] px-4 py-1.5 font-medium w-16">Rev</th>
+                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium w-36">Category</th>
+                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium w-40">Subcategory</th>
                             </tr>
                         </thead>
                         <tbody>
                             {transmittal?.documents.map((doc, index) => (
                                     <tr
                                         key={doc.id}
-                                        className="border-t border-[var(--color-border)] hover:bg-[#2d2d30]/50"
+                                        className="hover:bg-[var(--color-bg-tertiary)]"
                                     >
-                                        <td className="px-4 py-1.5 text-[#6e6e6e]">
+                                        <td className="px-4 py-1.5 text-[var(--color-text-muted)]">
                                             {index + 1}
                                         </td>
                                         <td className="px-4 py-1.5 text-[var(--color-text-primary)]">
@@ -139,14 +139,14 @@ export function AddendumTransmittalSchedule({
                                                     {doc.drawingNumber}
                                                 </span>
                                             ) : (
-                                                <span className="text-[#6e6e6e]">-</span>
+                                                <span className="text-[var(--color-text-muted)]">-</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-1.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
                                             {doc.drawingName || doc.originalName}
                                         </td>
                                         <td className="px-4 py-1.5 text-center text-[var(--color-text-primary)]">
-                                            {doc.drawingRevision || <span className="text-[#6e6e6e]">-</span>}
+                                            {doc.drawingRevision || <span className="text-[var(--color-text-muted)]">-</span>}
                                         </td>
                                         <td className="px-4 py-1.5">
                                             {doc.categoryName ? (
@@ -161,7 +161,7 @@ export function AddendumTransmittalSchedule({
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <span className="text-[#6e6e6e]">-</span>
+                                                <span className="text-[var(--color-text-muted)]">-</span>
                                             )}
                                         </td>
                                         <td className="px-4 py-1.5">
@@ -177,7 +177,7 @@ export function AddendumTransmittalSchedule({
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <span className="text-[#6e6e6e]">-</span>
+                                                <span className="text-[var(--color-text-muted)]">-</span>
                                             )}
                                         </td>
                                     </tr>

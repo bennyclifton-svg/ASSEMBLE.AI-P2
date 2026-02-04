@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from './shared/Button';
 import { navLinks } from './data/landing-data';
@@ -34,14 +35,16 @@ export function NavBar() {
         >
             <div className="max-w-[1280px] mx-auto px-8 py-4 flex items-center justify-between">
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2">
-                    <div className="flex gap-0.5">
-                        <div className="w-1 h-6 rounded-full bg-[var(--logo-green)]" />
-                        <div className="w-1 h-6 rounded-full bg-[var(--logo-yellow)]" />
-                        <div className="w-1 h-6 rounded-full bg-[var(--logo-red)]" />
-                        <div className="w-1 h-6 rounded-full bg-[var(--logo-teal)]" />
-                    </div>
-                    <span className="text-white font-bold text-[22px]">ASSEMBLE.AI</span>
+                <Link href="/" className="flex items-center gap-2 hover:scale-[1.02] transition-transform duration-200">
+                    <Image
+                        src="/logo-foundry.svg"
+                        alt="Foundry Logo"
+                        width={36}
+                        height={36}
+                        className="flex-shrink-0"
+                        priority
+                    />
+                    <span className="text-white font-bold text-[22px] italic">Foundry</span>
                 </Link>
 
                 {/* Nav Links - hidden on mobile */}
