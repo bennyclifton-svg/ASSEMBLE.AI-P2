@@ -932,20 +932,20 @@ export interface RecommendedDiscipline {
 
 const BASE_DISCIPLINES = [
     'Architect',
-    'Structural Engineer',
-    'Civil Engineer',
-    'Mechanical Engineer',
-    'Electrical Engineer',
-    'Hydraulic Engineer',
+    'Structural',
+    'Civil',
+    'Mechanical',
+    'Electrical',
+    'Hydraulic',
 ];
 
 const CLASS_DISCIPLINES: Record<string, string[]> = {
-    residential: ['Landscape Architect', 'Acoustic Consultant'],
-    commercial: ['Facade Engineer', 'Acoustic Consultant', 'ESD Consultant'],
-    industrial: ['Fire Engineer', 'ESD Consultant'],
-    institution: ['Acoustic Consultant', 'Security Consultant'],
-    mixed: ['Facade Engineer', 'Traffic Engineer', 'Acoustic Consultant'],
-    infrastructure: ['Geotechnical Engineer', 'Environmental Consultant', 'Traffic Engineer'],
+    residential: ['Landscape', 'Acoustic'],
+    commercial: ['Facade', 'Acoustic', 'ESD'],
+    industrial: ['Fire Engineer', 'ESD'],
+    institution: ['Acoustic', 'Security'],
+    mixed: ['Facade', 'Traffic', 'Acoustic'],
+    infrastructure: ['Geotech', 'Ecology', 'Traffic'],
 };
 
 export function getRecommendedDisciplines(
@@ -977,36 +977,36 @@ export function getRecommendedDisciplines(
 
     // Complexity-triggered disciplines
     if (complexity.heritage === 'listed' || complexity.heritage === 'conservation') {
-        disciplines.push({ name: 'Heritage Consultant', required: true, reason: 'Heritage requirements' });
+        disciplines.push({ name: 'Heritage', required: true, reason: 'Heritage requirements' });
     }
     if (siteConditions.includes('bushfire')) {
-        disciplines.push({ name: 'Bushfire Consultant (BPAD)', required: true, reason: 'BAL compliance' });
+        disciplines.push({ name: 'Bushfire', required: true, reason: 'BAL compliance' });
     }
     if (siteConditions.includes('flood')) {
-        disciplines.push({ name: 'Flood Engineer', required: true, reason: 'Flood planning requirements' });
+        disciplines.push({ name: 'Flood', required: true, reason: 'Flood planning requirements' });
     }
     if (siteConditions.includes('coastal')) {
-        disciplines.push({ name: 'Coastal Engineer', required: true, reason: 'Coastal hazard management' });
+        disciplines.push({ name: 'Civil', required: true, reason: 'Coastal hazard management' });
     }
     if (siteConditions.includes('sloping')) {
-        disciplines.push({ name: 'Geotechnical Engineer', required: true, reason: 'Steep site assessment' });
+        disciplines.push({ name: 'Geotech', required: true, reason: 'Steep site assessment' });
     }
     if (complexity.approval_pathway === 'state_significant') {
-        disciplines.push({ name: 'Planning Consultant', required: true, reason: 'SSD pathway' });
+        disciplines.push({ name: 'Town Planning', required: true, reason: 'SSD pathway' });
     }
 
     // Subclass-specific
     if (subclass.includes('aged_care_9c')) {
         disciplines.push({ name: 'Fire Engineer', required: true, reason: 'Class 9c compliance' });
-        disciplines.push({ name: 'Accessibility Consultant', required: true, reason: 'Aged care accessibility' });
+        disciplines.push({ name: 'Access', required: true, reason: 'Aged care accessibility' });
     }
     if (subclass.includes('healthcare_hospital')) {
         disciplines.push({ name: 'Medical Planner', required: true, reason: 'Healthcare planning' });
         disciplines.push({ name: 'Fire Engineer', required: true, reason: 'Class 9a compliance' });
     }
     if (subclass.includes('data_centre')) {
-        disciplines.push({ name: 'Data Centre Specialist', required: true, reason: 'IT infrastructure' });
-        disciplines.push({ name: 'Security Consultant', required: true, reason: 'Physical security' });
+        disciplines.push({ name: 'ICT', required: true, reason: 'IT infrastructure' });
+        disciplines.push({ name: 'Security', required: true, reason: 'Physical security' });
     }
 
     return disciplines;

@@ -36,6 +36,23 @@ import {
     projectStakeholders,
 } from '@/lib/db';
 
+/**
+ * Clean up AI-generated content by removing excessive blank lines and empty bullets
+ */
+function cleanupFormatting(content: string): string {
+    return content
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => {
+            if (line === '') return true;
+            if (/^[•\-\*]\s*$/.test(line)) return false;
+            return true;
+        })
+        .join('\n')
+        .replace(/\n{2,}/g, '\n\n')
+        .trim();
+}
+
 interface GenerateFieldRequest {
     projectId: string;
     fieldType: FieldType;
@@ -231,6 +248,9 @@ export async function POST(req: NextRequest) {
             throw new Error('No text response from Claude');
         }
 
+        // Clean up formatting (remove excessive blank lines)
+        const cleanedContent = cleanupFormatting(textContent.text);
+
         // Build sources array (empty if RAG not used)
         const sources = ragResults.map(r => ({
             chunkId: r.chunkId,
@@ -240,7 +260,7 @@ export async function POST(req: NextRequest) {
 
         // Build response with metadata about sources used
         const response: GenerateFieldResponse = {
-            content: textContent.text.trim(),
+            content: cleanedContent,
             sources,
             inputInterpretation: inputMode,
             metadata: {

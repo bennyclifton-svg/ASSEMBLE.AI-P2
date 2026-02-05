@@ -23,57 +23,57 @@ interface DisciplineSuggestion {
 // Base disciplines required for most projects
 const BASE_DISCIPLINES = [
   'Architect',
-  'Structural Engineer',
-  'Civil Engineer',
-  'Services Engineer (Mechanical)',
-  'Services Engineer (Electrical)',
-  'Services Engineer (Hydraulic)',
+  'Structural',
+  'Civil',
+  'Mechanical',
+  'Electrical',
+  'Hydraulic',
 ];
 
 // Discipline requirements by building class
 const CLASS_DISCIPLINES: Record<string, string[]> = {
-  residential: ['Landscape Architect', 'Acoustic Consultant'],
-  commercial: ['Facade Engineer', 'Acoustic Consultant', 'ESD Consultant'],
-  industrial: ['Fire Engineer', 'ESD Consultant'],
-  institution: ['Acoustic Consultant', 'Security Consultant'],
-  mixed: ['Facade Engineer', 'Traffic Engineer', 'Acoustic Consultant'],
-  infrastructure: ['Geotechnical Engineer', 'Environmental Consultant', 'Traffic Engineer'],
-  defense_secure: ['Security Consultant', 'SCIF Specialist', 'Fire Engineer'],
-  agricultural: ['Agricultural Engineer', 'Environmental Consultant', 'Civil Engineer'],
+  residential: ['Landscape', 'Acoustic'],
+  commercial: ['Facade', 'Acoustic', 'ESD'],
+  industrial: ['Fire Engineer', 'ESD'],
+  institution: ['Acoustic', 'Security'],
+  mixed: ['Facade', 'Traffic', 'Acoustic'],
+  infrastructure: ['Geotech', 'Environmental', 'Traffic'],
+  defense_secure: ['Security', 'SCIF Specialist', 'Fire Engineer'],
+  agricultural: ['Agricultural', 'Environmental', 'Civil'],
 };
 
 // Subclass-specific disciplines
 const SUBCLASS_DISCIPLINES: Record<string, DisciplineSuggestion[]> = {
   aged_care_9c: [
     { name: 'Fire Engineer', required: true, reason: 'Class 9c fire safety compliance' },
-    { name: 'Accessibility Consultant', required: true, reason: 'Aged care accessibility requirements' },
+    { name: 'Access', required: true, reason: 'Aged care accessibility requirements' },
     { name: 'Kitchen Consultant', required: false, reason: 'Commercial kitchen design' },
   ],
   healthcare_hospital: [
     { name: 'Medical Planner', required: true, reason: 'Healthcare facility planning' },
     { name: 'Fire Engineer', required: true, reason: 'Class 9a fire safety compliance' },
-    { name: 'Acoustic Consultant', required: true, reason: 'Healthcare acoustic requirements' },
+    { name: 'Acoustic', required: true, reason: 'Healthcare acoustic requirements' },
     { name: 'Infection Control Consultant', required: false, reason: 'Enhanced infection control' },
   ],
   data_centre: [
     { name: 'Data Centre Specialist', required: true, reason: 'IT infrastructure coordination' },
     { name: 'Fire Engineer', required: true, reason: 'Critical infrastructure fire protection' },
-    { name: 'Security Consultant', required: true, reason: 'Physical security requirements' },
+    { name: 'Security', required: true, reason: 'Physical security requirements' },
   ],
   hotel: [
-    { name: 'Interior Designer', required: true, reason: 'Guest room and F&B design' },
+    { name: 'Interior', required: true, reason: 'Guest room and F&B design' },
     { name: 'Kitchen Consultant', required: true, reason: 'Commercial kitchen design' },
-    { name: 'Acoustic Consultant', required: true, reason: 'Noise transmission control' },
-    { name: 'Lighting Designer', required: false, reason: 'Feature lighting design' },
+    { name: 'Acoustic', required: true, reason: 'Noise transmission control' },
+    { name: 'Lighting', required: false, reason: 'Feature lighting design' },
   ],
   retail_shopping: [
-    { name: 'Traffic Engineer', required: true, reason: 'Car park and access design' },
+    { name: 'Traffic', required: true, reason: 'Car park and access design' },
     { name: 'Retail Planner', required: false, reason: 'Tenancy mix optimization' },
   ],
   education_school: [
-    { name: 'Acoustic Consultant', required: true, reason: 'Learning space acoustics' },
-    { name: 'Security Consultant', required: true, reason: 'School security requirements' },
-    { name: 'Landscape Architect', required: true, reason: 'Play areas and outdoor learning' },
+    { name: 'Acoustic', required: true, reason: 'Learning space acoustics' },
+    { name: 'Security', required: true, reason: 'School security requirements' },
+    { name: 'Landscape', required: true, reason: 'Play areas and outdoor learning' },
   ],
   education_tertiary: [
     { name: 'Laboratory Planner', required: false, reason: 'Specialized lab design' },
@@ -89,38 +89,38 @@ const SUBCLASS_DISCIPLINES: Record<string, DisciplineSuggestion[]> = {
     { name: 'Cleanroom Specialist', required: true, reason: 'ISO cleanroom design compliance' },
     { name: 'HVAC', required: true, reason: 'Clean air handling systems' },
     { name: 'Fire Engineer', required: true, reason: 'Cleanroom fire protection' },
-    { name: 'ESD Consultant', required: true, reason: 'Electrostatic discharge control' },
+    { name: 'ESD', required: true, reason: 'Electrostatic discharge control' },
   ],
   data_centre_hyperscale: [
     { name: 'Critical Systems Engineer', required: true, reason: 'Mission-critical infrastructure' },
-    { name: 'Electrical Engineer', required: true, reason: 'High-capacity power distribution' },
+    { name: 'Electrical', required: true, reason: 'High-capacity power distribution' },
     { name: 'Fire Engineer', required: true, reason: 'Data centre fire suppression' },
   ],
   marina: [
     { name: 'Coastal Engineer', required: true, reason: 'Coastal and marine structures' },
     { name: 'Marine Surveyor', required: true, reason: 'Bathymetric and marine surveys' },
-    { name: 'Environmental Consultant', required: true, reason: 'Marine environmental assessments' },
+    { name: 'Environmental', required: true, reason: 'Marine environmental assessments' },
   ],
   airport_terminal: [
     { name: 'Aviation Planner', required: true, reason: 'Airport planning and operations' },
-    { name: 'Security Consultant', required: true, reason: 'Aviation security requirements' },
+    { name: 'Security', required: true, reason: 'Aviation security requirements' },
     { name: 'Wayfinding', required: true, reason: 'Passenger wayfinding systems' },
   ],
   winery_brewery: [
-    { name: 'Process Engineer', required: true, reason: 'Winemaking/brewing process design' },
+    { name: 'Process', required: true, reason: 'Winemaking/brewing process design' },
     { name: 'Food Safety Consultant', required: true, reason: 'Food production compliance' },
   ],
 };
 
 // Complexity-triggered disciplines
 const COMPLEXITY_DISCIPLINES: Record<string, DisciplineSuggestion> = {
-  heritage: { name: 'Heritage Consultant', required: true, reason: 'Heritage overlay requirements' },
+  heritage: { name: 'Heritage', required: true, reason: 'Heritage overlay requirements' },
   listed: { name: 'Heritage Architect', required: true, reason: 'Heritage listed building conservation' },
-  bushfire: { name: 'Bushfire Consultant (BPAD)', required: true, reason: 'BAL assessment and compliance' },
-  flood: { name: 'Flood Engineer', required: true, reason: 'Flood planning and management' },
-  state_significant: { name: 'Planning Consultant', required: true, reason: 'SSD approval pathway' },
-  complex_da: { name: 'Town Planner', required: true, reason: 'Complex DA submission' },
-  triple_cert: { name: 'ESD Consultant', required: true, reason: 'Triple certification requirements' },
+  bushfire: { name: 'Bushfire', required: true, reason: 'BAL assessment and compliance' },
+  flood: { name: 'Flood', required: true, reason: 'Flood planning and management' },
+  state_significant: { name: 'Planning', required: true, reason: 'SSD approval pathway' },
+  complex_da: { name: 'Town Planning', required: true, reason: 'Complex DA submission' },
+  triple_cert: { name: 'ESD', required: true, reason: 'Triple certification requirements' },
   net_zero: { name: 'Net Zero Consultant', required: true, reason: 'Net zero carbon pathway' },
   tier_3: { name: 'Commissioning Agent', required: true, reason: 'Tier III commissioning' },
   tier_4: { name: 'Commissioning Agent', required: true, reason: 'Tier IV commissioning requirements' },
@@ -130,19 +130,19 @@ const COMPLEXITY_DISCIPLINES: Record<string, DisciplineSuggestion> = {
 const SCALE_THRESHOLDS: Record<string, { threshold: number; discipline: DisciplineSuggestion }> = {
   storeys: {
     threshold: 15,
-    discipline: { name: 'Wind Engineer', required: false, reason: 'High-rise wind assessment' },
+    discipline: { name: 'Wind', required: false, reason: 'High-rise wind assessment' },
   },
   total_storeys: {
     threshold: 15,
-    discipline: { name: 'Wind Engineer', required: false, reason: 'High-rise wind assessment' },
+    discipline: { name: 'Wind', required: false, reason: 'High-rise wind assessment' },
   },
   car_parks: {
     threshold: 100,
-    discipline: { name: 'Traffic Engineer', required: true, reason: 'Traffic impact assessment' },
+    discipline: { name: 'Traffic', required: true, reason: 'Traffic impact assessment' },
   },
   gfa_sqm: {
     threshold: 10000,
-    discipline: { name: 'Quantity Surveyor', required: true, reason: 'Cost planning for large project' },
+    discipline: { name: 'Cost Planning', required: true, reason: 'Cost planning for large project' },
   },
 };
 

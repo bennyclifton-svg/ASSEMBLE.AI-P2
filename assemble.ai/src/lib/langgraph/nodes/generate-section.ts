@@ -633,19 +633,19 @@ function formatProjectObjectives(context: PlanningContext): string {
     const objectives = [];
 
     if (context.objectives.functional) {
-        objectives.push(`**Functional Objectives**\n\n${context.objectives.functional}`);
+        objectives.push(`Functional Objectives\n\n${context.objectives.functional}`);
     }
 
     if (context.objectives.quality) {
-        objectives.push(`**Quality Objectives**\n\n${context.objectives.quality}`);
+        objectives.push(`Quality Objectives\n\n${context.objectives.quality}`);
     }
 
     if (context.objectives.budget) {
-        objectives.push(`**Budget Objectives**\n\n${context.objectives.budget}`);
+        objectives.push(`Budget Objectives\n\n${context.objectives.budget}`);
     }
 
     if (context.objectives.program) {
-        objectives.push(`**Program Objectives**\n\n${context.objectives.program}`);
+        objectives.push(`Program Objectives\n\n${context.objectives.program}`);
     }
 
     if (objectives.length === 0) {
@@ -726,15 +726,15 @@ function buildBriefContent(discipline: DisciplineContext): string {
     const sections = [];
 
     if (discipline.briefServices) {
-        sections.push(`**Services Required**\n\n${discipline.briefServices}`);
+        sections.push(`Services Required\n\n${discipline.briefServices}`);
     }
 
     if (discipline.briefProgram) {
-        sections.push(`**Program**\n\n${discipline.briefProgram}`);
+        sections.push(`Program\n\n${discipline.briefProgram}`);
     }
 
     if (discipline.briefFee) {
-        sections.push(`**Fee Basis**\n\n${discipline.briefFee}`);
+        sections.push(`Fee Basis\n\n${discipline.briefFee}`);
     }
 
     if (sections.length === 0) {
@@ -745,11 +745,11 @@ function buildBriefContent(discipline: DisciplineContext): string {
 }
 
 function formatGenericSection(section: TocSection, context: PlanningContext): string {
-    return `## ${section.title}
+    return `${section.title}
 
 ${section.description || 'This section contains information from the Planning Card.'}
 
-**Project**: ${context.details.projectName}
+Project: ${context.details.projectName}
 
-*Content for this section should be added manually or via AI-assisted mode.*`;
+Content for this section should be added manually or via AI-assisted mode.`;
 }

@@ -262,39 +262,24 @@ function generateConsultants(profile: ProfileContext): GeneratedStakeholder[] {
 
 /**
  * Map consultant names from profile-templates.json to discipline codes
+ * Most names now pass through directly since profile-templates uses clean names
  */
 function mapConsultantToDiscipline(consultantName: string): string {
   const mappings: Record<string, string> = {
+    // Names that need mapping to different discipline codes
     'Architect': 'Architecture',
-    'Structural Engineer': 'Structural',
-    'Civil Engineer': 'Civil',
-    'Services Engineer (Mechanical)': 'Mechanical',
-    'Services Engineer (Electrical)': 'Electrical',
-    'Services Engineer (Hydraulic)': 'Hydraulic',
-    'Fire Engineer': 'Fire',
-    'Facade Engineer': 'Facade',
-    'ESD Consultant': 'ESD',
-    'Acoustic Consultant': 'Acoustic',
-    'Traffic Engineer': 'Traffic',
-    'Geotechnical Engineer': 'Geotechnical',
-    'Environmental Consultant': 'Environmental',
-    'Heritage Consultant': 'Heritage',
-    'Bushfire Consultant (BPAD)': 'Bushfire',
-    'Flood Engineer': 'Flood',
-    'Wind Engineer': 'Wind',
-    'Quantity Surveyor': 'Cost Planning',
-    'Waterproofing Consultant': 'Waterproofing',
-    'Hazmat Consultant': 'Hazmat',
+    'Fire Engineer': 'Fire',  // Fire Engineer kept as-is per user request
+    // Specialist names that may still appear with full names
     'Occupational Hygienist': 'Occupational Hygiene',
     'Contamination Specialist': 'Contamination',
     'Concrete Technologist': 'Concrete Technology',
     'Corrosion Specialist': 'Corrosion',
-    'Vertical Transport Consultant': 'Vertical Transport',
-    'Accessibility Consultant': 'Access',
-    'Lighting Designer': 'Lighting',
-    'Security Consultant': 'Security',
     'PFAS Specialist': 'PFAS',
     'Hydrogeologist': 'Hydrogeology',
+    'Expert Witness': 'Expert Witness',
+    'Project Manager': 'Project Manager',
+    'Construction Manager': 'Construction Manager',
+    'Building Manager': 'Building Manager',
   };
   return mappings[consultantName] || consultantName;
 }

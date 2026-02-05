@@ -8,7 +8,7 @@
 
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { mutate as globalMutate } from 'swr';
 import { NotesPanel } from './NotesPanel';
 import { MeetingsPanel } from './MeetingsPanel';
@@ -28,6 +28,9 @@ export function NotesMeetingsReportsContainer({
     onSetSelectedDocumentIds,
     className,
 }: NotesMeetingsReportsContainerProps) {
+    // Track if any note is expanded to adjust column width
+    const [hasExpandedNote, setHasExpandedNote] = useState(false);
+
     // Handlers for Save Transmittal - save selected documents to an entity
     const handleSaveTransmittal = useCallback(async (type: 'note' | 'meeting' | 'report', id: string) => {
         // Only proceed if there are documents selected
@@ -106,27 +109,33 @@ export function NotesMeetingsReportsContainer({
     }, [onSetSelectedDocumentIds]);
 
     return (
-        <div className={cn('flex flex-col h-full overflow-y-auto', className)}>
-            {/* Notes Section */}
-            <NotesPanel
-                projectId={projectId}
-                onSaveTransmittal={(noteId) => handleSaveTransmittal('note', noteId)}
-                onLoadTransmittal={(noteId) => handleLoadTransmittal('note', noteId)}
-            />
+        <div className={cn('flex flex-row h-full gap-4 overflow-y-auto', className)}>
+            {/* Left column: Notes (dynamic width - expands when note is expanded) */}
+            <div className={cn(
+                'shrink-0 overflow-y-auto transition-all duration-200',
+                hasExpandedNote ? 'w-[550px]' : 'w-[300px]'
+            )}>
+                <NotesPanel
+                    projectId={projectId}
+                    onSaveTransmittal={(noteId) => handleSaveTransmittal('note', noteId)}
+                    onLoadTransmittal={(noteId) => handleLoadTransmittal('note', noteId)}
+                    onExpandedChange={setHasExpandedNote}
+                />
+            </div>
 
-            {/* Meetings Section */}
-            <MeetingsPanel
-                projectId={projectId}
-                onSaveTransmittal={(meetingId) => handleSaveTransmittal('meeting', meetingId)}
-                onLoadTransmittal={(meetingId) => handleLoadTransmittal('meeting', meetingId)}
-            />
-
-            {/* Reports Section */}
-            <ReportsPanel
-                projectId={projectId}
-                onSaveTransmittal={(reportId) => handleSaveTransmittal('report', reportId)}
-                onLoadTransmittal={(reportId) => handleLoadTransmittal('report', reportId)}
-            />
+            {/* Right column: Reports + Meetings stacked (aligned with first note) */}
+            <div className="flex-1 flex flex-col overflow-y-auto pt-[172px]">
+                <ReportsPanel
+                    projectId={projectId}
+                    onSaveTransmittal={(reportId) => handleSaveTransmittal('report', reportId)}
+                    onLoadTransmittal={(reportId) => handleLoadTransmittal('report', reportId)}
+                />
+                <MeetingsPanel
+                    projectId={projectId}
+                    onSaveTransmittal={(meetingId) => handleSaveTransmittal('meeting', meetingId)}
+                    onLoadTransmittal={(meetingId) => handleLoadTransmittal('meeting', meetingId)}
+                />
+            </div>
         </div>
     );
 }

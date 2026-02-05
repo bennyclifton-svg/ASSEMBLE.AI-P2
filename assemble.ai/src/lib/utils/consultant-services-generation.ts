@@ -126,7 +126,7 @@ function formatPhaseName(phaseName: string): string {
  *   projectType: 'house',
  *   templatesData: consultantTemplates.consultantTemplates
  * });
- * // Returns array of services for Architect, Structural Engineer, etc.
+ * // Returns array of services for Architect, Structural, etc.
  * ```
  */
 export function generateServicesAndDeliverables(

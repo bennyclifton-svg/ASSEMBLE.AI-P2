@@ -17,8 +17,10 @@ interface CategoryUploadTilesProps {
     filterCategoryId?: string | null;
     /** Currently filtered subcategory ID (null = no subcategory filter). */
     filterSubcategoryId?: string | null;
+    /** Whether filtering by synced documents only (Knowledge tile active). */
+    filterBySyncedOnly?: boolean;
     /** Callback when filter changes. */
-    onFilterChange?: (categoryId: string | null, subcategoryId?: string | null) => void;
+    onFilterChange?: (categoryId: string | null, subcategoryId?: string | null, syncedOnly?: boolean) => void;
 }
 
 export function CategoryUploadTiles({
@@ -29,6 +31,7 @@ export function CategoryUploadTiles({
     onKnowledgeAction,
     filterCategoryId,
     filterSubcategoryId,
+    filterBySyncedOnly,
     onFilterChange,
 }: CategoryUploadTilesProps) {
     const { categories, isLoading } = useActiveCategories(projectId);
@@ -80,30 +83,42 @@ export function CategoryUploadTiles({
                 />
 
                 {/* All category tiles */}
-                {categories.map(category => (
-                    <CategoryTile
-                        key={category.id}
-                        category={category}
-                        onFilesDropped={onFilesDropped}
-                        onClick={category.hasSubcategories ? () => toggleCategory(category.id) : undefined}
-                        onCategoryClick={() => {
-                            // Toggle filter for this category (only for categories without subcategories)
-                            if (!category.hasSubcategories) {
-                                if (filterCategoryId === category.id && !filterSubcategoryId) {
-                                    onFilterChange?.(null); // Clear filter
-                                } else {
-                                    onFilterChange?.(category.id); // Set filter
+                {categories.map(category => {
+                    const isKnowledgeCategory = category.isKnowledgeSource === true;
+                    return (
+                        <CategoryTile
+                            key={category.id}
+                            category={category}
+                            onFilesDropped={onFilesDropped}
+                            onClick={category.hasSubcategories ? () => toggleCategory(category.id) : undefined}
+                            onCategoryClick={() => {
+                                // Knowledge tile: toggle filter by synced documents
+                                if (isKnowledgeCategory) {
+                                    if (filterBySyncedOnly) {
+                                        onFilterChange?.(null, null, false); // Clear filter
+                                    } else {
+                                        onFilterChange?.(null, null, true); // Set synced-only filter
+                                    }
+                                    return;
                                 }
-                            }
-                        }}
-                        onBulkSelectCategory={onBulkSelectCategory}
-                        onKnowledgeAction={onKnowledgeAction}
-                        isExpanded={expandedCategories.has(category.id)}
-                        hasSelection={hasSelection}
-                        isSelected={expandedCategories.has(category.id)}
-                        isFiltered={filterCategoryId === category.id && !filterSubcategoryId}
-                    />
-                ))}
+                                // Toggle filter for this category (only for categories without subcategories)
+                                if (!category.hasSubcategories) {
+                                    if (filterCategoryId === category.id && !filterSubcategoryId) {
+                                        onFilterChange?.(null); // Clear filter
+                                    } else {
+                                        onFilterChange?.(category.id); // Set filter
+                                    }
+                                }
+                            }}
+                            onBulkSelectCategory={onBulkSelectCategory}
+                            onKnowledgeAction={onKnowledgeAction}
+                            isExpanded={expandedCategories.has(category.id)}
+                            hasSelection={hasSelection}
+                            isSelected={expandedCategories.has(category.id)}
+                            isFiltered={isKnowledgeCategory ? filterBySyncedOnly : (filterCategoryId === category.id && !filterSubcategoryId)}
+                        />
+                    );
+                })}
             </div>
 
             {/* Subcategory sections (full-width, flex-wrap) */}

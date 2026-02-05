@@ -1496,7 +1496,7 @@
             { "profiler": { "work_scope_includes": ["substructure", "superstructure", "steel_frame"] } }
           ]
         },
-        "infer": [{ "name": "Structural Engineer", "subgroup": "Structural", "reason": "Structural design", "confidence": "high" }],
+        "infer": [{ "name": "Structural", "subgroup": "Structural", "reason": "Structural design", "confidence": "high" }],
         "priority": 95,
         "source": "inferred"
       },
@@ -1510,9 +1510,9 @@
           ]
         },
         "infer": [
-          { "name": "Mechanical Engineer", "subgroup": "Mechanical", "reason": "HVAC design", "confidence": "high" },
-          { "name": "Electrical Engineer", "subgroup": "Electrical", "reason": "Electrical design", "confidence": "high" },
-          { "name": "Hydraulic Engineer", "subgroup": "Hydraulic", "reason": "Plumbing design", "confidence": "high" }
+          { "name": "Mechanical", "subgroup": "Mechanical", "reason": "HVAC design", "confidence": "high" },
+          { "name": "Electrical", "subgroup": "Electrical", "reason": "Electrical design", "confidence": "high" },
+          { "name": "Hydraulic", "subgroup": "Hydraulic", "reason": "Plumbing design", "confidence": "high" }
         ],
         "priority": 90,
         "source": "inferred"
@@ -1534,7 +1534,7 @@
         "id": "sco-010",
         "description": "Heritage consultant",
         "condition": { "profiler": { "complexity": { "heritage": "heritage_overlay" } } },
-        "infer": [{ "name": "Heritage Consultant", "subgroup": "Other", "reason": "Heritage impact assessment", "confidence": "high" }],
+        "infer": [{ "name": "Heritage", "subgroup": "Other", "reason": "Heritage impact assessment", "confidence": "high" }],
         "priority": 80,
         "source": "inferred"
       },
@@ -1547,7 +1547,7 @@
             { "profiler": { "complexity": { "site_conditions": ["infill", "sloping"] } } }
           ]
         },
-        "infer": [{ "name": "Geotechnical Engineer", "subgroup": "Other", "reason": "Ground conditions", "confidence": "high" }],
+        "infer": [{ "name": "Geotech", "subgroup": "Other", "reason": "Ground conditions", "confidence": "high" }],
         "priority": 75,
         "source": "inferred"
       },
@@ -1555,7 +1555,7 @@
         "id": "sco-012",
         "description": "Environmental consultant",
         "condition": { "profiler": { "complexity": { "contamination_level": ["minor", "significant", "heavily_contaminated"] } } },
-        "infer": [{ "name": "Environmental Consultant", "subgroup": "Other", "reason": "Contamination assessment", "confidence": "high" }],
+        "infer": [{ "name": "Ecology", "subgroup": "Other", "reason": "Contamination assessment", "confidence": "high" }],
         "priority": 75,
         "source": "inferred"
       },
@@ -1563,7 +1563,7 @@
         "id": "sco-020",
         "description": "Access consultant",
         "condition": { "profiler": { "building_class": ["commercial", "institution"] } },
-        "infer": [{ "name": "Access Consultant", "subgroup": "Access", "reason": "DDA compliance", "confidence": "medium" }],
+        "infer": [{ "name": "Access", "subgroup": "Access", "reason": "DDA compliance", "confidence": "medium" }],
         "priority": 70,
         "source": "inferred"
       },
@@ -1576,7 +1576,7 @@
             { "profiler": { "building_class": ["commercial", "residential", "institution"] } }
           ]
         },
-        "infer": [{ "name": "Landscape Architect", "subgroup": "Landscape", "reason": "External works design", "confidence": "high" }],
+        "infer": [{ "name": "Landscape", "subgroup": "Landscape", "reason": "External works design", "confidence": "high" }],
         "priority": 72,
         "source": "inferred"
       },
@@ -1589,7 +1589,7 @@
             { "profiler": { "building_class": ["commercial", "industrial"] } }
           ]
         },
-        "infer": [{ "name": "Traffic Engineer", "subgroup": "Civil", "reason": "Traffic impact assessment", "confidence": "high" }],
+        "infer": [{ "name": "Traffic", "subgroup": "Civil", "reason": "Traffic impact assessment", "confidence": "high" }],
         "priority": 73,
         "source": "inferred"
       },
@@ -1615,7 +1615,7 @@
             { "profiler": { "building_class": ["mixed", "commercial"] } }
           ]
         },
-        "infer": [{ "name": "BCA Consultant", "subgroup": "Building Code", "reason": "Code compliance certification", "confidence": "high" }],
+        "infer": [{ "name": "Building Code Advice", "subgroup": "Building Code", "reason": "Code compliance certification", "confidence": "high" }],
         "priority": 78,
         "source": "inferred"
       },
@@ -1649,7 +1649,7 @@
             { "profiler": { "complexity": { "site_conditions": "infill" } } }
           ]
         },
-        "infer": [{ "name": "Acoustic Engineer", "subgroup": "Acoustic", "reason": "Noise assessment and design", "confidence": "high" }],
+        "infer": [{ "name": "Acoustic", "subgroup": "Acoustic", "reason": "Noise assessment and design", "confidence": "high" }],
         "priority": 65,
         "source": "inferred"
       },
@@ -1662,7 +1662,7 @@
             { "profiler": { "complexity": { "sustainability": ["nabers", "green_star"] } } }
           ]
         },
-        "infer": [{ "name": "ESD Consultant", "subgroup": "Sustainability", "reason": "Sustainability design and certification", "confidence": "high" }],
+        "infer": [{ "name": "ESD", "subgroup": "Sustainability", "reason": "Sustainability design and certification", "confidence": "high" }],
         "priority": 70,
         "source": "inferred"
       },
@@ -1678,7 +1678,7 @@
             ]}
           ]
         },
-        "infer": [{ "name": "Facade Engineer", "subgroup": "Facade", "reason": "Facade design and engineering", "confidence": "high" }],
+        "infer": [{ "name": "Facade", "subgroup": "Facade", "reason": "Facade design and engineering", "confidence": "high" }],
         "priority": 72,
         "source": "inferred"
       },
@@ -1691,7 +1691,7 @@
             { "profiler": { "building_class": ["commercial", "institution"] } }
           ]
         },
-        "infer": [{ "name": "Lift Consultant", "subgroup": "Vertical Transport", "reason": "Lift design and specification", "confidence": "high" }],
+        "infer": [{ "name": "Vertical Transport", "subgroup": "Vertical Transport", "reason": "Lift design and specification", "confidence": "high" }],
         "priority": 68,
         "source": "inferred"
       },
@@ -1704,7 +1704,7 @@
             { "profiler": { "complexity": { "quality_tier": "premium" } } }
           ]
         },
-        "infer": [{ "name": "Security Consultant", "subgroup": "Security", "reason": "Security design and specification", "confidence": "medium" }],
+        "infer": [{ "name": "Security", "subgroup": "Security", "reason": "Security design and specification", "confidence": "medium" }],
         "priority": 55,
         "source": "inferred"
       },
@@ -1738,7 +1738,7 @@
             { "profiler": { "complexity": { "bushfire": ["bap", "fz"] } } }
           ]
         },
-        "infer": [{ "name": "Bushfire Consultant", "subgroup": "Bushfire", "reason": "BAL assessment and compliance", "confidence": "high" }],
+        "infer": [{ "name": "Bushfire", "subgroup": "Bushfire", "reason": "BAL assessment and compliance", "confidence": "high" }],
         "priority": 80,
         "source": "inferred"
       },
@@ -1751,7 +1751,7 @@
             { "profiler": { "complexity": { "site_conditions": "coastal" } } }
           ]
         },
-        "infer": [{ "name": "Wind Engineer", "subgroup": "Structural", "reason": "Wind load analysis and facade pressures", "confidence": "high" }],
+        "infer": [{ "name": "Wind", "subgroup": "Structural", "reason": "Wind load analysis and facade pressures", "confidence": "high" }],
         "priority": 70,
         "source": "inferred"
       },
@@ -1764,7 +1764,7 @@
             { "profiler": { "building_class": "institution" } }
           ]
         },
-        "infer": [{ "name": "Lighting Designer", "subgroup": "Electrical", "reason": "Feature lighting design", "confidence": "medium" }],
+        "infer": [{ "name": "Lighting", "subgroup": "Electrical", "reason": "Feature lighting design", "confidence": "medium" }],
         "priority": 52,
         "source": "inferred"
       },
@@ -1777,7 +1777,7 @@
             { "profiler": { "scale": { "gfa_sqm": { "min": 5000 } } } }
           ]
         },
-        "infer": [{ "name": "Wayfinding/Signage Consultant", "subgroup": "Other", "reason": "Navigation and signage design", "confidence": "medium" }],
+        "infer": [{ "name": "Signage", "subgroup": "Other", "reason": "Navigation and signage design", "confidence": "medium" }],
         "priority": 45,
         "source": "inferred"
       },
@@ -1785,7 +1785,7 @@
         "id": "sco-040",
         "description": "Process engineer for industrial",
         "condition": { "profiler": { "building_class": "industrial" } },
-        "infer": [{ "name": "Process Engineer", "subgroup": "Process", "reason": "Industrial process design", "confidence": "high" }],
+        "infer": [{ "name": "Process", "subgroup": "Process", "reason": "Industrial process design", "confidence": "high" }],
         "priority": 88,
         "source": "inferred"
       },
@@ -1793,7 +1793,7 @@
         "id": "sco-041",
         "description": "Material handling engineer",
         "condition": { "profiler": { "subclass": ["warehouse", "distribution"] } },
-        "infer": [{ "name": "Material Handling Engineer", "subgroup": "Process", "reason": "Logistics and racking design", "confidence": "high" }],
+        "infer": [{ "name": "Material Handling", "subgroup": "Process", "reason": "Logistics and racking design", "confidence": "high" }],
         "priority": 82,
         "source": "inferred"
       },
@@ -1801,7 +1801,7 @@
         "id": "sco-042",
         "description": "Refrigeration engineer",
         "condition": { "profiler": { "subclass": "cold_storage" } },
-        "infer": [{ "name": "Refrigeration Engineer", "subgroup": "Mechanical", "reason": "Cold storage systems", "confidence": "high" }],
+        "infer": [{ "name": "Refrigeration", "subgroup": "Mechanical", "reason": "Cold storage systems", "confidence": "high" }],
         "priority": 90,
         "source": "inferred"
       },
@@ -1849,7 +1849,7 @@
         "id": "sco-060",
         "description": "Civil engineer for infrastructure",
         "condition": { "profiler": { "building_class": "infrastructure" } },
-        "infer": [{ "name": "Civil Engineer", "subgroup": "Civil", "reason": "Infrastructure design lead", "confidence": "high" }],
+        "infer": [{ "name": "Civil", "subgroup": "Civil", "reason": "Infrastructure design lead", "confidence": "high" }],
         "priority": 100,
         "source": "inferred"
       },
@@ -1857,7 +1857,7 @@
         "id": "sco-061",
         "description": "Environmental consultant for infrastructure",
         "condition": { "profiler": { "building_class": "infrastructure" } },
-        "infer": [{ "name": "Environmental Consultant", "subgroup": "Environment", "reason": "Environmental impact assessment", "confidence": "high" }],
+        "infer": [{ "name": "Ecology", "subgroup": "Environment", "reason": "Environmental impact assessment", "confidence": "high" }],
         "priority": 95,
         "source": "inferred"
       },
@@ -1865,7 +1865,7 @@
         "id": "sco-070",
         "description": "Agricultural consultant",
         "condition": { "profiler": { "building_class": "agricultural" } },
-        "infer": [{ "name": "Agricultural Consultant", "subgroup": "Agricultural", "reason": "Agricultural operations planning", "confidence": "high" }],
+        "infer": [{ "name": "Agricultural", "subgroup": "Agricultural", "reason": "Agricultural operations planning", "confidence": "high" }],
         "priority": 85,
         "source": "inferred"
       },
@@ -1889,7 +1889,7 @@
         "id": "sco-090",
         "description": "Interior Designer for high/premium",
         "condition": { "profiler": { "complexity": { "quality_tier": ["high", "premium"] } } },
-        "infer": [{ "name": "Interior Designer", "subgroup": "Interior Design", "reason": "Interior design coordination", "confidence": "high" }],
+        "infer": [{ "name": "Interior", "subgroup": "Interior Design", "reason": "Interior design coordination", "confidence": "high" }],
         "priority": 72,
         "source": "inferred"
       },
@@ -1897,7 +1897,7 @@
         "id": "sco-091",
         "description": "Hydraulic engineer for flood sites",
         "condition": { "profiler": { "complexity": { "flood_overlay": true } } },
-        "infer": [{ "name": "Hydraulic/Flooding Engineer", "subgroup": "Civil", "reason": "Flood study and mitigation", "confidence": "high" }],
+        "infer": [{ "name": "Flood", "subgroup": "Flood", "reason": "Flood study and mitigation", "confidence": "high" }],
         "priority": 78,
         "source": "inferred"
       }

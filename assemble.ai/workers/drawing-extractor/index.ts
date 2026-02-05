@@ -48,8 +48,9 @@ async function bootstrap() {
         mimeType: string;
     }
 
-    // Worker concurrency - limit to reduce API costs
-    const EXTRACTION_CONCURRENCY = 3;
+    // Worker concurrency - increased for fast vision-first extraction
+    // Vision extraction is a single API call (no polling), so higher concurrency is safe
+    const EXTRACTION_CONCURRENCY = 5;
 
     /**
      * Check if extraction is enabled for the project containing this file

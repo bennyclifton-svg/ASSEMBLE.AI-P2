@@ -106,6 +106,50 @@ const REVISION_PATTERNS: RegExp[] = [
 ];
 
 // ============================================================================
+// NON-DRAWING DETECTION (SKIP API CALLS)
+// ============================================================================
+
+/**
+ * Filename patterns that indicate a document is NOT a drawing
+ * These files skip vision extraction entirely (saves API calls)
+ */
+const NON_DRAWING_FILENAME_PATTERNS: RegExp[] = [
+    // Specifications
+    /\bspec(ification)?s?\b/i,
+    /\bsection\s*\d/i,
+    // Reports and documents
+    /\breport\b/i,
+    /\bmanual\b/i,
+    /\bguide\b/i,
+    /\bstandard\b/i,
+    // Schedules and matrices
+    /\bschedule\b/i,
+    /\bmatrix\b/i,
+    /\bregister\b/i,
+    // Administrative
+    /\btransmittal\b/i,
+    /\bcorrespondence\b/i,
+    /\bletter\b/i,
+    /\bminutes\b/i,
+    /\bagenda\b/i,
+    /\bcontract\b/i,
+    /\bcertificate\b/i,
+    /\bsubmittal\b/i,
+    // Data sheets
+    /\bdata\s*sheet\b/i,
+    /\bcut\s*sheet\b/i,
+];
+
+/**
+ * Check if filename indicates this is NOT a drawing
+ * Returns true if the file should skip drawing extraction
+ */
+function isNonDrawingFilename(filename: string): boolean {
+    const baseName = filename.replace(/\.[^/.]+$/, '').toLowerCase();
+    return NON_DRAWING_FILENAME_PATTERNS.some(pattern => pattern.test(baseName));
+}
+
+// ============================================================================
 // FILENAME EXTRACTION (FALLBACK)
 // ============================================================================
 
@@ -227,29 +271,61 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
 // ============================================================================
 
 /**
- * Extract drawing information using hybrid approach:
- * 1. Always extract from filename
- * 2. Try text-based AI extraction with Haiku
- * 3. Merge results (AI primary, filename supplements)
- * 4. If low confidence, try vision fallback
+ * Extract drawing information using FAST hybrid approach:
+ * 1. Always extract from filename (free, instant)
+ * 2. Use vision-first for PDFs (single API call, no polling - FAST)
+ * 3. Fall back to text extraction only if vision unavailable
+ *
+ * This approach bypasses LlamaParse which is slow (polling-based) and
+ * overkill for simple title block extraction.
  */
 export async function extractDrawingInfo(
     request: DrawingExtractionRequest
 ): Promise<DrawingExtractionResult> {
     const { fileBuffer, filename, mimeType } = request;
 
+    // Step 0: Check if filename indicates this is NOT a drawing (skip API calls entirely)
+    if (isNonDrawingFilename(filename)) {
+        console.log(`[drawing-extraction] Skipping non-drawing file (filename pattern): ${filename}`);
+        return {
+            drawingNumber: null,
+            drawingName: null,
+            drawingRevision: null,
+            confidence: 90,  // High confidence it's not a drawing
+            source: 'FILENAME',
+        };
+    }
+
     // Step 1: Always extract from filename first (free, fast)
     const filenameResult = extractFromFilename(filename);
     console.log(`[drawing-extraction] Filename extraction: ${filenameResult?.drawingNumber || 'none'}, rev: ${filenameResult?.drawingRevision || 'none'}`);
 
-    // Step 2: Try text-based AI extraction
+    // Step 2: For PDFs, use VISION-FIRST approach (single API call, no polling)
+    // This is much faster than LlamaParse which requires upload + polling + download
+    if (mimeType === 'application/pdf') {
+        console.log(`[drawing-extraction] Using fast vision extraction for: ${filename}`);
+
+        try {
+            const visionResult = await extractWithVision(fileBuffer, filename, mimeType);
+
+            // Merge vision with filename result
+            const merged = mergeExtractionResults(visionResult, filenameResult);
+            console.log(`[drawing-extraction] Fast result for ${filename}: ${merged.drawingNumber || 'none'}, rev: ${merged.drawingRevision || 'none'} (confidence: ${merged.confidence}, source: ${merged.source})`);
+
+            return merged;
+        } catch (visionError) {
+            console.error('[drawing-extraction] Vision extraction failed, falling back to text:', visionError);
+            // Fall through to text-based extraction
+        }
+    }
+
+    // Step 3: Text-based extraction (for non-PDFs or if vision failed)
     let aiResult: DrawingExtractionResult | null = null;
-    let documentText: string | null = null;
 
     try {
-        console.log(`[drawing-extraction] Parsing document: ${filename}`);
+        console.log(`[drawing-extraction] Parsing document (text mode): ${filename}`);
         const parsed = await parseDocument(fileBuffer, filename);
-        documentText = parsed.content;
+        const documentText = parsed.content;
 
         // Only call AI if we have meaningful text content
         if (documentText && documentText.trim().length >= 50) {
@@ -272,39 +348,16 @@ export async function extractDrawingInfo(
                 console.log(`[drawing-extraction] AI result: ${aiResult.drawingNumber || 'none'} (confidence: ${aiResult.confidence})`);
             }
         } else {
-            console.log('[drawing-extraction] No/minimal text extracted, skipping AI text extraction');
+            console.log('[drawing-extraction] No/minimal text extracted, using filename only');
         }
     } catch (error) {
         console.error('[drawing-extraction] Text extraction/AI failed:', error);
     }
 
-    // Step 3: Merge AI result with filename result
-    let merged = aiResult
+    // Step 4: Merge results
+    const merged = aiResult
         ? mergeExtractionResults(aiResult, filenameResult)
         : (filenameResult || createEmptyResult('FILENAME'));
-
-    // Step 4: Vision fallback for low confidence or missing critical fields
-    const needsVisionFallback =
-        merged.confidence < 50 ||
-        (!merged.drawingNumber && !merged.drawingRevision);
-
-    if (needsVisionFallback && mimeType === 'application/pdf') {
-        console.log(`[drawing-extraction] Low confidence (${merged.confidence}), trying vision fallback`);
-
-        try {
-            const visionResult = await extractWithVision(fileBuffer, filename, mimeType);
-
-            // Use vision result if it's better
-            if (visionResult.confidence > merged.confidence ||
-                (visionResult.drawingNumber && !merged.drawingNumber)) {
-                console.log(`[drawing-extraction] Vision improved result: ${visionResult.drawingNumber || 'none'} (confidence: ${visionResult.confidence})`);
-                // Merge vision with filename too
-                merged = mergeExtractionResults(visionResult, filenameResult);
-            }
-        } catch (visionError) {
-            console.error('[drawing-extraction] Vision fallback failed:', visionError);
-        }
-    }
 
     console.log(`[drawing-extraction] Final result for ${filename}: ${merged.drawingNumber || 'none'}, rev: ${merged.drawingRevision || 'none'} (confidence: ${merged.confidence}, source: ${merged.source})`);
 
@@ -318,44 +371,63 @@ function buildExtractionPrompt(documentText: string, filename: string): string {
     // Take first 8000 chars to avoid token limits
     const truncatedText = documentText.substring(0, 8000);
 
-    return `You are analyzing a construction document to extract drawing information.
+    return `You are analyzing a construction project document to determine if it is a DRAWING and extract drawing information.
 
 DOCUMENT CONTENT (first 8000 characters):
 ${truncatedText}
 
 FILENAME: ${filename}
 
-Extract the following information if present:
+STEP 1 - CLASSIFY THE DOCUMENT TYPE:
+First, determine if this document is an actual DRAWING or a different document type.
+
+DRAWINGS are technical/graphical documents with:
+- A title block (usually bottom-right) containing drawing number, title, revision
+- Visual content like floor plans, elevations, sections, details, diagrams
+- Standard drawing number formats: A-101, S-201, M-301, SK-001, etc.
+
+NOT DRAWINGS (return null values for these):
+- Matrices, schedules, registers (e.g., "DA Responsibility Matrix", "Door Schedule")
+- Reports, specifications, standards
+- Correspondence, letters, transmittals
+- Contracts, conditions, certificates
+- Meeting minutes, agendas
+- Tables of conditions or requirements (these contain reference numbers, NOT drawing numbers)
+- Any document that is primarily tabular data or text without a drawing title block
+
+IMPORTANT: Condition numbers (like "Condition 3", "A 141", "Item 5") in matrices/schedules are NOT drawing numbers.
+Reference codes within document tables are NOT drawing numbers.
+Only extract drawing information if this is genuinely a technical drawing.
+
+STEP 2 - IF THIS IS A DRAWING, extract:
 
 1. DRAWING NUMBER: The unique identifier for this drawing. Common formats include:
    - Discipline prefix + number: A-101, S-201, M-301, E-401, P-501
    - SK (sketch) drawings: SK-001, SK-100
    - DWG prefix: DWG-2024-001
    - Sheet numbers: Sheet 1, Sheet A1
-   - May appear in title block, header, or footer of the document
+   - Found in title block, header, or footer of the drawing
 
-2. DRAWING NAME/TITLE: The descriptive name of the drawing (e.g., "Floor Plan - Level 1", "Structural Foundation Details", "Electrical Single Line Diagram")
+2. DRAWING NAME/TITLE: The descriptive name of the drawing (e.g., "Floor Plan - Level 1", "Structural Foundation Details")
 
-3. REVISION: The revision indicator. Common formats:
-   - Letters: A, B, C
-   - Numbers: 01, 02, 1, 2
-   - Preliminary: P01, P02
-   - With prefix: Rev A, Rev. 1, Issue B
-   - May appear near drawing number or in revision block
+3. REVISION: The revision indicator (A, B, 01, P01, Rev. 1, etc.)
 
-Respond in this exact JSON format (use null for missing values):
+Respond in this exact JSON format:
 {
+  "isDrawing": true or false,
   "drawingNumber": "A-101" or null,
   "drawingName": "Floor Plan Level 1" or null,
   "drawingRevision": "A" or null,
   "confidence": 85
 }
 
-The confidence score (0-100) should reflect how certain you are about the extraction accuracy:
-- 90-100: Clear, unambiguous drawing information found
+If isDrawing is false, set drawingNumber, drawingName, and drawingRevision to null.
+
+The confidence score (0-100) should reflect how certain you are:
+- 90-100: Clearly a drawing with unambiguous information, OR clearly NOT a drawing
 - 70-89: Likely correct but some ambiguity
-- 50-69: Uncertain, making educated guess
-- Below 50: Very uncertain or guessing
+- 50-69: Uncertain
+- Below 50: Very uncertain
 
 Only respond with the JSON, no other text.`;
 }
@@ -371,6 +443,18 @@ function parseAIResponse(text: string): DrawingExtractionResult {
     }
 
     const result = JSON.parse(jsonMatch[0]);
+
+    // If AI determined this is NOT a drawing, return null values with high confidence
+    if (result.isDrawing === false) {
+        console.log('[drawing-extraction] AI classified document as NOT a drawing');
+        return {
+            drawingNumber: null,
+            drawingName: null,
+            drawingRevision: null,
+            confidence: typeof result.confidence === 'number' ? result.confidence : 90,
+            source: 'AI',
+        };
+    }
 
     // Normalize drawing number to strip project prefixes
     const normalizedNumber = normalizeDrawingNumber(result.drawingNumber || null);
@@ -405,25 +489,38 @@ function createEmptyResult(source: 'AI' | 'FILENAME' | 'VISION'): DrawingExtract
  * Build vision extraction prompt for PDF documents
  */
 function buildVisionExtractionPrompt(): string {
-    return `You are analyzing a construction drawing document. Look at the title block (usually in the bottom-right corner) to extract:
+    return `You are analyzing a construction project document. First determine if it is a DRAWING, then extract information if applicable.
+
+STEP 1 - CLASSIFY THE DOCUMENT:
+
+DRAWINGS have:
+- A title block (usually bottom-right) with drawing number, title, revision
+- Visual/graphical content: floor plans, elevations, sections, details, diagrams
+- Standard drawing number formats: A-101, S-201, M-301, SK-001
+
+NOT DRAWINGS (return null values):
+- Matrices, schedules, registers, tables (e.g., "DA Responsibility Matrix", "Door Schedule")
+- Reports, specifications, correspondence, contracts
+- Documents that are primarily text or tabular data without a drawing title block
+
+IMPORTANT: Condition numbers, reference codes, or item numbers in tables are NOT drawing numbers.
+
+STEP 2 - IF THIS IS A DRAWING, look at the title block to extract:
 
 1. DRAWING NUMBER: The unique identifier (e.g., A-101, S-201, SK-001)
 2. DRAWING NAME/TITLE: The descriptive name
 3. REVISION: The revision indicator (e.g., A, B, 01, P01, Rev. 2)
 
-Focus on the title block area which typically contains:
-- Drawing number/sheet number
-- Drawing title
-- Revision block or revision indicator
-- Date and scale information
-
-Respond in this exact JSON format (use null for missing values):
+Respond in this exact JSON format:
 {
+  "isDrawing": true or false,
   "drawingNumber": "A-101" or null,
   "drawingName": "Floor Plan Level 1" or null,
   "drawingRevision": "A" or null,
   "confidence": 85
 }
+
+If isDrawing is false, set drawingNumber, drawingName, and drawingRevision to null.
 
 Only respond with the JSON, no other text.`;
 }
@@ -496,6 +593,18 @@ function parseVisionResponse(text: string): DrawingExtractionResult {
 
     const result = JSON.parse(jsonMatch[0]);
 
+    // If AI determined this is NOT a drawing, return null values with high confidence
+    if (result.isDrawing === false) {
+        console.log('[drawing-extraction] Vision classified document as NOT a drawing');
+        return {
+            drawingNumber: null,
+            drawingName: null,
+            drawingRevision: null,
+            confidence: typeof result.confidence === 'number' ? result.confidence : 90,
+            source: 'VISION',
+        };
+    }
+
     // Normalize drawing number to strip project prefixes
     const normalizedNumber = normalizeDrawingNumber(result.drawingNumber || null);
 
@@ -564,7 +673,8 @@ export async function extractDrawingInfoBatch(
     requests: DrawingExtractionRequest[],
     options: { concurrency?: number } = {}
 ): Promise<Map<string, DrawingExtractionResult>> {
-    const { concurrency = 3 } = options;
+    // Higher default concurrency since vision extraction is fast (single API call, no polling)
+    const { concurrency = 5 } = options;
     const results = new Map<string, DrawingExtractionResult>();
 
     // Process in batches

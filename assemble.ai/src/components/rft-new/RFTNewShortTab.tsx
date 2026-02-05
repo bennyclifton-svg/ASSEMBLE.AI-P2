@@ -14,6 +14,7 @@ import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { useFieldGeneration } from '@/lib/hooks/use-field-generation';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 
 function formatDisplayDate(dateString: string): string {
     if (!dateString) return '';
@@ -594,7 +595,7 @@ export function RFTNewShortTab({
      * Polish Service field by enhancing existing content
      */
     const handlePolishService = useCallback(async () => {
-        if (!briefData.service.trim()) {
+        if (!hasContent(briefData.service)) {
             toast({
                 title: 'Nothing to Polish',
                 description: 'Enter some content first, then polish it',
@@ -667,7 +668,7 @@ export function RFTNewShortTab({
      * Polish Deliverables field by enhancing existing content
      */
     const handlePolishDeliverables = useCallback(async () => {
-        if (!briefData.deliverables.trim()) {
+        if (!hasContent(briefData.deliverables)) {
             toast({
                 title: 'Nothing to Polish',
                 description: 'Enter some content first, then polish it',
@@ -714,6 +715,12 @@ export function RFTNewShortTab({
     }
 
     const rftLabel = `RFT ${contextName}`;
+
+    // Helper to check if HTML content has actual text (not just empty tags)
+    const hasContent = (html: string) => {
+        const textContent = html.replace(/<[^>]*>/g, '').trim();
+        return textContent.length > 0;
+    };
 
     const handleBriefChange = (field: 'service' | 'deliverables', value: string) => {
         setBriefData(prev => ({ ...prev, [field]: value }));
@@ -861,12 +868,12 @@ export function RFTNewShortTab({
                                 </button>
                                 <button
                                     onClick={handlePolishService}
-                                    disabled={isGeneratingService || isPolishingService || !briefData.service.trim()}
+                                    disabled={isGeneratingService || isPolishingService || !hasContent(briefData.service)}
                                     className={`
                                         flex items-center gap-1.5 text-sm font-medium transition-all
                                         ${isPolishingService
                                             ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                            : (isGeneratingService || !briefData.service.trim())
+                                            : (isGeneratingService || !hasContent(briefData.service))
                                                 ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
                                                 : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                         }
@@ -878,14 +885,17 @@ export function RFTNewShortTab({
                                 </button>
                             </div>
                         </div>
-                        <Textarea
-                            value={briefData.service}
-                            onChange={(e) => handleBriefChange('service', e.target.value)}
+                        <RichTextEditor
+                            content={briefData.service}
+                            onChange={(content) => handleBriefChange('service', content)}
                             onBlur={() => handleSaveBrief('service')}
                             placeholder="Enter service details..."
                             disabled={isGeneratingService || isPolishingService}
-                            className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                            style={{ fieldSizing: 'content' } as React.CSSProperties}
+                            variant="mini"
+                            toolbarVariant="mini"
+                            transparentBg
+                            className="border-0 rounded-none"
+                            editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors [&_strong]:text-black [&_strong]:font-semibold"
                         />
                     </div>
                     {/* Right: Deliverables */}
@@ -912,12 +922,12 @@ export function RFTNewShortTab({
                                 </button>
                                 <button
                                     onClick={handlePolishDeliverables}
-                                    disabled={isGeneratingDeliverables || isPolishingDeliverables || !briefData.deliverables.trim()}
+                                    disabled={isGeneratingDeliverables || isPolishingDeliverables || !hasContent(briefData.deliverables)}
                                     className={`
                                         flex items-center gap-1.5 text-sm font-medium transition-all
                                         ${isPolishingDeliverables
                                             ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                            : (isGeneratingDeliverables || !briefData.deliverables.trim())
+                                            : (isGeneratingDeliverables || !hasContent(briefData.deliverables))
                                                 ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
                                                 : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                         }
@@ -929,14 +939,17 @@ export function RFTNewShortTab({
                                 </button>
                             </div>
                         </div>
-                        <Textarea
-                            value={briefData.deliverables}
-                            onChange={(e) => handleBriefChange('deliverables', e.target.value)}
+                        <RichTextEditor
+                            content={briefData.deliverables}
+                            onChange={(content) => handleBriefChange('deliverables', content)}
                             onBlur={() => handleSaveBrief('deliverables')}
                             placeholder="Enter deliverables..."
                             disabled={isGeneratingDeliverables || isPolishingDeliverables}
-                            className="w-full border-0 rounded-none bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] resize-y min-h-[100px] p-4 hover:bg-[var(--color-bg-primary)] transition-colors cursor-text disabled:opacity-70 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                            style={{ fieldSizing: 'content' } as React.CSSProperties}
+                            variant="mini"
+                            toolbarVariant="mini"
+                            transparentBg
+                            className="border-0 rounded-none"
+                            editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors [&_strong]:text-black [&_strong]:font-semibold"
                         />
                     </div>
                 </div>

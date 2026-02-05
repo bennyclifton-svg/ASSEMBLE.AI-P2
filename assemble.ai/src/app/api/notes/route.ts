@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
                     isNull(notes.deletedAt)
                 )
             )
-            .orderBy(desc(notes.updatedAt));
+            .orderBy(desc(notes.createdAt));
 
         // Get transmittal counts for each note
         const notesWithCounts = await Promise.all(

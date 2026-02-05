@@ -21,7 +21,7 @@ export const CONSULTANT_DISCIPLINES = [
   { name: 'Geotech', order: 19 },
   { name: 'Hazmat', order: 20 },
   { name: 'Hydraulic', order: 21 },
-  { name: 'Interior Designer', order: 22 },
+  { name: 'Interior', order: 22 },
   { name: 'Landscape', order: 23 },
   { name: 'Mechanical', order: 24 },
   { name: 'NBN', order: 25 },

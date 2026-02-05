@@ -18,7 +18,7 @@ const CONSULTANT_SUBCATEGORIES = [
     'Access', 'Acoustic', 'Arborist', 'Architect', 'ASP3', 'BASIX', 'Building Code Advice',
     'Bushfire', 'Building Certifier', 'Civil', 'Cost Planning', 'Ecology', 'Electrical',
     'ESD', 'Facade', 'Fire Engineering', 'Fire Services', 'Flood', 'Geotech', 'Hazmat',
-    'Hydraulic', 'Interior Designer', 'Landscape', 'Mechanical', 'NBN', 'Passive Fire',
+    'Hydraulic', 'Interior', 'Landscape', 'Mechanical', 'NBN', 'Passive Fire',
     'Roof Access', 'Site Investigation', 'Stormwater', 'Structural', 'Survey', 'Traffic',
     'Vertical Transport', 'Waste Management', 'Wastewater', 'Waterproofing'
 ];

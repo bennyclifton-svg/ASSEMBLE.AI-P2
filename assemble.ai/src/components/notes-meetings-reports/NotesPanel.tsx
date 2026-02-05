@@ -8,7 +8,7 @@
 
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,6 +25,7 @@ interface NotesPanelProps {
     projectId: string;
     onSaveTransmittal?: (noteId: string) => void;
     onLoadTransmittal?: (noteId: string) => void;
+    onExpandedChange?: (hasExpanded: boolean) => void;
     className?: string;
 }
 
@@ -32,6 +33,7 @@ export function NotesPanel({
     projectId,
     onSaveTransmittal,
     onLoadTransmittal,
+    onExpandedChange,
     className,
 }: NotesPanelProps) {
     const { notes, isLoading, error, refetch } = useNotes({ projectId });
@@ -39,6 +41,11 @@ export function NotesPanel({
 
     // Track expanded state for each note independently
     const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+
+    // Notify parent when expansion state changes
+    useEffect(() => {
+        onExpandedChange?.(expandedNotes.size > 0);
+    }, [expandedNotes.size, onExpandedChange]);
 
     const toggleNoteExpanded = useCallback((noteId: string) => {
         setExpandedNotes(prev => {
@@ -53,9 +60,8 @@ export function NotesPanel({
     }, []);
 
     const handleCreateNote = useCallback(async () => {
-        const newNote = await createNote({ projectId });
-        // Auto-expand the newly created note
-        setExpandedNotes(prev => new Set(prev).add(newNote.id));
+        await createNote({ projectId });
+        // Note stays collapsed by default
     }, [createNote, projectId]);
 
     const handleDeleteNote = useCallback(async (noteId: string) => {
@@ -76,9 +82,8 @@ export function NotesPanel({
     }, [updateNote]);
 
     const handleCopyNote = useCallback(async (noteId: string) => {
-        const copied = await copyNote(noteId);
-        // Auto-expand the copied note
-        setExpandedNotes(prev => new Set(prev).add(copied.id));
+        await copyNote(noteId);
+        // Copied note stays collapsed by default
     }, [copyNote]);
 
     // Error state
@@ -90,16 +95,16 @@ export function NotesPanel({
                     <button
                         onClick={handleCreateNote}
                         disabled={isLoading}
-                        className="relative w-[140px] h-[140px] bg-[rgba(255,217,61,0.25)] border border-[rgba(255,217,61,0.4)] hover:bg-[rgba(255,217,61,0.35)] transition-colors disabled:opacity-50 group"
+                        className="relative w-[140px] h-[140px] bg-[#fef9c3] hover:bg-[#fde68a] shadow-md transition-colors disabled:opacity-50 group"
                         title="Create new note"
                     >
-                        <div className="absolute -bottom-1 -right-1 w-[140px] h-[140px] bg-[rgba(255,217,61,0.15)] border border-[rgba(255,217,61,0.3)]" />
-                        <div className="absolute -bottom-0.5 -right-0.5 w-[140px] h-[140px] bg-[rgba(255,217,61,0.2)] border border-[rgba(255,217,61,0.35)]" />
+                        <div className="absolute -bottom-1 -right-1 w-[140px] h-[140px] bg-[#fef9c3]/70 shadow-sm" />
+                        <div className="absolute -bottom-0.5 -right-0.5 w-[140px] h-[140px] bg-[#fef9c3]/85 shadow-sm" />
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
                             <div className="absolute top-0 right-0 w-6 h-6 overflow-hidden">
                                 <div className="absolute top-0 right-0 w-8 h-8 bg-[var(--color-bg-primary)] origin-top-right rotate-0 transform translate-x-2 -translate-y-2"
                                      style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
-                                <div className="absolute top-0 right-0 w-6 h-6 bg-[rgba(255,217,61,0.5)] shadow-sm"
+                                <div className="absolute top-0 right-0 w-6 h-6 bg-[#fde68a] shadow-sm"
                                      style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
                             </div>
                             <div className="text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-copper)] transition-colors">
@@ -133,10 +138,12 @@ export function NotesPanel({
     if (isLoading) {
         return (
             <div className={cn('mt-6', className)}>
-                <div className="flex flex-wrap gap-2 mx-2">
+                <div className="mx-2 mb-2">
                     <Skeleton className="w-[140px] h-[140px]" />
-                    <Skeleton className="w-[140px] h-[140px]" />
-                    <Skeleton className="w-[140px] h-[140px]" />
+                </div>
+                <div className="space-y-2 mx-2">
+                    <Skeleton className="h-[140px] w-[140px]" />
+                    <Skeleton className="h-[140px] w-[140px]" />
                 </div>
             </div>
         );
@@ -149,12 +156,12 @@ export function NotesPanel({
                 <button
                     onClick={handleCreateNote}
                     disabled={isLoading}
-                    className="relative w-[140px] h-[140px] bg-[rgba(255,217,61,0.25)] border border-[rgba(255,217,61,0.4)] hover:bg-[rgba(255,217,61,0.35)] transition-colors disabled:opacity-50 group"
+                    className="relative w-[140px] h-[140px] bg-[#fef9c3] hover:bg-[#fde68a] shadow-md transition-colors disabled:opacity-50 group"
                     title="Create new note"
                 >
                     {/* Stacked pages effect - bottom layers */}
-                    <div className="absolute -bottom-1 -right-1 w-[140px] h-[140px] bg-[rgba(255,217,61,0.15)] border border-[rgba(255,217,61,0.3)]" />
-                    <div className="absolute -bottom-0.5 -right-0.5 w-[140px] h-[140px] bg-[rgba(255,217,61,0.2)] border border-[rgba(255,217,61,0.35)]" />
+                    <div className="absolute -bottom-1 -right-1 w-[140px] h-[140px] bg-[#fef9c3]/70 shadow-sm" />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-[140px] h-[140px] bg-[#fef9c3]/85 shadow-sm" />
 
                     {/* Main note surface */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -162,7 +169,7 @@ export function NotesPanel({
                         <div className="absolute top-0 right-0 w-6 h-6 overflow-hidden">
                             <div className="absolute top-0 right-0 w-8 h-8 bg-[var(--color-bg-primary)] origin-top-right rotate-0 transform translate-x-2 -translate-y-2"
                                  style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
-                            <div className="absolute top-0 right-0 w-6 h-6 bg-[rgba(255,217,61,0.5)] shadow-sm"
+                            <div className="absolute top-0 right-0 w-6 h-6 bg-[#fde68a] shadow-sm"
                                  style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
                         </div>
 
@@ -185,7 +192,7 @@ export function NotesPanel({
                     </p>
                 </div>
             ) : (
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
                     {(notes as NoteWithCount[]).map((note, index) => (
                         <SingleNotePanel
                             key={note.id}

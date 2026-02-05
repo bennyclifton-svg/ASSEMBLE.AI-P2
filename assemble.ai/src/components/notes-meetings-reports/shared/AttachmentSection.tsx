@@ -25,6 +25,8 @@ interface AttachmentSectionProps {
     onSave?: () => void;
     onLoad?: () => void;
     showToggle?: boolean;
+    /** Compact mode for notes - smaller text, reduced padding, fewer columns */
+    compact?: boolean;
     className?: string;
 }
 
@@ -34,6 +36,7 @@ export function AttachmentSection({
     onSave,
     onLoad,
     showToggle = true,
+    compact = false,
     className,
 }: AttachmentSectionProps) {
     const [isVisible, setIsVisible] = useState(true);
@@ -115,6 +118,7 @@ export function AttachmentSection({
                     ) : (
                         <AttachmentTable
                             documents={documents}
+                            compact={compact}
                             emptyMessage="No documents attached. Click 'Save' to select documents from the repository."
                         />
                     )}

@@ -32,9 +32,9 @@ export type NoteColor = 'yellow' | 'blue' | 'green' | 'pink';
 export const NOTE_COLORS: NoteColor[] = ['yellow', 'blue', 'green', 'pink'];
 
 export const NOTE_COLOR_MAP: Record<NoteColor, { bg: string; border: string }> = {
-    yellow: { bg: 'rgba(255, 217, 61, 0.4)', border: 'rgba(255, 217, 61, 0.6)' },
+    yellow: { bg: '#fef9c3', border: '#fde68a' },
     blue:   { bg: 'rgba(100, 180, 255, 0.4)', border: 'rgba(100, 180, 255, 0.6)' },
-    green:  { bg: 'rgba(122, 200, 130, 0.4)', border: 'rgba(122, 200, 130, 0.6)' },
+    green:  { bg: '#c8ffd8', border: '#86efac' },
     pink:   { bg: 'rgba(255, 150, 180, 0.4)', border: 'rgba(255, 150, 180, 0.6)' },
 };
 

@@ -31,6 +31,27 @@ import type {
 import { getSectionLabel } from '@/lib/constants/sections';
 
 // ============================================================================
+// FORMATTING CLEANUP
+// ============================================================================
+
+/**
+ * Clean up AI-generated content by removing excessive blank lines and empty bullets
+ */
+function cleanupFormatting(content: string): string {
+    return content
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => {
+            if (line === '') return true;
+            if (/^[•\-\*]\s*$/.test(line)) return false;
+            return true;
+        })
+        .join('\n')
+        .replace(/\n{2,}/g, '\n\n')
+        .trim();
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -524,7 +545,7 @@ Generate only the section content. Do not include headers, titles, or meta-comme
     }
 
     return {
-        content: textContent.text.trim(),
+        content: cleanupFormatting(textContent.text),
         sourcesUsed: {
             notes: starredNotes.length,
             procurementDocs: procurementDocs.length,
@@ -587,6 +608,6 @@ Return only the polished content. Do not include commentary or explanations.`;
     }
 
     return {
-        content: textContent.text.trim(),
+        content: cleanupFormatting(textContent.text),
     };
 }

@@ -246,22 +246,22 @@ export const SCALE_THRESHOLDS: ScaleThreshold[] = [
   {
     key: 'storeys',
     threshold: 15,
-    discipline: { name: 'Wind Engineer', disciplineOrTrade: 'Wind', required: false, reason: 'High-rise wind assessment' },
+    discipline: { name: 'Wind', disciplineOrTrade: 'Wind', required: false, reason: 'High-rise wind assessment' },
   },
   {
     key: 'total_storeys',
     threshold: 15,
-    discipline: { name: 'Wind Engineer', disciplineOrTrade: 'Wind', required: false, reason: 'High-rise wind assessment' },
+    discipline: { name: 'Wind', disciplineOrTrade: 'Wind', required: false, reason: 'High-rise wind assessment' },
   },
   {
     key: 'car_parks',
     threshold: 100,
-    discipline: { name: 'Traffic Engineer', disciplineOrTrade: 'Traffic', required: true, reason: 'Traffic impact assessment' },
+    discipline: { name: 'Traffic', disciplineOrTrade: 'Traffic', required: true, reason: 'Traffic impact assessment' },
   },
   {
     key: 'gfa_sqm',
     threshold: 10000,
-    discipline: { name: 'Quantity Surveyor', disciplineOrTrade: 'Cost Planning', required: true, reason: 'Cost planning for large project' },
+    discipline: { name: 'Cost Planning', disciplineOrTrade: 'Cost Planning', required: true, reason: 'Cost planning for large project' },
   },
 ];
 

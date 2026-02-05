@@ -13,8 +13,11 @@ import { sql } from 'drizzle-orm';
  */
 export async function GET(request: NextRequest) {
     try {
+        console.log('[sync-status] SUPABASE_POSTGRES_URL set:', !!process.env.SUPABASE_POSTGRES_URL);
+
         // Check if RAG database is configured
         if (!process.env.SUPABASE_POSTGRES_URL) {
+            console.log('[sync-status] RAG database not configured, returning empty statuses');
             // Return empty statuses when RAG database is not configured
             return NextResponse.json({
                 statuses: {},
@@ -54,6 +57,8 @@ export async function GET(request: NextRequest) {
         // Build array literal for PostgreSQL: ARRAY['id1', 'id2']::text[]
         const arrayLiteral = `ARRAY[${validDocumentIds.map(id => `'${id}'`).join(',')}]::text[]`;
 
+        console.log('[sync-status] Querying for document IDs:', validDocumentIds.slice(0, 5), validDocumentIds.length > 5 ? `... (${validDocumentIds.length} total)` : '');
+
         const result = await ragDb.execute(sql.raw(`
             SELECT
                 dsm.document_id as "documentId",
@@ -66,6 +71,8 @@ export async function GET(request: NextRequest) {
             WHERE dsm.document_id = ANY(${arrayLiteral})
             ORDER BY dsm.document_id, dsm.created_at DESC
         `));
+
+        console.log('[sync-status] Query returned', result.rows?.length || 0, 'rows');
 
         // Group by documentId
         const statusMap: Record<string, {

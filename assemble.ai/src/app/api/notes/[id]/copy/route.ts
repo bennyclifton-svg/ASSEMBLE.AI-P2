@@ -55,16 +55,22 @@ export async function POST(
         const copyId = uuidv4();
         const now = new Date().toISOString();
 
+        // Set createdAt to 1ms before original so copy appears just below it in the list
+        // (notes are sorted by createdAt desc, so slightly older = appears after)
+        const originalCreatedAt = new Date(original.createdAt);
+        const copyCreatedAt = new Date(originalCreatedAt.getTime() - 1).toISOString();
+
         await db.insert(notes).values({
             id: copyId,
             projectId: original.projectId,
             organizationId: original.organizationId,
             title: `${original.title} copy`,
             content: original.content,
+            color: original.color, // Preserve the original color
             isStarred: false, // Don't copy starred status
             reportingPeriodStart: original.reportingPeriodStart,
             reportingPeriodEnd: original.reportingPeriodEnd,
-            createdAt: now,
+            createdAt: copyCreatedAt,
             updatedAt: now,
         });
 

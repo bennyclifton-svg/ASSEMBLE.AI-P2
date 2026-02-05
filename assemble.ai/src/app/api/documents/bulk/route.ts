@@ -3,6 +3,8 @@ import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
 import { documents } from '@/lib/db';
 import { inArray } from 'drizzle-orm';
+import { ragDb } from '@/lib/db/rag-client';
+import { documentChunks, documentSetMembers } from '@/lib/db/rag-schema';
 
 export async function PATCH(request: NextRequest) {
     return handleApiError(async () => {
@@ -74,6 +76,16 @@ export async function DELETE(request: NextRequest) {
 
         if (validDocIds.length === 0) {
             return NextResponse.json({ error: 'No valid documents found in this project' }, { status: 404 });
+        }
+
+        // Clean up RAG database (chunks and set memberships)
+        // Use try/catch so RAG failures don't block main document deletion
+        try {
+            await ragDb.delete(documentChunks).where(inArray(documentChunks.documentId, validDocIds));
+            await ragDb.delete(documentSetMembers).where(inArray(documentSetMembers.documentId, validDocIds));
+        } catch (ragError) {
+            console.error('Failed to clean up RAG chunks during document deletion:', ragError);
+            // Continue with main deletion even if RAG cleanup fails
         }
 
         // Get all versions for these documents

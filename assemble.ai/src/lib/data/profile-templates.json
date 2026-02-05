@@ -2466,43 +2466,43 @@
       "envelope": {
         "label": "Building Envelope",
         "items": [
-          { "value": "facade_remediation", "label": "Facade Remediation", "consultants": ["Facade Engineer", "Structural Engineer"] },
-          { "value": "roof_waterproofing", "label": "Roof Waterproofing", "consultants": ["Waterproofing Consultant"] },
-          { "value": "podium_waterproofing", "label": "Podium/Deck Waterproofing", "consultants": ["Waterproofing Consultant", "Structural Engineer"] },
-          { "value": "balcony_remediation", "label": "Balcony Remediation", "consultants": ["Structural Engineer", "Waterproofing Consultant"] },
-          { "value": "window_replacement", "label": "Window/Glazing Replacement", "consultants": ["Facade Engineer"] },
-          { "value": "cladding_replacement", "label": "Cladding Replacement (ACP/ACM)", "consultants": ["Facade Engineer", "Fire Engineer"], "riskFlag": "combustible_cladding" }
+          { "value": "facade_remediation", "label": "Facade Remediation", "consultants": ["Facade", "Structural"] },
+          { "value": "roof_waterproofing", "label": "Roof Waterproofing", "consultants": ["Waterproofing"] },
+          { "value": "podium_waterproofing", "label": "Podium/Deck Waterproofing", "consultants": ["Waterproofing", "Structural"] },
+          { "value": "balcony_remediation", "label": "Balcony Remediation", "consultants": ["Structural", "Waterproofing"] },
+          { "value": "window_replacement", "label": "Window/Glazing Replacement", "consultants": ["Facade"] },
+          { "value": "cladding_replacement", "label": "Cladding Replacement (ACP/ACM)", "consultants": ["Facade", "Fire Engineer"], "riskFlag": "combustible_cladding" }
         ]
       },
       "structural": {
         "label": "Structural Remediation",
         "items": [
-          { "value": "spalling_concrete", "label": "Spalling Concrete Repair", "consultants": ["Structural Engineer", "Concrete Technologist"] },
-          { "value": "crack_injection", "label": "Crack Injection/Repair", "consultants": ["Structural Engineer"] },
-          { "value": "steel_protection", "label": "Steel Protection/Coating", "consultants": ["Structural Engineer", "Corrosion Specialist"] },
-          { "value": "carbon_fibre_strengthening", "label": "Carbon Fibre Strengthening", "consultants": ["Structural Engineer"] },
-          { "value": "pile_remediation", "label": "Foundation/Pile Remediation", "consultants": ["Structural Engineer", "Geotechnical Engineer"] },
-          { "value": "post_tension_repair", "label": "Post-Tension Cable Repair", "consultants": ["Structural Engineer"] }
+          { "value": "spalling_concrete", "label": "Spalling Concrete Repair", "consultants": ["Structural", "Concrete Technologist"] },
+          { "value": "crack_injection", "label": "Crack Injection/Repair", "consultants": ["Structural"] },
+          { "value": "steel_protection", "label": "Steel Protection/Coating", "consultants": ["Structural", "Corrosion Specialist"] },
+          { "value": "carbon_fibre_strengthening", "label": "Carbon Fibre Strengthening", "consultants": ["Structural"] },
+          { "value": "pile_remediation", "label": "Foundation/Pile Remediation", "consultants": ["Structural", "Geotech"] },
+          { "value": "post_tension_repair", "label": "Post-Tension Cable Repair", "consultants": ["Structural"] }
         ]
       },
       "environmental": {
         "label": "Environmental Remediation",
         "items": [
-          { "value": "soil_contamination", "label": "Soil Contamination", "consultants": ["Environmental Consultant", "Contamination Specialist"], "riskFlag": "contaminated_land", "complexityPoints": 2 },
-          { "value": "groundwater_contamination", "label": "Groundwater Contamination", "consultants": ["Environmental Consultant", "Hydrogeologist"], "complexityPoints": 2 },
-          { "value": "pfas_remediation", "label": "PFAS Remediation", "consultants": ["Environmental Consultant", "PFAS Specialist"], "riskFlag": "pfas", "complexityPoints": 3 },
-          { "value": "acid_sulfate_soils", "label": "Acid Sulfate Soils", "consultants": ["Environmental Consultant", "Geotechnical Engineer"] },
-          { "value": "landfill_gas", "label": "Landfill Gas Management", "consultants": ["Environmental Consultant"] },
-          { "value": "ust_removal", "label": "UST Removal (Underground Tanks)", "consultants": ["Environmental Consultant"] }
+          { "value": "soil_contamination", "label": "Soil Contamination", "consultants": ["Environmental", "Contamination Specialist"], "riskFlag": "contaminated_land", "complexityPoints": 2 },
+          { "value": "groundwater_contamination", "label": "Groundwater Contamination", "consultants": ["Environmental", "Hydrogeologist"], "complexityPoints": 2 },
+          { "value": "pfas_remediation", "label": "PFAS Remediation", "consultants": ["Environmental", "PFAS Specialist"], "riskFlag": "pfas", "complexityPoints": 3 },
+          { "value": "acid_sulfate_soils", "label": "Acid Sulfate Soils", "consultants": ["Environmental", "Geotech"] },
+          { "value": "landfill_gas", "label": "Landfill Gas Management", "consultants": ["Environmental"] },
+          { "value": "ust_removal", "label": "UST Removal (Underground Tanks)", "consultants": ["Environmental"] }
         ]
       },
       "hazmat": {
         "label": "Hazardous Materials",
         "items": [
-          { "value": "asbestos_acm", "label": "Asbestos/ACM Removal", "consultants": ["Hazmat Consultant", "Occupational Hygienist"], "riskFlag": "asbestos", "complexityPoints": 2 },
-          { "value": "lead_paint", "label": "Lead Paint Removal", "consultants": ["Hazmat Consultant", "Occupational Hygienist"] },
-          { "value": "synthetic_mineral_fibre", "label": "Synthetic Mineral Fibre (SMF)", "consultants": ["Hazmat Consultant"] },
-          { "value": "pcb_removal", "label": "PCB Removal (Lighting/Transformers)", "consultants": ["Hazmat Consultant", "Electrical Engineer"] },
+          { "value": "asbestos_acm", "label": "Asbestos/ACM Removal", "consultants": ["Hazmat", "Occupational Hygienist"], "riskFlag": "asbestos", "complexityPoints": 2 },
+          { "value": "lead_paint", "label": "Lead Paint Removal", "consultants": ["Hazmat", "Occupational Hygienist"] },
+          { "value": "synthetic_mineral_fibre", "label": "Synthetic Mineral Fibre (SMF)", "consultants": ["Hazmat"] },
+          { "value": "pcb_removal", "label": "PCB Removal (Lighting/Transformers)", "consultants": ["Hazmat", "Electrical"] },
           { "value": "silica_exposure", "label": "Silica Exposure Management", "consultants": ["Occupational Hygienist"] }
         ]
       }
@@ -2511,11 +2511,11 @@
       "fire_life_safety": {
         "label": "Fire & Life Safety",
         "items": [
-          { "value": "fire_pump_room", "label": "Fire Pump Room Upgrade", "consultants": ["Fire Engineer", "Services Engineer (Hydraulic)"] },
-          { "value": "hydrant_system", "label": "Hydrant System Upgrade", "consultants": ["Fire Engineer", "Services Engineer (Hydraulic)"] },
-          { "value": "fire_tank", "label": "Fire Tank Installation", "consultants": ["Fire Engineer", "Structural Engineer"] },
+          { "value": "fire_pump_room", "label": "Fire Pump Room Upgrade", "consultants": ["Fire Engineer", "Hydraulic"] },
+          { "value": "hydrant_system", "label": "Hydrant System Upgrade", "consultants": ["Fire Engineer", "Hydraulic"] },
+          { "value": "fire_tank", "label": "Fire Tank Installation", "consultants": ["Fire Engineer", "Structural"] },
           { "value": "sprinkler_upgrade", "label": "Sprinkler System Upgrade/Install", "consultants": ["Fire Engineer"] },
-          { "value": "smoke_detection", "label": "Smoke Detection System", "consultants": ["Fire Engineer", "Services Engineer (Electrical)"] },
+          { "value": "smoke_detection", "label": "Smoke Detection System", "consultants": ["Fire Engineer", "Electrical"] },
           { "value": "emergency_warning", "label": "Emergency Warning (EWIS)", "consultants": ["Fire Engineer"] },
           { "value": "exit_egress", "label": "Exit/Egress Compliance", "consultants": ["Fire Engineer", "Architect"] },
           { "value": "fire_doors_seals", "label": "Fire Doors/Seals Replacement", "consultants": ["Fire Engineer"] },
@@ -2525,70 +2525,70 @@
       "mechanical": {
         "label": "Mechanical Systems",
         "items": [
-          { "value": "hvac_upgrade", "label": "HVAC System Upgrade", "consultants": ["Services Engineer (Mechanical)"] },
-          { "value": "chiller_replacement", "label": "Chiller Replacement", "consultants": ["Services Engineer (Mechanical)"] },
-          { "value": "cooling_tower", "label": "Cooling Tower Upgrade", "consultants": ["Services Engineer (Mechanical)"] },
-          { "value": "ahu_replacement", "label": "AHU Replacement", "consultants": ["Services Engineer (Mechanical)"] },
-          { "value": "vav_upgrade", "label": "VAV System Upgrade", "consultants": ["Services Engineer (Mechanical)"] },
-          { "value": "exhaust_ventilation", "label": "Exhaust/Ventilation Upgrade", "consultants": ["Services Engineer (Mechanical)"] },
-          { "value": "carpark_ventilation", "label": "Car Park Ventilation", "consultants": ["Services Engineer (Mechanical)"] },
-          { "value": "refrigerant_changeover", "label": "Refrigerant Changeover (R22)", "consultants": ["Services Engineer (Mechanical)"], "riskFlag": "refrigerant_phase_out" }
+          { "value": "hvac_upgrade", "label": "HVAC System Upgrade", "consultants": ["Mechanical"] },
+          { "value": "chiller_replacement", "label": "Chiller Replacement", "consultants": ["Mechanical"] },
+          { "value": "cooling_tower", "label": "Cooling Tower Upgrade", "consultants": ["Mechanical"] },
+          { "value": "ahu_replacement", "label": "AHU Replacement", "consultants": ["Mechanical"] },
+          { "value": "vav_upgrade", "label": "VAV System Upgrade", "consultants": ["Mechanical"] },
+          { "value": "exhaust_ventilation", "label": "Exhaust/Ventilation Upgrade", "consultants": ["Mechanical"] },
+          { "value": "carpark_ventilation", "label": "Car Park Ventilation", "consultants": ["Mechanical"] },
+          { "value": "refrigerant_changeover", "label": "Refrigerant Changeover (R22)", "consultants": ["Mechanical"], "riskFlag": "refrigerant_phase_out" }
         ]
       },
       "electrical": {
         "label": "Electrical Systems",
         "items": [
-          { "value": "switchboard_upgrade", "label": "Switchboard Upgrade", "consultants": ["Services Engineer (Electrical)"] },
-          { "value": "metering_upgrade", "label": "Metering/Sub-metering", "consultants": ["Services Engineer (Electrical)"] },
-          { "value": "backup_power", "label": "Backup Power (Generator/UPS)", "consultants": ["Services Engineer (Electrical)"] },
-          { "value": "lighting_upgrade", "label": "Lighting Upgrade (LED)", "consultants": ["Services Engineer (Electrical)", "Lighting Designer"] },
-          { "value": "emergency_lighting", "label": "Emergency Lighting", "consultants": ["Services Engineer (Electrical)", "Fire Engineer"] },
-          { "value": "ev_charging", "label": "EV Charging Infrastructure", "consultants": ["Services Engineer (Electrical)"] },
-          { "value": "solar_pv", "label": "Solar PV Installation", "consultants": ["Services Engineer (Electrical)", "ESD Consultant"] },
-          { "value": "battery_storage", "label": "Battery Storage", "consultants": ["Services Engineer (Electrical)"] }
+          { "value": "switchboard_upgrade", "label": "Switchboard Upgrade", "consultants": ["Electrical"] },
+          { "value": "metering_upgrade", "label": "Metering/Sub-metering", "consultants": ["Electrical"] },
+          { "value": "backup_power", "label": "Backup Power (Generator/UPS)", "consultants": ["Electrical"] },
+          { "value": "lighting_upgrade", "label": "Lighting Upgrade (LED)", "consultants": ["Electrical", "Lighting"] },
+          { "value": "emergency_lighting", "label": "Emergency Lighting", "consultants": ["Electrical", "Fire Engineer"] },
+          { "value": "ev_charging", "label": "EV Charging Infrastructure", "consultants": ["Electrical"] },
+          { "value": "solar_pv", "label": "Solar PV Installation", "consultants": ["Electrical", "ESD"] },
+          { "value": "battery_storage", "label": "Battery Storage", "consultants": ["Electrical"] }
         ]
       },
       "hydraulic": {
         "label": "Hydraulic Systems",
         "items": [
-          { "value": "plumbing_upgrade", "label": "Plumbing Riser Upgrade", "consultants": ["Services Engineer (Hydraulic)"] },
-          { "value": "hot_water_system", "label": "Hot Water System Upgrade", "consultants": ["Services Engineer (Hydraulic)"] },
-          { "value": "water_treatment", "label": "Water Treatment System", "consultants": ["Services Engineer (Hydraulic)"] },
-          { "value": "stormwater_upgrade", "label": "Stormwater System Upgrade", "consultants": ["Civil Engineer", "Services Engineer (Hydraulic)"] },
-          { "value": "sewer_upgrade", "label": "Sewer/Trade Waste Upgrade", "consultants": ["Services Engineer (Hydraulic)"] },
-          { "value": "rainwater_harvesting", "label": "Rainwater Harvesting", "consultants": ["Services Engineer (Hydraulic)", "ESD Consultant"] },
-          { "value": "greywater_recycling", "label": "Greywater Recycling", "consultants": ["Services Engineer (Hydraulic)", "ESD Consultant"] }
+          { "value": "plumbing_upgrade", "label": "Plumbing Riser Upgrade", "consultants": ["Hydraulic"] },
+          { "value": "hot_water_system", "label": "Hot Water System Upgrade", "consultants": ["Hydraulic"] },
+          { "value": "water_treatment", "label": "Water Treatment System", "consultants": ["Hydraulic"] },
+          { "value": "stormwater_upgrade", "label": "Stormwater System Upgrade", "consultants": ["Civil", "Hydraulic"] },
+          { "value": "sewer_upgrade", "label": "Sewer/Trade Waste Upgrade", "consultants": ["Hydraulic"] },
+          { "value": "rainwater_harvesting", "label": "Rainwater Harvesting", "consultants": ["Hydraulic", "ESD"] },
+          { "value": "greywater_recycling", "label": "Greywater Recycling", "consultants": ["Hydraulic", "ESD"] }
         ]
       },
       "vertical_transport": {
         "label": "Vertical Transport",
         "items": [
-          { "value": "lift_modernisation", "label": "Lift Modernisation", "consultants": ["Vertical Transport Consultant"] },
-          { "value": "lift_replacement", "label": "Lift Replacement", "consultants": ["Vertical Transport Consultant", "Structural Engineer"], "complexityPoints": 2 },
-          { "value": "dda_compliance", "label": "DDA Lift Compliance", "consultants": ["Vertical Transport Consultant", "Accessibility Consultant"] },
-          { "value": "escalator_upgrade", "label": "Escalator Upgrade", "consultants": ["Vertical Transport Consultant"] },
-          { "value": "hoist_installation", "label": "Goods Hoist Installation", "consultants": ["Vertical Transport Consultant"] }
+          { "value": "lift_modernisation", "label": "Lift Modernisation", "consultants": ["Vertical Transport"] },
+          { "value": "lift_replacement", "label": "Lift Replacement", "consultants": ["Vertical Transport", "Structural"], "complexityPoints": 2 },
+          { "value": "dda_compliance", "label": "DDA Lift Compliance", "consultants": ["Vertical Transport", "Access"] },
+          { "value": "escalator_upgrade", "label": "Escalator Upgrade", "consultants": ["Vertical Transport"] },
+          { "value": "hoist_installation", "label": "Goods Hoist Installation", "consultants": ["Vertical Transport"] }
         ]
       },
       "controls_security": {
         "label": "Controls & Security",
         "items": [
-          { "value": "bms_upgrade", "label": "BMS Upgrade", "consultants": ["BMS Consultant", "Services Engineer (Mechanical)"] },
-          { "value": "access_control", "label": "Access Control System", "consultants": ["Security Consultant"] },
-          { "value": "cctv_upgrade", "label": "CCTV System Upgrade", "consultants": ["Security Consultant"] },
-          { "value": "intercom_system", "label": "Intercom/Entry System", "consultants": ["Security Consultant", "Services Engineer (Electrical)"] },
-          { "value": "smart_building", "label": "Smart Building Integration", "consultants": ["BMS Consultant", "ICT Consultant"], "complexityPoints": 2 }
+          { "value": "bms_upgrade", "label": "BMS Upgrade", "consultants": ["BMS", "Mechanical"] },
+          { "value": "access_control", "label": "Access Control System", "consultants": ["Security"] },
+          { "value": "cctv_upgrade", "label": "CCTV System Upgrade", "consultants": ["Security"] },
+          { "value": "intercom_system", "label": "Intercom/Entry System", "consultants": ["Security", "Electrical"] },
+          { "value": "smart_building", "label": "Smart Building Integration", "consultants": ["BMS", "ICT"], "complexityPoints": 2 }
         ]
       },
       "common_areas": {
         "label": "Common Areas",
         "items": [
-          { "value": "lobby_refurbishment", "label": "Lobby/Foyer Refurbishment", "consultants": ["Interior Designer", "Architect"] },
-          { "value": "amenities_upgrade", "label": "Amenities Upgrade", "consultants": ["Interior Designer", "Services Engineer (Hydraulic)"] },
-          { "value": "corridor_refurbishment", "label": "Corridor Refurbishment", "consultants": ["Interior Designer"] },
-          { "value": "carpark_upgrade", "label": "Car Park Upgrade", "consultants": ["Civil Engineer", "Services Engineer (Electrical)"] },
-          { "value": "landscape_upgrade", "label": "Landscape/External Works", "consultants": ["Landscape Architect"] },
-          { "value": "signage_wayfinding", "label": "Signage/Wayfinding", "consultants": ["Signage Consultant", "Architect"] }
+          { "value": "lobby_refurbishment", "label": "Lobby/Foyer Refurbishment", "consultants": ["Interior", "Architect"] },
+          { "value": "amenities_upgrade", "label": "Amenities Upgrade", "consultants": ["Interior", "Hydraulic"] },
+          { "value": "corridor_refurbishment", "label": "Corridor Refurbishment", "consultants": ["Interior"] },
+          { "value": "carpark_upgrade", "label": "Car Park Upgrade", "consultants": ["Civil", "Electrical"] },
+          { "value": "landscape_upgrade", "label": "Landscape/External Works", "consultants": ["Landscape"] },
+          { "value": "signage_wayfinding", "label": "Signage/Wayfinding", "consultants": ["Signage", "Architect"] }
         ]
       }
     },
@@ -2596,18 +2596,18 @@
       "structural_additions": {
         "label": "Structural Additions",
         "items": [
-          { "value": "vertical_extension", "label": "Vertical Extension (Add Floors)", "consultants": ["Structural Engineer", "Architect"], "complexityPoints": 3 },
-          { "value": "horizontal_extension", "label": "Horizontal Extension", "consultants": ["Structural Engineer", "Architect"] },
-          { "value": "basement_extension", "label": "Basement Extension", "consultants": ["Structural Engineer", "Geotechnical Engineer"], "complexityPoints": 3 },
-          { "value": "link_building", "label": "Link Building/Bridge", "consultants": ["Structural Engineer", "Architect"] }
+          { "value": "vertical_extension", "label": "Vertical Extension (Add Floors)", "consultants": ["Structural", "Architect"], "complexityPoints": 3 },
+          { "value": "horizontal_extension", "label": "Horizontal Extension", "consultants": ["Structural", "Architect"] },
+          { "value": "basement_extension", "label": "Basement Extension", "consultants": ["Structural", "Geotech"], "complexityPoints": 3 },
+          { "value": "link_building", "label": "Link Building/Bridge", "consultants": ["Structural", "Architect"] }
         ]
       },
       "services_extension": {
         "label": "Services Extension",
         "items": [
-          { "value": "new_plant_room", "label": "New Plant Room", "consultants": ["Services Engineer (Mechanical)", "Structural Engineer"] },
-          { "value": "services_reticulation", "label": "Services Reticulation Extension", "consultants": ["Services Engineer (Mechanical)", "Services Engineer (Electrical)"] },
-          { "value": "substation_upgrade", "label": "Substation Upgrade/Addition", "consultants": ["Services Engineer (Electrical)"] }
+          { "value": "new_plant_room", "label": "New Plant Room", "consultants": ["Mechanical", "Structural"] },
+          { "value": "services_reticulation", "label": "Services Reticulation Extension", "consultants": ["Mechanical", "Electrical"] },
+          { "value": "substation_upgrade", "label": "Substation Upgrade/Addition", "consultants": ["Electrical"] }
         ]
       }
     },
@@ -2615,56 +2615,56 @@
       "enabling_works": {
         "label": "Enabling Works",
         "items": [
-          { "value": "demolition", "label": "Demolition", "consultants": ["Demolition Consultant", "Hazmat Consultant"] },
-          { "value": "site_clearance", "label": "Site Clearance", "consultants": ["Civil Engineer"] },
-          { "value": "decontamination", "label": "Decontamination", "consultants": ["Environmental Consultant"], "riskFlag": "contaminated_land" },
-          { "value": "bulk_earthworks", "label": "Bulk Earthworks", "consultants": ["Civil Engineer", "Geotechnical Engineer"] },
-          { "value": "temporary_works", "label": "Temporary Works", "consultants": ["Structural Engineer"] },
-          { "value": "utility_diversions", "label": "Utility Diversions", "consultants": ["Civil Engineer", "Services Engineer"] }
+          { "value": "demolition", "label": "Demolition", "consultants": ["Demolition", "Hazmat"] },
+          { "value": "site_clearance", "label": "Site Clearance", "consultants": ["Civil"] },
+          { "value": "decontamination", "label": "Decontamination", "consultants": ["Environmental"], "riskFlag": "contaminated_land" },
+          { "value": "bulk_earthworks", "label": "Bulk Earthworks", "consultants": ["Civil", "Geotech"] },
+          { "value": "temporary_works", "label": "Temporary Works", "consultants": ["Structural"] },
+          { "value": "utility_diversions", "label": "Utility Diversions", "consultants": ["Civil", "Services"] }
         ]
       },
       "civil_works": {
         "label": "Civil Works",
         "items": [
-          { "value": "earthworks_detailed", "label": "Detailed Earthworks", "consultants": ["Civil Engineer"] },
-          { "value": "site_drainage", "label": "Site Drainage", "consultants": ["Civil Engineer", "Hydraulic Engineer"] },
-          { "value": "stormwater_management", "label": "Stormwater Management", "consultants": ["Civil Engineer"] },
-          { "value": "internal_roads", "label": "Internal Roads/Pavements", "consultants": ["Civil Engineer", "Traffic Engineer"] },
-          { "value": "retaining_walls", "label": "Retaining Walls", "consultants": ["Structural Engineer", "Civil Engineer"] }
+          { "value": "earthworks_detailed", "label": "Detailed Earthworks", "consultants": ["Civil"] },
+          { "value": "site_drainage", "label": "Site Drainage", "consultants": ["Civil", "Hydraulic"] },
+          { "value": "stormwater_management", "label": "Stormwater Management", "consultants": ["Civil"] },
+          { "value": "internal_roads", "label": "Internal Roads/Pavements", "consultants": ["Civil", "Traffic"] },
+          { "value": "retaining_walls", "label": "Retaining Walls", "consultants": ["Structural", "Civil"] }
         ]
       },
       "structure": {
         "label": "Structure",
         "items": [
-          { "value": "substructure", "label": "Substructure/Foundations", "consultants": ["Structural Engineer", "Geotechnical Engineer"] },
-          { "value": "superstructure", "label": "Superstructure", "consultants": ["Structural Engineer"] },
-          { "value": "post_tensioning", "label": "Post-Tensioning", "consultants": ["Structural Engineer"], "complexityPoints": 1 },
-          { "value": "precast_elements", "label": "Precast Elements", "consultants": ["Structural Engineer"] },
-          { "value": "steel_frame", "label": "Structural Steel Frame", "consultants": ["Structural Engineer"] },
-          { "value": "timber_mass", "label": "Mass Timber Structure", "consultants": ["Structural Engineer", "Fire Engineer"], "complexityPoints": 2 }
+          { "value": "substructure", "label": "Substructure/Foundations", "consultants": ["Structural", "Geotech"] },
+          { "value": "superstructure", "label": "Superstructure", "consultants": ["Structural"] },
+          { "value": "post_tensioning", "label": "Post-Tensioning", "consultants": ["Structural"], "complexityPoints": 1 },
+          { "value": "precast_elements", "label": "Precast Elements", "consultants": ["Structural"] },
+          { "value": "steel_frame", "label": "Structural Steel Frame", "consultants": ["Structural"] },
+          { "value": "timber_mass", "label": "Mass Timber Structure", "consultants": ["Structural", "Fire Engineer"], "complexityPoints": 2 }
         ]
       },
       "envelope": {
         "label": "Building Envelope",
         "items": [
-          { "value": "facade_system", "label": "Facade System", "consultants": ["Facade Engineer", "Architect"] },
-          { "value": "curtain_wall", "label": "Curtain Wall", "consultants": ["Facade Engineer"] },
+          { "value": "facade_system", "label": "Facade System", "consultants": ["Facade", "Architect"] },
+          { "value": "curtain_wall", "label": "Curtain Wall", "consultants": ["Facade"] },
           { "value": "roofing", "label": "Roofing System", "consultants": ["Architect"] },
-          { "value": "glazing", "label": "Glazing/Windows", "consultants": ["Facade Engineer"] },
-          { "value": "waterproofing", "label": "Waterproofing", "consultants": ["Waterproofing Consultant"] }
+          { "value": "glazing", "label": "Glazing/Windows", "consultants": ["Facade"] },
+          { "value": "waterproofing", "label": "Waterproofing", "consultants": ["Waterproofing"] }
         ]
       },
       "services": {
         "label": "Building Services",
         "items": [
-          { "value": "mechanical_hvac", "label": "Mechanical/HVAC", "consultants": ["Services Engineer (Mechanical)"] },
-          { "value": "electrical_power", "label": "Electrical/Power", "consultants": ["Services Engineer (Electrical)"] },
-          { "value": "hydraulic_plumbing", "label": "Hydraulic/Plumbing", "consultants": ["Services Engineer (Hydraulic)"] },
+          { "value": "mechanical_hvac", "label": "Mechanical/HVAC", "consultants": ["Mechanical"] },
+          { "value": "electrical_power", "label": "Electrical/Power", "consultants": ["Electrical"] },
+          { "value": "hydraulic_plumbing", "label": "Hydraulic/Plumbing", "consultants": ["Hydraulic"] },
           { "value": "fire_services", "label": "Fire Services", "consultants": ["Fire Engineer"] },
-          { "value": "vertical_transport", "label": "Vertical Transport", "consultants": ["Vertical Transport Consultant"] },
-          { "value": "bms_controls", "label": "BMS/Controls", "consultants": ["BMS Consultant"] },
-          { "value": "security_systems", "label": "Security Systems", "consultants": ["Security Consultant"] },
-          { "value": "ict_structured_cabling", "label": "ICT/Structured Cabling", "consultants": ["ICT Consultant"] }
+          { "value": "vertical_transport", "label": "Vertical Transport", "consultants": ["Vertical Transport"] },
+          { "value": "bms_controls", "label": "BMS/Controls", "consultants": ["BMS"] },
+          { "value": "security_systems", "label": "Security Systems", "consultants": ["Security"] },
+          { "value": "ict_structured_cabling", "label": "ICT/Structured Cabling", "consultants": ["ICT"] }
         ]
       },
       "fitout": {
@@ -2672,19 +2672,19 @@
         "items": [
           { "value": "partitions_walls", "label": "Partitions/Internal Walls", "consultants": ["Architect"] },
           { "value": "ceilings", "label": "Ceilings", "consultants": ["Architect"] },
-          { "value": "flooring", "label": "Flooring", "consultants": ["Architect", "Interior Designer"] },
-          { "value": "joinery", "label": "Joinery/Cabinetry", "consultants": ["Interior Designer"] },
-          { "value": "specialist_fitout", "label": "Specialist Fitout (Lab/Kitchen)", "consultants": ["Specialist Consultant"], "complexityPoints": 1 }
+          { "value": "flooring", "label": "Flooring", "consultants": ["Architect", "Interior"] },
+          { "value": "joinery", "label": "Joinery/Cabinetry", "consultants": ["Interior"] },
+          { "value": "specialist_fitout", "label": "Specialist Fitout (Lab/Kitchen)", "consultants": ["Specialist"], "complexityPoints": 1 }
         ]
       },
       "external_works": {
         "label": "External Works",
         "items": [
-          { "value": "landscaping", "label": "Landscaping", "consultants": ["Landscape Architect"] },
-          { "value": "car_parking", "label": "Car Parking", "consultants": ["Civil Engineer", "Traffic Engineer"] },
-          { "value": "signage_wayfinding", "label": "Signage/Wayfinding", "consultants": ["Signage Consultant"] },
-          { "value": "external_lighting", "label": "External Lighting", "consultants": ["Lighting Designer"] },
-          { "value": "fencing_gates", "label": "Fencing/Gates", "consultants": ["Security Consultant", "Architect"] }
+          { "value": "landscaping", "label": "Landscaping", "consultants": ["Landscape"] },
+          { "value": "car_parking", "label": "Car Parking", "consultants": ["Civil", "Traffic"] },
+          { "value": "signage_wayfinding", "label": "Signage/Wayfinding", "consultants": ["Signage"] },
+          { "value": "external_lighting", "label": "External Lighting", "consultants": ["Lighting"] },
+          { "value": "fencing_gates", "label": "Fencing/Gates", "consultants": ["Security", "Architect"] }
         ]
       }
     },
@@ -2692,38 +2692,38 @@
       "due_diligence": {
         "label": "Due Diligence",
         "items": [
-          { "value": "technical_dd", "label": "Technical Due Diligence", "consultants": ["Building Consultant", "Structural Engineer"] },
-          { "value": "building_condition", "label": "Building Condition Assessment", "consultants": ["Building Consultant"] },
-          { "value": "environmental_dd", "label": "Environmental Due Diligence", "consultants": ["Environmental Consultant"] },
+          { "value": "technical_dd", "label": "Technical Due Diligence", "consultants": ["Building", "Structural"] },
+          { "value": "building_condition", "label": "Building Condition Assessment", "consultants": ["Building"] },
+          { "value": "environmental_dd", "label": "Environmental Due Diligence", "consultants": ["Environmental"] },
           { "value": "compliance_audit", "label": "Compliance Audit", "consultants": ["Building Certifier", "Fire Engineer"] },
-          { "value": "capex_assessment", "label": "CapEx Assessment", "consultants": ["Quantity Surveyor"] },
-          { "value": "services_assessment", "label": "Services Assessment", "consultants": ["Services Engineer"] }
+          { "value": "capex_assessment", "label": "CapEx Assessment", "consultants": ["Cost Planning"] },
+          { "value": "services_assessment", "label": "Services Assessment", "consultants": ["Services"] }
         ]
       },
       "feasibility": {
         "label": "Feasibility Studies",
         "items": [
-          { "value": "highest_best_use", "label": "Highest & Best Use Study", "consultants": ["Town Planner", "Architect"] },
-          { "value": "development_feasibility", "label": "Development Feasibility", "consultants": ["Quantity Surveyor", "Town Planner"] },
-          { "value": "massing_study", "label": "Massing/Yield Study", "consultants": ["Architect", "Town Planner"] },
-          { "value": "cost_benefit", "label": "Cost-Benefit Analysis", "consultants": ["Quantity Surveyor"] }
+          { "value": "highest_best_use", "label": "Highest & Best Use Study", "consultants": ["Town Planning", "Architect"] },
+          { "value": "development_feasibility", "label": "Development Feasibility", "consultants": ["Cost Planning", "Town Planning"] },
+          { "value": "massing_study", "label": "Massing/Yield Study", "consultants": ["Architect", "Town Planning"] },
+          { "value": "cost_benefit", "label": "Cost-Benefit Analysis", "consultants": ["Cost Planning"] }
         ]
       },
       "design_review": {
         "label": "Design Review",
         "items": [
           { "value": "design_audit", "label": "Design Audit", "consultants": ["Project Manager", "Architect"] },
-          { "value": "value_engineering", "label": "Value Engineering", "consultants": ["Quantity Surveyor", "Architect"] },
+          { "value": "value_engineering", "label": "Value Engineering", "consultants": ["Cost Planning", "Architect"] },
           { "value": "constructability_review", "label": "Constructability Review", "consultants": ["Construction Manager"] },
-          { "value": "peer_review", "label": "Peer Review (Structural/Services)", "consultants": ["Structural Engineer", "Services Engineer"] }
+          { "value": "peer_review", "label": "Peer Review (Structural/Services)", "consultants": ["Structural", "Services"] }
         ]
       },
       "procurement_support": {
         "label": "Procurement Support",
         "items": [
           { "value": "procurement_strategy", "label": "Procurement Strategy", "consultants": ["Project Manager"] },
-          { "value": "tender_documentation", "label": "Tender Documentation Review", "consultants": ["Quantity Surveyor"] },
-          { "value": "tender_evaluation", "label": "Tender Evaluation", "consultants": ["Quantity Surveyor", "Project Manager"] },
+          { "value": "tender_documentation", "label": "Tender Documentation Review", "consultants": ["Cost Planning"] },
+          { "value": "tender_evaluation", "label": "Tender Evaluation", "consultants": ["Cost Planning", "Project Manager"] },
           { "value": "contract_negotiation", "label": "Contract Negotiation Support", "consultants": ["Project Manager"] }
         ]
       },
@@ -2731,17 +2731,17 @@
         "label": "Contract Administration",
         "items": [
           { "value": "superintendent_services", "label": "Superintendent Services", "consultants": ["Project Manager"] },
-          { "value": "progress_certification", "label": "Progress Certification", "consultants": ["Quantity Surveyor"] },
-          { "value": "variation_assessment", "label": "Variation Assessment", "consultants": ["Quantity Surveyor"] },
-          { "value": "eot_assessment", "label": "EOT Assessment", "consultants": ["Project Manager", "Programming Consultant"] },
+          { "value": "progress_certification", "label": "Progress Certification", "consultants": ["Cost Planning"] },
+          { "value": "variation_assessment", "label": "Variation Assessment", "consultants": ["Cost Planning"] },
+          { "value": "eot_assessment", "label": "EOT Assessment", "consultants": ["Project Manager", "Programming"] },
           { "value": "defects_management", "label": "Defects Management", "consultants": ["Project Manager"] }
         ]
       },
       "dispute_resolution": {
         "label": "Dispute Resolution",
         "items": [
-          { "value": "claim_assessment", "label": "Claim Assessment", "consultants": ["Quantity Surveyor"], "complexityPoints": 2 },
-          { "value": "delay_analysis", "label": "Delay Analysis", "consultants": ["Programming Consultant"], "complexityPoints": 2 },
+          { "value": "claim_assessment", "label": "Claim Assessment", "consultants": ["Cost Planning"], "complexityPoints": 2 },
+          { "value": "delay_analysis", "label": "Delay Analysis", "consultants": ["Programming"], "complexityPoints": 2 },
           { "value": "expert_determination", "label": "Expert Determination", "consultants": ["Expert Witness"], "complexityPoints": 3 },
           { "value": "arbitration_support", "label": "Arbitration/Litigation Support", "consultants": ["Expert Witness"], "complexityPoints": 3 }
         ]
@@ -2750,16 +2750,16 @@
     "classOverrides": {
       "commercial": {
         "additionalItems": [
-          { "value": "tenant_fitout", "label": "Tenant Fitout Coordination", "category": "refurb.common_areas", "consultants": ["Interior Designer", "Project Manager"] },
-          { "value": "esd_upgrade", "label": "ESD/NABERS Upgrade", "category": "refurb.controls_security", "consultants": ["ESD Consultant"] },
-          { "value": "end_of_trip", "label": "End of Trip Facilities", "category": "refurb.common_areas", "consultants": ["Architect", "Services Engineer (Hydraulic)"] }
+          { "value": "tenant_fitout", "label": "Tenant Fitout Coordination", "category": "refurb.common_areas", "consultants": ["Interior", "Project Manager"] },
+          { "value": "esd_upgrade", "label": "ESD/NABERS Upgrade", "category": "refurb.controls_security", "consultants": ["ESD"] },
+          { "value": "end_of_trip", "label": "End of Trip Facilities", "category": "refurb.common_areas", "consultants": ["Architect", "Hydraulic"] }
         ]
       },
       "industrial": {
         "additionalItems": [
-          { "value": "crane_system", "label": "Crane System Upgrade", "category": "refurb.mechanical", "consultants": ["Structural Engineer"] },
+          { "value": "crane_system", "label": "Crane System Upgrade", "category": "refurb.mechanical", "consultants": ["Structural"] },
           { "value": "dock_equipment", "label": "Dock Equipment Upgrade", "category": "refurb.mechanical", "consultants": [] },
-          { "value": "hardstand_upgrade", "label": "Hardstand/Pavement Upgrade", "category": "refurb.common_areas", "consultants": ["Civil Engineer"] },
+          { "value": "hardstand_upgrade", "label": "Hardstand/Pavement Upgrade", "category": "refurb.common_areas", "consultants": ["Civil"] },
           { "value": "industrial_flooring", "label": "Industrial Flooring", "category": "refurb.common_areas", "consultants": [] },
           { "value": "racking_system", "label": "Racking System Install/Modify", "category": "refurb.mechanical", "consultants": [] }
         ]
@@ -2767,17 +2767,17 @@
       "residential": {
         "additionalItems": [
           { "value": "common_property", "label": "Common Property Works", "category": "refurb.common_areas", "consultants": ["Building Manager", "Architect"] },
-          { "value": "defect_rectification", "label": "Defect Rectification", "category": "remediation.structural", "consultants": ["Building Consultant", "Structural Engineer"] },
-          { "value": "strata_compliance", "label": "Strata Compliance Works", "category": "remediation.envelope", "consultants": ["Building Consultant"] }
+          { "value": "defect_rectification", "label": "Defect Rectification", "category": "remediation.structural", "consultants": ["Building", "Structural"] },
+          { "value": "strata_compliance", "label": "Strata Compliance Works", "category": "remediation.envelope", "consultants": ["Building"] }
         ]
       },
       "infrastructure": {
         "additionalItems": [
-          { "value": "pavement_rehabilitation", "label": "Pavement Rehabilitation", "category": "remediation.structural", "consultants": ["Civil Engineer"] },
-          { "value": "bridge_strengthening", "label": "Bridge Strengthening", "category": "remediation.structural", "consultants": ["Structural Engineer", "Civil Engineer"] },
-          { "value": "pipe_relining", "label": "Pipe Relining/Replacement", "category": "refurb.hydraulic", "consultants": ["Civil Engineer", "Services Engineer (Hydraulic)"] },
-          { "value": "pump_station_upgrade", "label": "Pump Station Upgrade", "category": "refurb.hydraulic", "consultants": ["Services Engineer (Hydraulic)", "Services Engineer (Electrical)"] },
-          { "value": "treatment_upgrade", "label": "Treatment Plant Upgrade", "category": "refurb.hydraulic", "consultants": ["Process Engineer", "Civil Engineer"] }
+          { "value": "pavement_rehabilitation", "label": "Pavement Rehabilitation", "category": "remediation.structural", "consultants": ["Civil"] },
+          { "value": "bridge_strengthening", "label": "Bridge Strengthening", "category": "remediation.structural", "consultants": ["Structural", "Civil"] },
+          { "value": "pipe_relining", "label": "Pipe Relining/Replacement", "category": "refurb.hydraulic", "consultants": ["Civil", "Hydraulic"] },
+          { "value": "pump_station_upgrade", "label": "Pump Station Upgrade", "category": "refurb.hydraulic", "consultants": ["Hydraulic", "Electrical"] },
+          { "value": "treatment_upgrade", "label": "Treatment Plant Upgrade", "category": "refurb.hydraulic", "consultants": ["Process", "Civil"] }
         ]
       }
     },

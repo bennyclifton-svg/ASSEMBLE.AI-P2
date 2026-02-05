@@ -489,7 +489,7 @@
       },
 
       "structural": {
-        "name": "Structural Engineer",
+        "name": "Structural",
         "abbrev": "STR",
         "category": "engineering",
         "applicableProjectTypes": ["all"],
@@ -678,7 +678,7 @@
       },
 
       "civil": {
-        "name": "Civil Engineer",
+        "name": "Civil",
         "abbrev": "CIV",
         "category": "engineering",
         "applicableProjectTypes": ["apartments", "townhouses", "retirement-living", "office", "industrial", "retail", "mixed-use"],
@@ -862,7 +862,7 @@
       },
 
       "mechanical": {
-        "name": "Mechanical Engineer",
+        "name": "Mechanical",
         "abbrev": "MEC",
         "category": "engineering",
         "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "fitout", "refurbishment", "mixed-use"],
@@ -1056,7 +1056,7 @@
       },
 
       "electrical": {
-        "name": "Electrical Engineer",
+        "name": "Electrical",
         "abbrev": "ELE",
         "category": "engineering",
         "applicableProjectTypes": ["all"],
@@ -1255,7 +1255,7 @@
       },
 
       "hydraulic": {
-        "name": "Hydraulic Engineer",
+        "name": "Hydraulic",
         "abbrev": "HYD",
         "category": "engineering",
         "applicableProjectTypes": ["house", "apartments", "townhouses", "office", "retail", "industrial", "fitout", "mixed-use"],
@@ -1595,7 +1595,7 @@
       },
 
       "facade": {
-        "name": "Façade Engineer",
+        "name": "Facade",
         "abbrev": "FAC",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "refurbishment", "mixed-use"],
@@ -1735,7 +1735,7 @@
       },
 
       "landscape": {
-        "name": "Landscape Architect",
+        "name": "Landscape",
         "abbrev": "LAN",
         "category": "design",
         "applicableProjectTypes": ["house", "apartments", "townhouses", "retirement-living", "office", "retail", "industrial", "mixed-use"],
@@ -1914,7 +1914,7 @@
       },
 
       "interior_designer": {
-        "name": "Interior Designer",
+        "name": "Interior",
         "abbrev": "INT",
         "category": "design",
         "applicableProjectTypes": ["apartments", "office", "retail", "fitout", "mixed-use"],
@@ -2727,7 +2727,7 @@
       },
 
       "esd_consultant": {
-        "name": "ESD Consultant",
+        "name": "ESD",
         "abbrev": "ESD",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "industrial", "mixed-use", "retirement-living"],
@@ -2905,7 +2905,7 @@
       },
 
       "acoustic": {
-        "name": "Acoustic Consultant",
+        "name": "Acoustic",
         "abbrev": "ACO",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
@@ -3017,7 +3017,7 @@
       },
 
       "traffic": {
-        "name": "Traffic Engineer",
+        "name": "Traffic",
         "abbrev": "TRA",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
@@ -3115,7 +3115,7 @@
       },
 
       "geotechnical": {
-        "name": "Geotechnical Engineer",
+        "name": "Geotech",
         "abbrev": "GEO",
         "category": "specialist",
         "applicableProjectTypes": ["house", "apartments", "townhouses", "office", "industrial", "remediation", "mixed-use"],
@@ -3233,7 +3233,7 @@
       },
 
       "environmental": {
-        "name": "Environmental Consultant",
+        "name": "Ecology",
         "abbrev": "ENV",
         "category": "specialist",
         "applicableProjectTypes": ["due-diligence", "feasibility", "industrial", "remediation"],
@@ -3350,7 +3350,7 @@
       },
 
       "heritage": {
-        "name": "Heritage Consultant",
+        "name": "Heritage",
         "abbrev": "HER",
         "category": "specialist",
         "applicableProjectTypes": ["due-diligence", "refurbishment", "mixed-use"],
@@ -3473,7 +3473,7 @@
       },
 
       "access": {
-        "name": "Access Consultant",
+        "name": "Access",
         "abbrev": "ACC",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "retail", "refurbishment", "mixed-use", "retirement-living"],
@@ -3901,7 +3901,7 @@
       },
 
       "lighting_designer": {
-        "name": "Lighting Designer",
+        "name": "Lighting",
         "abbrev": "LIG",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "retail", "fitout", "mixed-use"],
@@ -4029,7 +4029,7 @@
       },
 
       "security_consultant": {
-        "name": "Security / ICT Consultant",
+        "name": "Security",
         "abbrev": "SEC",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
@@ -4138,7 +4138,7 @@
       },
 
       "waste_consultant": {
-        "name": "Waste Management Consultant",
+        "name": "Waste Management",
         "abbrev": "WST",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
@@ -4297,7 +4297,7 @@
       },
 
       "vertical_transport": {
-        "name": "Vertical Transport Consultant",
+        "name": "Vertical Transport",
         "abbrev": "VT",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "retail", "mixed-use"],
@@ -4403,7 +4403,7 @@
       },
 
       "wind_consultant": {
-        "name": "Wind Consultant",
+        "name": "Wind",
         "abbrev": "WND",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "office", "mixed-use"],
@@ -4459,7 +4459,7 @@
       },
 
       "pool_consultant": {
-        "name": "Pool / Aquatic Consultant",
+        "name": "Pool / Aquatic",
         "abbrev": "POL",
         "category": "specialist",
         "applicableProjectTypes": ["apartments", "retirement-living", "mixed-use"],

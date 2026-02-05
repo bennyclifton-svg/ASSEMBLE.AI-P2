@@ -42,6 +42,56 @@ function SyncStatusDot({ status }: { status: SyncStatus | null }) {
     );
 }
 
+/**
+ * RAG sync diamond indicator - shows sync status for knowledge/RAG
+ * Always visible: outline when not synced, filled when synced
+ */
+function RagDiamond({ status }: { status: SyncStatus | null }) {
+    const syncStatus = status?.status;
+
+    // Color and fill based on status
+    const colorMap = {
+        synced: 'text-[var(--color-accent-green)]',
+        pending: 'text-[var(--color-accent-yellow)]',
+        processing: 'text-[var(--color-accent-yellow)]',
+        failed: 'text-[var(--color-accent-coral)]',
+    };
+
+    const color = syncStatus ? (colorMap[syncStatus] || 'text-[var(--color-text-muted)]') : 'text-[var(--color-border)]';
+    const isProcessing = syncStatus === 'processing' || syncStatus === 'pending';
+    const isFilled = syncStatus !== null && syncStatus !== undefined;
+
+    const tooltipText = syncStatus
+        ? `RAG: ${syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1)}`
+        : 'Not synced to Knowledge';
+
+    return (
+        <svg
+            width={10}
+            height={10}
+            viewBox="0 0 10 10"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className={cn(color, isProcessing && 'animate-spin [animation-duration:2.5s]')}
+            title={tooltipText}
+        >
+            {isFilled ? (
+                <path
+                    d="M5 0.5L9.5 5L5 9.5L0.5 5L5 0.5Z"
+                    fill="currentColor"
+                />
+            ) : (
+                <path
+                    d="M5 1.2L8.8 5L5 8.8L1.2 5L5 1.2Z"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    fill="none"
+                />
+            )}
+        </svg>
+    );
+}
+
 interface Document {
     id: string;
     originalName: string;
@@ -69,13 +119,15 @@ interface CategorizedListProps {
     filterCategoryId?: string | null;
     /** Filter to show only documents in this subcategory. */
     filterSubcategoryId?: string | null;
+    /** Filter to show only documents that have been synced to Knowledge (RAG). */
+    filterBySyncedOnly?: boolean;
     /** Whether files are currently being uploaded/processed. */
     isProcessing?: boolean;
     /** Number of files being processed. */
     processingCount?: number;
 }
 
-export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef, filterCategoryId, filterSubcategoryId, isProcessing, processingCount }: CategorizedListProps) {
+export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef, filterCategoryId, filterSubcategoryId, filterBySyncedOnly, isProcessing, processingCount }: CategorizedListProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(externalSelectedIds || new Set());
@@ -151,8 +203,16 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         });
     }, [documents, sortColumn, sortDirection]);
 
-    // Filter documents by category if filter is active
+    // Filter documents by category or sync status if filter is active
     const filteredDocuments = useMemo(() => {
+        // Filter by synced status (Knowledge tile clicked)
+        if (filterBySyncedOnly) {
+            return sortedDocuments.filter(doc => {
+                const status = syncStatuses[doc.id];
+                return status?.status === 'synced' || status?.status === 'processing' || status?.status === 'pending';
+            });
+        }
+        // Filter by category
         if (!filterCategoryId) return sortedDocuments;
         return sortedDocuments.filter(doc => {
             if (filterSubcategoryId) {
@@ -160,7 +220,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             }
             return doc.categoryId === filterCategoryId;
         });
-    }, [sortedDocuments, filterCategoryId, filterSubcategoryId]);
+    }, [sortedDocuments, filterCategoryId, filterSubcategoryId, filterBySyncedOnly, syncStatuses]);
 
     const handleSort = (column: 'drawingNumber' | 'name' | 'drawingRevision' | 'category' | 'subcategory' | 'fileName' | 'version') => {
         if (sortColumn === column) {
@@ -249,6 +309,14 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     // Keyboard shortcuts
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Skip keyboard shortcuts if user is typing in a text field
+            const activeElement = document.activeElement;
+            const isEditingText = activeElement?.tagName === 'INPUT' ||
+                                  activeElement?.tagName === 'TEXTAREA' ||
+                                  activeElement?.getAttribute('contenteditable') === 'true';
+
+            if (isEditingText) return;
+
             // Ctrl+A to select all
             if ((e.ctrlKey || e.metaKey) && e.key === 'a' && documents.length > 0) {
                 e.preventDefault();
@@ -497,6 +565,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                     <table className="w-full caption-bottom text-sm table-fixed">
                         <TableHeader>
                             <TableRow className="border-[var(--color-border)] bg-[var(--color-accent-copper-tint)]">
+                                <TableHead className="w-5 !p-0" />
                                 <TableHead
                                     className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-16 !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('drawingNumber')}
@@ -504,7 +573,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     #<SortIndicator column="drawingNumber" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider min-w-[40%] !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('name')}
                                 >
                                     <div className="flex items-center gap-1.5">
@@ -525,7 +594,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     Rev<SortIndicator column="drawingRevision" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-14 @2xl:w-20 @3xl:w-auto !px-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-16 @2xl:w-20 @3xl:w-24 !px-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('category')}
                                 >
                                     <span className="@3xl:hidden">Cat</span>
@@ -533,7 +602,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     <SortIndicator column="category" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-28 @2xl:w-36 @3xl:w-auto !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-28 @2xl:w-32 @3xl:w-36 !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
                                     onClick={() => handleSort('subcategory')}
                                 >
                                     <span className="@3xl:hidden">Subcat</span>
@@ -577,8 +646,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                         <TableBody>
                             {filteredDocuments.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="text-center text-[var(--color-text-muted)] h-24">
-                                        {filterCategoryId ? 'No documents in this category.' : 'No documents found.'}
+                                    <TableCell colSpan={9} className="text-center text-[var(--color-text-muted)] h-24">
+                                        {filterBySyncedOnly ? 'No documents synced to Knowledge.' : filterCategoryId ? 'No documents in this category.' : 'No documents found.'}
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -598,6 +667,11 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         }}
                                         onClick={(e) => handleSelect(doc.id, e)}
                                     >
+                                        <TableCell className="w-5 !p-0">
+                                            <div className="flex items-center justify-center h-full">
+                                                <RagDiamond status={syncStatuses[doc.id] || null} />
+                                            </div>
+                                        </TableCell>
                                         <TableCell className="text-[var(--color-text-primary)] w-16 !px-2 !py-1.5">
                                             {doc.drawingExtractionStatus === 'PROCESSING' ? (
                                                 <Loader2 className="w-4 h-4 animate-spin text-[var(--color-text-muted)]" />
@@ -609,7 +683,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 <span className="text-[var(--color-text-muted)]">—</span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="font-medium text-[var(--color-text-primary)] !px-2 !py-1.5">
+                                        <TableCell className="font-medium text-[var(--color-text-primary)] min-w-[40%] !px-2 !py-1.5">
                                             <div className="flex items-center gap-1.5 min-w-0">
                                                 <div className="w-2 flex-shrink-0">
                                                     <SyncStatusDot status={syncStatuses[doc.id] || null} />
@@ -638,7 +712,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 <span className="text-[var(--color-text-muted)]">—</span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="w-14 @2xl:w-20 @3xl:w-auto @lg:table-cell hidden !px-2 !py-1.5">
+                                        <TableCell className="w-16 @2xl:w-20 @3xl:w-24 @lg:table-cell hidden !px-2 !py-1.5">
                                             <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
                                                 {doc.categoryName ? (
                                                     <>
@@ -657,7 +731,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="w-28 @2xl:w-36 @3xl:w-auto @md:table-cell hidden !pl-2 !pr-1 !py-1.5">
+                                        <TableCell className="w-28 @2xl:w-32 @3xl:w-36 @md:table-cell hidden !pl-2 !pr-1 !py-1.5">
                                             {doc.subcategoryName ? (
                                                 <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
                                                     <Folder

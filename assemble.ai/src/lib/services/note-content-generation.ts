@@ -164,6 +164,39 @@ async function fetchProjectContext(projectId: string): Promise<ProjectContext> {
 }
 
 // ============================================================================
+// FORMATTING CLEANUP
+// ============================================================================
+
+/**
+ * Clean up AI-generated content by removing blank lines
+ * - Removes empty bullet points (lines that are just •, -, or *)
+ * - Removes all blank lines (no double spacing)
+ * - Trims whitespace from each line
+ * - Removes leading/trailing blank lines
+ */
+function cleanupFormatting(content: string): string {
+    return content
+        // Split into lines
+        .split('\n')
+        // Trim whitespace from each line
+        .map(line => line.trim())
+        // Remove empty lines and empty bullet points
+        .filter(line => {
+            // Remove blank lines entirely
+            if (line === '') return false;
+            // Remove lines that are ONLY a bullet character
+            if (/^[•\-\*]$/.test(line)) return false;
+            // Remove lines that are just a bullet followed by whitespace
+            if (/^[•\-\*]\s*$/.test(line)) return false;
+            return true;
+        })
+        // Join back together with single newlines (no blank lines)
+        .join('\n')
+        // Final trim
+        .trim();
+}
+
+// ============================================================================
 // CONTEXT BUILDING
 // ============================================================================
 
@@ -353,8 +386,11 @@ Output only the generated content with no headers or meta-commentary.`;
 
     console.log(`[note-content-generation] Generated content successfully`);
 
+    // Clean up formatting (remove excessive blank lines)
+    const cleanedContent = cleanupFormatting(textContent.text);
+
     return {
-        content: textContent.text.trim(),
+        content: cleanedContent,
         sourcesUsed: {
             attachedDocs: attachedDocs.length,
             ragChunks: ragResults.length,

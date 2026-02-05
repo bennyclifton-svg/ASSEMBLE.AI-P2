@@ -230,8 +230,8 @@
   --color-card-firm-text: #E8E6E3;
 
   /* Work Scope Card Colors - green tint for dark mode */
-  --color-card-scope: rgba(74, 222, 128, 0.15);
-  --color-card-scope-selected: rgba(74, 222, 128, 0.25);
+  --color-card-scope: rgba(74, 222, 128, 0.25);
+  --color-card-scope-selected: rgba(74, 222, 128, 0.15);
   --color-card-scope-text: #86efac;
 
   /* Tailwind CSS Theme Integration */
@@ -358,8 +358,8 @@
   --color-card-firm-text: #000000;
 
   /* Work Scope Card Colors - green for light mode */
-  --color-card-scope: #98f5b8;
-  --color-card-scope-selected: #c8ffd8;
+  --color-card-scope: #c8ffd8;
+  --color-card-scope-selected: #98f5b8;
   --color-card-scope-text: #000000;
 
   /* Tailwind CSS Theme Integration */

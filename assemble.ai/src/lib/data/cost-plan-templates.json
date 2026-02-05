@@ -344,7 +344,7 @@
             "mandatory": true
           },
           "structural": {
-            "name": "Structural Engineer",
+            "name": "Structural",
             "calculation": "percentage",
             "percentageRange": { "min": 1.5, "max": 3 },
             "basis": "construction_cost",
@@ -353,7 +353,7 @@
             "mandatory": true
           },
           "civil": {
-            "name": "Civil Engineer",
+            "name": "Civil",
             "calculation": "percentage",
             "percentageRange": { "min": 0.5, "max": 1.5 },
             "basis": "construction_cost",
@@ -362,7 +362,7 @@
             "mandatory": true
           },
           "mechanical": {
-            "name": "Mechanical Engineer",
+            "name": "Mechanical",
             "calculation": "percentage",
             "percentageRange": { "min": 1, "max": 2 },
             "basis": "construction_cost",
@@ -371,7 +371,7 @@
             "mandatory": true
           },
           "electrical": {
-            "name": "Electrical Engineer",
+            "name": "Electrical",
             "calculation": "percentage",
             "percentageRange": { "min": 1, "max": 2 },
             "basis": "construction_cost",
@@ -380,7 +380,7 @@
             "mandatory": true
           },
           "hydraulic": {
-            "name": "Hydraulic Engineer",
+            "name": "Hydraulic",
             "calculation": "percentage",
             "percentageRange": { "min": 0.5, "max": 1.5 },
             "basis": "construction_cost",
@@ -397,7 +397,7 @@
             "mandatory": true
           },
           "facade": {
-            "name": "Façade Engineer",
+            "name": "Facade",
             "calculation": "lump_sum",
             "typicalRange": { "min": 30000, "max": 200000 },
             "notes": "Required for complex facades, typically high-rise",
@@ -414,7 +414,7 @@
             "mandatory": true
           },
           "interior": {
-            "name": "Interior Designer",
+            "name": "Interior",
             "calculation": "percentage",
             "percentageRange": { "min": 5, "max": 12 },
             "basis": "fitout_cost",
@@ -469,7 +469,7 @@
             "mandatory": true
           },
           "esd": {
-            "name": "ESD Consultant",
+            "name": "ESD",
             "calculation": "lump_sum",
             "typicalRange": { "min": 20000, "max": 180000 },
             "notes": "Higher end for Green Star, NABERS, WELL certifications",
@@ -477,21 +477,21 @@
             "mandatory": true
           },
           "acoustic": {
-            "name": "Acoustic Consultant",
+            "name": "Acoustic",
             "calculation": "lump_sum",
             "typicalRange": { "min": 10000, "max": 80000 },
             "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
             "mandatory": true
           },
           "traffic": {
-            "name": "Traffic Engineer",
+            "name": "Traffic",
             "calculation": "lump_sum",
             "typicalRange": { "min": 10000, "max": 60000 },
             "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
             "mandatory": true
           },
           "geotechnical": {
-            "name": "Geotechnical Engineer",
+            "name": "Geotech",
             "calculation": "lump_sum",
             "typicalRange": { "min": 15000, "max": 120000 },
             "notes": "Investigation and reporting. Complex sites significantly higher.",
@@ -507,14 +507,14 @@
             "mandatory": true
           },
           "heritage": {
-            "name": "Heritage Consultant",
+            "name": "Heritage",
             "calculation": "lump_sum",
             "typicalRange": { "min": 10000, "max": 80000 },
             "applicableProjectTypes": ["refurbishment", "mixed-use"],
             "mandatory": false
           },
           "environmental": {
-            "name": "Environmental Consultant",
+            "name": "Ecology",
             "calculation": "lump_sum",
             "typicalRange": { "min": 15000, "max": 200000 },
             "notes": "Phase 1/2 ESA, RAP, validation. Remediation significantly higher.",
@@ -522,7 +522,7 @@
             "mandatory": false
           },
           "access": {
-            "name": "Access Consultant",
+            "name": "Access",
             "calculation": "lump_sum",
             "typicalRange": { "min": 6000, "max": 35000 },
             "applicableProjectTypes": ["apartments", "office", "retail", "refurbishment", "mixed-use"],
@@ -544,7 +544,7 @@
             "mandatory": false
           },
           "wind_consultant": {
-            "name": "Wind Consultant",
+            "name": "Wind",
             "calculation": "lump_sum",
             "typicalRange": { "min": 15000, "max": 100000 },
             "notes": "Desktop study lower end; wind tunnel testing upper end",
@@ -552,7 +552,7 @@
             "mandatory": false
           },
           "vertical_transport": {
-            "name": "Vertical Transport Consultant",
+            "name": "Vertical Transport",
             "calculation": "lump_sum",
             "typicalRange": { "min": 10000, "max": 60000 },
             "notes": "Lift traffic analysis and specification",
@@ -560,7 +560,7 @@
             "mandatory": false
           },
           "lighting_designer": {
-            "name": "Lighting Designer",
+            "name": "Lighting",
             "calculation": "percentage",
             "percentageRange": { "min": 0.5, "max": 2 },
             "basis": "electrical_cost",
@@ -569,7 +569,7 @@
             "mandatory": false
           },
           "security_ict": {
-            "name": "Security / ICT Consultant",
+            "name": "Security",
             "calculation": "lump_sum",
             "typicalRange": { "min": 12000, "max": 80000 },
             "notes": "Access control, CCTV, ICT infrastructure",
@@ -577,7 +577,7 @@
             "mandatory": false
           },
           "bim_coordinator": {
-            "name": "BIM Coordinator / Digital Engineer",
+            "name": "BIM Coordinator",
             "calculation": "lump_sum",
             "typicalRange": { "min": 30000, "max": 200000 },
             "notes": "Federated model, clash detection, digital delivery",
@@ -593,14 +593,14 @@
             "mandatory": false
           },
           "waste_consultant": {
-            "name": "Waste Management Consultant",
+            "name": "Waste Management",
             "calculation": "lump_sum",
             "typicalRange": { "min": 4000, "max": 20000 },
             "applicableProjectTypes": ["apartments", "office", "retail", "industrial", "mixed-use"],
             "mandatory": false
           },
           "pool_consultant": {
-            "name": "Pool / Aquatic Consultant",
+            "name": "Pool / Aquatic",
             "calculation": "lump_sum",
             "typicalRange": { "min": 10000, "max": 50000 },
             "applicableProjectTypes": ["apartments", "retirement-living", "mixed-use"],

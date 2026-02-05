@@ -22,6 +22,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     const [knowledgeSetId, setKnowledgeSetId] = useState<string | null>(null);
     const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
     const [filterSubcategoryId, setFilterSubcategoryId] = useState<string | null>(null);
+    const [filterBySyncedOnly, setFilterBySyncedOnly] = useState(false);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
 
@@ -190,10 +191,12 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     /**
      * Handle category filter change from clicking category tiles.
      * Pass null to clear the filter, or categoryId to filter by category.
+     * Pass syncedOnly: true to filter by synced documents (Knowledge tile).
      */
-    const handleFilterChange = (categoryId: string | null, subcategoryId?: string | null) => {
+    const handleFilterChange = (categoryId: string | null, subcategoryId?: string | null, syncedOnly?: boolean) => {
         setFilterCategoryId(categoryId);
         setFilterSubcategoryId(subcategoryId ?? null);
+        setFilterBySyncedOnly(syncedOnly ?? false);
     };
 
     // Upload configuration
@@ -461,6 +464,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     onKnowledgeAction={handleKnowledgeAction}
                     filterCategoryId={filterCategoryId}
                     filterSubcategoryId={filterSubcategoryId}
+                    filterBySyncedOnly={filterBySyncedOnly}
                     onFilterChange={handleFilterChange}
                 />
             </div>
@@ -475,6 +479,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     scrollContainerRef={scrollContainerRef}
                     filterCategoryId={filterCategoryId}
                     filterSubcategoryId={filterSubcategoryId}
+                    filterBySyncedOnly={filterBySyncedOnly}
                     isProcessing={uploading}
                     processingCount={uploadFiles.length}
                 />

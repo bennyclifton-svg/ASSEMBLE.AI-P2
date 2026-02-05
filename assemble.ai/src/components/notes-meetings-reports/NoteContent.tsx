@@ -142,7 +142,7 @@ export function NoteContent({
 
     return (
         <div
-            className={cn('space-y-4 p-4 rounded-md transition-colors', className)}
+            className={cn('space-y-4 px-4 pt-2 pb-4 transition-colors', className)}
             style={{
                 backgroundColor: colorStyles.bg,
             }}
@@ -243,12 +243,13 @@ export function NoteContent({
                 transparentBg={true}
             />
 
-            {/* Attachment section - matches RFT TransmittalSchedule style */}
+            {/* Attachment section - compact for notes */}
             <AttachmentSection
                 documents={documents}
                 isLoading={transmittalLoading}
                 onSave={onSaveTransmittal}
                 onLoad={onLoadTransmittal}
+                compact={true}
             />
         </div>
     );

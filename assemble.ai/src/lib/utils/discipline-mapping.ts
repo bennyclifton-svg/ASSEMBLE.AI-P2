@@ -20,7 +20,7 @@ import type {
  * ```ts
  * const consultantTemplates = await import('@/lib/data/consultant-templates.json');
  * const enabledDisciplines = getEnabledDisciplines('house', consultantTemplates);
- * // Returns: ['Architect', 'Structural Engineer', ...]
+ * // Returns: ['Architect', 'Structural', ...]
  * ```
  */
 export function getEnabledDisciplines(
@@ -59,7 +59,7 @@ export function getEnabledDisciplines(
  * ```ts
  * const consultantTemplates = await import('@/lib/data/consultant-templates.json');
  * const disciplines = getApplicableDisciplines('apartments', consultantTemplates);
- * // Returns: Map { 'Architect' => {...}, 'Structural Engineer' => {...}, ... }
+ * // Returns: Map { 'Architect' => {...}, 'Structural' => {...}, ... }
  * ```
  */
 export function getApplicableDisciplines(

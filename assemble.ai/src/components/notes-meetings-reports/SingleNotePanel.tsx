@@ -9,7 +9,7 @@
 'use client';
 
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { Trash2, MoreHorizontal, MoreVertical, Star, Copy, Sparkles, Loader2 } from 'lucide-react';
+import { Trash, Star, Copy, Diamond, Loader2 } from 'lucide-react';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { NoteColorPicker } from './NoteColorPicker';
 import { NoteContent } from './NoteContent';
@@ -46,7 +46,6 @@ export function SingleNotePanel({
     onLoadTransmittal,
     className,
 }: SingleNotePanelProps) {
-    const [isMenuExpanded, setMenuExpanded] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [localTitle, setLocalTitle] = useState(note.title || 'New Note');
@@ -163,16 +162,16 @@ export function SingleNotePanel({
         return (
             <div className={cn('', className)}>
                 <div
-                    className="relative w-[140px] h-[140px] pt-1 pr-1.5 pb-2 pl-1.5 shadow-sm flex flex-col"
-                    style={{ backgroundColor: colorStyles.bg, borderColor: colorStyles.border, borderWidth: '1px', borderStyle: 'solid' }}
+                    className="relative w-[140px] h-[140px] pt-1 pr-1.5 pb-2 pl-1.5 shadow-md flex flex-col"
+                    style={{ backgroundColor: colorStyles.bg }}
                 >
-                    {/* Top toolbar: Color dots, copy, delete, expand */}
-                    <div className="flex items-center gap-1 mb-1">
-                        {/* Color picker dots */}
+                    {/* Top toolbar: Color dot, copy, delete, expand */}
+                    <div className="flex items-center justify-end gap-1 mb-1">
+                        {/* Color picker - compact mode */}
                         <NoteColorPicker
                             selectedColor={noteColor}
                             onColorChange={handleColorChange}
-                            className="flex-1"
+                            compact={true}
                         />
 
                         {/* Copy button */}
@@ -192,21 +191,25 @@ export function SingleNotePanel({
                             className="p-0.5 text-[var(--color-text-muted)] hover:text-red-500 transition-colors disabled:opacity-50"
                             title="Delete note"
                         >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash className="w-3 h-3" />
                         </button>
 
                         {/* Expand button */}
                         <button
                             onClick={onToggleExpand}
-                            className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                            className="p-0.5 -mt-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                             title="Expand"
                         >
                             <CornerBracketIcon direction="left" className="w-3 h-3" />
                         </button>
                     </div>
 
-                    {/* Editable Title - fills remaining space */}
-                    <div className="flex-1 overflow-hidden">
+                    {/* Editable Title - fills remaining space, entire area clickable */}
+                    <div
+                        className="flex-1 overflow-hidden cursor-pointer"
+                        onClick={!isEditingTitle ? handleTitleClick : undefined}
+                        title={!isEditingTitle ? "Click to edit title" : undefined}
+                    >
                         {isEditingTitle ? (
                             <textarea
                                 ref={textareaRef}
@@ -220,11 +223,7 @@ export function SingleNotePanel({
                                 placeholder="New Note"
                             />
                         ) : (
-                            <span
-                                onClick={handleTitleClick}
-                                className="block text-xs font-medium text-[var(--color-text-primary)] cursor-pointer hover:text-[var(--color-accent-copper)] line-clamp-6 transition-colors"
-                                title="Click to edit title"
-                            >
+                            <span className="block text-xs font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-copper)] line-clamp-6 transition-colors">
                                 {localTitle || 'New Note'}
                             </span>
                         )}
@@ -234,15 +233,15 @@ export function SingleNotePanel({
         );
     }
 
-    // Expanded state: Full note with header and content
+    // Expanded state: Full note with header and content (spans full grid width)
     return (
-        <div className={cn('', className)}>
+        <div className={cn('w-full col-span-2', className)}>
             {/* Custom Header with Editable Title */}
-            <div className="flex items-stretch gap-0.5 p-2">
+            <div className="flex items-stretch gap-0.5 px-2 pt-1 pb-1">
                 {/* Title segment with editable note name */}
                 <div
-                    className="flex items-center min-w-[220px] px-3 py-1.5 shadow-sm rounded-l-md"
-                    style={{ backgroundColor: colorStyles.bg, borderColor: colorStyles.border, borderWidth: '1px', borderStyle: 'solid' }}
+                    className="flex items-center flex-1 min-w-0 px-2 py-1"
+                    style={{ backgroundColor: colorStyles.bg }}
                 >
                     {/* Editable Title */}
                     {isEditingTitle ? (
@@ -254,14 +253,14 @@ export function SingleNotePanel({
                             onBlur={handleTitleBlur}
                             onKeyDown={handleTitleKeyDown}
                             onClick={(e) => e.stopPropagation()}
-                            className="flex-1 min-w-0 text-sm font-semibold bg-transparent border-none outline-none focus:outline-none focus:ring-0 focus:border-none focus:shadow-none text-[var(--color-text-primary)] uppercase tracking-wide"
-                            style={{ boxShadow: 'none' }}
+                            className="flex-1 min-w-0 h-4 leading-4 text-xs font-semibold bg-transparent text-[var(--color-text-primary)] p-0 m-0"
+                            style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
                             placeholder="New Note"
                         />
                     ) : (
                         <span
                             onClick={handleTitleClick}
-                            className="flex-1 min-w-0 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide cursor-pointer hover:text-[var(--color-accent-copper)] truncate transition-colors"
+                            className="flex-1 min-w-0 h-4 leading-4 text-xs font-semibold text-[var(--color-text-primary)] cursor-pointer hover:text-[var(--color-accent-copper)] truncate transition-colors"
                             title="Click to edit title"
                         >
                             {localTitle || 'New Note'}
@@ -272,101 +271,82 @@ export function SingleNotePanel({
                 {/* Corner bracket segment - expand/collapse toggle */}
                 <button
                     onClick={onToggleExpand}
-                    className="flex items-center justify-center p-2 shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                    style={{ backgroundColor: colorStyles.bg, borderColor: colorStyles.border, borderWidth: '1px', borderStyle: 'solid' }}
+                    className="flex items-center justify-center p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    style={{ backgroundColor: colorStyles.bg }}
                     title="Collapse"
                 >
-                    <CornerBracketIcon direction="right" className="w-4 h-4" />
+                    <CornerBracketIcon direction="right" className="w-3.5 h-3.5" />
                 </button>
 
-                {/* Options menu segment */}
+                {/* Tools segment - always visible */}
                 <div
-                    className="flex items-center shadow-sm rounded-r-md transition-all"
-                    style={{ backgroundColor: colorStyles.bg, borderColor: colorStyles.border, borderWidth: '1px', borderStyle: 'solid' }}
+                    className="flex items-center"
+                    style={{ backgroundColor: colorStyles.bg }}
                 >
+                    {/* Generate button (Diamond) */}
                     <button
-                        onClick={() => setMenuExpanded(!isMenuExpanded)}
-                        className="flex items-center justify-center w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                        title={isMenuExpanded ? 'Hide options' : 'Show options'}
+                        onClick={handleGenerate}
+                        disabled={isGenerating}
+                        className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
+                        title="Generate content with AI"
                     >
-                        {isMenuExpanded ? (
-                            <MoreHorizontal className="w-4 h-4" />
+                        {isGenerating ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
                         ) : (
-                            <MoreVertical className="w-4 h-4" />
+                            <Diamond className="w-3.5 h-3.5" />
                         )}
                     </button>
 
-                    {/* Expanded menu content */}
-                    {isMenuExpanded && (
-                        <>
-                            <div className="ml-1 mr-2 h-5 w-px bg-[var(--color-border)]" />
+                    {/* Star button */}
+                    <button
+                        onClick={handleStarToggle}
+                        className={cn(
+                            'p-1 rounded transition-colors',
+                            note.isStarred
+                                ? 'text-yellow-500 hover:text-yellow-600'
+                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                        )}
+                        title={note.isStarred ? 'Unstar note' : 'Star note'}
+                    >
+                        <Star className={cn('w-3.5 h-3.5', note.isStarred && 'fill-current')} />
+                    </button>
 
-                            {/* Color picker */}
-                            <NoteColorPicker
-                                selectedColor={noteColor}
-                                onColorChange={handleColorChange}
-                            />
+                    {/* Copy button */}
+                    <button
+                        onClick={handleCopy}
+                        disabled={isCopying}
+                        className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
+                        title="Copy note"
+                    >
+                        {isCopying ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                        )}
+                    </button>
 
-                            {/* Star button */}
-                            <button
-                                onClick={handleStarToggle}
-                                className={cn(
-                                    'p-1.5 rounded transition-colors',
-                                    note.isStarred
-                                        ? 'text-yellow-500 hover:text-yellow-600'
-                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                )}
-                                title={note.isStarred ? 'Unstar note' : 'Star note'}
-                            >
-                                <Star className={cn('w-4 h-4', note.isStarred && 'fill-current')} />
-                            </button>
+                    {/* Color picker */}
+                    <NoteColorPicker
+                        selectedColor={noteColor}
+                        onColorChange={handleColorChange}
+                    />
 
-                            {/* Generate button */}
-                            <button
-                                onClick={handleGenerate}
-                                disabled={isGenerating}
-                                className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
-                                title="Generate content with AI"
-                            >
-                                {isGenerating ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Sparkles className="w-4 h-4" />
-                                )}
-                            </button>
+                    <div className="mx-0.5 h-4 w-px bg-[var(--color-border)]" />
 
-                            {/* Copy button */}
-                            <button
-                                onClick={handleCopy}
-                                disabled={isCopying}
-                                className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
-                                title="Copy note"
-                            >
-                                {isCopying ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Copy className="w-4 h-4" />
-                                )}
-                            </button>
-
-                            <div className="mx-1 h-5 w-px bg-[var(--color-border)]" />
-
-                            {/* Delete button */}
-                            <button
-                                onClick={handleDelete}
-                                disabled={isDeleting}
-                                className="p-1.5 text-[var(--color-text-muted)] hover:text-red-500 transition-colors disabled:opacity-50"
-                                title="Delete note"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </>
-                    )}
+                    {/* Delete button */}
+                    <button
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="p-1 text-[var(--color-text-muted)] hover:text-red-500 transition-colors disabled:opacity-50"
+                        title="Delete note"
+                    >
+                        <Trash className="w-3.5 h-3.5" />
+                    </button>
                 </div>
             </div>
 
             {/* Content Area */}
-            <div className="mx-2">
+            <div className="mx-2 -mt-px">
                 <NoteContent
                     note={note}
                     onUpdate={onUpdate}
