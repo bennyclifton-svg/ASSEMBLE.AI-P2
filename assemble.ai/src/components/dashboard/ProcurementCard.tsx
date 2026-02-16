@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { mutate as globalMutate } from 'swr';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStakeholders } from '@/lib/hooks/use-stakeholders';
 import { ProcurementUIProvider } from '@/lib/contexts/procurement-ui-context';
@@ -10,8 +11,10 @@ import { CostPlanPanel } from '@/components/cost-plan/CostPlanPanel';
 import { ProgramPanel } from '@/components/program/ProgramPanel';
 import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
 import { ObjectivesProfilerSection } from '@/components/profiler/ObjectivesProfilerSection';
+import { useObjectivesTransmittal } from '@/lib/hooks/use-objectives-transmittal';
 import { StakeholderPanel } from '@/components/stakeholders/StakeholderPanel';
-import { NotesMeetingsReportsContainer } from '@/components/notes-meetings-reports/NotesMeetingsReportsContainer';
+import { MeetingsReportsContainer } from '@/components/notes-meetings-reports/MeetingsReportsContainer';
+import { NotesPanel } from '@/components/notes-meetings-reports/NotesPanel';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
 import { AlertCircle } from 'lucide-react';
 import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
@@ -23,6 +26,8 @@ interface ProcurementCardProps {
     onSetSelectedDocumentIds?: (ids: string[]) => void;
     buildingClass?: BuildingClass | null;
     projectType?: ProjectType | null;
+    onClassChange?: (cls: BuildingClass) => void;
+    onTypeChange?: (type: ProjectType) => void;
     region?: Region;
     onRegionChange?: (region: Region) => void;
     onProfileComplete?: () => void;
@@ -80,6 +85,8 @@ export function ProcurementCard({
     onSetSelectedDocumentIds,
     buildingClass,
     projectType,
+    onClassChange,
+    onTypeChange,
     region = 'AU',
     onRegionChange,
     onProfileComplete,
@@ -228,6 +235,13 @@ export function ProcurementCard({
         fetchObjectivesData();
     }, [fetchProfileStatus, fetchObjectivesData, projectId]);
 
+    // Re-fetch profile data when navigating back to the profiler tab
+    useEffect(() => {
+        if (activeMainTab === 'profiler') {
+            fetchProfileStatus();
+        }
+    }, [activeMainTab, fetchProfileStatus]);
+
     // Check if profile is complete enough for Cost/Program tabs
     const isProfileComplete = profileStatus.hasProfile && profileStatus.buildingClass && profileStatus.projectType;
 
@@ -244,6 +258,64 @@ export function ProcurementCard({
             }
         }
     }, [consultantStakeholders, contractorStakeholders, activeTab]);
+
+    // Handlers for note transmittals (Save/Load document attachments)
+    const handleSaveNoteTransmittal = useCallback(async (noteId: string) => {
+        if (!selectedDocumentIds) return;
+        try {
+            const endpoint = `/api/notes/${noteId}/transmittal`;
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentIds: selectedDocumentIds }),
+            });
+            if (response.ok) {
+                globalMutate(endpoint);
+            }
+        } catch (err) {
+            console.error('[ProcurementCard] Error saving note transmittal:', err);
+        }
+    }, [selectedDocumentIds]);
+
+    const handleLoadNoteTransmittal = useCallback(async (noteId: string) => {
+        try {
+            const endpoint = `/api/notes/${noteId}/transmittal`;
+            const res = await fetch(endpoint);
+            if (res.ok) {
+                const data = await res.json();
+                const documentIds = data.documents?.map((doc: { documentId: string }) => doc.documentId) || [];
+                onSetSelectedDocumentIds?.(documentIds);
+            }
+        } catch (err) {
+            console.error('[ProcurementCard] Error loading note transmittal:', err);
+        }
+    }, [onSetSelectedDocumentIds]);
+
+    // Handlers for objectives transmittal (Save/Load document attachments)
+    const { saveTransmittal: saveObjectivesTransmittal, refetch: refetchObjectivesTransmittal } = useObjectivesTransmittal(projectId);
+
+    const handleObjectivesSaveTransmittal = useCallback(async () => {
+        if (!selectedDocumentIds) return;
+        try {
+            await saveObjectivesTransmittal(selectedDocumentIds);
+        } catch (err) {
+            console.error('[ProcurementCard] Error saving objectives transmittal:', err);
+        }
+    }, [selectedDocumentIds, saveObjectivesTransmittal]);
+
+    const handleObjectivesLoadTransmittal = useCallback(async () => {
+        try {
+            const endpoint = `/api/projects/${projectId}/objectives/transmittal`;
+            const res = await fetch(endpoint);
+            if (res.ok) {
+                const data = await res.json();
+                const documentIds = data.documents?.map((doc: { documentId: string }) => doc.documentId) || [];
+                onSetSelectedDocumentIds?.(documentIds);
+            }
+        } catch (err) {
+            console.error('[ProcurementCard] Error loading objectives transmittal:', err);
+        }
+    }, [projectId, onSetSelectedDocumentIds]);
 
     if (isLoadingStakeholders) {
         return (
@@ -271,7 +343,7 @@ export function ProcurementCard({
                 onValueChange={setActiveMainTab}
                 className="flex-1 flex flex-col px-6 min-h-0"
             >
-                <TabsList className="w-full justify-start items-end bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 gap-1.5">
+                <TabsList className="w-full justify-start items-end bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 gap-1.5 pl-[20%]">
                     <TabsTrigger value="cost-planning" className={tabClassName}>
                         Cost Planning
                     </TabsTrigger>
@@ -281,11 +353,11 @@ export function ProcurementCard({
                     <TabsTrigger value="procurement" className={tabClassName}>
                         Procurement
                     </TabsTrigger>
-                    <TabsTrigger value="notes-meetings-reports" className={`${tabClassName} text-center !px-2 !py-2`}>
-                        <span className="flex flex-col leading-none gap-0.5">
-                            <span>Notes Meetings</span>
-                            <span>Reports</span>
-                        </span>
+                    <TabsTrigger value="notes" className={tabClassName}>
+                        Notes
+                    </TabsTrigger>
+                    <TabsTrigger value="meetings-reports" className={tabClassName}>
+                        Meet & Report
                     </TabsTrigger>
                 </TabsList>
 
@@ -295,6 +367,8 @@ export function ProcurementCard({
                         projectId={projectId}
                         buildingClass={buildingClass}
                         projectType={projectType}
+                        onClassChange={onClassChange}
+                        onTypeChange={onTypeChange}
                         region={region}
                         onRegionChange={onRegionChange}
                         initialData={profileData || undefined}
@@ -324,6 +398,8 @@ export function ProcurementCard({
                             onUpdate={() => {
                                 fetchObjectivesData();
                             }}
+                            onSaveTransmittal={handleObjectivesSaveTransmittal}
+                            onLoadTransmittal={handleObjectivesLoadTransmittal}
                         />
                     </div>
                 </TabsContent>
@@ -353,13 +429,13 @@ export function ProcurementCard({
                             onValueChange={(value) => setActiveTab(value)}
                             className="flex-1 flex flex-col min-h-0"
                         >
-                            <TabsList className="w-full justify-start bg-[#f0f0f0] dark:bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 flex-wrap">
+                            <TabsList className="w-full justify-start bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 flex-wrap">
                                 {/* Consultant tabs */}
                                 {consultantStakeholders.map(s => (
                                     <TabsTrigger
                                         key={`consultant-${s.id}`}
                                         value={`consultant-${s.id}`}
-                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-[var(--color-bg-primary)]"
+                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] bg-transparent data-[state=active]:bg-transparent"
                                     >
                                         {s.disciplineOrTrade || s.name}
                                     </TabsTrigger>
@@ -370,7 +446,7 @@ export function ProcurementCard({
                                     <TabsTrigger
                                         key={`contractor-${s.id}`}
                                         value={`contractor-${s.id}`}
-                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-[var(--color-bg-primary)]"
+                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] bg-transparent data-[state=active]:bg-transparent"
                                     >
                                         {s.disciplineOrTrade || s.name}
                                     </TabsTrigger>
@@ -440,9 +516,18 @@ export function ProcurementCard({
                     <StakeholderPanel projectId={projectId} />
                 </TabsContent>
 
-                {/* Notes/Meetings/Reports Tab Content - T096, T099 */}
-                <TabsContent value="notes-meetings-reports" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <NotesMeetingsReportsContainer
+                {/* Notes Tab Content */}
+                <TabsContent value="notes" className="flex-1 mt-0 min-h-0 overflow-y-auto">
+                    <NotesPanel
+                        projectId={projectId}
+                        onSaveTransmittal={handleSaveNoteTransmittal}
+                        onLoadTransmittal={handleLoadNoteTransmittal}
+                    />
+                </TabsContent>
+
+                {/* Meetings/Reports Tab Content - T096, T099 */}
+                <TabsContent value="meetings-reports" className="flex-1 mt-0 min-h-0 overflow-hidden">
+                    <MeetingsReportsContainer
                         projectId={projectId}
                         selectedDocumentIds={selectedDocumentIds}
                         onSetSelectedDocumentIds={onSetSelectedDocumentIds}

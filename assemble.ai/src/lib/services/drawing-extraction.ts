@@ -59,6 +59,14 @@ const DRAWING_NUMBER_PATTERNS: RegExp[] = [
 ];
 
 /**
+ * Check if a value matches a known drawing number pattern
+ * Used to validate filename extraction results against AI results
+ */
+function isKnownDrawingNumberPattern(value: string): boolean {
+    return DRAWING_NUMBER_PATTERNS.some(pattern => pattern.test(value));
+}
+
+/**
  * Patterns that match project number prefixes that should be stripped
  * These are typically 4-6 digit numbers at the start of a drawing number
  */
@@ -257,11 +265,18 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
         return null;
     }
 
+    // Higher confidence when we have both a recognized drawing number pattern and a clean revision
+    const hasStrongPattern = isKnownDrawingNumberPattern(drawingNumber);
+    const hasCleanRevision = revision !== null && /^[A-Z]$/i.test(revision);
+    const confidence = hasStrongPattern && hasCleanRevision ? 85
+        : hasStrongPattern ? 80
+        : 70;
+
     return {
         drawingNumber,
         drawingName,
         drawingRevision: revision,
-        confidence: 70,
+        confidence,
         source: 'FILENAME',
     };
 }
@@ -378,6 +393,17 @@ ${truncatedText}
 
 FILENAME: ${filename}
 
+IMPORTANT - FILENAME CONVENTIONS:
+Construction drawing filenames typically follow this pattern:
+  [ProjectNumber] [DrawingNumber] [Description] [Revision].[ext]
+For example: "1115 CC-46 WET AREAS A.pdf"
+  - 1115 = project number (ignore this)
+  - CC-46 = drawing number
+  - WET AREAS = abbreviated description
+  - A = revision letter
+The drawing number in the filename (e.g., CC-46, CC-08, H-101) is almost always correct.
+Do NOT confuse paper sizes (A1, A3), project numbers (1115), or issue statuses (RG, IFC) with drawing numbers or revisions.
+
 STEP 1 - CLASSIFY THE DOCUMENT TYPE:
 First, determine if this document is an actual DRAWING or a different document type.
 
@@ -488,15 +514,33 @@ function createEmptyResult(source: 'AI' | 'FILENAME' | 'VISION'): DrawingExtract
 /**
  * Build vision extraction prompt for PDF documents
  */
-function buildVisionExtractionPrompt(): string {
+function buildVisionExtractionPrompt(filename: string): string {
     return `You are analyzing a construction project document. First determine if it is a DRAWING, then extract information if applicable.
+
+FILENAME: ${filename}
+
+IMPORTANT - FILENAME CONVENTIONS:
+Construction drawing filenames typically follow this pattern:
+  [ProjectNumber] [DrawingNumber] [Description] [Revision].[ext]
+For example: "1115 CC-46 WET AREAS A.pdf"
+  - 1115 = project number (ignore this)
+  - CC-46 = drawing number (this is what goes in drawingNumber)
+  - WET AREAS = abbreviated description
+  - A = revision letter
+
+The drawing number in the filename (e.g., CC-46, CC-08, H-101) is almost always correct.
+The single letter at the end before the extension is almost always the revision.
+Do NOT confuse these with:
+  - Paper sizes (A1, A3) - these are NOT drawing numbers
+  - Project numbers (1115, 1150) - these are NOT drawing numbers
+  - Issue statuses (RG, IFC, FC) - these are NOT revision letters
 
 STEP 1 - CLASSIFY THE DOCUMENT:
 
 DRAWINGS have:
 - A title block (usually bottom-right) with drawing number, title, revision
 - Visual/graphical content: floor plans, elevations, sections, details, diagrams
-- Standard drawing number formats: A-101, S-201, M-301, SK-001
+- Standard drawing number formats: A-101, S-201, M-301, SK-001, CC-46
 
 NOT DRAWINGS (return null values):
 - Matrices, schedules, registers, tables (e.g., "DA Responsibility Matrix", "Door Schedule")
@@ -505,17 +549,17 @@ NOT DRAWINGS (return null values):
 
 IMPORTANT: Condition numbers, reference codes, or item numbers in tables are NOT drawing numbers.
 
-STEP 2 - IF THIS IS A DRAWING, look at the title block to extract:
+STEP 2 - IF THIS IS A DRAWING, extract:
 
-1. DRAWING NUMBER: The unique identifier (e.g., A-101, S-201, SK-001)
-2. DRAWING NAME/TITLE: The descriptive name
-3. REVISION: The revision indicator (e.g., A, B, 01, P01, Rev. 2)
+1. DRAWING NUMBER: The unique identifier. Use the drawing number from the filename if it matches a pattern like XX-NN (e.g., CC-46, H-101). Verify against the title block if possible.
+2. DRAWING NAME/TITLE: The full descriptive name from the title block (e.g., "Floor Plan - Level 1", not the abbreviated filename version)
+3. REVISION: The revision letter/number. Use the single letter at the end of the filename (before .pdf) as the revision. Do NOT use issue statuses like RG (Regulatory), IFC (Issued for Construction), FC (For Construction) as revisions.
 
 Respond in this exact JSON format:
 {
   "isDrawing": true or false,
-  "drawingNumber": "A-101" or null,
-  "drawingName": "Floor Plan Level 1" or null,
+  "drawingNumber": "CC-46" or null,
+  "drawingName": "Wet Areas - Sheet 1" or null,
   "drawingRevision": "A" or null,
   "confidence": 85
 }
@@ -557,7 +601,7 @@ async function extractWithVision(
                     },
                     {
                         type: 'text',
-                        text: buildVisionExtractionPrompt(),
+                        text: buildVisionExtractionPrompt(filename),
                     },
                 ],
             }],
@@ -623,7 +667,13 @@ function parseVisionResponse(text: string): DrawingExtractionResult {
 
 /**
  * Merge AI/Vision result with filename result
- * AI/Vision takes priority, filename supplements missing fields
+ *
+ * Strategy:
+ * - Drawing number: FILENAME takes priority when it matches a known pattern
+ *   (AI/vision often confuses sheet sizes, project numbers, and reference codes with drawing numbers)
+ * - Drawing name: AI/VISION takes priority (reads full descriptive title from title block)
+ * - Revision: FILENAME takes priority when it has a clear single-letter revision
+ *   (AI/vision often confuses issue statuses like RG/IFC with revision letters)
  */
 function mergeExtractionResults(
     primaryResult: DrawingExtractionResult,
@@ -631,31 +681,46 @@ function mergeExtractionResults(
 ): DrawingExtractionResult {
     if (!filenameResult) return primaryResult;
 
-    // Use primary result values, fall back to filename for missing fields
+    // Filename drawing number is very reliable when it matches a known pattern
+    // AI/vision often picks up sheet sizes (A1), project numbers (1115), or
+    // reference codes instead of the actual drawing number
+    const filenameHasStrongDrawingNumber = filenameResult.drawingNumber &&
+        isKnownDrawingNumberPattern(filenameResult.drawingNumber);
+
+    // Filename revision is very reliable when it's a clean single letter at end
+    // AI/vision often picks up issue statuses (RG=Regulatory, IFC=Issued for Construction)
+    // instead of the actual revision letter
+    const filenameHasStrongRevision = filenameResult.drawingRevision &&
+        /^[A-Z]$/i.test(filenameResult.drawingRevision);
+
     const merged: DrawingExtractionResult = {
-        drawingNumber: primaryResult.drawingNumber || filenameResult.drawingNumber,
+        // Drawing number: prefer filename when it has a recognized pattern
+        drawingNumber: filenameHasStrongDrawingNumber
+            ? filenameResult.drawingNumber
+            : (primaryResult.drawingNumber || filenameResult.drawingNumber),
+        // Drawing name: prefer AI (reads full descriptive title from title block)
         drawingName: primaryResult.drawingName || filenameResult.drawingName,
-        drawingRevision: primaryResult.drawingRevision || filenameResult.drawingRevision,
+        // Revision: prefer filename when it has a clear single-letter revision
+        drawingRevision: filenameHasStrongRevision
+            ? filenameResult.drawingRevision
+            : (primaryResult.drawingRevision || filenameResult.drawingRevision),
         confidence: primaryResult.confidence,
         source: primaryResult.source,
     };
 
-    // If we supplemented from filename, note it in logs and adjust confidence
-    const supplementedFields: string[] = [];
-    if (!primaryResult.drawingNumber && filenameResult.drawingNumber) {
-        supplementedFields.push('drawingNumber');
+    // Log when filename overrides AI
+    if (filenameHasStrongDrawingNumber && primaryResult.drawingNumber &&
+        primaryResult.drawingNumber !== filenameResult.drawingNumber) {
+        console.log(`[drawing-extraction] Filename drawing number override: AI="${primaryResult.drawingNumber}" -> Filename="${filenameResult.drawingNumber}"`);
     }
-    if (!primaryResult.drawingRevision && filenameResult.drawingRevision) {
-        supplementedFields.push('drawingRevision');
+    if (filenameHasStrongRevision && primaryResult.drawingRevision &&
+        primaryResult.drawingRevision !== filenameResult.drawingRevision) {
+        console.log(`[drawing-extraction] Filename revision override: AI="${primaryResult.drawingRevision}" -> Filename="${filenameResult.drawingRevision}"`);
     }
 
-    if (supplementedFields.length > 0) {
-        console.log(`[drawing-extraction] Supplemented from filename: ${supplementedFields.join(', ')}`);
-        // Blend confidence if we used filename data
-        merged.confidence = Math.max(
-            primaryResult.confidence,
-            Math.round((primaryResult.confidence + filenameResult.confidence) / 2)
-        );
+    // Boost confidence when filename corroborates AI results
+    if (filenameHasStrongDrawingNumber || filenameHasStrongRevision) {
+        merged.confidence = Math.max(merged.confidence, filenameResult.confidence);
     }
 
     return merged;

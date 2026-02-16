@@ -31,11 +31,11 @@ export type NoteColor = 'yellow' | 'blue' | 'green' | 'pink';
 
 export const NOTE_COLORS: NoteColor[] = ['yellow', 'blue', 'green', 'pink'];
 
-export const NOTE_COLOR_MAP: Record<NoteColor, { bg: string; border: string }> = {
-    yellow: { bg: '#fef9c3', border: '#fde68a' },
-    blue:   { bg: 'rgba(100, 180, 255, 0.4)', border: 'rgba(100, 180, 255, 0.6)' },
-    green:  { bg: '#c8ffd8', border: '#86efac' },
-    pink:   { bg: 'rgba(255, 150, 180, 0.4)', border: 'rgba(255, 150, 180, 0.6)' },
+export const NOTE_COLOR_MAP: Record<NoteColor, { bg: string; border: string; scrollbar: string; text: string }> = {
+    yellow: { bg: 'rgba(254, 249, 195, 0.65)', border: 'rgba(253, 230, 138, 0.65)', scrollbar: 'rgba(229, 215, 139, 0.65)', text: '#1f2937' },
+    blue:   { bg: 'rgba(100, 180, 255, 0.4)', border: 'rgba(100, 180, 255, 0.6)', scrollbar: 'rgba(80, 150, 220, 0.5)', text: '#1f2937' },
+    green:  { bg: 'rgba(200, 255, 216, 0.65)', border: 'rgba(134, 239, 172, 0.65)', scrollbar: 'rgba(126, 219, 160, 0.65)', text: '#1f2937' },
+    pink:   { bg: 'rgba(255, 150, 180, 0.4)', border: 'rgba(255, 150, 180, 0.6)', scrollbar: 'rgba(220, 120, 150, 0.5)', text: '#1f2937' },
 };
 
 export interface Note {
@@ -155,6 +155,7 @@ export interface MeetingTransmittal {
 
 export interface CreateMeetingRequest {
   projectId: string;
+  groupId?: string;
   title?: string;
   meetingDate?: string;
   agendaType?: MeetingAgendaType;
@@ -270,6 +271,7 @@ export interface ReportTransmittal {
 
 export interface CreateReportRequest {
   projectId: string;
+  groupId?: string;
   title?: string;
   reportDate?: string;
   preparedFor?: string;

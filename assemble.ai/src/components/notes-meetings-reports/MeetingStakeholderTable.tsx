@@ -127,16 +127,17 @@ export function MeetingStakeholderTable({
                                     />
                                 </td>
                                 <td className="py-0.5 px-2 text-center">
-                                    {hoveredRowId === attendee.id && (
-                                        <button
-                                            onClick={() => onRemoveAttendee(attendee.id)}
-                                            disabled={isLoading}
-                                            className="p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50"
-                                            title="Remove attendee"
-                                        >
-                                            <Trash className="h-3.5 w-3.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)]" />
-                                        </button>
-                                    )}
+                                    <button
+                                        onClick={() => onRemoveAttendee(attendee.id)}
+                                        disabled={isLoading}
+                                        className={cn(
+                                            'p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50',
+                                            hoveredRowId === attendee.id ? 'opacity-100' : 'opacity-0'
+                                        )}
+                                        title="Remove attendee"
+                                    >
+                                        <Trash className="h-3.5 w-3.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)]" />
+                                    </button>
                                 </td>
                             </tr>
                         );

@@ -36,22 +36,29 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
+        const groupId = searchParams.get('groupId');
 
         if (!projectId) {
             return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+        }
+
+        // Build conditions
+        const conditions = [
+            eq(meetings.projectId, projectId),
+            eq(meetings.organizationId, authResult.user.organizationId),
+            isNull(meetings.deletedAt),
+        ];
+
+        // Filter by groupId if provided
+        if (groupId) {
+            conditions.push(eq(meetings.groupId, groupId));
         }
 
         // Fetch meetings for the project (excluding soft-deleted)
         const meetingsList = await db
             .select()
             .from(meetings)
-            .where(
-                and(
-                    eq(meetings.projectId, projectId),
-                    eq(meetings.organizationId, authResult.user.organizationId),
-                    isNull(meetings.deletedAt)
-                )
-            )
+            .where(and(...conditions))
             .orderBy(desc(meetings.updatedAt));
 
         // Get counts for each meeting
@@ -108,7 +115,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { projectId, title, meetingDate, agendaType } = validationResult.data;
+        const { projectId, groupId, title, meetingDate, agendaType } = validationResult.data;
 
         // Create new meeting
         const id = uuidv4();
@@ -118,6 +125,7 @@ export async function POST(request: NextRequest) {
             id,
             projectId,
             organizationId: authResult.user.organizationId,
+            groupId: groupId || null,
             title: title || 'New Meeting',
             meetingDate: meetingDate || null,
             agendaType: agendaType || 'standard',

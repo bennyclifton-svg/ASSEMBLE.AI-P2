@@ -4,7 +4,7 @@ import { testimonialsContent } from './data/landing-data';
 
 export function TestimonialsSection() {
     return (
-        <SectionContainer id="testimonials" pattern="standard" background="bg-[var(--gray-50)]" className="py-24">
+        <SectionContainer id="testimonials" pattern="standard" patternOffset={15} background="bg-[var(--gray-50)]" className="py-24">
             <ScrollReveal>
                 <div className="text-center mb-12">
                     <p className="text-[var(--gray-500)] text-sm font-medium mb-3">

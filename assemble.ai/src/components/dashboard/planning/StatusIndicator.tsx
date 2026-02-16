@@ -20,7 +20,7 @@ const STATUS_CONFIG = {
   },
   tender: {
     icon: Send,
-    label: 'Tender',
+    label: 'Tender.',
     color: '#f97316', // Orange/Coral
   },
   rec: {

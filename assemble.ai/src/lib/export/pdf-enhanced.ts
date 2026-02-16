@@ -144,13 +144,24 @@ export async function exportToPDF(
       yPosition += lines.length * (fontSize / 2) + 5;
 
     } else if (tagName === 'p') {
-      // Paragraph
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor('#000000');
-
+      // Paragraph - detect inline formatting
       const text = element.textContent || '';
       if (text.trim()) {
+        const hasBold = element.querySelector('strong, b') !== null;
+        const hasItalic = element.querySelector('em, i') !== null;
+
+        doc.setFontSize(11);
+        if (hasBold && hasItalic) {
+          doc.setFont('helvetica', 'bolditalic');
+        } else if (hasBold) {
+          doc.setFont('helvetica', 'bold');
+        } else if (hasItalic) {
+          doc.setFont('helvetica', 'italic');
+        } else {
+          doc.setFont('helvetica', 'normal');
+        }
+        doc.setTextColor('#000000');
+
         const lines = doc.splitTextToSize(text, contentWidth);
         doc.text(lines, margin, yPosition);
         yPosition += lines.length * 5 + 3;
@@ -231,11 +242,15 @@ export async function exportToPDF(
             fontSize: 10,
             fontStyle: 'bold',
           },
+          styles: isProjectInfo ? {
+            cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+          } : undefined,
           bodyStyles: {
             fontSize: isProjectInfo ? 10 : 9,
           },
           columnStyles: isProjectInfo ? {
-            0: { cellWidth: 35, fontStyle: 'bold', fillColor: [245, 245, 245] },
+            0: { cellWidth: 35, fontStyle: 'bold', textColor: [26, 111, 181] },
+            2: { cellWidth: 45, halign: 'right' as const, fontStyle: 'bold', textColor: [26, 111, 181] },
           } : undefined,
           // Apply cell-specific colors for transmittal category columns
           didParseCell: isTransmittal ? (data) => {
@@ -261,39 +276,62 @@ export async function exportToPDF(
         yPosition = finalY + 10;
       }
 
-    } else if (tagName === 'div') {
-      // Process div contents - handle text with <br> tags
-      const innerHTML = element.innerHTML;
+    } else if (tagName === 'ul' || tagName === 'ol') {
+      // Process list items
+      const items = element.querySelectorAll(':scope > li');
+      items.forEach((li: Element, idx: number) => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 20;
+        }
 
-      // Check if it contains line breaks (from addendum content)
-      if (innerHTML.includes('<br>')) {
+        const text = li.textContent || '';
+        const prefix = tagName === 'ul' ? '\u2022  ' : `${idx + 1}.  `;
+
+        // Check if the li content has bold/italic
+        const hasBold = li.querySelector('strong, b') !== null;
+        const hasItalic = li.querySelector('em, i') !== null;
+
         doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
+        if (hasBold && hasItalic) {
+          doc.setFont('helvetica', 'bolditalic');
+        } else if (hasBold) {
+          doc.setFont('helvetica', 'bold');
+        } else if (hasItalic) {
+          doc.setFont('helvetica', 'italic');
+        } else {
+          doc.setFont('helvetica', 'normal');
+        }
         doc.setTextColor('#000000');
 
-        // Split by <br> tags and render each line
-        const textLines = innerHTML
-          .split(/<br\s*\/?>/i)
-          .map(line => line.replace(/<[^>]+>/g, '').trim());
+        const lines = doc.splitTextToSize(prefix + text.trim(), contentWidth - 5);
+        doc.text(lines, margin + 5, yPosition);
+        yPosition += lines.length * 5 + 2;
+      });
+      yPosition += 3;
 
-        textLines.forEach(line => {
-          if (line) {
-            // Check for page break
-            if (yPosition > pageHeight - 20) {
-              doc.addPage();
-              yPosition = 20;
-            }
-            const wrapped = doc.splitTextToSize(line, contentWidth);
-            doc.text(wrapped, margin, yPosition);
-            yPosition += wrapped.length * 5 + 2;
-          }
-        });
-        yPosition += 5;
-      } else {
-        // Process child elements
-        const children = element.children;
+    } else if (tagName === 'div') {
+      // Process div contents recursively
+      const children = element.children;
+      if (children.length > 0) {
         for (let j = 0; j < children.length; j++) {
           processElement(children[j]);
+        }
+      } else {
+        // Text-only div
+        const text = element.textContent || '';
+        if (text.trim()) {
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor('#000000');
+
+          if (yPosition > pageHeight - 20) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          const wrapped = doc.splitTextToSize(text.trim(), contentWidth);
+          doc.text(wrapped, margin, yPosition);
+          yPosition += wrapped.length * 5 + 2;
         }
       }
     }
@@ -402,6 +440,7 @@ export async function exportMeetingToPDF(
       startY: yPosition,
       body: infoRows,
       theme: 'grid',
+      styles: { cellPadding: { top: 3, right: 3, bottom: 3, left: 3 } },
       bodyStyles: { fontSize: 10 },
       columnStyles: {
         0: { cellWidth: 35, fontStyle: 'bold', fillColor: [245, 245, 245] },
@@ -627,6 +666,7 @@ export async function exportProjectReportToPDF(
       startY: yPosition,
       body: infoRows,
       theme: 'grid',
+      styles: { cellPadding: { top: 3, right: 3, bottom: 3, left: 3 } },
       bodyStyles: { fontSize: 10 },
       columnStyles: {
         0: { cellWidth: 40, fontStyle: 'bold', fillColor: [245, 245, 245] },
@@ -707,4 +747,247 @@ export async function exportProjectReportToPDF(
   }
 
   return doc.output('arraybuffer');
+}
+
+// ============================================================================
+// RFT NEW EXPORT - Dedicated PDF export matching screen layout
+// ============================================================================
+
+import {
+  type RFTExportData,
+  type ContentBlock,
+  RFT_COLORS,
+  parseHtmlContent,
+  generateWeekColumns,
+  groupByMonth,
+  isWeekInRange,
+  formatDateShort,
+  buildOrderedActivities,
+} from './rft-export';
+
+/**
+ * Render two-column content section using autoTable.
+ * Each content block becomes its own table row so autoTable handles
+ * page breaks correctly with both columns side-by-side.
+ */
+function renderTwoColPDF(
+  d: jsPDF, startY: number, mg: number, cw: number, _ph: number,
+  lHead: string, rHead: string, lBlocks: ContentBlock[], rBlocks: ContentBlock[],
+): number {
+  const colW = cw / 2;
+
+  // Convert blocks to row lines with bold flag
+  type RowLine = { text: string; bold: boolean };
+  function toLines(blocks: ContentBlock[]): RowLine[] {
+    const out: RowLine[] = [];
+    let first = true;
+    for (const b of blocks) {
+      if (b.type === 'heading') {
+        if (!first) out.push({ text: '', bold: false });
+        out.push({ text: b.text, bold: true });
+      } else if (b.type === 'bullet') {
+        out.push({ text: `\u2022  ${b.text}`, bold: false });
+      } else {
+        out.push({ text: b.text, bold: false });
+      }
+      first = false;
+    }
+    return out;
+  }
+
+  const lLines = toLines(lBlocks);
+  const rLines = toLines(rBlocks);
+  const rowCount = Math.max(lLines.length, rLines.length);
+
+  const body: string[][] = [];
+  const boldCells = new Set<string>();
+  for (let i = 0; i < rowCount; i++) {
+    body.push([lLines[i]?.text ?? '', rLines[i]?.text ?? '']);
+    if (lLines[i]?.bold) boldCells.add(`${i}-0`);
+    if (rLines[i]?.bold) boldCells.add(`${i}-1`);
+  }
+
+  const hS = { fontStyle: 'bold' as const, textColor: RFT_COLORS.blue, fillColor: RFT_COLORS.white, fontSize: 9 };
+
+  autoTable(d, {
+    startY,
+    head: [[{ content: lHead, styles: hS }, { content: rHead, styles: hS }]],
+    body,
+    theme: 'plain',
+    styles: {
+      fontSize: 8,
+      cellPadding: { top: 0.5, bottom: 0.5, left: 3, right: 3 },
+      textColor: RFT_COLORS.body,
+      overflow: 'linebreak',
+    },
+    columnStyles: { 0: { cellWidth: colW }, 1: { cellWidth: colW } },
+    margin: { left: mg, right: mg },
+    tableWidth: cw,
+    didParseCell: (data: any) => {
+      if (data.section === 'body' && boldCells.has(`${data.row.index}-${data.column.index}`)) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.textColor = RFT_COLORS.dark;
+      }
+    },
+    didDrawCell: (data: any) => {
+      d.setDrawColor(...RFT_COLORS.border);
+      d.setLineWidth(0.15);
+      // Vertical separator between columns
+      if (data.column.index === 0) {
+        const x = data.cell.x + data.cell.width;
+        d.line(x, data.cell.y, x, data.cell.y + data.cell.height);
+      }
+      // Header bottom border
+      if (data.section === 'head') {
+        const y = data.cell.y + data.cell.height;
+        d.line(data.cell.x, y, data.cell.x + data.cell.width, y);
+      }
+    },
+  });
+
+  return ((d as any).lastAutoTable?.finalY ?? startY + 20) + 6;
+}
+
+export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffer> {
+  const d = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pw = d.internal.pageSize.getWidth(), ph = d.internal.pageSize.getHeight();
+  const mg = 15, cw = pw - 2 * mg;
+  let y = 15;
+  const cpb = (n: number) => { if (y + n > ph - 15) { d.addPage(); y = 15; } };
+
+  // 1. PROJECT INFO
+  autoTable(d, {
+    startY: y,
+    body: [
+      [{ content: 'Project Name', styles: { fontStyle: 'bold' as const, textColor: RFT_COLORS.blue } }, { content: data.projectName, colSpan: 2 }],
+      [{ content: 'Address', styles: { fontStyle: 'bold' as const, textColor: RFT_COLORS.blue } }, { content: data.address, colSpan: 2 }],
+      [{ content: 'Document', styles: { fontStyle: 'bold' as const, textColor: RFT_COLORS.blue } }, { content: data.documentLabel, styles: { fontStyle: 'bold' as const } }, { content: `Issued ${data.issuedDate}`, styles: { halign: 'right' as const, fontStyle: 'bold' as const, textColor: RFT_COLORS.blue } }],
+    ],
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: { top: 3, right: 3, bottom: 3, left: 3 }, lineColor: RFT_COLORS.border, lineWidth: 0.15 },
+    columnStyles: { 0: { cellWidth: 28 } },
+    margin: { left: mg, right: mg }, tableWidth: cw,
+  });
+  y = ((d as any).lastAutoTable?.finalY ?? y + 17) + 8;
+
+  // 2. OBJECTIVES
+  const fq = parseHtmlContent(data.objectives.functionalQuality);
+  const pc = parseHtmlContent(data.objectives.planningCompliance);
+  if (fq.length > 0 || pc.length > 0) {
+    cpb(25);
+    d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+    d.text('OBJECTIVES', mg, y); y += 5;
+    y = renderTwoColPDF(d, y, mg, cw, ph, 'Functional & Quality', 'Planning & Compliance', fq, pc);
+  } else {
+    cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+    d.text('OBJECTIVES', mg, y); y += 5;
+    d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No objectives defined.', mg, y); y += 8;
+  }
+
+  // 3. BRIEF
+  const sv = parseHtmlContent(data.brief.service);
+  const dl = parseHtmlContent(data.brief.deliverables);
+  if (sv.length > 0 || dl.length > 0) {
+    cpb(25);
+    d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+    d.text('BRIEF', mg, y); y += 5;
+    y = renderTwoColPDF(d, y, mg, cw, ph, 'Service', 'Deliverables', sv, dl);
+  } else {
+    cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+    d.text('BRIEF', mg, y); y += 5;
+    d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No brief content.', mg, y); y += 8;
+  }
+
+  // 4. PROGRAM
+  cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+  d.text('PROGRAM', mg, y); y += 5;
+  const wd = data.activities.filter(a => a.startDate && a.endDate);
+  if (wd.length > 0) {
+    const allD = wd.flatMap(a => [new Date(a.startDate!), new Date(a.endDate!)]);
+    const mnD = new Date(Math.min(...allD.map(x => x.getTime())));
+    const mxD = new Date(Math.max(...allD.map(x => x.getTime())));
+    const wC = generateWeekColumns(mnD, mxD);
+    const mG = groupByMonth(wC);
+    const ord = buildOrderedActivities(data.activities);
+
+    const mRow: any[] = [
+      { content: 'Activity', rowSpan: 2, styles: { halign: 'left' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 8 } },
+      { content: 'Start', rowSpan: 2, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 7 } },
+      { content: 'End', rowSpan: 2, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 7 } },
+    ];
+    mG.forEach(g => mRow.push({ content: g.label, colSpan: g.count, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 7 } }));
+
+    const dRow: any[] = wC.map(c => ({ content: String(c.dayLabel), styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 6.5 } }));
+
+    const bRows = ord.map(a => {
+      const ch = !!a.parentId;
+      const aS = a.startDate ? new Date(a.startDate) : null;
+      const aE = a.endDate ? new Date(a.endDate) : null;
+      const r: any[] = [
+        { content: `${ch ? '    ' : '\u25B8 '}${a.name}`, styles: ch ? { fontStyle: 'normal' as const, textColor: RFT_COLORS.muted, fontSize: 7.5 } : { fontStyle: 'bold' as const, textColor: RFT_COLORS.dark, fontSize: 7.5 } },
+        { content: formatDateShort(a.startDate), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted, fontSize: 7 } },
+        { content: formatDateShort(a.endDate), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted, fontSize: 7 } },
+      ];
+      wC.forEach(c => { r.push({ content: '', styles: { fillColor: aS && aE && isWeekInRange(c.start, aS, aE) ? RFT_COLORS.bar : RFT_COLORS.white } }); });
+      return r;
+    });
+
+    const tlW = Math.min(7, (cw - 35 - 14 - 14) / wC.length);
+    const cs: Record<number, any> = { 0: { cellWidth: 35 }, 1: { cellWidth: 14 }, 2: { cellWidth: 14 } };
+    wC.forEach((_, i) => { cs[i + 3] = { cellWidth: tlW }; });
+
+    autoTable(d, {
+      startY: y, head: [mRow, dRow], body: bRows, theme: 'grid',
+      styles: { cellPadding: 1.5, lineColor: RFT_COLORS.border, lineWidth: 0.15, overflow: 'hidden' },
+      headStyles: { fillColor: RFT_COLORS.headerBg }, columnStyles: cs,
+      margin: { left: mg, right: mg }, tableWidth: cw,
+    });
+    y = ((d as any).lastAutoTable?.finalY ?? y + 32) + 8;
+  } else { d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No program activities with dates.', mg, y); y += 8; }
+
+  // 5. FEE
+  cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+  d.text('FEE', mg, y); y += 5;
+  if (data.feeItems.length > 0) {
+    autoTable(d, {
+      startY: y,
+      head: [[{ content: 'Description', styles: { textColor: RFT_COLORS.blue, fillColor: RFT_COLORS.headerBg, fontStyle: 'bold' as const } }, { content: 'Amount (Excl. GST)', styles: { textColor: RFT_COLORS.blue, fillColor: RFT_COLORS.headerBg, fontStyle: 'bold' as const } }]],
+      body: data.feeItems.map(f => [f.activity, '$']),
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 1.5, lineColor: RFT_COLORS.border, lineWidth: 0.15 },
+      columnStyles: { 1: { cellWidth: 40 } },
+      margin: { left: mg, right: mg }, tableWidth: cw,
+    });
+    y = ((d as any).lastAutoTable?.finalY ?? y + 12) + 8;
+  } else { d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No cost plan items.', mg, y); y += 8; }
+
+  // 6. TRANSMITTAL
+  cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+  d.text('TRANSMITTAL', mg, y); y += 5;
+  if (data.transmittalDocs.length > 0) {
+    const hS = { textColor: RFT_COLORS.dark, fillColor: [240, 240, 240] as [number, number, number], fontStyle: 'normal' as const };
+    autoTable(d, {
+      startY: y,
+      head: [[
+        { content: '#', styles: { ...hS, halign: 'center' as const } },
+        { content: 'DWG #', styles: hS },
+        { content: 'Name', styles: hS },
+        { content: 'Rev', styles: { ...hS, halign: 'center' as const } },
+        { content: 'Category', styles: hS },
+        { content: 'Subcategory', styles: hS },
+      ]],
+      body: data.transmittalDocs.map((t, i) => [
+        { content: String(i + 1), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted } },
+        t.drawingNumber || '-', t.drawingName || t.originalName,
+        { content: t.drawingRevision || '-', styles: { halign: 'center' as const } },
+        t.categoryName || '-', t.subcategoryName || '-',
+      ]),
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 1.5, lineColor: RFT_COLORS.border, lineWidth: 0.15 },
+      columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 18 }, 3: { cellWidth: 12 }, 4: { cellWidth: 28 }, 5: { cellWidth: 28 } },
+      margin: { left: mg, right: mg }, tableWidth: cw,
+    });
+  }
+
+  return d.output('arraybuffer');
 }

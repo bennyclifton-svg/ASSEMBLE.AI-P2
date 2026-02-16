@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently -n next,doc-worker,draw-worker -c blue,magenta,cyan \"next dev\" \"tsx workers/document-processor/index.ts\" \"tsx workers/drawing-extractor/index.ts\"",
+    "dev": "concurrently -n next,doc-worker,draw-worker -c blue,magenta,cyan \"next dev\" \"tsx watch workers/document-processor/index.ts\" \"tsx watch workers/drawing-extractor/index.ts\"",
     "dev:next": "next dev",
     "dev:local": "dotenv -e .env.development -- next dev",
     "build": "next build && npm run worker:build",
@@ -38,6 +38,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fortune-sheet/core": "^1.0.4",
     "@fortune-sheet/react": "^1.0.4",
+    "@googlemaps/js-api-loader": "^2.0.2",
     "@hookform/resolvers": "^5.2.2",
     "@langchain/langgraph": "^1.0.2",
     "@polar-sh/better-auth": "^1.6.4",

@@ -237,18 +237,22 @@ export function ContextChips({
   };
 
   return (
-    <div className="flex flex-wrap gap-2 mt-3">
-      {chips.map((chip) => (
-        <div
-          key={chip.id}
-          className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs border ${colorClasses[chip.color]}`}
-          title={`${chip.label}: ${chip.value}`}
-        >
-          {chip.icon}
-          <span className="font-medium">{chip.label}:</span>
-          <span>{chip.value}</span>
-        </div>
-      ))}
+    <div className="p-3 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
+      <div className="space-y-2.5">
+        {chips.map((chip) => (
+          <div
+            key={chip.id}
+            className="flex items-start gap-1.5"
+            title={`${chip.label}: ${chip.value}`}
+          >
+            <span className="mt-0.5 flex-shrink-0 text-[var(--color-text-muted)]">{chip.icon}</span>
+            <div className="min-w-0">
+              <div className="text-[10px] text-[var(--color-text-muted)]">{chip.label}</div>
+              <div className="text-xs font-medium text-[var(--color-text-primary)]">{chip.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

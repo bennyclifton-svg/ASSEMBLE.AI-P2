@@ -82,7 +82,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 })
                 .from(reportAttendees)
                 .leftJoin(projectStakeholders, eq(reportAttendees.stakeholderId, projectStakeholders.id))
-                .where(eq(reportAttendees.reportId, id)),
+                .where(eq(reportAttendees.reportId, id))
+                .orderBy(asc(projectStakeholders.sortOrder)),
 
             // Transmittals
             db

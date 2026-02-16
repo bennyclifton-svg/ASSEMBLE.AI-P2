@@ -9,27 +9,26 @@ export const navLinks = [
 ];
 
 export const heroContent = {
-    headline: {
-        gray: 'Upload. Extract.',
-        white: 'Generate. Done.',
-    },
-    subtitle: 'From brief to tender to invoice to report — automated.',
+    headline: [
+        { gray: 'Tender,', white: 'at speed' },
+        { gray: 'Award,', white: 'with clarity.' },
+    ],
+    subtitle: 'AI-powered construction management',
     cta: 'Get started free',
     terms: 'By signing up, you agree to our Terms and Privacy Policy',
 };
 
 export const logoBarContent = {
-    headline: 'Trusted by 200+ architecture and construction firms worldwide',
-    logos: ['SKYLINE', 'BUILDCO', 'STRUCTURA', 'ARCHIGROUP', 'CONSTRUCT+'],
+    headline: 'Trusted by leading builders, project & construction managers',
 };
 
 export const statsContent = {
     label: 'Results speak',
     headline: 'Less admin. More delivery.',
     stats: [
-        { value: '80%', label: 'Reduction in bid review time' },
-        { value: '10+', label: 'Hours saved per week on documents' },
-        { value: '200+', label: 'AEC firms trust ASSEMBLE.AI' },
+        { value: '80%', label: 'Reduction in tender preparation, evaluation and award time' },
+        { value: '10+', label: 'Hours saved per week on document & information management' },
+        { value: '10X', label: 'admin speed and skill' },
     ],
 };
 
@@ -41,20 +40,20 @@ export const aiSectionContent = {
 };
 
 export const problemContent = {
-    headline: 'Running big projects is hard.',
-    description: "You know the pain. Deadlines slip. Costs spiral. Teams get frustrated. It doesn't have to be this way.",
+    headline: 'Big projects are hard.',
+    description: 'Pushing to deadlines, mitigating scope creep, variation and delay.  Foundry forges forward, information flows, empowers iteration.',
     problems: [
-        'Lost documents and version confusion',
-        'Hours wasted on manual bid reviews',
-        'Budget overruns from missed details',
-        'Frustrated teams and unhappy clients',
+        'Document intelligence',
+        'Tender automation',
+        'Cost plan accuracy',
+        'AI-empowered teams',
     ],
 };
 
 export const solutionContent = {
     label: 'The Solution',
-    headline: 'One platform for your entire project',
-    description: 'ASSEMBLE.AI brings everything together—documents, bids, budgets, and teams—in one intelligent workspace. See the full picture. Make better decisions. Deliver on time.',
+    headline: '',
+    description: 'One dashboard integrates briefs, scopes, documents, tenders, cost plans, program, notes, meetings, reports and stakeholders, forged by AI, orchestrated by humans, in the loop when it matters. Make better decisions, faster. Deliver on time.',
 };
 
 export const featuresContent = {
@@ -83,7 +82,7 @@ export const featuresContent = {
         },
         {
             title: 'Documents',
-            description: 'Drag. Drop. Organised. Bulk upload files and AI generates document schedules automatically — IDs, names, revisions extracted and categorised.',
+            description: 'Drag. Drop. Organise. Bulk upload, AI structured IDs, names, revisions extracted and categorised. AI ingest, integrated!',
             benefit: 'Project knowledge integrated with AI RAG.',
         },
     ],

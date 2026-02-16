@@ -29,22 +29,29 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get('projectId');
+        const groupId = searchParams.get('groupId');
 
         if (!projectId) {
             return NextResponse.json({ error: 'projectId is required' }, { status: 400 });
+        }
+
+        // Build conditions
+        const conditions = [
+            eq(reports.projectId, projectId),
+            eq(reports.organizationId, authResult.user.organizationId),
+            isNull(reports.deletedAt),
+        ];
+
+        // Filter by groupId if provided
+        if (groupId) {
+            conditions.push(eq(reports.groupId, groupId));
         }
 
         // Fetch reports for the project (excluding soft-deleted)
         const reportsList = await db
             .select()
             .from(reports)
-            .where(
-                and(
-                    eq(reports.projectId, projectId),
-                    eq(reports.organizationId, authResult.user.organizationId),
-                    isNull(reports.deletedAt)
-                )
-            )
+            .where(and(...conditions))
             .orderBy(desc(reports.updatedAt));
 
         // Get section and transmittal counts for each report
@@ -99,7 +106,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { projectId, title, reportDate, preparedFor, preparedBy, contentsType } = validationResult.data;
+        const { projectId, groupId, title, reportDate, preparedFor, preparedBy, contentsType } = validationResult.data;
 
         // Create new report
         const id = uuidv4();
@@ -109,6 +116,7 @@ export async function POST(request: NextRequest) {
             id,
             projectId,
             organizationId: authResult.user.organizationId,
+            groupId: groupId || null,
             title: title || 'New Report',
             reportDate: reportDate || null,
             preparedFor: preparedFor || null,

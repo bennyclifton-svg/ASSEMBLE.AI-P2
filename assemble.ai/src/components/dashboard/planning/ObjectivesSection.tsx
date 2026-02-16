@@ -106,6 +106,7 @@ export function ObjectivesSection({ projectId, data, onUpdate }: ObjectivesSecti
                 toast({
                     title: 'Objectives Extracted',
                     description: `Successfully extracted project objectives (${confidence}% confidence)`,
+                    variant: 'success',
                 });
             }
         } catch (error) {

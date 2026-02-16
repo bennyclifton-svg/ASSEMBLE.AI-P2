@@ -146,6 +146,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body.contactName !== undefined) updateRequest.contactName = body.contactName;
     if (body.contactEmail !== undefined) updateRequest.contactEmail = body.contactEmail;
     if (body.contactPhone !== undefined) updateRequest.contactPhone = body.contactPhone;
+    if (body.disciplineOrTrade !== undefined) updateRequest.disciplineOrTrade = body.disciplineOrTrade;
     if (body.isEnabled !== undefined) updateRequest.isEnabled = body.isEnabled;
     if (body.briefServices !== undefined) updateRequest.briefServices = body.briefServices;
     if (body.briefDeliverables !== undefined) updateRequest.briefDeliverables = body.briefDeliverables;

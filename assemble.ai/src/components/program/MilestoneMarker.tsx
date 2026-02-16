@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useDeleteMilestone } from '@/lib/hooks/use-program';
 import { useRefetch } from './ProgramPanel';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import type { ProgramMilestone } from '@/types/program';
 
 interface MilestoneMarkerProps {
@@ -47,6 +48,7 @@ export function MilestoneMarker({
     rowHeight,
 }: MilestoneMarkerProps) {
     const [showTooltip, setShowTooltip] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const markerRef = useRef<HTMLDivElement>(null);
 
     const deleteMilestone = useDeleteMilestone(projectId);
@@ -60,50 +62,62 @@ export function MilestoneMarker({
 
     const handleDoubleClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        if (confirm(`Delete milestone "${milestone.name}"?`)) {
-            deleteMilestone.mutate(milestone.id, refetch);
-        }
+        setDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        deleteMilestone.mutate(milestone.id, refetch);
     };
 
     return (
-        <div
-            ref={markerRef}
-            className="absolute cursor-pointer"
-            style={{
-                left: left - markerSize / 2,
-                top: topOffset,
-                width: markerSize,
-                height: markerSize,
-            }}
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
-            onDoubleClick={handleDoubleClick}
-        >
-            {/* Diamond shape */}
+        <>
             <div
-                className="absolute inset-0 transform rotate-45 border-2 bg-[var(--color-accent-teal)] border-[var(--color-text-primary)] shadow-md"
-            />
-
-            {/* Tooltip */}
-            {showTooltip && (
+                ref={markerRef}
+                className="absolute cursor-pointer"
+                style={{
+                    left: left - markerSize / 2,
+                    top: topOffset,
+                    width: markerSize,
+                    height: markerSize,
+                }}
+                onMouseEnter={() => setShowTooltip(true)}
+                onMouseLeave={() => setShowTooltip(false)}
+                onDoubleClick={handleDoubleClick}
+            >
+                {/* Diamond shape */}
                 <div
-                    className="absolute z-20 px-2 py-1 text-xs text-[var(--color-text-primary)] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg whitespace-nowrap"
-                    style={{
-                        bottom: markerSize + 4,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                    }}
-                >
-                    <div className="font-medium">{milestone.name}</div>
-                    <div className="text-[var(--color-text-muted)]">
-                        {date.toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                        })}
+                    className="absolute inset-0 transform rotate-45 border-2 bg-[var(--color-accent-teal)] border-[var(--color-text-primary)] shadow-md"
+                />
+
+                {/* Tooltip */}
+                {showTooltip && (
+                    <div
+                        className="absolute z-20 px-2 py-1 text-xs text-[var(--color-text-primary)] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg whitespace-nowrap"
+                        style={{
+                            bottom: markerSize + 4,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                        }}
+                    >
+                        <div className="font-medium">{milestone.name}</div>
+                        <div className="text-[var(--color-text-muted)]">
+                            {date.toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                            })}
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+
+            {/* Delete Confirmation Dialog */}
+            <AuroraConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                onConfirm={handleConfirmDelete}
+                title={`Delete milestone "${milestone.name}"?`}
+            />
+        </>
     );
 }

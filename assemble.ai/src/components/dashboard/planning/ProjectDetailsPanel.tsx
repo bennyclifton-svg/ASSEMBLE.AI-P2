@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useRef, useLayoutEffect, useEffect } from 'react';
+import { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
 import { Upload } from 'lucide-react';
+import { AddressAutocomplete } from './AddressAutocomplete';
+import { LEPDataCard } from './LEPDataCard';
+import type { PlaceSelection, SiteInfo } from '@/types/lep';
 
 // Props for InlineEditField component
 interface InlineEditFieldProps {
@@ -286,15 +289,28 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
     const { toast } = useToast();
     const [isDragging, setIsDragging] = useState(false);
     const [isExtracting, setIsExtracting] = useState(false);
+    const dataRef = useRef(data);
+    dataRef.current = data;
+
+    const buildPayload = useCallback(() => {
+        const d = dataRef.current;
+        return {
+            projectName: d?.projectName || '',
+            address: d?.address || '',
+            legalAddress: d?.legalAddress || '',
+            zoning: d?.zoning || '',
+            jurisdiction: d?.jurisdiction || '',
+            lotArea: d?.lotArea || '',
+            latitude: d?.latitude || '',
+            longitude: d?.longitude || '',
+            placeId: d?.placeId || '',
+            formattedAddress: d?.formattedAddress || '',
+        };
+    }, []);
 
     const updateField = async (field: string, value: string) => {
         const payload = {
-            projectName: data?.projectName || '',
-            address: data?.address || '',
-            legalAddress: data?.legalAddress || '',
-            zoning: data?.zoning || '',
-            jurisdiction: data?.jurisdiction || '',
-            lotArea: data?.lotArea || '',
+            ...buildPayload(),
             [field]: value,
         };
 
@@ -315,6 +331,50 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
             onProjectNameChange();
         }
     };
+
+    const handleAddressSelect = async (place: PlaceSelection) => {
+        const payload = {
+            ...buildPayload(),
+            address: place.formattedAddress,
+            formattedAddress: place.formattedAddress,
+            latitude: String(place.coordinates.lat),
+            longitude: String(place.coordinates.lng),
+            placeId: place.placeId,
+        };
+
+        const res = await fetch(`/api/planning/${projectId}/details`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+            throw new Error('Failed to save address');
+        }
+
+        onUpdate();
+    };
+
+    const handleSiteInfo = useCallback(async (info: SiteInfo) => {
+        // Use ref to read latest data (avoids stale closure from LEPDataCard callback chain)
+        const current = dataRef.current;
+        const updates: Record<string, string> = {};
+        // Always update from LEP site info (address may have changed)
+        if (info.jurisdiction) updates.jurisdiction = info.jurisdiction;
+        if (info.legalAddress) updates.legalAddress = info.legalAddress;
+        if (info.lotAreaSqm) updates.lotArea = String(info.lotAreaSqm);
+
+        if (Object.keys(updates).length === 0) return;
+
+        const payload = { ...buildPayload(), ...updates };
+        const res = await fetch(`/api/planning/${projectId}/details`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (res.ok) onUpdate();
+    }, [buildPayload, projectId, onUpdate]);
 
     const updateMultipleFields = async (extractedData: any) => {
         const payload = {
@@ -384,6 +444,7 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
                 toast({
                     title: 'Data Extracted',
                     description: `Successfully extracted project details (${confidence}% confidence)`,
+                    variant: 'success',
                 });
             }
         } catch (error) {
@@ -522,14 +583,20 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
             <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarGutter: 'stable both-edges' }}>
                 <div className="space-y-4">
                     {/* Project Name Card */}
-                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
-                            <span className="text-[var(--color-accent-copper)] font-medium text-sm uppercase tracking-wide">
+                    <div className="border border-[var(--color-border)]/50 rounded overflow-hidden">
+                        <div
+                            className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
+                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
+                        >
+                            <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
                                 Project Name
                             </span>
-                            <Upload className="w-4 h-4 text-[var(--color-accent-copper)]" />
+                            <Upload className="w-4 h-4 text-[var(--color-text-muted)]" />
                         </div>
-                        <div className="bg-[var(--color-bg-secondary)] p-4">
+                        <div
+                            className="backdrop-blur-md p-4"
+                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                        >
                             <InlineEditField
                                 value={data?.projectName || ''}
                                 onSave={(v) => updateField('projectName', v)}
@@ -540,30 +607,30 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
                     </div>
 
                     {/* Details Card */}
-                    <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
-                            <span className="text-[var(--color-accent-copper)] font-medium text-sm uppercase tracking-wide">
+                    <div className="border border-[var(--color-border)]/50 rounded overflow-hidden">
+                        <div
+                            className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
+                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
+                        >
+                            <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
                                 Site Details
                             </span>
                         </div>
-                        <div className="bg-[var(--color-bg-secondary)]">
-                            <DetailRow
-                                label="Address"
+                        <div
+                            className="backdrop-blur-md"
+                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                        >
+                            <AddressAutocomplete
                                 value={data?.address || ''}
-                                onSave={(v) => updateField('address', v)}
-                                placeholder="Enter address"
+                                onSelect={handleAddressSelect}
+                                onManualEdit={(v) => updateField('address', v)}
+                                placeholder="Search address..."
                             />
                             <DetailRow
                                 label="Lot Area"
                                 value={data?.lotArea?.toString() || ''}
                                 onSave={(v) => updateField('lotArea', v)}
                                 placeholder="0 m²"
-                            />
-                            <DetailRow
-                                label="Zoning"
-                                value={data?.zoning || ''}
-                                onSave={(v) => updateField('zoning', v)}
-                                placeholder="Enter zoning"
                             />
                             <DetailRow
                                 label="Legal Address"
@@ -580,6 +647,14 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
                             />
                         </div>
                     </div>
+
+                    {/* LEP Planning Controls Card */}
+                    <LEPDataCard
+                        projectId={projectId}
+                        hasCoordinates={!!(data?.latitude && data?.longitude)}
+                        coordinates={data?.latitude && data?.longitude ? { lat: data.latitude, lng: data.longitude } : undefined}
+                        onSiteInfo={handleSiteInfo}
+                    />
                 </div>
             </div>
         </div>

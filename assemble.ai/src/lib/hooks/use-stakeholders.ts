@@ -166,13 +166,14 @@ export function useStakeholders({
           prev.map(s => (s.id === id ? { ...s, ...stakeholder } : s))
         );
 
+        triggerRefresh(); // Notify other components (categories, etc.)
         return stakeholder;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
         return null;
       }
     },
-    [projectId]
+    [projectId, triggerRefresh]
   );
 
   // Delete stakeholder

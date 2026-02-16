@@ -12,6 +12,10 @@ interface TRRAddendumTableProps {
     addenda: TRRAddendumRow[];
 }
 
+function stripHtml(html: string): string {
+    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 export function TRRAddendumTable({ addenda }: TRRAddendumTableProps) {
     const formatDate = (dateStr: string | null | undefined): string => {
         if (!dateStr) return '-';
@@ -55,7 +59,7 @@ export function TRRAddendumTable({ addenda }: TRRAddendumTableProps) {
                                         {String(addendum.addendumNumber).padStart(2, '0')}
                                     </td>
                                     <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
-                                        {addendum.summary || '-'}
+                                        {addendum.summary ? stripHtml(addendum.summary) : '-'}
                                     </td>
                                     <td className="px-4 py-2.5 text-[var(--color-text-primary)]">
                                         {formatDate(addendum.date)}

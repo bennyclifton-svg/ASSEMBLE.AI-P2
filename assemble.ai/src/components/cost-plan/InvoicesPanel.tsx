@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, Upload, Check, X, Trash, ChevronUp, ChevronDown } from 'lucide-react';
-import { useInvoices, useInvoiceMutations, useCostLines } from '@/lib/hooks/cost-plan';
+import { useInvoices, useInvoiceMutations, useCostLines, useVariations } from '@/lib/hooks/cost-plan';
 import { formatCurrency, getCurrentPeriod } from '@/lib/calculations/cost-plan-formulas';
-import type { PaidStatus, InvoiceWithRelations, CreateInvoiceInput } from '@/types/invoice';
+import type { PaidStatus, InvoiceWithRelations, CreateInvoiceInput, UpdateInvoiceInput } from '@/types/invoice';
 import type { CostLineWithCalculations } from '@/types/cost-plan';
+import type { Variation } from '@/types/variation';
 import { InvoiceDropZone } from './InvoiceDropZone';
 
 // App color palette - consistent with global styles
@@ -30,8 +31,8 @@ const COLORS = {
         invoice: 'var(--primitive-copper)',  // copper - unified accent
     },
     status: {
-        unpaid: { bg: 'bg-yellow-900/40', text: 'text-yellow-400', border: 'border-yellow-600' },
-        paid: { bg: 'bg-green-900/40', text: 'text-green-400', border: 'border-green-600' },
+        unpaid: 'bg-[var(--color-accent-coral)] hover:bg-[var(--color-accent-coral)]/80 text-white',
+        paid: 'bg-[var(--color-accent-green)] hover:bg-[var(--color-accent-green)]/80 text-white',
         partial: { bg: 'bg-orange-900/40', text: 'text-orange-400', border: 'border-orange-600' },
     },
 };
@@ -47,6 +48,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
     const { invoices, isLoading, error, refetch } = useInvoices(projectId);
     const { createInvoice, updateInvoice, deleteInvoice, isSubmitting } = useInvoiceMutations(projectId, refetch);
     const { costLines } = useCostLines(projectId);
+    const { variations } = useVariations(projectId);
 
     const [showAddRow, setShowAddRow] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; invoiceNo: string } | null>(null);
@@ -135,9 +137,9 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
 
     return (
         <InvoiceDropZone projectId={projectId} onUploadComplete={() => refetch()}>
-        <div className="h-full flex flex-col bg-[var(--color-bg-primary)] text-xs">
+        <div className="h-full flex flex-col text-xs">
             {/* Toolbar */}
-            <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[#f0f0f0]">
+            <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
                 <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
                     <Upload className="h-3 w-3" />
                     Drop Invoice
@@ -147,90 +149,93 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
             {/* Table */}
             <div className="flex-1 overflow-auto">
                 <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
-                    <thead className="sticky top-0 z-10 bg-[var(--color-accent-copper-tint)]">
+                    <thead className="sticky top-0 z-10 backdrop-blur-sm shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
                         <tr>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[100px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[100px] overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('invoiceNumber')}
                             >
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 truncate">
                                     Invoice No.
                                     {sortColumn === 'invoiceNumber' && (
-                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
                                     )}
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('description')}
                             >
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 truncate">
                                     Description
                                     {sortColumn === 'description' && (
-                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
                                     )}
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[160px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[160px] overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('costLine')}
                             >
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 truncate">
                                     Cost Line
                                     {sortColumn === 'costLine' && (
-                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
                                     )}
                                 </div>
                             </th>
+                            <th className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[120px] overflow-hidden border-b border-b-[var(--color-border)]">
+                                <span className="truncate block">Variation</span>
+                            </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[80px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[80px] overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('period')}
                             >
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 truncate">
                                     Period
                                     {sortColumn === 'period' && (
-                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
                                     )}
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[90px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[90px] overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('invoiceDate')}
                             >
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 truncate">
                                     Date
                                     {sortColumn === 'invoiceDate' && (
-                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
                                     )}
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-right text-[var(--color-accent-copper)] font-medium w-[100px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-right text-[var(--color-text-primary)] font-bold w-[100px] overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('amountCents')}
                             >
-                                <div className="flex items-center justify-end gap-1">
+                                <div className="flex items-center justify-end gap-1 truncate">
                                     Amount ex GST
                                     {sortColumn === 'amountCents' && (
-                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
                                     )}
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[80px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[80px] overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('paidStatus')}
                             >
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1 truncate">
                                     Status
                                     {sortColumn === 'paidStatus' && (
-                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                                        sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />
                                     )}
                                 </div>
                             </th>
-                            <th className="border border-[var(--color-accent-copper)] px-2 py-2 text-center text-[var(--color-accent-copper)] font-medium w-[40px]">
+                            <th className="px-2 py-2 text-center text-[var(--color-text-primary)] font-bold w-[40px] border-b border-b-[var(--color-border)]">
                                 <button
                                     onClick={() => setShowAddRow(true)}
                                     disabled={showAddRow}
-                                    className="p-0.5 text-[var(--color-accent-copper)] hover:text-[var(--color-accent-teal)] transition-colors disabled:opacity-50"
+                                    className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
                                     title="Add Invoice"
                                 >
                                     <Plus className="h-4 w-4" />
@@ -241,11 +246,11 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">Loading invoices...</td>
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">Loading invoices...</td>
                             </tr>
                         ) : sortedInvoices.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={8} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
                                     No invoices yet. Click the + icon to add one.
                                 </td>
                             </tr>
@@ -255,6 +260,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                                     key={invoice.id}
                                     invoice={invoice}
                                     costLines={costLines}
+                                    variations={variations}
                                     onUpdate={updateInvoice}
                                     onDelete={() => setDeleteConfirm({ id: invoice.id, invoiceNo: invoice.invoiceNumber })}
                                 />
@@ -264,6 +270,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                         {showAddRow && (
                             <AddInvoiceRow
                                 costLines={costLines}
+                                variations={variations}
                                 onSave={handleAddInvoice}
                                 onCancel={() => setShowAddRow(false)}
                                 isSubmitting={isSubmitting}
@@ -273,7 +280,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                     {sortedInvoices.length > 0 && (
                         <tfoot className="bg-[var(--color-bg-tertiary)] font-semibold">
                             <tr>
-                                <td colSpan={5} className="border border-[var(--color-border)] px-2 py-1.5 text-right text-[var(--color-text-muted)]">
+                                <td colSpan={6} className="border border-[var(--color-border)] px-2 py-1.5 text-right text-[var(--color-text-muted)]">
                                     Total:
                                 </td>
                                 <td className="border border-[var(--color-border)] px-2 py-1.5 text-right font-mono text-[var(--color-text-primary)]">
@@ -305,21 +312,12 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
 interface InvoiceRowProps {
     invoice: InvoiceWithRelations;
     costLines: CostLineWithCalculations[];
-    onUpdate: (id: string, data: Partial<{
-        paidStatus: PaidStatus;
-        description: string;
-        costLineId: string | null;
-        amountCents: number;
-        gstCents: number;
-        invoiceNumber: string;
-        periodMonth: number;
-        periodYear: number;
-        invoiceDate: string;
-    }>) => Promise<void>;
+    variations: Variation[];
+    onUpdate: (id: string, data: UpdateInvoiceInput) => Promise<any>;
     onDelete: () => void;
 }
 
-function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps) {
+function InvoiceRow({ invoice, costLines, variations, onUpdate, onDelete }: InvoiceRowProps) {
     const [editingField, setEditingField] = useState<string | null>(null);
     const [editValue, setEditValue] = useState<string>('');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -401,8 +399,17 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
     };
 
     const handleCostLineChange = async (costLineId: string) => {
-        await onUpdate(invoice.id, { costLineId: costLineId || null });
+        await onUpdate(invoice.id, { costLineId: costLineId || null, variationId: null });
     };
+
+    const handleVariationChange = async (variationId: string) => {
+        await onUpdate(invoice.id, { variationId: variationId || null });
+    };
+
+    // Variations available for this invoice's cost line
+    const availableVariations = variations.filter(
+        v => v.costLineId === invoice.costLineId && (v.status === 'Approved' || v.status === 'Forecast')
+    );
 
     return (
         <tr className="group bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] transition-colors">
@@ -467,6 +474,22 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
                     })}
                 </select>
             </td>
+            <td className="border-x border-[var(--color-border)] px-1 py-1 w-[120px]">
+                <select
+                    value={invoice.variationId || ''}
+                    onChange={(e) => handleVariationChange(e.target.value)}
+                    disabled={!invoice.costLineId || availableVariations.length === 0}
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer disabled:opacity-40 disabled:cursor-default"
+                    style={{ colorScheme: 'dark' }}
+                >
+                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">Contract</option>
+                    {availableVariations.map((v) => (
+                        <option key={v.id} value={v.id} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                            {v.variationNumber}
+                        </option>
+                    ))}
+                </select>
+            </td>
             <td
                 className="border-x border-[var(--color-border)] px-2 py-1.5 text-[var(--color-text-muted)] cursor-pointer w-[80px]"
                 onClick={() => handleStartEdit('period', `${invoice.periodYear}-${String(invoice.periodMonth).padStart(2, '0')}`)}
@@ -526,10 +549,10 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
             <td className="border-x border-[var(--color-border)] px-2 py-1.5 w-[80px]">
                 <button
                     onClick={() => onUpdate(invoice.id, { paidStatus: isPaid ? 'unpaid' : 'paid' })}
-                    className={`px-2 py-0.5 rounded text-[10px] border cursor-pointer transition-colors ${
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors ${
                         isPaid
-                            ? 'bg-green-900/40 text-green-400 border-green-600 hover:bg-green-900/60'
-                            : 'bg-yellow-900/40 text-yellow-400 border-yellow-600 hover:bg-yellow-900/60'
+                            ? COLORS.status.paid
+                            : COLORS.status.unpaid
                     }`}
                 >
                     {isPaid ? 'Paid' : 'Unpaid'}
@@ -550,18 +573,20 @@ function InvoiceRow({ invoice, costLines, onUpdate, onDelete }: InvoiceRowProps)
 
 interface AddInvoiceRowProps {
     costLines: CostLineWithCalculations[];
+    variations: Variation[];
     onSave: (data: Omit<CreateInvoiceInput, 'projectId'>) => Promise<void>;
     onCancel: () => void;
     isSubmitting: boolean;
 }
 
-function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoiceRowProps) {
+function AddInvoiceRow({ costLines, variations, onSave, onCancel, isSubmitting }: AddInvoiceRowProps) {
     const invoiceNumberRef = useRef<HTMLInputElement>(null);
     const currentPeriod = getCurrentPeriod();
     const [formData, setFormData] = useState({
         invoiceNumber: '',
         description: '',
         costLineId: '',
+        variationId: '',
         periodMonth: currentPeriod.month,
         periodYear: currentPeriod.year,
         invoiceDate: new Date().toISOString().split('T')[0],
@@ -588,6 +613,7 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
             invoiceNumber: formData.invoiceNumber,
             description: formData.description || undefined,
             costLineId: formData.costLineId || undefined,
+            variationId: formData.variationId || undefined,
             periodMonth: formData.periodMonth,
             periodYear: formData.periodYear,
             invoiceDate: formData.invoiceDate,
@@ -596,6 +622,11 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
             paidStatus: formData.paidStatus,
         });
     };
+
+    // Variations available for the selected cost line
+    const addRowVariations = variations.filter(
+        v => v.costLineId === formData.costLineId && (v.status === 'Approved' || v.status === 'Forecast')
+    );
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -633,7 +664,7 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
             <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <select
                     value={formData.costLineId}
-                    onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, costLineId: e.target.value, variationId: '' })}
                     className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
                     title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
                     style={{ colorScheme: 'dark' }}
@@ -650,6 +681,22 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                             </option>
                         );
                     })}
+                </select>
+            </td>
+            <td className="border-x border-[var(--color-border)] px-1 py-1">
+                <select
+                    value={formData.variationId}
+                    onChange={(e) => setFormData({ ...formData, variationId: e.target.value })}
+                    disabled={!formData.costLineId || addRowVariations.length === 0}
+                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer disabled:opacity-40 disabled:cursor-default"
+                    style={{ colorScheme: 'dark' }}
+                >
+                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">Contract</option>
+                    {addRowVariations.map((v) => (
+                        <option key={v.id} value={v.id} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                            {v.variationNumber}
+                        </option>
+                    ))}
                 </select>
             </td>
             <td className="border-x border-[var(--color-border)] px-1 py-1">
@@ -685,10 +732,10 @@ function AddInvoiceRow({ costLines, onSave, onCancel, isSubmitting }: AddInvoice
                     <button
                         type="button"
                         onClick={() => setFormData({ ...formData, paidStatus: formData.paidStatus === 'paid' ? 'unpaid' : 'paid' })}
-                        className={`px-2 py-0.5 rounded text-[10px] border cursor-pointer transition-colors ${
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-colors ${
                             formData.paidStatus === 'paid'
-                                ? 'bg-green-900/40 text-green-400 border-green-600 hover:bg-green-900/60'
-                                : 'bg-yellow-900/40 text-yellow-400 border-yellow-600 hover:bg-yellow-900/60'
+                                ? COLORS.status.paid
+                                : COLORS.status.unpaid
                         }`}
                     >
                         {formData.paidStatus === 'paid' ? 'Paid' : 'Unpaid'}

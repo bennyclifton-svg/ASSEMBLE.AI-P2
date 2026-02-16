@@ -8,7 +8,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import { type Addendum } from '@/lib/hooks/use-addenda';
-import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 
 function formatDisplayDate(dateString: string): string {
     if (!dateString) return '';
@@ -72,8 +72,8 @@ export function AddendumContent({
         await onUpdateDate(addendum.id, newDate);
     }, [addendum.id, onUpdateDate]);
 
-    const handleContentChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setContent(e.target.value);
+    const handleContentChange = useCallback((value: string) => {
+        setContent(value);
     }, []);
 
     const handleBlur = useCallback(async () => {
@@ -144,14 +144,17 @@ export function AddendumContent({
                         <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
                     )}
                 </div>
-                <div className="border border-[var(--color-border)] rounded overflow-hidden">
-                    <Textarea
-                        value={content}
+                <div className="overflow-hidden rounded-lg">
+                    <RichTextEditor
+                        content={content}
                         onChange={handleContentChange}
                         onBlur={handleBlur}
                         placeholder="Enter addendum details, changes, clarifications..."
-                        className="w-full bg-[var(--color-bg-secondary)] border-0 text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-y min-h-[100px] p-4 border-l-2 border-l-[var(--color-accent-copper)]/30 hover:border-l-[var(--color-accent-copper)] hover:bg-[var(--color-bg-primary)] transition-colors cursor-text focus-visible:ring-0 focus-visible:ring-offset-0 rounded-none"
-                        style={{ fieldSizing: 'content' } as React.CSSProperties}
+                        variant="mini"
+                        toolbarVariant="mini"
+                        transparentBg
+                        className="border-0 rounded-none"
+                        editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors"
                     />
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)]">

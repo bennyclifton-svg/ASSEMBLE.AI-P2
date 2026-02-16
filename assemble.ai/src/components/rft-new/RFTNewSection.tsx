@@ -90,6 +90,15 @@ export function RFTNewSection({
         }
     }, [createRft, setActiveRftId, setIsExpanded]);
 
+    // Auto-create first RFT when expanding with none
+    const handleExpandToggle = useCallback(async () => {
+        if (!isExpanded && rfts.length === 0 && !isLoading && !isCreating) {
+            await handleCreateRft();
+        } else {
+            setIsExpanded(!isExpanded);
+        }
+    }, [isExpanded, rfts.length, isLoading, isCreating, handleCreateRft, setIsExpanded]);
+
     const handleDeleteRft = useCallback(async (rftId: string) => {
         const success = await deleteRft(rftId);
         if (success && rftId === activeRftId) {
@@ -216,7 +225,10 @@ export function RFTNewSection({
             {/* Header - Segmented white ribbons with grey surround */}
             <div className="flex items-stretch gap-0.5 p-2">
                 {/* Request For Tender segment */}
-                <div className="flex items-center w-[220px] px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
+                <div
+                    className="flex items-center w-fit h-11 px-3 py-1.5 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-l-md"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                >
                     <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
                     <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         Request For Tender
@@ -224,8 +236,9 @@ export function RFTNewSection({
                 </div>
                 {/* Corner bracket segment - square, points out to expand, in to collapse */}
                 <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center justify-center p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    onClick={handleExpandToggle}
+                    className="flex items-center justify-center w-11 h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
                     title={isExpanded ? 'Collapse' : 'Expand'}
                 >
                     <CornerBracketIcon
@@ -234,10 +247,13 @@ export function RFTNewSection({
                     />
                 </button>
                 {/* More options segment - expandable to show tabs and export buttons */}
-                <div className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md transition-all">
+                <div
+                    className="flex items-center h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-r-md transition-all"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                >
                     <button
                         onClick={() => setIsMenuExpanded(!isMenuExpanded)}
-                        className="flex items-center justify-center w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                        className="flex items-center justify-center w-11 h-11 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                         title={isMenuExpanded ? 'Hide options' : 'Show options'}
                     >
                         {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
@@ -286,7 +302,10 @@ export function RFTNewSection({
             <div>
                 {/* Tab Content - only shown when expanded */}
                 {isExpanded && (
-                    <div className="mx-2 p-4 bg-[var(--color-bg-secondary)] rounded-md shadow-sm">
+                    <div
+                        className="mx-2 p-4 backdrop-blur-md rounded-md shadow-sm"
+                        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                    >
                         {isLoading ? (
                             <div className="p-8 text-center text-[var(--color-text-muted)]">
                                 <p>Loading RFTs...</p>

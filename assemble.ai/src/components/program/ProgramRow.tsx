@@ -2,12 +2,11 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { ChevronRight, ChevronDown, Trash, GripVertical, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useUpdateActivity, useDeleteActivity, useCreateMilestone } from '@/lib/hooks/use-program';
 import { useRefetch } from './ProgramPanel';
 import { ProgramBar } from './ProgramBar';
 import { MilestoneMarker } from './MilestoneMarker';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import type { ProgramActivity, ProgramMilestone, ZoomLevel } from '@/types/program';
 
 // Format date to ISO string (date only)
@@ -29,6 +28,11 @@ interface ProgramRowProps {
     onStartLinkDrag?: (activityId: string, end: 'start' | 'end', clientX: number, clientY: number) => void;
     selectedActivityId?: string | null;
     onSelectActivity?: (activityId: string | null) => void;
+    // Sortable props (passed from SortableItem wrapper in ProgramTable)
+    sortableRef?: (node: HTMLElement | null) => void;
+    sortableStyle?: React.CSSProperties;
+    dragHandleAttributes?: Record<string, any>;
+    dragHandleListeners?: Record<string, any>;
 }
 
 export function ProgramRow({
@@ -45,9 +49,14 @@ export function ProgramRow({
     onStartLinkDrag,
     selectedActivityId,
     onSelectActivity,
+    sortableRef,
+    sortableStyle,
+    dragHandleAttributes,
+    dragHandleListeners,
 }: ProgramRowProps) {
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState(activity.name);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     const updateActivity = useUpdateActivity(projectId);
@@ -55,22 +64,6 @@ export function ProgramRow({
     const createMilestone = useCreateMilestone(projectId);
     const refetch = useRefetch();
     const timelineRef = useRef<HTMLDivElement>(null);
-
-    // Sortable hook for drag reordering
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: activity.id });
-
-    const sortableStyle = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-    };
 
     // State for drag-to-create bar
     const [isCreatingBar, setIsCreatingBar] = useState(false);
@@ -163,10 +156,12 @@ export function ProgramRow({
         }
     };
 
-    const handleDelete = () => {
-        if (confirm('Delete this activity?')) {
-            deleteActivity.mutate(activity.id, refetch);
-        }
+    const handleDeleteClick = () => {
+        setDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        deleteActivity.mutate(activity.id, refetch);
     };
 
     // Double-click on timeline to create milestone
@@ -308,15 +303,15 @@ export function ProgramRow({
         // Render the activity name column
         return (
             <div
-                ref={setNodeRef}
+                ref={sortableRef}
                 className="group flex items-center border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)]"
                 style={{ height: rowHeight, ...sortableStyle }}
             >
                 {/* Drag handle - always visible */}
                 <div
                     className="cursor-grab active:cursor-grabbing p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] touch-none"
-                    {...attributes}
-                    {...listeners}
+                    {...dragHandleAttributes}
+                    {...dragHandleListeners}
                 >
                     <GripVertical className="h-3 w-3" />
                 </div>
@@ -388,11 +383,19 @@ export function ProgramRow({
 
                 {/* Delete button (visible on hover) */}
                 <button
-                    onClick={handleDelete}
+                    onClick={handleDeleteClick}
                     className="invisible mr-2 p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] group-hover:visible"
                 >
                     <Trash className="h-3.5 w-3.5" />
                 </button>
+
+                {/* Delete Confirmation Dialog */}
+                <AuroraConfirmDialog
+                    open={deleteDialogOpen}
+                    onOpenChange={setDeleteDialogOpen}
+                    onConfirm={handleConfirmDelete}
+                    title="Delete this activity?"
+                />
             </div>
         );
     }

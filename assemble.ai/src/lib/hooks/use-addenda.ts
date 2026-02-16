@@ -115,6 +115,7 @@ export function useAddenda({
             toast({
                 title: 'Addendum created',
                 description: `Created Addendum ${String(newAddendum.addendumNumber).padStart(2, '0')}`,
+                variant: 'success',
             });
 
             return newAddendum;
@@ -232,6 +233,7 @@ export function useAddenda({
             toast({
                 title: 'Addendum deleted',
                 description: 'Addendum has been removed',
+                variant: 'success',
             });
 
             return true;

@@ -6,19 +6,10 @@
 
 'use client';
 
-import { useState, ReactNode } from 'react';
-import { Plus, Loader2, X, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, Loader2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 
 interface NumberedTabsProps<T extends { id: string }> {
     /** Array of items to display as tabs */
@@ -140,33 +131,15 @@ export function NumberedTabs<T extends { id: string }>({
                 </button>
             </div>
 
-            {/* Delete Confirmation Dialog - Aurora styled */}
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent className="card-aurora border-0 bg-[rgba(20,22,24,0.95)] backdrop-blur-xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-3 text-[var(--color-text-primary)]">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primitive-aurora-magenta)]/20 to-[var(--primitive-aurora-violet)]/20 border border-[var(--primitive-aurora-magenta)]/30">
-                                <AlertTriangle className="w-5 h-5 text-[var(--primitive-aurora-magenta)]" />
-                            </div>
-                            <span>Delete {entityName} {pendingLabel}?</span>
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-[var(--color-text-muted)] pl-[52px]">
-                            {deleteMessage || `This will permanently delete this ${entityName.toLowerCase()} and all its associated data. This action cannot be undone.`}
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="gap-3 sm:gap-3">
-                        <AlertDialogCancel className="btn-aurora-ghost border-[var(--color-border)] hover:border-[var(--primitive-aurora-cyan)]/30">
-                            Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={confirmDelete}
-                            className="bg-gradient-to-r from-[var(--primitive-aurora-magenta)] to-[var(--primitive-aurora-violet)] text-white hover:opacity-90 border-0 shadow-[0_0_20px_rgba(255,20,147,0.3)]"
-                        >
-                            Delete
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+            {/* Delete Confirmation Dialog */}
+            <AuroraConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                onConfirm={confirmDelete}
+                title={`Delete ${entityName} ${pendingLabel}`}
+                description={deleteMessage || `Are you sure you want to delete this ${entityName.toLowerCase()}?`}
+                variant="destructive"
+            />
         </>
     );
 }

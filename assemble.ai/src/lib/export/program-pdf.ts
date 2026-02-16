@@ -1,12 +1,14 @@
 /**
  * Program Module PDF Export
  *
- * Exports program activities to a PDF document with Gantt-style timeline view.
+ * Exports program activities to a PDF document with Gantt-style timeline view
+ * matching the on-screen appearance.
  * Features:
  * - 2-tier header: Months (Tier 1) spanning Weeks (Tier 2)
- * - Visual activity bars with colors
- * - Compact row heights
- * - Milestone markers
+ * - Activity, Start, End columns
+ * - Continuous activity bars with sub-cell fractional positioning
+ * - Dependency arrows (FS, SS, FF)
+ * - Activity name text inside bars
  */
 
 import jsPDF from 'jspdf';
@@ -19,6 +21,14 @@ interface ProgramActivity {
     startDate: string | null;
     endDate: string | null;
     color: string | null;
+    sortOrder: number;
+}
+
+interface ProgramDependency {
+    id: string;
+    fromActivityId: string;
+    toActivityId: string;
+    type: 'FS' | 'SS' | 'FF';
 }
 
 interface ProgramMilestone {
@@ -30,6 +40,7 @@ interface ProgramMilestone {
 
 interface ProgramData {
     activities: ProgramActivity[];
+    dependencies: ProgramDependency[];
     milestones: ProgramMilestone[];
     projectName: string;
 }
@@ -37,24 +48,18 @@ interface ProgramData {
 interface WeekColumn {
     weekStart: Date;
     weekEnd: Date;
-    dayLabel: string; // Day of month (e.g., "15")
-    monthKey: string; // For grouping (e.g., "2025-12")
-    monthLabel: string; // Display label (e.g., "Dec 2025")
+    dayLabel: string;
+    monthKey: string;
+    monthLabel: string;
 }
 
-// Convert hex to RGB tuple
-function hexToRgb(hex: string): [number, number, number] {
-    const cleanHex = hex.replace('#', '');
-    const fullHex = cleanHex.length === 3
-        ? cleanHex[0] + cleanHex[0] + cleanHex[1] + cleanHex[1] + cleanHex[2] + cleanHex[2]
-        : cleanHex;
-
-    return [
-        parseInt(fullHex.substring(0, 2), 16),
-        parseInt(fullHex.substring(2, 4), 16),
-        parseInt(fullHex.substring(4, 6), 16),
-    ];
-}
+// Theme colors matching on-screen teal theme
+const TEAL: [number, number, number] = [13, 148, 136];
+const BAR_FILL: [number, number, number] = [207, 234, 231]; // teal/20 on white
+const BAR_BORDER: [number, number, number] = [158, 212, 207]; // teal/40 on white
+const ARROW_COLOR: [number, number, number] = [120, 120, 120]; // text-muted
+const HEADER_BG: [number, number, number] = [37, 55, 53]; // dark teal-tinted
+const HEADER_BG_LIGHT: [number, number, number] = [50, 70, 68]; // lighter teal-tinted
 
 // Get Monday of the week for a given date
 function getMonday(date: Date): Date {
@@ -71,7 +76,7 @@ function generateWeekColumns(startDate: Date, endDate: Date): WeekColumn[] {
     const columns: WeekColumn[] = [];
     const current = getMonday(startDate);
     const end = new Date(endDate);
-    end.setDate(end.getDate() + 7); // Include the last week
+    end.setDate(end.getDate() + 7);
 
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -112,24 +117,11 @@ function groupByMonth(columns: WeekColumn[]): Map<string, { label: string; count
     return groups;
 }
 
-// Check if activity spans a week
-function activitySpansWeek(
-    activityStart: Date | null,
-    activityEnd: Date | null,
-    weekStart: Date,
-    weekEnd: Date
-): boolean {
-    if (!activityStart || !activityEnd) return false;
-    // Activity spans this week if it starts before week ends AND ends after week starts
-    return activityStart <= weekEnd && activityEnd >= weekStart;
-}
-
-// Build hierarchical structure
+// Build hierarchical structure sorted by sortOrder
 function buildHierarchy(activities: ProgramActivity[]): Array<ProgramActivity & { depth: number }> {
     const result: Array<ProgramActivity & { depth: number }> = [];
     const childMap = new Map<string | null, ProgramActivity[]>();
 
-    // Group by parent
     for (const activity of activities) {
         const parentId = activity.parentId;
         if (!childMap.has(parentId)) {
@@ -138,9 +130,8 @@ function buildHierarchy(activities: ProgramActivity[]): Array<ProgramActivity & 
         childMap.get(parentId)!.push(activity);
     }
 
-    // Recursive traversal
     function traverse(parentId: string | null, depth: number) {
-        const children = childMap.get(parentId) || [];
+        const children = (childMap.get(parentId) || []).sort((a, b) => a.sortOrder - b.sortOrder);
         for (const child of children) {
             result.push({ ...child, depth });
             traverse(child.id, depth + 1);
@@ -151,9 +142,67 @@ function buildHierarchy(activities: ProgramActivity[]): Array<ProgramActivity & 
     return result;
 }
 
-// Default color for activities without a color
-const DEFAULT_ACTIVITY_COLOR = '#4A90A4';
-const PARENT_ACTIVITY_COLOR = '#D97706'; // Orange for parent/phase rows
+// Format date as DD/MM/YY
+function formatDateShort(dateStr: string | null): string {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+}
+
+// Get X position for a date within the timeline
+function getTimelineX(
+    date: Date,
+    weekColumns: WeekColumn[],
+    colPositions: Array<{ x: number; width: number }>
+): number {
+    if (colPositions.length === 0 || weekColumns.length === 0) return 0;
+
+    const dateTime = date.getTime();
+
+    for (let i = 0; i < weekColumns.length; i++) {
+        const colStart = weekColumns[i].weekStart.getTime();
+        const colEnd = i < weekColumns.length - 1
+            ? weekColumns[i + 1].weekStart.getTime()
+            : colStart + 7 * 24 * 60 * 60 * 1000;
+
+        if (dateTime >= colStart && dateTime < colEnd) {
+            const fraction = (dateTime - colStart) / (colEnd - colStart);
+            return colPositions[i].x + fraction * colPositions[i].width;
+        }
+    }
+
+    // Before all columns
+    if (dateTime < weekColumns[0].weekStart.getTime()) {
+        return colPositions[0].x;
+    }
+
+    // After all columns
+    const lastIdx = colPositions.length - 1;
+    return colPositions[lastIdx].x + colPositions[lastIdx].width;
+}
+
+// Draw an arrowhead triangle
+function drawArrowhead(doc: jsPDF, x: number, y: number, direction: 'left' | 'right') {
+    const size = 1.2;
+    if (direction === 'right') {
+        doc.triangle(
+            x, y,
+            x - size, y - size * 0.6,
+            x - size, y + size * 0.6,
+            'F'
+        );
+    } else {
+        doc.triangle(
+            x, y,
+            x + size, y - size * 0.6,
+            x + size, y + size * 0.6,
+            'F'
+        );
+    }
+}
 
 export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer> {
     const doc = new jsPDF({
@@ -166,10 +215,10 @@ export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 10;
 
-    // Title
+    // Title in teal
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(207, 114, 43); // Orange title
+    doc.setTextColor(TEAL[0], TEAL[1], TEAL[2]);
     doc.text('Program', margin, margin + 5);
 
     // Build hierarchical activities
@@ -190,37 +239,73 @@ export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer
         }
     }
 
-    // Default to current month + 6 months if no dates
     if (!minDate) minDate = new Date();
     if (!maxDate) {
         maxDate = new Date(minDate);
         maxDate.setMonth(maxDate.getMonth() + 6);
     }
 
-    // Add some padding to dates
+    // Pad dates
     const paddedStart = new Date(minDate);
     paddedStart.setDate(paddedStart.getDate() - 7);
     const paddedEnd = new Date(maxDate);
     paddedEnd.setDate(paddedEnd.getDate() + 14);
 
-    // Generate week columns
+    // Generate timeline columns
     const weekColumns = generateWeekColumns(paddedStart, paddedEnd);
     const monthGroups = groupByMonth(weekColumns);
 
-    // Calculate column widths
-    const activityColWidth = 55;
-    const availableWidth = pageWidth - (2 * margin) - activityColWidth;
+    // Column widths
+    const activityColWidth = 50;
+    const startColWidth = 18;
+    const endColWidth = 18;
+    const fixedColsWidth = activityColWidth + startColWidth + endColWidth;
+    const availableWidth = pageWidth - (2 * margin) - fixedColsWidth;
     const weekColWidth = Math.min(8, availableWidth / weekColumns.length);
 
-    // Build month header row (Tier 1)
-    const monthHeaderRow: CellDef[] = [{ content: '', styles: { fillColor: [37, 37, 38] } }];
+    // === Month header row (Tier 1) ===
+    const monthHeaderRow: CellDef[] = [
+        {
+            content: 'ACTIVITY',
+            styles: {
+                halign: 'left',
+                fillColor: HEADER_BG as unknown as [number, number, number],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 7,
+                cellPadding: 1,
+            },
+        },
+        {
+            content: 'START',
+            styles: {
+                halign: 'center',
+                fillColor: HEADER_BG as unknown as [number, number, number],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 6,
+                cellPadding: 1,
+            },
+        },
+        {
+            content: 'END',
+            styles: {
+                halign: 'center',
+                fillColor: HEADER_BG as unknown as [number, number, number],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 6,
+                cellPadding: 1,
+            },
+        },
+    ];
     for (const [, group] of monthGroups) {
         monthHeaderRow.push({
             content: group.label,
             colSpan: group.count,
             styles: {
                 halign: 'center',
-                fillColor: [37, 37, 38],
+                fillColor: HEADER_BG as unknown as [number, number, number],
                 textColor: [255, 255, 255],
                 fontStyle: 'bold',
                 fontSize: 7,
@@ -229,24 +314,18 @@ export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer
         });
     }
 
-    // Build week header row (Tier 2)
-    const weekHeaderRow: CellDef[] = [{
-        content: 'Activity',
-        styles: {
-            halign: 'left',
-            fillColor: [50, 50, 52],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            fontSize: 7,
-            cellPadding: 1,
-        },
-    }];
+    // === Week header row (Tier 2) ===
+    const weekHeaderRow: CellDef[] = [
+        { content: '', styles: { fillColor: HEADER_BG_LIGHT as unknown as [number, number, number], cellPadding: 1 } },
+        { content: '', styles: { fillColor: HEADER_BG_LIGHT as unknown as [number, number, number], cellPadding: 1 } },
+        { content: '', styles: { fillColor: HEADER_BG_LIGHT as unknown as [number, number, number], cellPadding: 1 } },
+    ];
     for (const week of weekColumns) {
         weekHeaderRow.push({
             content: week.dayLabel,
             styles: {
                 halign: 'center',
-                fillColor: [50, 50, 52],
+                fillColor: HEADER_BG_LIGHT as unknown as [number, number, number],
                 textColor: [255, 255, 255],
                 fontSize: 6,
                 cellPadding: 1,
@@ -254,31 +333,51 @@ export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer
         });
     }
 
-    // Build body rows
+    // === Body rows ===
     const bodyRows: RowInput[] = [];
 
     for (const activity of hierarchicalActivities) {
         const isParent = activity.depth === 0;
-        const indent = isParent ? '>' : '  '.repeat(activity.depth);
-        const activityStart = activity.startDate ? new Date(activity.startDate) : null;
-        const activityEnd = activity.endDate ? new Date(activity.endDate) : null;
-        const activityColor = activity.color || (isParent ? PARENT_ACTIVITY_COLOR : DEFAULT_ACTIVITY_COLOR);
+        const tierMarker = isParent ? '\u00BB ' : '\u00AB ';
+        const indent = '  '.repeat(activity.depth);
 
-        const row: CellDef[] = [{
-            content: indent + activity.name,
-            styles: {
-                halign: 'left',
-                fontSize: 7,
-                fontStyle: isParent ? 'bold' : 'normal',
-                cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 1 },
-                overflow: 'ellipsize',
+        const row: CellDef[] = [
+            // Activity name with tier marker
+            {
+                content: `${indent}${tierMarker}${activity.name}`,
+                styles: {
+                    halign: 'left',
+                    fontSize: 7,
+                    fontStyle: isParent ? 'bold' : 'normal',
+                    textColor: isParent ? [30, 30, 30] : [100, 100, 100],
+                    cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 1 },
+                    overflow: 'ellipsize',
+                },
             },
-        }];
+            // Start date
+            {
+                content: formatDateShort(activity.startDate),
+                styles: {
+                    halign: 'center',
+                    fontSize: 6,
+                    textColor: activity.startDate ? [80, 80, 80] : [180, 180, 180],
+                    cellPadding: { top: 1.5, bottom: 1.5, left: 1, right: 1 },
+                },
+            },
+            // End date
+            {
+                content: formatDateShort(activity.endDate),
+                styles: {
+                    halign: 'center',
+                    fontSize: 6,
+                    textColor: activity.endDate ? [80, 80, 80] : [180, 180, 180],
+                    cellPadding: { top: 1.5, bottom: 1.5, left: 1, right: 1 },
+                },
+            },
+        ];
 
-        // Add week cells
-        for (const week of weekColumns) {
-            const spans = activitySpansWeek(activityStart, activityEnd, week.weekStart, week.weekEnd);
-
+        // Timeline cells (empty white - bars drawn on top after table)
+        for (let _i = 0; _i < weekColumns.length; _i++) {
             row.push({
                 content: '',
                 styles: {
@@ -286,12 +385,6 @@ export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer
                     cellPadding: 0,
                     minCellHeight: 6,
                 },
-                // Store bar info for drawing
-                // @ts-expect-error - custom property for didDrawCell
-                _barInfo: spans ? {
-                    color: activityColor,
-                    isParent,
-                } : null,
             });
         }
 
@@ -301,12 +394,19 @@ export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer
     // Column styles
     const columnStyles: { [key: number]: Partial<Styles> } = {
         0: { cellWidth: activityColWidth },
+        1: { cellWidth: startColWidth },
+        2: { cellWidth: endColWidth },
     };
-    for (let i = 1; i <= weekColumns.length; i++) {
+    for (let i = 3; i < 3 + weekColumns.length; i++) {
         columnStyles[i] = { cellWidth: weekColWidth };
     }
 
-    // Add table with custom drawing
+    // === Cell position tracking for post-table bar/arrow drawing ===
+    const rowPositions: Array<{ y: number; height: number }> = [];
+    const colPositions: Array<{ x: number; width: number }> = [];
+    let colsCaptured = false;
+
+    // === Draw table ===
     autoTable(doc, {
         startY: margin + 10,
         head: [monthHeaderRow, weekHeaderRow],
@@ -320,63 +420,188 @@ export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer
         margin: { left: margin, right: margin },
         tableWidth: 'auto',
         didDrawCell: (hookData) => {
-            // Draw activity bars
-            if (hookData.section === 'body' && hookData.column.index > 0) {
-                const cell = hookData.cell;
-                // @ts-expect-error - accessing custom property
-                const barInfo = cell.raw?._barInfo;
+            if (hookData.section === 'body') {
+                const rowIdx = hookData.row.index;
+                const colIdx = hookData.column.index;
 
-                if (barInfo) {
-                    const rgb = hexToRgb(barInfo.color);
-                    const barHeight = barInfo.isParent ? 3 : 4;
-                    const barY = cell.y + (cell.height - barHeight) / 2;
-                    const barX = cell.x + 0.3;
-                    const barWidth = cell.width - 0.6;
+                // Capture row Y position from the activity name column
+                if (colIdx === 0) {
+                    rowPositions[rowIdx] = {
+                        y: hookData.cell.y,
+                        height: hookData.cell.height,
+                    };
+                }
 
-                    doc.setFillColor(rgb[0], rgb[1], rgb[2]);
-
-                    if (barInfo.isParent) {
-                        // Parent rows get a thinner bar with rounded ends
-                        doc.roundedRect(barX, barY, barWidth, barHeight, 1, 1, 'F');
-                    } else {
-                        // Child rows get a solid bar
-                        doc.rect(barX, barY, barWidth, barHeight, 'F');
+                // Capture timeline column positions from the first body row
+                if (!colsCaptured && colIdx >= 3) {
+                    colPositions[colIdx - 3] = {
+                        x: hookData.cell.x,
+                        width: hookData.cell.width,
+                    };
+                    if (colIdx === 3 + weekColumns.length - 1) {
+                        colsCaptured = true;
                     }
                 }
             }
         },
         didParseCell: (hookData) => {
-            // Add alternating row colors for readability
             if (hookData.section === 'body') {
-                const rowIndex = hookData.row.index;
-                if (rowIndex % 2 === 1) {
+                if (hookData.row.index % 2 === 1) {
                     hookData.cell.styles.fillColor = [250, 250, 250];
                 }
             }
         },
     });
 
-    // Get final Y position
-    const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable?.finalY || 100;
+    // === Draw continuous activity bars ===
+    if (colPositions.length > 0) {
+        for (let i = 0; i < hierarchicalActivities.length; i++) {
+            const activity = hierarchicalActivities[i];
+            if (!activity.startDate || !activity.endDate) continue;
 
-    // Add legend
-    if (finalY + 15 < pageHeight - margin) {
-        const legendY = finalY + 8;
-        doc.setFontSize(7);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Legend:', margin, legendY);
+            const row = rowPositions[i];
+            if (!row) continue;
 
-        // Phase bar
-        const phaseColor = hexToRgb(PARENT_ACTIVITY_COLOR);
-        doc.setFillColor(phaseColor[0], phaseColor[1], phaseColor[2]);
-        doc.roundedRect(margin + 15, legendY - 2, 12, 3, 1, 1, 'F');
-        doc.text('Phase', margin + 29, legendY);
+            const startDate = new Date(activity.startDate);
+            const endDate = new Date(activity.endDate);
 
-        // Task bar
-        const taskColor = hexToRgb(DEFAULT_ACTIVITY_COLOR);
-        doc.setFillColor(taskColor[0], taskColor[1], taskColor[2]);
-        doc.rect(margin + 45, legendY - 2, 12, 3, 'F');
-        doc.text('Task', margin + 59, legendY);
+            const barStartX = getTimelineX(startDate, weekColumns, colPositions);
+            const barEndX = getTimelineX(endDate, weekColumns, colPositions);
+            const barWidth = Math.max(barEndX - barStartX, 2);
+
+            const barHeight = 4.5;
+            const barY = row.y + (row.height - barHeight) / 2;
+
+            // Fill and border
+            doc.setFillColor(BAR_FILL[0], BAR_FILL[1], BAR_FILL[2]);
+            doc.setDrawColor(BAR_BORDER[0], BAR_BORDER[1], BAR_BORDER[2]);
+            doc.setLineWidth(0.2);
+            doc.roundedRect(barStartX, barY, barWidth, barHeight, 0.5, 0.5, 'FD');
+
+            // Activity name inside bar (if wide enough)
+            if (barWidth > 15) {
+                doc.setFontSize(5);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(TEAL[0], TEAL[1], TEAL[2]);
+                const textY = barY + barHeight / 2 + 1.2;
+                doc.text(activity.name, barStartX + 1.5, textY, {
+                    maxWidth: barWidth - 3,
+                });
+            }
+        }
+    }
+
+    // === Draw dependency arrows ===
+    if (data.dependencies && data.dependencies.length > 0 && colPositions.length > 0) {
+        for (const dep of data.dependencies) {
+            const fromIdx = hierarchicalActivities.findIndex(a => a.id === dep.fromActivityId);
+            const toIdx = hierarchicalActivities.findIndex(a => a.id === dep.toActivityId);
+            if (fromIdx === -1 || toIdx === -1) continue;
+
+            const fromActivity = hierarchicalActivities[fromIdx];
+            const toActivity = hierarchicalActivities[toIdx];
+            const fromRow = rowPositions[fromIdx];
+            const toRow = rowPositions[toIdx];
+            if (!fromRow || !toRow) continue;
+
+            // Get dates based on dependency type
+            let fromDate: Date | null = null;
+            let toDate: Date | null = null;
+
+            switch (dep.type) {
+                case 'FS':
+                    fromDate = fromActivity.endDate ? new Date(fromActivity.endDate) : null;
+                    toDate = toActivity.startDate ? new Date(toActivity.startDate) : null;
+                    break;
+                case 'SS':
+                    fromDate = fromActivity.startDate ? new Date(fromActivity.startDate) : null;
+                    toDate = toActivity.startDate ? new Date(toActivity.startDate) : null;
+                    break;
+                case 'FF':
+                    fromDate = fromActivity.endDate ? new Date(fromActivity.endDate) : null;
+                    toDate = toActivity.endDate ? new Date(toActivity.endDate) : null;
+                    break;
+            }
+
+            if (!fromDate || !toDate) continue;
+
+            const fromX = getTimelineX(fromDate, weekColumns, colPositions);
+            const toX = getTimelineX(toDate, weekColumns, colPositions);
+            const fromY = fromRow.y + fromRow.height / 2;
+            const toY = toRow.y + toRow.height / 2;
+
+            // Set arrow styling
+            doc.setDrawColor(ARROW_COLOR[0], ARROW_COLOR[1], ARROW_COLOR[2]);
+            doc.setFillColor(ARROW_COLOR[0], ARROW_COLOR[1], ARROW_COLOR[2]);
+            doc.setLineWidth(0.3);
+
+            // Dashed lines for SS and FF
+            if (dep.type !== 'FS') {
+                doc.setLineDashPattern([1.5, 0.8], 0);
+            } else {
+                doc.setLineDashPattern([], 0);
+            }
+
+            // Route the arrow based on dependency type
+            const gap = 3; // mm horizontal gap for routing
+            const goingDown = toY > fromY;
+            const midY = goingDown
+                ? fromRow.y + fromRow.height + 0.5
+                : fromRow.y - 0.5;
+
+            if (dep.type === 'FS') {
+                if (Math.abs(fromY - toY) < 0.5) {
+                    // Same row - direct line
+                    doc.line(fromX, fromY, toX, toY);
+                } else if (toX >= fromX + gap) {
+                    // Normal L-shape: right, drop, enter
+                    const dropX = fromX + gap;
+                    doc.line(fromX, fromY, dropX, fromY);
+                    doc.line(dropX, fromY, dropX, toY);
+                    doc.line(dropX, toY, toX, toY);
+                } else {
+                    // Route around: right, drop to gap, left, drop to target, enter
+                    const exitX = fromX + gap;
+                    const entryX = toX - gap;
+                    doc.line(fromX, fromY, exitX, fromY);
+                    doc.line(exitX, fromY, exitX, midY);
+                    doc.line(exitX, midY, entryX, midY);
+                    doc.line(entryX, midY, entryX, toY);
+                    doc.line(entryX, toY, toX, toY);
+                }
+            } else if (dep.type === 'SS') {
+                if (Math.abs(fromY - toY) < 0.5) {
+                    doc.line(fromX, fromY, toX, toY);
+                } else {
+                    const exitX = Math.min(fromX, toX) - gap;
+                    doc.line(fromX, fromY, exitX, fromY);
+                    doc.line(exitX, fromY, exitX, toY);
+                    doc.line(exitX, toY, toX, toY);
+                }
+            } else {
+                // FF
+                if (Math.abs(fromY - toY) < 0.5) {
+                    doc.line(fromX, fromY, toX, toY);
+                } else {
+                    const exitX = Math.max(fromX, toX) + gap;
+                    doc.line(fromX, fromY, exitX, fromY);
+                    doc.line(exitX, fromY, exitX, toY);
+                    doc.line(exitX, toY, toX, toY);
+                }
+            }
+
+            // Reset dash pattern
+            doc.setLineDashPattern([], 0);
+
+            // Arrowhead at target: FS/SS enter from left (point right), FF enters from right (point left)
+            drawArrowhead(doc, toX, toY, dep.type === 'FF' ? 'left' : 'right');
+
+            // Start dot
+            doc.circle(fromX, fromY, 0.5, 'F');
+        }
+
+        // Reset line dash
+        doc.setLineDashPattern([], 0);
     }
 
     // Footer

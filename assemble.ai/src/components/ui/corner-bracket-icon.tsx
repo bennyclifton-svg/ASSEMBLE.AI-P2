@@ -15,7 +15,7 @@ interface CornerBracketIconProps {
 const GRADIENT_COLORS = {
     dark: {
         start: '#0080FF',
-        mid: '#00FFFF',
+        mid: '#1776c1',
         end: '#8B5CF6',
     },
     light: {

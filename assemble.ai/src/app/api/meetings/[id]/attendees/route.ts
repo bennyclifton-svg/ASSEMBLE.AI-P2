@@ -13,7 +13,7 @@ import { meetings, meetingAttendees, projectStakeholders } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { addAttendeeSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql, asc } from 'drizzle-orm';
 
 interface RouteContext {
     params: Promise<{ id: string }>;
@@ -53,7 +53,7 @@ export async function GET(
             return NextResponse.json({ error: 'Meeting not found' }, { status: 404 });
         }
 
-        // Fetch attendees with stakeholder data
+        // Fetch attendees with stakeholder data, ordered by master stakeholder sortOrder
         const attendees = await db
             .select({
                 attendee: meetingAttendees,
@@ -61,7 +61,8 @@ export async function GET(
             })
             .from(meetingAttendees)
             .leftJoin(projectStakeholders, eq(meetingAttendees.stakeholderId, projectStakeholders.id))
-            .where(eq(meetingAttendees.meetingId, id));
+            .where(eq(meetingAttendees.meetingId, id))
+            .orderBy(asc(projectStakeholders.sortOrder));
 
         // Transform to include stakeholder data
         const transformedAttendees = attendees.map(({ attendee, stakeholder }) => ({

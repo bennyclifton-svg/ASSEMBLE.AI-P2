@@ -94,7 +94,10 @@ export function EvaluationSection({
             {/* Header - Segmented white ribbons with grey surround */}
             <div className="flex items-center gap-0.5 p-2">
                 {/* Evaluation segment */}
-                <div className="flex items-center w-[220px] px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
+                <div
+                    className="flex items-center w-fit h-11 px-3 py-1.5 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-l-md"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                >
                     <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
                     <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         Evaluation
@@ -103,7 +106,8 @@ export function EvaluationSection({
                 {/* Corner bracket segment - square, points out to expand, in to collapse */}
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center justify-center w-8 h-8 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    className="flex items-center justify-center w-11 h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
                     title={isExpanded ? 'Collapse' : 'Expand'}
                 >
                     <CornerBracketIcon
@@ -112,10 +116,13 @@ export function EvaluationSection({
                     />
                 </button>
                 {/* More options segment - expandable to show tabs and export buttons */}
-                <div className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md transition-all">
+                <div
+                    className="flex items-center h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-r-md transition-all"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                >
                     <button
                         onClick={() => setIsMenuExpanded(!isMenuExpanded)}
-                        className="flex items-center justify-center w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                        className="flex items-center justify-center w-11 h-11 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                         title={isMenuExpanded ? 'Hide options' : 'Show options'}
                     >
                         {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
@@ -191,7 +198,10 @@ export function EvaluationSection({
             <div>
                 {/* Content - only shown when expanded */}
                 {isExpanded && (
-                    <div className="mx-2 p-4 bg-[var(--color-bg-secondary)] rounded-md">
+                    <div
+                        className="mx-2 p-4 backdrop-blur-md rounded-md"
+                        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                    >
                         {activeTab === 'price' ? (
                             <EvaluationPriceTab
                                 projectId={projectId}

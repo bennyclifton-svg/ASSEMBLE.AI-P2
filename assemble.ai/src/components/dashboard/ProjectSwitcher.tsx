@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Plus, Home } from 'lucide-react';
+import { Plus, ChevronsRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface Project {
@@ -26,6 +26,7 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const buttonRef = useRef<HTMLButtonElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
     // Update dropdown position when opened
@@ -61,7 +62,11 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
         if (!isOpen) return;
 
         const handleClickOutside = (e: MouseEvent) => {
-            if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (
+                buttonRef.current && !buttonRef.current.contains(target) &&
+                dropdownRef.current && !dropdownRef.current.contains(target)
+            ) {
                 setIsOpen(false);
             }
         };
@@ -157,20 +162,10 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
 
     const dropdown = isOpen && typeof document !== 'undefined' ? createPortal(
         <div
+            ref={dropdownRef}
             className="fixed w-64 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg z-[9999]"
             style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
         >
-            {/* Home option */}
-            <button
-                onClick={() => {
-                    setIsOpen(false);
-                    router.push('/');
-                }}
-                className="w-full px-4 py-2 text-left hover:bg-[var(--color-bg-tertiary)] flex items-center gap-2 border-b border-[var(--color-border)]"
-            >
-                <Home className="w-4 h-4 text-[var(--color-text-muted)]" />
-                <span className="text-sm text-[var(--color-text-primary)]">Home</span>
-            </button>
             {projects.map(project => (
                 <button
                     key={project.id}
@@ -196,23 +191,19 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
     ) : null;
 
     return (
-        <div className="relative">
+        <div className="relative w-full">
             <button
                 ref={buttonRef}
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-1.5 hover:bg-[var(--color-bg-tertiary)] rounded transition-colors"
+                className="flex items-center gap-1.5 w-full"
             >
                 {children}
-                <svg
+                <ChevronsRight
                     className={cn(
-                        'w-2.5 h-2.5 text-[var(--color-text-primary)] transition-transform flex-shrink-0',
-                        isOpen && 'rotate-90'
+                        'w-5 h-5 text-[var(--color-text-secondary)] flex-shrink-0',
+                        isOpen && 'text-[var(--color-text-primary)]'
                     )}
-                    viewBox="0 0 12 12"
-                    fill="currentColor"
-                >
-                    <polygon points="2,0 12,6 2,12" />
-                </svg>
+                />
             </button>
             {dropdown}
         </div>

@@ -161,6 +161,7 @@ export function useTransmittal({
             toast({
                 title: 'Transmittal saved',
                 description: `Saved ${name} (${documentIds.length} documents)`,
+                variant: 'success',
             });
 
             return { success: true, id: result.id };
@@ -191,6 +192,7 @@ export function useTransmittal({
         toast({
             title: 'Transmittal loaded',
             description: `Loaded ${name} (${data.documentCount} documents)`,
+            variant: 'success',
         });
 
         return data.documentIds;

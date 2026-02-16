@@ -5,6 +5,8 @@ import { FileText } from 'lucide-react';
 import { useToast } from '@/lib/hooks/use-toast';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { AttachmentSection } from '@/components/notes-meetings-reports/shared/AttachmentSection';
+import { useObjectivesTransmittal } from '@/lib/hooks/use-objectives-transmittal';
 import type { ObjectiveContent, ObjectiveSource, ProfileContext } from '@/types/profiler';
 
 interface ObjectivesProfilerSectionProps {
@@ -12,6 +14,8 @@ interface ObjectivesProfilerSectionProps {
   profileData: any;
   objectivesData: any;
   onUpdate: () => void;
+  onSaveTransmittal?: () => void;
+  onLoadTransmittal?: () => void;
 }
 
 interface ObjectiveEditorProps {
@@ -59,18 +63,27 @@ function ObjectiveEditor({ label, objective, onChange, isGenerating, isPolishing
       {/* Segmented ribbon header - matches RFT/TRR/Evaluation style */}
       <div className="flex items-stretch gap-0.5 p-2">
         {/* Left segment: icon + label */}
-        <div className="flex items-center px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
+        <div
+          className="flex items-center px-3 py-3 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-l-md"
+          style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+        >
           <FileText className="w-4 h-4" style={{ color: 'var(--color-accent-copper)' }} />
           <span className="ml-2 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">{label}</span>
         </div>
         {/* Right segment: action buttons */}
-        <div className="flex items-center gap-3 px-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md">
+        <div
+          className="flex items-center gap-3 px-3 py-3 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-r-md"
+          style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+        >
           {headerActions}
         </div>
       </div>
 
       {/* Content area with drop shadow and rich text editor */}
-      <div className="flex-1 mx-2 mb-2">
+      <div
+        className="flex-1 mx-2 mb-2 rounded-md overflow-hidden backdrop-blur-md"
+        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
+      >
         <RichTextEditor
           content={localContent}
           onChange={handleContentChange}
@@ -78,6 +91,7 @@ function ObjectiveEditor({ label, objective, onChange, isGenerating, isPolishing
           placeholder={`Enter ${label.toLowerCase()} objectives...`}
           variant="compact"
           toolbarVariant="full"
+          transparentBg
           className="shadow-sm"
         />
       </div>
@@ -87,10 +101,13 @@ function ObjectiveEditor({ label, objective, onChange, isGenerating, isPolishing
 
 type ObjectiveSection = 'functionalQuality' | 'planningCompliance';
 
-export function ObjectivesProfilerSection({ projectId, profileData, objectivesData, onUpdate }: ObjectivesProfilerSectionProps) {
+export function ObjectivesProfilerSection({ projectId, profileData, objectivesData, onUpdate, onSaveTransmittal, onLoadTransmittal }: ObjectivesProfilerSectionProps) {
   const { toast } = useToast();
   const [generatingSection, setGeneratingSection] = useState<ObjectiveSection | null>(null);
   const [polishingSection, setPolishingSection] = useState<ObjectiveSection | null>(null);
+
+  // Document attachments for objectives extraction
+  const { documents: attachedDocuments, isLoading: isLoadingTransmittals } = useObjectivesTransmittal(projectId);
 
   // Local state for objectives
   const [functionalQuality, setFunctionalQuality] = useState<ObjectiveContent | null>(
@@ -149,8 +166,10 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
     saveObjectives(functionalQuality, content);
   };
 
-  // Check if profile is complete for generation
-  const canGenerate = profileData?.buildingClass && profileData?.projectType && profileData?.subclass?.length > 0;
+  // Check if can generate from either documents or profile
+  const hasAttachedDocuments = attachedDocuments.length > 0;
+  const canGenerateFromProfile = profileData?.buildingClass && profileData?.projectType && profileData?.subclass?.length > 0;
+  const canGenerate = canGenerateFromProfile || hasAttachedDocuments;
 
   // Check if can polish each section (need existing content)
   const canPolishFunctional = !!functionalQuality?.content;
@@ -202,6 +221,7 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
       toast({
         title: 'Objectives Generated',
         description: `${section === 'functionalQuality' ? 'Functional & Quality' : 'Planning & Compliance'} objectives are ready for review`,
+        variant: 'success',
       });
 
       onUpdate();
@@ -270,6 +290,7 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
       toast({
         title: 'Objectives Polished',
         description: `${section === 'functionalQuality' ? 'Functional & Quality' : 'Planning & Compliance'} content has been improved`,
+        variant: 'success',
       });
 
       onUpdate();
@@ -325,9 +346,15 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
             flex items-center gap-1.5 text-sm font-medium transition-all
             ${getGenerateButtonClasses()}
           `}
-          title={canGenerate ? 'Generate objectives from profile' : 'Complete profile to enable'}
+          title={
+            hasAttachedDocuments
+              ? 'Extract objectives from attached documents'
+              : canGenerateFromProfile
+              ? 'Generate objectives from profile'
+              : 'Complete profile or attach documents to enable'
+          }
         >
-          <DiamondIcon className={`w-4 h-4 ${isGenerating ? 'animate-spin [animation-duration:2.5s]' : ''}`} variant="empty" />
+          <DiamondIcon className={`w-4 h-4 ${isGenerating ? 'animate-diamond-spin' : ''}`} variant="empty" />
           <span className={isGenerating ? 'animate-text-aurora' : ''}>
             {isGenerating ? 'Generating...' : 'Generate'}
           </span>
@@ -341,7 +368,7 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
           `}
           title={canPolish ? 'Polish existing objectives' : 'Add content to enable'}
         >
-          <DiamondIcon className={`w-4 h-4 ${isPolishing ? 'animate-spin [animation-duration:2.5s]' : ''}`} variant="filled" />
+          <DiamondIcon className={`w-4 h-4 ${isPolishing ? 'animate-diamond-spin' : ''}`} variant="filled" />
           <span className={isPolishing ? 'animate-text-aurora' : ''}>
             {isPolishing ? 'Polishing...' : 'Polish'}
           </span>
@@ -351,7 +378,8 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
         {/* Functional & Quality Objectives */}
         <ObjectiveEditor
           label="Functional & Quality"
@@ -372,5 +400,28 @@ export function ObjectivesProfilerSection({ projectId, profileData, objectivesDa
           headerActions={createActionButtons('planningCompliance')}
         />
       </div>
+
+      {/* Document Attachments */}
+      <div className="px-2">
+        <AttachmentSection
+          documents={attachedDocuments.map(d => ({
+            id: d.id,
+            documentId: d.documentId,
+            documentName: d.documentName || d.fileName || 'Unknown',
+            categoryName: d.categoryName || null,
+            subcategoryName: d.subcategoryName || null,
+            revision: d.versionNumber || 0,
+            addedAt: d.addedAt || '',
+            drawingNumber: d.drawingNumber || null,
+            drawingName: d.drawingName || null,
+            drawingRevision: d.drawingRevision || null,
+          }))}
+          isLoading={isLoadingTransmittals}
+          onSave={onSaveTransmittal}
+          onLoad={onLoadTransmittal}
+          compact
+        />
+      </div>
+    </div>
   );
 }

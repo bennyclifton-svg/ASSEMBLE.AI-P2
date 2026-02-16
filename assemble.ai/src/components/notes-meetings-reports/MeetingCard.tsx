@@ -143,6 +143,8 @@ export function MeetingCard({
                         projectId={projectId}
                         agendaType={meeting.agendaType}
                         meetingDate={meeting.meetingDate}
+                        title={meeting.title}
+                        onTitleChange={async (title) => { await onUpdate({ title }); }}
                         onAgendaTypeChange={handleAgendaTypeChange}
                         onMeetingDateChange={(date) => onUpdate({ meetingDate: date })}
                     />

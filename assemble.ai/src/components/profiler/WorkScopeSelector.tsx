@@ -141,23 +141,24 @@ export function WorkScopeSelector({
   }
 
   return (
-    <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
-      <div className="flex items-center justify-between mb-2">
+    <div>
+      <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
-          Work Scope
+          Scope of Work
         </h3>
         {totalSelections > 0 && (
-          <span
-            className="text-xs px-2 py-0.5 rounded-full"
+          <button
+            onClick={() => onScopeChange([])}
+            className="text-xs px-2 py-0.5 rounded hover:opacity-80 transition-opacity"
             style={{ backgroundColor: 'var(--color-card-scope)', color: 'var(--color-card-scope-text)' }}
           >
-            {totalSelections} selected
-          </span>
+            Clear Selection
+          </button>
         )}
       </div>
 
       {/* Sticky-note grid layout matching complexity tiles */}
-      <div className="grid grid-cols-2 @[500px]:grid-cols-3 @[700px]:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 @[300px]:grid-cols-2 @[500px]:grid-cols-3 @[700px]:grid-cols-4 gap-4">
         {categories.map((category) => {
           const selectionCount = getCategorySelectionCount(category);
 

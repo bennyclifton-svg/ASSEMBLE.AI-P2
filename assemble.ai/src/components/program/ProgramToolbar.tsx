@@ -5,6 +5,8 @@ import { Plus, ChevronDown, Download } from 'lucide-react';
 import { useCreateActivity, useInsertTemplate } from '@/lib/hooks/use-program';
 import { useRefetch } from './ProgramPanel';
 import { PROGRAM_TEMPLATES } from '@/lib/constants/program-templates';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
+import { useToast } from '@/lib/hooks/use-toast';
 import type { ZoomLevel } from '@/types/program';
 
 interface ProgramToolbarProps {
@@ -17,28 +19,30 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
+    const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
     const createActivity = useCreateActivity(projectId);
     const insertTemplate = useInsertTemplate(projectId);
     const refetch = useRefetch();
+    const { toast } = useToast();
 
     const handleAddActivity = () => {
         createActivity.mutate({ name: 'New Activity' }, refetch);
     };
 
-    const handleInsertTemplate = (templateKey: string) => {
-        insertTemplate.mutate({ templateKey }, refetch);
+    const handleInsertTemplate = async (templateKey: string) => {
         setShowTemplateMenu(false);
+        try {
+            await insertTemplate.mutate({ templateKey }, refetch);
+        } catch {
+            // Error is already set in the hook
+        }
     };
 
-    const handleClearAll = async () => {
-        const confirmed = window.confirm(
-            'Are you sure you want to delete all program activities? This action cannot be undone.'
-        );
+    const handleClearAllClick = () => {
+        setClearAllDialogOpen(true);
+    };
 
-        if (!confirmed) {
-            return;
-        }
-
+    const handleConfirmClearAll = async () => {
         try {
             setIsClearing(true);
             const response = await fetch(
@@ -53,14 +57,15 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
                 throw new Error(error.error || 'Failed to clear activities');
             }
 
-            const result = await response.json();
-            alert(result.message || 'All activities cleared');
+            await response.json();
             refetch();
         } catch (error) {
             console.error('Clear error:', error);
-            alert(
-                error instanceof Error ? error.message : 'Failed to clear activities'
-            );
+            toast({
+                title: 'Error',
+                description: error instanceof Error ? error.message : 'Failed to clear activities',
+                variant: 'destructive',
+            });
         } finally {
             setIsClearing(false);
         }
@@ -83,14 +88,18 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
             window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Export error:', error);
-            alert('Failed to export program');
+            toast({
+                title: 'Error',
+                description: 'Failed to export program',
+                variant: 'destructive',
+            });
         } finally {
             setIsExporting(false);
         }
     };
 
     return (
-        <div className="flex items-center gap-2 border-b border-[var(--color-accent-copper)] bg-[#f0f0f0] px-3 py-2">
+        <div className="relative z-10 flex items-center gap-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm px-3 py-2" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
             {/* Week/Month Toggle - Segmented Control */}
             <div className="relative flex rounded-full bg-[var(--color-bg-tertiary)] p-0.5">
                 {/* Sliding background indicator */}
@@ -128,7 +137,7 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
             <div className="relative">
                 <button
                     onClick={() => setShowTemplateMenu(!showTemplateMenu)}
-                    className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)]"
+                    className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-white bg-[#1776c1] hover:opacity-90"
                 >
                     Template
                     <ChevronDown className="h-3.5 w-3.5" />
@@ -145,8 +154,7 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
                                 <button
                                     key={template.key}
                                     onClick={() => handleInsertTemplate(template.key)}
-                                    disabled={insertTemplate.isLoading}
-                                    className="w-full px-3 py-1.5 text-left text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50"
+                                    className="w-full px-3 py-1.5 text-left text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-accent-teal)]/10 hover:text-[var(--color-accent-teal)]"
                                 >
                                     {template.name}
                                 </button>
@@ -168,13 +176,24 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
 
             {/* Clear All Button */}
             <button
-                onClick={handleClearAll}
+                onClick={handleClearAllClick}
                 disabled={isClearing}
-                className="rounded px-2.5 py-1.5 text-xs font-medium text-[var(--primary-foreground)] bg-[var(--color-accent-coral)] hover:bg-[var(--primitive-red-dark)] disabled:opacity-50"
+                className="rounded px-2.5 py-1.5 text-xs font-medium text-white bg-[var(--color-accent-coral)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-coral)] focus:ring-opacity-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Delete all program activities"
             >
                 {isClearing ? 'Clearing...' : 'Clear All'}
             </button>
+
+            {/* Clear All Confirmation Dialog */}
+            <AuroraConfirmDialog
+                open={clearAllDialogOpen}
+                onOpenChange={setClearAllDialogOpen}
+                onConfirm={handleConfirmClearAll}
+                title="Delete all activities?"
+                description="This will delete all program activities. This action cannot be undone."
+                variant="destructive"
+                confirmLabel="Delete All"
+            />
 
             {/* Export Button */}
             <button

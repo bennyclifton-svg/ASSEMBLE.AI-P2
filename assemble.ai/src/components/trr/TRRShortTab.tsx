@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { TRR, TRRUpdateData, TenderProcessFirm, TRRAddendumRow } from '@/types/trr';
 import { TRRHeaderTable } from './TRRHeaderTable';
 import { TRREditableSection } from './TRREditableSection';
@@ -186,6 +186,33 @@ export function TRRShortTab({
         debouncedSave({ reportDate: newDate });
     }, [debouncedSave]);
 
+    // TRR AI generation — calls dedicated /api/trr/[id]/generate endpoint
+    const createTrrGenerateHandler = useMemo(() => {
+        const makeHandler = (field: 'executiveSummary' | 'clarifications' | 'recommendation') => {
+            return async (_currentValue: string): Promise<string> => {
+                const res = await fetch(`/api/trr/${trr.id}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: 'Generation failed' }));
+                    throw new Error(err.error || 'Failed to generate');
+                }
+
+                const data = await res.json();
+                return data.content;
+            };
+        };
+
+        return {
+            executiveSummary: makeHandler('executiveSummary'),
+            clarifications: makeHandler('clarifications'),
+            recommendation: makeHandler('recommendation'),
+        };
+    }, [trr.id]);
+
     if (isLoading) {
         return (
             <div className="p-8 text-center text-[var(--color-text-muted)]">
@@ -207,7 +234,7 @@ export function TRRShortTab({
             <TRRHeaderTable
                 projectName={projectDetails?.projectName || 'Loading...'}
                 address={projectDetails?.address || ''}
-                documentTitle={`TRR ${contextName}`}
+                documentTitle={`Tender Recommendation Report, ${contextName} ${String(trr.trrNumber).padStart(2, '0')}`}
                 reportDate={reportDate}
                 onDateChange={handleDateChange}
             />
@@ -219,6 +246,7 @@ export function TRRShortTab({
                 onChange={setExecutiveSummary}
                 onBlur={handleExecutiveSummaryBlur}
                 placeholder="Enter executive summary..."
+                onGenerate={createTrrGenerateHandler.executiveSummary}
             />
 
             {/* 3. Tender Process Table */}
@@ -250,6 +278,7 @@ export function TRRShortTab({
                 onChange={setClarifications}
                 onBlur={handleClarificationsBlur}
                 placeholder="Enter clarifications..."
+                onGenerate={createTrrGenerateHandler.clarifications}
             />
 
             {/* 8. Recommendation */}
@@ -259,6 +288,7 @@ export function TRRShortTab({
                 onChange={setRecommendation}
                 onBlur={handleRecommendationBlur}
                 placeholder="Enter recommendation..."
+                onGenerate={createTrrGenerateHandler.recommendation}
             />
 
             {/* 9. Attachments */}

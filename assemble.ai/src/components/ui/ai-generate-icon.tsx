@@ -44,7 +44,7 @@ export function AIGenerateIcon({
                 viewBox="0 0 16 16"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
-                className={isLoading ? 'animate-spin [animation-duration:2.5s]' : ''}
+                className={isLoading ? 'animate-diamond-spin' : ''}
             >
                 {/* Outer diamond (square rotated 45°) */}
                 <path

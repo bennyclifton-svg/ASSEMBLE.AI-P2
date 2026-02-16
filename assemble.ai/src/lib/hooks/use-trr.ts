@@ -110,6 +110,7 @@ export function useTRR({
             toast({
                 title: 'TRR created',
                 description: `Created TRR ${String(newTrr.trrNumber).padStart(2, '0')}`,
+                variant: 'success',
             });
 
             return newTrr;
@@ -186,6 +187,7 @@ export function useTRR({
             toast({
                 title: 'TRR deleted',
                 description: 'TRR has been removed',
+                variant: 'success',
             });
 
             return true;

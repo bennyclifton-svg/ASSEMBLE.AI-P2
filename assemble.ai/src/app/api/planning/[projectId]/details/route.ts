@@ -60,6 +60,11 @@ export async function PUT(
                      typeof validated.lotArea === 'string' ? parseInt(validated.lotArea, 10) : validated.lotArea,
             numberOfStories: validated.numberOfStories === '' || validated.numberOfStories === undefined ? null :
                             typeof validated.numberOfStories === 'string' ? parseInt(validated.numberOfStories, 10) : validated.numberOfStories,
+            // Geocoded coordinate fields (pass through as-is)
+            latitude: validated.latitude || null,
+            longitude: validated.longitude || null,
+            placeId: validated.placeId || null,
+            formattedAddress: validated.formattedAddress || null,
         };
 
         // Check if details exist

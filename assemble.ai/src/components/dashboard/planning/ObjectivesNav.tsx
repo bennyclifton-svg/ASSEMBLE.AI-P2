@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check } from 'lucide-react';
-import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
+import { Check, Target } from 'lucide-react';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 
 interface ObjectivesNavProps {
@@ -32,21 +31,17 @@ export function ObjectivesNav({ projectId, data, profileData, onShowObjectives, 
         onClick={onShowObjectives}
         className="nav-panel-header w-full"
       >
-        <h3 className="nav-panel-title text-sm font-semibold text-[var(--color-text-primary)] transition-colors">
-          Objectives
-        </h3>
-        <div className="flex items-center gap-2">
-          {hasAnyContent && (
-            <span className="flex items-center gap-1 text-xs text-[var(--color-accent-green)]">
-              <Check className="w-3 h-3" /> {isAiGenerated ? 'AI' : 'Set'}
-            </span>
-          )}
-          <CornerBracketIcon
-            direction={isActive ? 'right' : 'left'}
-            gradient={isActive}
-            className={`nav-panel-chevron w-3.5 h-3.5 ${!isActive ? 'text-[var(--color-text-muted)]' : ''} transition-colors`}
-          />
+        <div className="flex items-center gap-1.5">
+          <Target className="w-5 h-5 text-[var(--color-text-secondary)]" />
+          <h3 className="nav-panel-title text-base font-medium text-[var(--color-text-primary)] transition-colors">
+            Objectives
+          </h3>
         </div>
+        {hasAnyContent && (
+          <span className="flex items-center gap-1 text-xs text-[var(--color-accent-green)]">
+            <Check className="w-3 h-3" /> {isAiGenerated ? 'AI' : 'Set'}
+          </span>
+        )}
       </button>
 
       {/* Summary of current state */}
@@ -69,10 +64,6 @@ export function ObjectivesNav({ projectId, data, profileData, onShowObjectives, 
               </div>
             )}
           </>
-        ) : !canGenerate ? (
-          <p className="text-xs text-[var(--color-text-muted)]">
-            Complete profile to enable AI generation
-          </p>
         ) : null}
       </div>
     </div>

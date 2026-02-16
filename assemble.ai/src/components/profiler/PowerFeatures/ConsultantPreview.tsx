@@ -247,54 +247,34 @@ export function ConsultantPreview({
   const suggestedCount = suggestions.filter((s) => !s.required).length;
 
   return (
-    <div className="mt-4 p-4 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-[var(--color-accent-purple)]" />
-          <span className="text-sm font-medium text-[var(--color-text-primary)]">
-            Consultant Disciplines
-          </span>
-        </div>
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-[var(--color-text-muted)]">
-            {requiredCount} required
-          </span>
-          {suggestedCount > 0 && (
-            <span className="text-[var(--color-text-muted)]">
-              + {suggestedCount} suggested
-            </span>
-          )}
-        </div>
+    <div className="p-3 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Users className="w-3.5 h-3.5 text-[var(--color-accent-purple)]" />
+        <span className="text-xs font-medium text-[var(--color-text-primary)]">
+          Disciplines
+        </span>
+      </div>
+      <div className="text-[10px] text-[var(--color-text-muted)] mb-2">
+        {requiredCount} required{suggestedCount > 0 && ` + ${suggestedCount} suggested`}
       </div>
 
-      <div className="space-y-1.5">
-        {suggestions.slice(0, 10).map((discipline) => (
+      <div className="space-y-0.5">
+        {suggestions.map((discipline) => (
           <div
             key={discipline.name}
-            className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors group"
+            className="flex items-center gap-1.5 py-0.5 rounded hover:bg-[var(--color-bg-tertiary)] transition-colors"
             title={discipline.reason}
           >
-            <div className="flex items-center gap-2">
-              {discipline.required ? (
-                <Check className="w-3.5 h-3.5 text-[var(--color-accent-teal)]" />
-              ) : (
-                <Plus className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-              )}
-              <span className={`text-sm ${discipline.required ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}>
-                {discipline.name}
-              </span>
-            </div>
-            <span className="text-xs text-[var(--color-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity truncate max-w-[150px]">
-              {discipline.reason}
+            {discipline.required ? (
+              <Check className="w-3 h-3 shrink-0 text-[var(--color-accent-teal)]" />
+            ) : (
+              <Plus className="w-3 h-3 shrink-0 text-[var(--color-text-muted)]" />
+            )}
+            <span className={`text-[11px] truncate ${discipline.required ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'}`}>
+              {discipline.name}
             </span>
           </div>
         ))}
-
-        {suggestions.length > 10 && (
-          <div className="text-xs text-[var(--color-text-muted)] pt-1 text-center">
-            + {suggestions.length - 10} more disciplines
-          </div>
-        )}
       </div>
     </div>
   );

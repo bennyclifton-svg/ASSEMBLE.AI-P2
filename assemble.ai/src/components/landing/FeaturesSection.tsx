@@ -1,37 +1,29 @@
+import Image from 'next/image';
 import { SectionContainer } from './shared/SectionContainer';
 import { ScrollReveal } from './shared/ScrollReveal';
 import { featuresContent } from './data/landing-data';
 
+// Map each feature index to the matching screenshot
+const featureImages = [
+    { src: '/images/Landing-03.png', alt: 'Project objectives and requirements setup' },      // Project Setup
+    { src: '/images/Landing-02.png', alt: 'Cost planning and program overview' },               // Cost Planning
+    { src: '/images/Landing-01.png', alt: 'Procurement evaluation and tender management' },     // Procurement
+    { src: '/images/Landing-05.png', alt: 'Notes, meetings, and automated reporting' },          // Reporting
+    { src: '/images/Landing-04.png', alt: 'Stakeholder and document management' },               // Documents
+];
+
 function FeatureMockup({ index }: { index: number }) {
-    // Different mockup styles for visual variety
-    const mockupStyles = [
-        'from-[var(--primary)] to-[var(--primary-dark)]', // Dashboard
-        'from-[var(--gray-700)] to-[var(--gray-800)]', // Document
-        'from-[var(--primary-light)] to-[var(--primary)]', // AI
-        'from-[var(--gray-600)] to-[var(--gray-700)]', // Cost
-        'from-[var(--primary)] to-[var(--primary-light)]', // Hub
-        'from-[var(--gray-800)] to-[var(--black)]', // Reports
-        'from-[var(--primary-dark)] to-[var(--primary)]', // Knowledge
-    ];
+    const image = featureImages[index % featureImages.length];
 
     return (
-        <div className={`w-full aspect-[4/3] rounded-2xl bg-gradient-to-br ${mockupStyles[index % mockupStyles.length]} shadow-xl flex items-center justify-center overflow-hidden`}>
-            <div className="w-[85%] h-[75%] bg-white/10 rounded-lg backdrop-blur-sm border border-white/20 p-4">
-                <div className="flex gap-1.5 mb-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--logo-red)]" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--logo-yellow)]" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--logo-green)]" />
-                </div>
-                <div className="space-y-2">
-                    <div className="h-3 bg-white/20 rounded w-3/4" />
-                    <div className="h-3 bg-white/20 rounded w-1/2" />
-                    <div className="h-3 bg-white/20 rounded w-2/3" />
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                        <div className="h-16 bg-white/15 rounded" />
-                        <div className="h-16 bg-white/15 rounded" />
-                    </div>
-                </div>
-            </div>
+        <div className="w-full rounded-2xl shadow-xl overflow-hidden border border-[var(--gray-200)]">
+            <Image
+                src={image.src}
+                alt={image.alt}
+                width={1320}
+                height={840}
+                className="w-full h-auto"
+            />
         </div>
     );
 }

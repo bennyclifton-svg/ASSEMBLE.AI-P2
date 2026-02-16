@@ -96,6 +96,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
             toast({
                 title: 'Adding to Knowledge Source',
                 description: `${result.added.length} document(s) queued for AI processing`,
+                variant: 'success',
             });
         }
     }, [projectId, knowledgeSetId, selectedIds, createDocumentSet, addDocuments, toast]);
@@ -138,6 +139,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
             toast({
                 title: 'Documents selected',
                 description: `Added ${docIds.length} document(s) from ${category?.name || categoryId}`,
+                variant: 'success',
             });
         } catch (error) {
             console.error('Bulk select category error:', error);
@@ -167,6 +169,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                 toast({
                     title: 'Documents categorized',
                     description: `${documentIds.length} file(s) → ${categoryName}`,
+                    variant: 'success',
                 });
 
                 onSelectionChange(new Set());
@@ -241,11 +244,16 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                 }
 
                 // Retryable server error (5xx, 429, 408)
-                lastError = `Server error: ${status} ${res.statusText}`;
+                // Capture the response body for better error diagnostics
+                let serverBody = '';
+                try {
+                    serverBody = await res.text();
+                } catch { /* ignore */ }
+                lastError = serverBody || `Server error: ${status} ${res.statusText}`;
 
                 if (attempt < maxRetries) {
                     const retryDelay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempt - 1);
-                    console.log(`[Upload] Retry ${attempt}/${maxRetries} for ${file.name} after ${retryDelay}ms`);
+                    console.log(`[Upload] Retry ${attempt}/${maxRetries} for ${file.name} after ${retryDelay}ms (${status})`);
                     await delay(retryDelay);
                 }
             } catch (networkError) {
@@ -348,14 +356,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     localFailureCount++;
                     const errorText = result.error || 'Upload failed';
 
-                    console.error('Upload failed after retries:', {
-                        filename: file.name,
-                        fileSize: file.size,
-                        fileType: file.type,
-                        error: errorText,
-                        categoryId,
-                        subcategoryId
-                    });
+                    console.error(`Upload failed for ${file.name} (${file.size} bytes): ${errorText}`);
 
                     let errorData;
                     try {
@@ -382,6 +383,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                 toast({
                     title: 'Upload complete',
                     description: `${localSuccessCount} file(s) → ${categoryName}`,
+                    variant: 'success',
                 });
 
                 // Trigger RAG processing for Knowledge category uploads
@@ -410,6 +412,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                             toast({
                                 title: 'Knowledge Source',
                                 description: `${result.added.length} document(s) queued for AI processing`,
+                                variant: 'success',
                             });
                         }
                     }

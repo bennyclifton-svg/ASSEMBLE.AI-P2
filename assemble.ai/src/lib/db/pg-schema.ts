@@ -118,6 +118,11 @@ export const projectDetails = pgTable('project_details', {
     numberOfStories: integer('number_of_stories'),
     buildingClass: text('building_class'),
     tenderReleaseDate: text('tender_release_date'),
+    // Geocoded coordinates from Google Places / Nominatim
+    latitude: text('latitude'),
+    longitude: text('longitude'),
+    placeId: text('place_id'),
+    formattedAddress: text('formatted_address'),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
 
@@ -246,10 +251,20 @@ export const revisionHistory = pgTable('revision_history', {
 
 export const gisCache = pgTable('gis_cache', {
     id: text('id').primaryKey(),
-    address: text('address').notNull().unique(),
-    zoning: text('zoning'),
-    jurisdiction: text('jurisdiction'),
-    lotArea: integer('lot_area'),
+    // Key: "{state}:{lat.toFixed(6)},{lng.toFixed(6)}"
+    coordKey: text('coord_key').notNull().unique(),
+    latitude: text('latitude').notNull(),
+    longitude: text('longitude').notNull(),
+    state: text('state').notNull(),
+    // LEP Planning Controls
+    landZone: text('land_zone'),
+    floorSpaceRatio: text('floor_space_ratio'),
+    buildingHeight: text('building_height'),
+    heritageStatus: text('heritage_status'),
+    floodZone: text('flood_zone'),
+    bushfireProne: text('bushfire_prone'),
+    minLotSize: text('min_lot_size'),
+    // Extracted fields from API response (not full raw JSON)
     rawData: text('raw_data'),
     cachedAt: timestamp('cached_at').defaultNow(),
     expiresAt: timestamp('expires_at').notNull(),
@@ -271,7 +286,7 @@ export const consultants = pgTable('consultants', {
     address: text('address'),
     abn: text('abn'),
     notes: text('notes'),
-    shortlisted: boolean('shortlisted').default(false),
+    shortlisted: boolean('shortlisted').default(true),
     awarded: boolean('awarded').default(false),
     companyId: text('company_id').references(() => companies.id),
     createdAt: timestamp('created_at').defaultNow(),
@@ -289,7 +304,7 @@ export const contractors = pgTable('contractors', {
     address: text('address'),
     abn: text('abn'),
     notes: text('notes'),
-    shortlisted: boolean('shortlisted').default(false),
+    shortlisted: boolean('shortlisted').default(true),
     awarded: boolean('awarded').default(false),
     companyId: text('company_id').references(() => companies.id),
     createdAt: timestamp('created_at').defaultNow(),
@@ -1143,10 +1158,30 @@ export const projectProfilesRelations = relations(projectProfiles, ({ one }) => 
     }),
 }));
 
-export const profilerObjectivesRelations = relations(profilerObjectives, ({ one }) => ({
+// Objectives Transmittals (document attachments for objectives extraction)
+export const objectivesTransmittals = pgTable('objectives_transmittals', {
+    id: text('id').primaryKey(),
+    objectivesId: text('objectives_id').references(() => profilerObjectives.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id).notNull(),
+    addedAt: text('added_at'),
+});
+
+export const profilerObjectivesRelations = relations(profilerObjectives, ({ one, many }) => ({
     project: one(projects, {
         fields: [profilerObjectives.projectId],
         references: [projects.id],
+    }),
+    transmittals: many(objectivesTransmittals),
+}));
+
+export const objectivesTransmittalsRelations = relations(objectivesTransmittals, ({ one }) => ({
+    objectives: one(profilerObjectives, {
+        fields: [objectivesTransmittals.objectivesId],
+        references: [profilerObjectives.id],
+    }),
+    document: one(documents, {
+        fields: [objectivesTransmittals.documentId],
+        references: [documents.id],
     }),
 }));
 
@@ -1326,6 +1361,20 @@ export const noteTransmittalsRelations = relations(noteTransmittals, ({ one }) =
 }));
 
 // ============================================================================
+// MEETING GROUPS SCHEMA
+// ============================================================================
+
+export const meetingGroups = pgTable('meeting_groups', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    groupNumber: integer('group_number').notNull().default(1),
+    title: text('title').notNull().default('New Meeting'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// ============================================================================
 // MEETINGS SCHEMA
 // ============================================================================
 
@@ -1333,6 +1382,7 @@ export const meetings = pgTable('meetings', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    groupId: text('group_id').references(() => meetingGroups.id, { onDelete: 'cascade' }),
     title: text('title').notNull().default('New Meeting'),
     meetingDate: text('meeting_date'),
     agendaType: text('agenda_type').default('standard'),
@@ -1376,6 +1426,19 @@ export const meetingTransmittals = pgTable('meeting_transmittals', {
     addedAt: text('added_at'),
 });
 
+// Meeting Groups Relations
+export const meetingGroupsRelations = relations(meetingGroups, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [meetingGroups.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [meetingGroups.organizationId],
+        references: [organizations.id],
+    }),
+    meetings: many(meetings),
+}));
+
 // Meetings Relations
 export const meetingsRelations = relations(meetings, ({ one, many }) => ({
     project: one(projects, {
@@ -1385,6 +1448,10 @@ export const meetingsRelations = relations(meetings, ({ one, many }) => ({
     organization: one(organizations, {
         fields: [meetings.organizationId],
         references: [organizations.id],
+    }),
+    group: one(meetingGroups, {
+        fields: [meetings.groupId],
+        references: [meetingGroups.id],
     }),
     sections: many(meetingSections),
     attendees: many(meetingAttendees),
@@ -1425,6 +1492,20 @@ export const meetingTransmittalsRelations = relations(meetingTransmittals, ({ on
 }));
 
 // ============================================================================
+// REPORT GROUPS SCHEMA
+// ============================================================================
+
+export const reportGroups = pgTable('report_groups', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    groupNumber: integer('group_number').notNull().default(1),
+    title: text('title').notNull().default('New Report'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// ============================================================================
 // REPORTS SCHEMA
 // ============================================================================
 
@@ -1432,6 +1513,7 @@ export const reports = pgTable('reports', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    groupId: text('group_id').references(() => reportGroups.id, { onDelete: 'cascade' }),
     title: text('title').notNull().default('New Report'),
     reportDate: text('report_date'),
     preparedFor: text('prepared_for'),
@@ -1476,6 +1558,19 @@ export const reportTransmittals = pgTable('report_transmittals', {
     addedAt: text('added_at'),
 });
 
+// Report Groups Relations
+export const reportGroupsRelations = relations(reportGroups, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [reportGroups.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [reportGroups.organizationId],
+        references: [organizations.id],
+    }),
+    reports: many(reports),
+}));
+
 // Reports Relations
 export const reportsRelations = relations(reports, ({ one, many }) => ({
     project: one(projects, {
@@ -1485,6 +1580,10 @@ export const reportsRelations = relations(reports, ({ one, many }) => ({
     organization: one(organizations, {
         fields: [reports.organizationId],
         references: [organizations.id],
+    }),
+    group: one(reportGroups, {
+        fields: [reports.groupId],
+        references: [reportGroups.id],
     }),
     sections: many(reportSections),
     attendees: many(reportAttendees),

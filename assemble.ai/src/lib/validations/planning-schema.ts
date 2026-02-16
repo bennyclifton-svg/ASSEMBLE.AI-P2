@@ -11,6 +11,11 @@ export const projectDetailsSchema = z.object({
     numberOfStories: z.union([z.number().int().positive(), z.string()]).optional(),
     buildingClass: z.string().optional(),
     tenderReleaseDate: z.string().optional(),
+    // Geocoded coordinates from address autocomplete
+    latitude: z.string().optional(),
+    longitude: z.string().optional(),
+    placeId: z.string().optional(),
+    formattedAddress: z.string().optional(),
 });
 
 // Project Objectives Schema

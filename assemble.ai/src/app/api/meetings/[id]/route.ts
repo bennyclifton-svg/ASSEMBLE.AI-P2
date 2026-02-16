@@ -68,14 +68,15 @@ export async function GET(
                 .from(meetingSections)
                 .where(eq(meetingSections.meetingId, id))
                 .orderBy(asc(meetingSections.sortOrder)),
-            // Fetch attendees
+            // Fetch attendees ordered by master stakeholder sortOrder
             db.select({
                 attendee: meetingAttendees,
                 stakeholder: projectStakeholders,
             })
                 .from(meetingAttendees)
                 .leftJoin(projectStakeholders, eq(meetingAttendees.stakeholderId, projectStakeholders.id))
-                .where(eq(meetingAttendees.meetingId, id)),
+                .where(eq(meetingAttendees.meetingId, id))
+                .orderBy(asc(projectStakeholders.sortOrder)),
             // Fetch transmittals count
             db.select({ count: sql<number>`count(*)` })
                 .from(meetingTransmittals)

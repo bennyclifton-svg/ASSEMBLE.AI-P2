@@ -25,6 +25,7 @@ import {
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { useToast } from '@/lib/hooks/use-toast';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 
 interface Report {
     id: string;
@@ -86,6 +87,8 @@ export function ReportsSection({
     const [startingGeneration, setStartingGeneration] = useState(false);
     const [selectedGenerationMode, setSelectedGenerationMode] = useState<GenerationMode>(generationMode);
     const [selectedContentLength, setSelectedContentLength] = useState<ContentLength>('concise'); // T099l
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
     // Ref to the currently viewing ReportGenerator
     const generatorRef = useRef<ReportGeneratorHandle>(null);
@@ -117,24 +120,30 @@ export function ReportsSection({
         fetcher
     );
 
-    const handleDelete = async (reportId: string) => {
-        if (!confirm('Are you sure you want to delete this report?')) return;
+    const handleDeleteClick = (reportId: string) => {
+        setPendingDeleteId(reportId);
+        setDeleteDialogOpen(true);
+    };
 
-        setDeletingId(reportId);
+    const handleConfirmDelete = async () => {
+        if (!pendingDeleteId) return;
+
+        setDeletingId(pendingDeleteId);
         try {
-            const res = await fetch(`/api/reports/${reportId}`, { method: 'DELETE' });
+            const res = await fetch(`/api/reports/${pendingDeleteId}`, { method: 'DELETE' });
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error || 'Failed to delete');
             }
             mutate();
-            if (viewingReportId === reportId) {
+            if (viewingReportId === pendingDeleteId) {
                 setViewingReportId(null);
             }
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Failed to delete report');
         } finally {
             setDeletingId(null);
+            setPendingDeleteId(null);
         }
     };
 
@@ -511,7 +520,7 @@ export function ReportsSection({
 
                                             <button
                                                 className="p-1.5 text-[var(--color-text-muted)] rounded hover:bg-[var(--color-border)] hover:text-red-500 disabled:opacity-50"
-                                                onClick={() => handleDelete(report.id)}
+                                                onClick={() => handleDeleteClick(report.id)}
                                                 disabled={deletingId === report.id}
                                                 title="Delete"
                                             >
@@ -589,6 +598,14 @@ export function ReportsSection({
                         </div>
                     )}
                 </div>
+
+            {/* Delete Confirmation Dialog */}
+            <AuroraConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                onConfirm={handleConfirmDelete}
+                title="Delete this report?"
+            />
         </div>
     );
 }

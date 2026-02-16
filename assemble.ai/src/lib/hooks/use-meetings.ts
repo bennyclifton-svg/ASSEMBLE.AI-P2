@@ -35,6 +35,7 @@ interface MeetingWithCount extends Meeting {
 
 interface UseMeetingsOptions {
     projectId: string;
+    groupId?: string;
 }
 
 interface UseMeetingsReturn {
@@ -90,6 +91,7 @@ interface UseMeetingSectionsReturn {
     updateSection: (sectionId: string, data: UpdateSectionRequest) => Promise<MeetingSection>;
     reorderSections: (sectionIds: string[]) => Promise<void>;
     generateSections: (agendaType: MeetingAgendaType) => Promise<MeetingSection[]>;
+    syncSections: (selectedSectionKeys: string[]) => Promise<void>;
     refetch: () => void;
 }
 
@@ -130,8 +132,11 @@ const fetcher = async <T>(url: string): Promise<T> => {
 /**
  * Hook for fetching a list of meetings for a project
  */
-export function useMeetings({ projectId }: UseMeetingsOptions): UseMeetingsReturn {
-    const swrKey = projectId ? `/api/meetings?projectId=${projectId}` : null;
+export function useMeetings({ projectId, groupId }: UseMeetingsOptions): UseMeetingsReturn {
+    const params = new URLSearchParams();
+    if (projectId) params.set('projectId', projectId);
+    if (groupId) params.set('groupId', groupId);
+    const swrKey = projectId ? `/api/meetings?${params.toString()}` : null;
 
     const { data, error, isLoading, mutate } = useSWR<MeetingsListResponse>(
         swrKey,
@@ -185,8 +190,11 @@ export function useMeeting({ meetingId }: UseMeetingOptions): UseMeetingReturn {
 /**
  * Hook for managing meeting mutations (create, update, delete, copy)
  */
-export function useMeetingMutations(projectId: string): UseMeetingMutationsReturn {
-    const listKey = `/api/meetings?projectId=${projectId}`;
+export function useMeetingMutations(projectId: string, groupId?: string): UseMeetingMutationsReturn {
+    const params = new URLSearchParams();
+    params.set('projectId', projectId);
+    if (groupId) params.set('groupId', groupId);
+    const listKey = `/api/meetings?${params.toString()}`;
 
     /**
      * Create a new meeting
@@ -367,11 +375,36 @@ export function useMeetingSections(meetingId: string | null): UseMeetingSections
 
         const result = await response.json();
 
-        // Revalidate sections and meeting
-        mutate();
+        // Await revalidation so UI gets new section IDs before loading state clears
+        await mutate();
         globalMutate(`/api/meetings/${meetingId}`);
 
         return result.sections;
+    }, [meetingId, mutate]);
+
+    /**
+     * Sync sections based on user selection (non-destructive)
+     * Preserves content for kept sections, adds new ones, removes unchecked.
+     */
+    const syncSections = useCallback(async (selectedSectionKeys: string[]): Promise<void> => {
+        if (!meetingId) {
+            throw new Error('Meeting ID is required');
+        }
+
+        const response = await fetch(`/api/meetings/${meetingId}/sync-sections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selectedSectionKeys }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Failed to sync sections' }));
+            throw new Error(error.error || 'Failed to sync sections');
+        }
+
+        // Await revalidation so UI gets new section IDs before loading state clears
+        await mutate();
+        globalMutate(`/api/meetings/${meetingId}`);
     }, [meetingId, mutate]);
 
     const refetch = useCallback(() => {
@@ -397,6 +430,7 @@ export function useMeetingSections(meetingId: string | null): UseMeetingSections
         updateSection,
         reorderSections,
         generateSections,
+        syncSections,
         refetch,
     };
 }
@@ -451,6 +485,20 @@ export function useMeetingAttendees(meetingId: string | null, projectId?: string
             throw new Error('Meeting ID is required');
         }
 
+        // Optimistic update: update the flag in place without reordering
+        mutate(
+            (current) => {
+                if (!current) return current;
+                return {
+                    ...current,
+                    attendees: current.attendees.map((a: MeetingAttendee) =>
+                        a.id === attendeeId ? { ...a, ...updateData } : a
+                    ),
+                };
+            },
+            { revalidate: false }
+        );
+
         const response = await fetch(`/api/meetings/${meetingId}/attendees/${attendeeId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -458,14 +506,13 @@ export function useMeetingAttendees(meetingId: string | null, projectId?: string
         });
 
         if (!response.ok) {
+            // Revert on error
+            mutate();
             const error = await response.json().catch(() => ({ error: 'Failed to update attendee' }));
             throw new Error(error.error || 'Failed to update attendee');
         }
 
         const updated = await response.json();
-
-        // Revalidate attendees
-        mutate();
 
         return updated;
     }, [meetingId, mutate]);

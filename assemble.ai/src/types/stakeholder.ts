@@ -228,6 +228,7 @@ export interface UpdateStakeholderRequest {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  disciplineOrTrade?: string;
   isEnabled?: boolean;
   briefServices?: string;
   briefDeliverables?: string;

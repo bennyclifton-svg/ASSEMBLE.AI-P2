@@ -4,6 +4,21 @@ import type { ProgramTemplate } from '@/types/program';
 
 export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
     {
+        key: 'consultant',
+        name: 'Consultant Engage',
+        activities: [
+            {
+                name: 'Consultant Engage',
+                children: [
+                    'Brief',
+                    'RFP',
+                    'Evaluation',
+                    'Appointment',
+                ],
+            },
+        ],
+    },
+    {
         key: 'design',
         name: 'Design Phase',
         activities: [
@@ -45,22 +60,6 @@ export const PROGRAM_TEMPLATES: ProgramTemplate[] = [
                     'Fitout',
                     'Commissioning',
                     'Defects',
-                ],
-            },
-        ],
-    },
-    {
-        key: 'consultant',
-        name: 'Consultant Engagement',
-        activities: [
-            {
-                name: 'Consultant Engagement',
-                children: [
-                    'Brief',
-                    'EOI',
-                    'RFP',
-                    'Evaluation',
-                    'Appointment',
                 ],
             },
         ],

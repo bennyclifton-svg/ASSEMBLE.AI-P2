@@ -100,6 +100,7 @@ export function SyncToAIButton({
                 toast({
                     title: 'Sync started',
                     description: `${addedCount} document${addedCount === 1 ? '' : 's'} queued for AI processing${skippedCount > 0 ? ` (${skippedCount} already in set)` : ''}`,
+                    variant: 'success',
                 });
             } else if (skippedCount > 0) {
                 toast({

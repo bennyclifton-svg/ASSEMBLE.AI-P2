@@ -13,16 +13,16 @@ interface LogoProps {
 
 const sizeConfig = {
   sm: {
-    fontSize: 'text-xl',
-    iconSize: 32,
+    fontSize: 'text-lg',
+    iconSize: 26,
   },
   md: {
-    fontSize: 'text-2xl',
-    iconSize: 42,
+    fontSize: 'text-xl',
+    iconSize: 34,
   },
   lg: {
-    fontSize: 'text-3xl',
-    iconSize: 55,
+    fontSize: 'text-2xl',
+    iconSize: 44,
   },
 };
 
@@ -30,7 +30,7 @@ const sizeConfig = {
  * Foundry Logo Component
  *
  * Displays the Foundry brand logo with SVG icon and Aurora-colored text.
- * Uses Aurora palette: Cyan (#00FFFF) for dark theme, Azure (#0066CC) for light theme.
+ * Uses Aurora palette: Blue (#1776c1) for dark theme, Azure (#0066CC) for light theme.
  *
  * @param size - Logo size variant (sm, md, lg)
  * @param className - Additional CSS classes

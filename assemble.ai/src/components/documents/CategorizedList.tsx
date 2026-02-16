@@ -17,39 +17,15 @@ import { useRenderLoopGuard, useStableArray } from '@/lib/hooks/use-render-loop-
 import { cn } from '@/lib/utils';
 
 /**
- * T032: Sync status dot indicator (compact version)
- * Now receives status as prop to avoid individual API calls per document
+ * Sync status diamond indicator next to file name
+ * Shows a small diamond: outline when not synced, filled when synced
+ * Spins during RAG processing/pending
  */
-function SyncStatusDot({ status }: { status: SyncStatus | null }) {
+function SyncStatusDiamond({ status }: { status: SyncStatus | null }) {
     if (!status || status.status === null) {
-        return null; // Not synced
+        return null;
     }
 
-    const colorMap = {
-        synced: 'bg-[var(--color-accent-green)]',
-        pending: 'bg-[var(--color-accent-yellow)]',
-        processing: 'bg-[var(--color-accent-yellow)]',
-        failed: 'bg-[var(--color-accent-coral)]',
-    };
-
-    const color = colorMap[status.status] || 'bg-[var(--color-text-muted)]';
-
-    return (
-        <div
-            className={`w-2 h-2 rounded-full ${color} flex-shrink-0`}
-            title={status.status.charAt(0).toUpperCase() + status.status.slice(1)}
-        />
-    );
-}
-
-/**
- * RAG sync diamond indicator - shows sync status for knowledge/RAG
- * Always visible: outline when not synced, filled when synced
- */
-function RagDiamond({ status }: { status: SyncStatus | null }) {
-    const syncStatus = status?.status;
-
-    // Color and fill based on status
     const colorMap = {
         synced: 'text-[var(--color-accent-green)]',
         pending: 'text-[var(--color-accent-yellow)]',
@@ -57,13 +33,9 @@ function RagDiamond({ status }: { status: SyncStatus | null }) {
         failed: 'text-[var(--color-accent-coral)]',
     };
 
-    const color = syncStatus ? (colorMap[syncStatus] || 'text-[var(--color-text-muted)]') : 'text-[var(--color-border)]';
-    const isProcessing = syncStatus === 'processing' || syncStatus === 'pending';
-    const isFilled = syncStatus !== null && syncStatus !== undefined;
-
-    const tooltipText = syncStatus
-        ? `RAG: ${syncStatus.charAt(0).toUpperCase() + syncStatus.slice(1)}`
-        : 'Not synced to Knowledge';
+    const color = colorMap[status.status] || 'text-[var(--color-text-muted)]';
+    const isProcessing = status.status === 'processing' || status.status === 'pending';
+    const isFilled = status.status === 'synced' || status.status === 'processing' || status.status === 'pending';
 
     return (
         <svg
@@ -72,25 +44,18 @@ function RagDiamond({ status }: { status: SyncStatus | null }) {
             viewBox="0 0 10 10"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            className={cn(color, isProcessing && 'animate-spin [animation-duration:2.5s]')}
-            title={tooltipText}
+            className={cn(color, 'flex-shrink-0', isProcessing && 'animate-diamond-spin')}
+            title={`RAG: ${status.status.charAt(0).toUpperCase() + status.status.slice(1)}`}
         >
             {isFilled ? (
-                <path
-                    d="M5 0.5L9.5 5L5 9.5L0.5 5L5 0.5Z"
-                    fill="currentColor"
-                />
+                <path d="M5 0.5L9.5 5L5 9.5L0.5 5L5 0.5Z" fill="currentColor" />
             ) : (
-                <path
-                    d="M5 1.2L8.8 5L5 8.8L1.2 5L5 1.2Z"
-                    stroke="currentColor"
-                    strokeWidth="1"
-                    fill="none"
-                />
+                <path d="M5 1.2L8.8 5L5 8.8L1.2 5L5 1.2Z" stroke="currentColor" strokeWidth="1" fill="none" />
             )}
         </svg>
     );
 }
+
 
 interface Document {
     id: string;
@@ -349,6 +314,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         [documents]
     );
 
+    // Count documents currently being ingested (RAG pending/processing)
+    const ingestingCount = useMemo(() => {
+        return Object.values(syncStatuses).filter(
+            s => s?.status === 'pending' || s?.status === 'processing'
+        ).length;
+    }, [syncStatuses]);
+
     // Poll for drawing extraction status updates
     useEffect(() => {
         // Skip polling during cooldown to prevent render loops
@@ -426,6 +398,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 toast({
                     title: "Document deleted",
                     description: "Successfully deleted document.",
+                    variant: "success",
                 });
                 fetchData();
             } else {
@@ -462,6 +435,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 toast({
                     title: "All documents deleted",
                     description: `Successfully deleted ${allIds.length} document(s).`,
+                    variant: "success",
                 });
                 fetchData();
                 setShowDeleteAllConfirm(false);
@@ -497,6 +471,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 toast({
                     title: "Documents deleted",
                     description: `Successfully deleted ${idsToDelete.length} document(s).`,
+                    variant: "success",
                 });
                 const newSelection = new Set<string>();
                 setSelectedIds(newSelection);
@@ -540,7 +515,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                         viewBox="0 0 16 16"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="animate-spin [animation-duration:2.5s] text-[var(--color-accent-copper)]"
+                        className="animate-diamond-spin text-[var(--color-accent-copper)]"
                     >
                         <path
                             d="M8 1L15 8L8 15L1 8L8 1Z"
@@ -559,21 +534,53 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 </div>
             )}
 
-            {/* Table View */}
-            <div className="border border-[var(--color-border)] rounded-md bg-[var(--color-bg-primary)] overflow-hidden @container">
+            {/* RAG Ingestion Banner */}
+            {ingestingCount > 0 && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-accent-green-tint)] border border-[var(--color-accent-green)] rounded-md">
+                    <svg
+                        width={16}
+                        height={16}
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="animate-diamond-spin text-[var(--color-accent-green)] flex-shrink-0"
+                    >
+                        <path
+                            d="M8 1L15 8L8 15L1 8L8 1Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            fill="none"
+                        />
+                    </svg>
+                    <span className="text-sm text-[var(--color-accent-green)]">
+                        Ingestion in progress — {ingestingCount} document{ingestingCount !== 1 ? 's' : ''} syncing to AI knowledge base
+                    </span>
+                </div>
+            )}
+
+            {/* Empty State */}
+            {filteredDocuments.length === 0 ? (
+                <div className="border border-dashed border-[var(--color-border)] rounded-md flex items-center justify-center h-24" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                        {filterBySyncedOnly ? 'No documents synced to Knowledge.' : filterCategoryId ? 'No documents in this category.' : 'No documents found.'}
+                    </p>
+                </div>
+            ) : (
+
+            /* Table View */
+            <div className="border border-[var(--color-border)] rounded-md overflow-hidden @container" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
                 <div className="relative w-full">
                     <table className="w-full caption-bottom text-sm table-fixed">
                         <TableHeader>
-                            <TableRow className="border-[var(--color-border)] bg-[var(--color-accent-copper-tint)]">
-                                <TableHead className="w-5 !p-0" />
+                            <TableRow className="border-[var(--color-border)]" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-16 !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-16 !px-2 cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('drawingNumber')}
                                 >
                                     #<SortIndicator column="drawingNumber" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider min-w-[40%] !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider min-w-[40%] !px-2 cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('name')}
                                 >
                                     <div className="flex items-center gap-1.5">
@@ -582,19 +589,19 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         {selectedIds.size > 0 ? (
                                             <span className="text-[var(--color-accent-yellow)]">({selectedIds.size})</span>
                                         ) : (
-                                            <span className="text-[var(--color-document-header)]">({filteredDocuments.length})</span>
+                                            <span className="text-[var(--color-text-primary)]">({filteredDocuments.length})</span>
                                         )}
                                         <SortIndicator column="name" />
                                     </div>
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-10 !px-2 cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-10 !px-2 cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('drawingRevision')}
                                 >
                                     Rev<SortIndicator column="drawingRevision" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-16 @2xl:w-20 @3xl:w-24 !px-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-16 @2xl:w-20 @3xl:w-24 !px-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('category')}
                                 >
                                     <span className="@3xl:hidden">Cat</span>
@@ -602,7 +609,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     <SortIndicator column="category" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-28 @2xl:w-32 @3xl:w-36 !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-28 @2xl:w-32 @3xl:w-36 !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('subcategory')}
                                 >
                                     <span className="@3xl:hidden">Subcat</span>
@@ -610,13 +617,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     <SortIndicator column="subcategory" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('fileName')}
                                 >
                                     File Name<SortIndicator column="fileName" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-medium text-[var(--color-document-header)] uppercase tracking-wider w-8 !px-1 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-accent-copper)] select-none transition-colors"
+                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-8 !px-1 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('version')}
                                 >
                                     V<SortIndicator column="version" />
@@ -644,19 +651,12 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredDocuments.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={9} className="text-center text-[var(--color-text-muted)] h-24">
-                                        {filterBySyncedOnly ? 'No documents synced to Knowledge.' : filterCategoryId ? 'No documents in this category.' : 'No documents found.'}
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredDocuments.map((doc) => (
+                            {filteredDocuments.map((doc) => (
                                     <TableRow
                                         key={doc.id}
                                         className={cn(
-                                            "border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors cursor-pointer select-none h-9",
-                                            selectedIds.has(doc.id) && "bg-[var(--color-bg-tertiary)]"
+                                            "border-[var(--color-border)] hover:bg-black/10 transition-colors cursor-pointer select-none h-9",
+                                            selectedIds.has(doc.id) && "bg-black/10"
                                         )}
                                         onMouseEnter={() => setHoveredRowId(doc.id)}
                                         onMouseLeave={() => setHoveredRowId(null)}
@@ -667,11 +667,6 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         }}
                                         onClick={(e) => handleSelect(doc.id, e)}
                                     >
-                                        <TableCell className="w-5 !p-0">
-                                            <div className="flex items-center justify-center h-full">
-                                                <RagDiamond status={syncStatuses[doc.id] || null} />
-                                            </div>
-                                        </TableCell>
                                         <TableCell className="text-[var(--color-text-primary)] w-16 !px-2 !py-1.5">
                                             {doc.drawingExtractionStatus === 'PROCESSING' ? (
                                                 <Loader2 className="w-4 h-4 animate-spin text-[var(--color-text-muted)]" />
@@ -683,10 +678,10 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 <span className="text-[var(--color-text-muted)]">—</span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="font-medium text-[var(--color-text-primary)] min-w-[40%] !px-2 !py-1.5">
+                                        <TableCell className="text-[var(--color-text-primary)] min-w-[40%] !px-2 !py-1.5">
                                             <div className="flex items-center gap-1.5 min-w-0">
-                                                <div className="w-2 flex-shrink-0">
-                                                    <SyncStatusDot status={syncStatuses[doc.id] || null} />
+                                                <div className="w-2 flex-shrink-0 flex items-center justify-center">
+                                                    <SyncStatusDiamond status={syncStatuses[doc.id] || null} />
                                                 </div>
                                                 {doc.drawingExtractionStatus === 'PROCESSING' ? (
                                                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
@@ -758,31 +753,32 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         </TableCell>
                                         <TableCell className="text-[var(--color-text-muted)] w-8 @lg:table-cell hidden !px-1 !py-1.5 text-xs">v{doc.versionNumber}</TableCell>
                                         <TableCell className="w-8 @sm:table-cell hidden !px-1 !py-1.5">
-                                            {(hoveredRowId === doc.id || deletingId === doc.id) && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteSingle(doc.id);
-                                                    }}
-                                                    disabled={deletingId === doc.id}
-                                                    className="p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50"
-                                                    title="Delete document"
-                                                >
-                                                    {deletingId === doc.id ? (
-                                                        <Loader2 className="w-4 h-4 text-[var(--color-text-muted)] animate-spin" />
-                                                    ) : (
-                                                        <Trash className="w-4 h-4 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)]" />
-                                                    )}
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteSingle(doc.id);
+                                                }}
+                                                disabled={deletingId === doc.id}
+                                                className={cn(
+                                                    "p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50",
+                                                    hoveredRowId !== doc.id && deletingId !== doc.id && "invisible"
+                                                )}
+                                                title="Delete document"
+                                            >
+                                                {deletingId === doc.id ? (
+                                                    <Loader2 className="w-4 h-4 text-[var(--color-text-muted)] animate-spin" />
+                                                ) : (
+                                                    <Trash className="w-4 h-4 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)]" />
+                                                )}
+                                            </button>
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
+                                ))}
                         </TableBody>
                     </table>
                 </div>
             </div>
+            )}
 
             {/* Delete Selected Confirmation Modal */}
             <Modal

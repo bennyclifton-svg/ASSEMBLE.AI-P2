@@ -13,8 +13,8 @@ import { TRRShortTab } from './TRRShortTab';
 import { TRRTabs } from './TRRTabs';
 import { FileText, Loader2, MoreHorizontal, MoreVertical } from 'lucide-react';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
-import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
+import { Button } from '@/components/ui/button';
 
 // Procurement section accent color (aurora blue from design system)
 const SECTION_ACCENT = 'var(--color-accent-copper)';
@@ -81,6 +81,15 @@ export function TRRSection({
             setIsCreating(false);
         }
     }, [createTrr, setActiveTrrId, setIsExpanded]);
+
+    // Auto-create first TRR when expanding with none
+    const handleExpandToggle = useCallback(async () => {
+        if (!isExpanded && trrs.length === 0 && !isLoading && !isCreating) {
+            await handleCreateTrr();
+        } else {
+            setIsExpanded(!isExpanded);
+        }
+    }, [isExpanded, trrs.length, isLoading, isCreating, handleCreateTrr, setIsExpanded]);
 
     const handleDeleteTrr = useCallback(async (trrId: string) => {
         const success = await deleteTrr(trrId);
@@ -188,11 +197,6 @@ export function TRRSection({
             });
 
             if (!response.ok) {
-                if (response.status === 501) {
-                    const data = await response.json();
-                    alert(data.message || 'Export functionality coming soon');
-                    return;
-                }
                 throw new Error('Export failed');
             }
 
@@ -234,16 +238,20 @@ export function TRRSection({
             {/* Header - Segmented white ribbons with grey surround */}
             <div className="flex items-stretch gap-0.5 p-2">
                 {/* TRR segment */}
-                <div className="flex items-center w-[220px] px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
+                <div
+                    className="flex items-center w-fit h-11 px-3 py-1.5 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-l-md"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                >
                     <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
                     <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                        TRR
+                        Tender Recommendation Report
                     </span>
                 </div>
                 {/* Corner bracket segment - square, points out to expand, in to collapse */}
                 <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center justify-center p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    onClick={handleExpandToggle}
+                    className="flex items-center justify-center w-11 h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
                     title={isExpanded ? 'Collapse' : 'Expand'}
                 >
                     <CornerBracketIcon
@@ -252,10 +260,13 @@ export function TRRSection({
                     />
                 </button>
                 {/* More options segment - expandable to show tabs and export buttons */}
-                <div className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md transition-all">
+                <div
+                    className="flex items-center h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-r-md transition-all"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                >
                     <button
                         onClick={() => setIsMenuExpanded(!isMenuExpanded)}
-                        className="flex items-center justify-center w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                        className="flex items-center justify-center w-11 h-11 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                         title={isMenuExpanded ? 'Hide options' : 'Show options'}
                     >
                         {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
@@ -308,7 +319,10 @@ export function TRRSection({
             <div>
                 {/* Tab Content - only shown when expanded */}
                 {isExpanded && (
-                    <div className="mx-2 p-4 bg-[var(--color-bg-secondary)] rounded-md shadow-sm">
+                    <div
+                        className="mx-2 p-4 backdrop-blur-md rounded-md shadow-sm"
+                        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+                    >
                         {isLoading ? (
                             <div className="p-8 text-center text-[var(--color-text-muted)]">
                                 <p>Loading TRRs...</p>

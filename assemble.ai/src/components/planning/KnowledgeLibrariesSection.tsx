@@ -72,6 +72,7 @@ export function KnowledgeLibrariesSection({
             toast({
                 title: `Saved to ${repo.name}`,
                 description: `${result.documentCount} document(s) saved`,
+                variant: 'success',
             });
         } else {
             toast({
@@ -95,6 +96,7 @@ export function KnowledgeLibrariesSection({
                 toast({
                     title: `Loaded from ${repo.name}`,
                     description: `${documentIds.length} document(s) selected`,
+                    variant: 'success',
                 });
             }
         } else {

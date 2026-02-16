@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from './shared/Button';
-import { navLinks } from './data/landing-data';
+import { TypingLogo } from '@/components/brand/TypingLogo';
 
 export function NavBar() {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -18,13 +18,7 @@ export function NavBar() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-        if (href.startsWith('#')) {
-            e.preventDefault();
-            const element = document.querySelector(href);
-            element?.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
+
 
     return (
         <nav
@@ -39,30 +33,22 @@ export function NavBar() {
                     <Image
                         src="/logo-foundry.svg"
                         alt="Foundry Logo"
-                        width={36}
-                        height={36}
-                        className="flex-shrink-0"
+                        width={29}
+                        height={29}
+                        className="flex-shrink-0 logo-icon-glow"
                         priority
                     />
-                    <span className="text-white font-bold text-[22px] italic">Foundry</span>
+                    <TypingLogo className="text-white font-bold text-[18px] italic" />
                 </Link>
 
-                {/* Nav Links - hidden on mobile */}
-                <div className="hidden md:flex items-center gap-8">
-                    {navLinks.map((link) => (
-                        <a
-                            key={link.href}
-                            href={link.href}
-                            onClick={(e) => handleNavClick(e, link.href)}
-                            className="text-[var(--gray-400)] hover:text-white transition-colors text-[15px] font-medium"
-                        >
-                            {link.label}
-                        </a>
-                    ))}
-                </div>
+                {/* Nav Links - REMOVED */}
+                <div className="flex-1" />
 
                 {/* CTA Buttons */}
                 <div className="flex items-center gap-3">
+                    <Link href="/login" className="text-sm text-white/60 hover:text-white transition-colors duration-200 hidden sm:block">
+                        Login
+                    </Link>
                     <Button variant="ghost" hasArrow={false} href="/demo" className="hidden sm:flex">
                         Book a demo
                     </Button>

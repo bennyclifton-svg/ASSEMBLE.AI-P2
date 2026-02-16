@@ -26,6 +26,10 @@ interface TradeOption {
   order: number;
 }
 
+/** Virtual Developer option for FEES section (no real stakeholder needed) */
+export const DEVELOPER_OPTION_ID = '_developer';
+const DEVELOPER_OPTION = { id: DEVELOPER_OPTION_ID, name: 'Developer' };
+
 interface DisciplineDropdownProps {
   value?: string | null; // Discipline or Trade ID
   displayValue?: string | null; // Display name
@@ -54,12 +58,17 @@ export function DisciplineDropdown({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Determine which items to show based on section
+  const isFees = section === 'FEES';
   const isConsultants = section === 'CONSULTANTS';
   const isConstruction = section === 'CONSTRUCTION';
-  const showDropdown = isConsultants || isConstruction;
+  const isContingency = section === 'CONTINGENCY';
+  const showDropdown = isFees || isConsultants || isConstruction || isContingency;
 
   // Get items based on section
-  const items = useMemo(() => {
+  const items = useMemo((): { id: string; name: string; group?: string }[] => {
+    if (isFees) {
+      return [{ ...DEVELOPER_OPTION }];
+    }
     if (isConsultants) {
       return disciplines
         .filter(d => d.isEnabled)
@@ -72,14 +81,27 @@ export function DisciplineDropdown({
         .sort((a, b) => a.order - b.order)
         .map(t => ({ id: t.id, name: t.name }));
     }
+    if (isContingency) {
+      // Contingency can be allocated to any discipline or trade
+      const disciplineItems = disciplines
+        .filter(d => d.isEnabled)
+        .sort((a, b) => a.order - b.order)
+        .map(d => ({ id: d.id, name: d.name, group: 'discipline' as const }));
+      const tradeItems = trades
+        .filter(t => t.isEnabled)
+        .sort((a, b) => a.order - b.order)
+        .map(t => ({ id: t.id, name: t.name, group: 'trade' as const }));
+      return [...disciplineItems, ...tradeItems];
+    }
     return [];
-  }, [disciplines, trades, isConsultants, isConstruction]);
+  }, [disciplines, trades, isFees, isConsultants, isConstruction, isContingency]);
 
-  // Get selected item
+  // Get selected item — FEES lines default to "Developer"
   const selectedItem = useMemo(() => {
+    if (isFees) return DEVELOPER_OPTION;
     if (!value) return null;
     return items.find((item) => item.id === value) || null;
-  }, [items, value]);
+  }, [items, value, isFees]);
 
   // Close on outside click
   useEffect(() => {
@@ -98,10 +120,14 @@ export function DisciplineDropdown({
   };
 
   // Dynamic placeholder
-  const defaultPlaceholder = isConsultants
+  const defaultPlaceholder = isFees
+    ? 'Developer'
+    : isConsultants
     ? 'Select discipline...'
     : isConstruction
     ? 'Select trade...'
+    : isContingency
+    ? 'Allocate to...'
     : 'N/A';
 
   // If not a section that supports disciplines/trades, show static text
@@ -138,29 +164,74 @@ export function DisciplineDropdown({
           <div className="max-h-48 overflow-auto">
             {items.length > 0 ? (
               <ul>
-                {items.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => handleSelect(item.id)}
-                      className={`
-                        w-full flex items-center gap-2 px-2 py-1.5 text-left text-xs
-                        hover:bg-[var(--color-bg-tertiary)] transition-colors
-                        ${item.id === value ? 'bg-[var(--color-accent-teal)]/20' : ''}
-                      `}
-                    >
-                      <span className={`flex-1 truncate ${item.id === value ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-primary)]'}`}>
-                        {item.name}
-                      </span>
-                      {item.id === value && (
-                        <Check className="w-3 h-3 text-[var(--color-accent-teal)] flex-shrink-0" />
-                      )}
-                    </button>
-                  </li>
-                ))}
+                {isContingency ? (
+                  <>
+                    {disciplines.some(d => d.isEnabled) && (
+                      <li className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
+                        Disciplines
+                      </li>
+                    )}
+                    {items.filter(item => item.group === 'discipline').map((item) => (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => handleSelect(item.id)}
+                          className={`
+                            w-full flex items-center gap-2 px-2 py-1.5 text-left text-xs
+                            hover:bg-[var(--color-bg-tertiary)] transition-colors
+                            ${item.id === value ? 'bg-[var(--color-accent-teal)]/20' : ''}
+                          `}
+                        >
+                          <span className="flex-1 truncate text-[var(--color-text-primary)]">{item.name}</span>
+                          {item.id === value && <Check className="w-3 h-3 text-[var(--color-accent-teal)] flex-shrink-0" />}
+                        </button>
+                      </li>
+                    ))}
+                    {trades.some(t => t.isEnabled) && (
+                      <li className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)] bg-[var(--color-bg-primary)] border-t border-[var(--color-border)]">
+                        Trades
+                      </li>
+                    )}
+                    {items.filter(item => item.group === 'trade').map((item) => (
+                      <li key={item.id}>
+                        <button
+                          onClick={() => handleSelect(item.id)}
+                          className={`
+                            w-full flex items-center gap-2 px-2 py-1.5 text-left text-xs
+                            hover:bg-[var(--color-bg-tertiary)] transition-colors
+                            ${item.id === value ? 'bg-[var(--color-accent-teal)]/20' : ''}
+                          `}
+                        >
+                          <span className="flex-1 truncate text-[var(--color-text-primary)]">{item.name}</span>
+                          {item.id === value && <Check className="w-3 h-3 text-[var(--color-accent-teal)] flex-shrink-0" />}
+                        </button>
+                      </li>
+                    ))}
+                  </>
+                ) : (
+                  items.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => handleSelect(item.id)}
+                        className={`
+                          w-full flex items-center gap-2 px-2 py-1.5 text-left text-xs
+                          hover:bg-[var(--color-bg-tertiary)] transition-colors
+                          ${item.id === value ? 'bg-[var(--color-accent-teal)]/20' : ''}
+                        `}
+                      >
+                        <span className={`flex-1 truncate ${item.id === value ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-primary)]'}`}>
+                          {item.name}
+                        </span>
+                        {item.id === value && (
+                          <Check className="w-3 h-3 text-[var(--color-accent-teal)] flex-shrink-0" />
+                        )}
+                      </button>
+                    </li>
+                  ))
+                )}
               </ul>
             ) : (
               <div className="px-2 py-3 text-center text-xs text-[var(--color-text-muted)]">
-                {`No active ${isConsultants ? 'disciplines' : 'trades'} available`}
+                {`No active ${isFees ? 'options' : isConsultants ? 'disciplines' : isConstruction ? 'trades' : 'disciplines or trades'} available`}
               </div>
             )}
           </div>

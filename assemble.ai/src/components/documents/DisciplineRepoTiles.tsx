@@ -111,7 +111,7 @@ export function DisciplineRepoTiles({
         try {
             const result = await saveToRepo(projectRepo.id, selectedDocumentIds);
             if (result) {
-                toast({ title: 'Sources Saved', description: `${result.documentCount} document(s) saved` });
+                toast({ title: 'Sources Saved', description: `${result.documentCount} document(s) saved`, variant: 'success' });
             }
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to save sources', variant: 'destructive' });
@@ -129,7 +129,7 @@ export function DisciplineRepoTiles({
             const documentIds = await loadFromRepo(projectRepo.id);
             if (documentIds && documentIds.length > 0) {
                 onSetSelectedDocumentIds?.(documentIds);
-                toast({ title: 'Sources Loaded', description: `${documentIds.length} document(s) selected` });
+                toast({ title: 'Sources Loaded', description: `${documentIds.length} document(s) selected`, variant: 'success' });
             } else {
                 toast({ title: 'Info', description: 'No sources saved yet' });
             }
@@ -150,7 +150,7 @@ export function DisciplineRepoTiles({
         setIsSavingTransmittal(true);
         try {
             await saveTransmittal(selectedDocumentIds);
-            toast({ title: 'Transmittal Saved', description: `${selectedDocumentIds.length} document(s)` });
+            toast({ title: 'Transmittal Saved', description: `${selectedDocumentIds.length} document(s)`, variant: 'success' });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to save transmittal', variant: 'destructive' });
         } finally {
@@ -163,7 +163,7 @@ export function DisciplineRepoTiles({
         const documentIds = loadTransmittal();
         if (documentIds.length > 0) {
             onSetSelectedDocumentIds?.(documentIds);
-            toast({ title: 'Transmittal Loaded', description: `${documentIds.length} document(s) selected` });
+            toast({ title: 'Transmittal Loaded', description: `${documentIds.length} document(s) selected`, variant: 'success' });
         } else {
             toast({ title: 'Info', description: 'No transmittal to load' });
         }

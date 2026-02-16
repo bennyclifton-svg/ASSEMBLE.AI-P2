@@ -8,8 +8,8 @@
 
 'use client';
 
-import { useCallback, useEffect } from 'react';
-import { ClipboardList, AlertCircle } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { ClipboardList, AlertCircle, Copy, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionHeader } from '@/components/shared/SectionHeader';
@@ -30,6 +30,10 @@ interface ReportWithCount extends Report {
 
 interface ReportsPanelProps {
     projectId: string;
+    groupId?: string;
+    groupTitle?: string;
+    onRenameGroup?: (newTitle: string) => void;
+    onDeleteGroup?: () => void;
     onSaveTransmittal?: (reportId: string) => void;
     onLoadTransmittal?: (reportId: string) => void;
     className?: string;
@@ -37,12 +41,16 @@ interface ReportsPanelProps {
 
 export function ReportsPanel({
     projectId,
+    groupId,
+    groupTitle,
+    onRenameGroup,
+    onDeleteGroup,
     onSaveTransmittal,
     onLoadTransmittal,
     className,
 }: ReportsPanelProps) {
-    const { reports, isLoading, error, refetch } = useReports({ projectId });
-    const { createReport, updateReport, deleteReport, copyReport } = useReportMutations(projectId);
+    const { reports, isLoading, error, refetch } = useReports({ projectId, groupId });
+    const { createReport, updateReport, deleteReport, copyReport } = useReportMutations(projectId, groupId);
 
     // Use UI context for expanded/active state persistence
     const {
@@ -52,13 +60,14 @@ export function ReportsPanel({
         setExpanded,
         setMenuExpanded,
         setActiveReportId,
-    } = useReportsSectionUI(projectId);
+    } = useReportsSectionUI(groupId || projectId);
 
     // Find the active report
     const activeReport = reports.find(r => r.id === activeReportId) || reports[0] || null;
 
     // Export hook for active report
     const { exportReport } = useReportExport(activeReport?.id || null);
+    const [isCopying, setIsCopying] = useState(false);
 
     // Auto-select first report when loaded
     useEffect(() => {
@@ -67,11 +76,27 @@ export function ReportsPanel({
         }
     }, [reports, activeReportId, setActiveReportId]);
 
+    const [isCreating, setIsCreating] = useState(false);
+
     const handleCreateReport = useCallback(async () => {
-        const newReport = await createReport({ projectId });
-        setActiveReportId(newReport.id);
-        setExpanded(true);
+        setIsCreating(true);
+        try {
+            const newReport = await createReport({ projectId, groupId });
+            setActiveReportId(newReport.id);
+            setExpanded(true);
+        } finally {
+            setIsCreating(false);
+        }
     }, [createReport, projectId, setActiveReportId, setExpanded]);
+
+    // Auto-create first report when expanding with none
+    const handleExpandToggle = useCallback(async () => {
+        if (!isExpanded && reports.length === 0 && !isLoading && !isCreating) {
+            await handleCreateReport();
+        } else {
+            setExpanded(!isExpanded);
+        }
+    }, [isExpanded, reports.length, isLoading, isCreating, handleCreateReport, setExpanded]);
 
     const handleDeleteReport = useCallback(async (reportId: string) => {
         await deleteReport(reportId);
@@ -104,19 +129,29 @@ export function ReportsPanel({
         await exportReport(format);
     }, [activeReport, exportReport]);
 
+    const handleRibbonCopy = useCallback(async () => {
+        if (!activeReport) return;
+        setIsCopying(true);
+        try {
+            await handleCopyReport(activeReport.id);
+        } finally {
+            setIsCopying(false);
+        }
+    }, [activeReport, handleCopyReport]);
+
     // Error state
     if (error) {
         return (
             <div className={cn('flex flex-col', className)}>
                 <SectionHeader
-                    title="Reports"
+                    title={groupTitle || "Reports"}
                     icon={ClipboardList}
                     isExpanded={isExpanded}
-                    onToggleExpand={() => setExpanded(!isExpanded)}
+                    onToggleExpand={handleExpandToggle}
                     isMenuExpanded={isMenuExpanded}
                     onToggleMenu={() => setMenuExpanded(!isMenuExpanded)}
                 />
-                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[var(--color-bg-secondary)]">
+                <div className="flex-1 flex flex-col items-center justify-center p-8" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
                     <div className="rounded-full bg-red-500/10 p-4 mb-4">
                         <AlertCircle className="h-8 w-8 text-red-500" />
                     </div>
@@ -156,6 +191,23 @@ export function ReportsPanel({
                 deleteMessage="This will permanently delete this report and all its sections, recipients, and attachments. This action cannot be undone."
             />
             <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
+            <div className="flex items-center gap-1">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRibbonCopy}
+                    disabled={!activeReport || isCopying}
+                    className="h-7 w-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] transition-colors"
+                    title="Copy report"
+                >
+                    {isCopying ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Copy className="w-4 h-4" />
+                    )}
+                </Button>
+            </div>
+            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
             <ExportButtonGroup
                 onExportPdf={() => handleExport('pdf')}
                 onExportDocx={() => handleExport('docx')}
@@ -171,7 +223,7 @@ export function ReportsPanel({
                 title="Reports"
                 icon={ClipboardList}
                 isExpanded={isExpanded}
-                onToggleExpand={() => setExpanded(!isExpanded)}
+                onToggleExpand={handleExpandToggle}
                 isMenuExpanded={isMenuExpanded}
                 onToggleMenu={() => setMenuExpanded(!isMenuExpanded)}
                 menuContent={menuContent}
@@ -179,7 +231,7 @@ export function ReportsPanel({
 
             {/* Content Area - only shown when expanded */}
             {isExpanded && (
-                <div className="mx-2 p-4 bg-[var(--color-bg-secondary)] rounded-md shadow-sm">
+                <div className="mx-2 p-4 rounded-md shadow-sm" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
                     {isLoading ? (
                         <ReportsPanelSkeleton />
                     ) : reports.length === 0 ? (

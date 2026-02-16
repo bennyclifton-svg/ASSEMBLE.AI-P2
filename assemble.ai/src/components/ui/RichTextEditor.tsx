@@ -18,6 +18,7 @@ import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
+import { InlineInstructionHighlight } from '@/lib/editor/inline-instruction-extension';
 import {
   Bold,
   Italic,
@@ -64,6 +65,9 @@ export interface RichTextEditorProps {
 
   /** Use transparent background (inherits from parent) */
   transparentBg?: boolean;
+
+  /** Extra content rendered at the right end of the toolbar */
+  toolbarExtra?: React.ReactNode;
 }
 
 const SIZE_CLASSES: Record<RichTextEditorVariant, string> = {
@@ -72,7 +76,7 @@ const SIZE_CLASSES: Record<RichTextEditorVariant, string> = {
   full: 'min-h-[500px]',
 };
 
-const PROSE_BASE_CLASSES = 'prose prose-invert prose-sm max-w-none focus:outline-none px-3 py-2 [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_h3]:text-[var(--color-accent-teal)] [&_p]:mb-1 [&_p]:leading-normal [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:my-0';
+const PROSE_BASE_CLASSES = 'prose prose-invert prose-sm max-w-none focus:outline-none px-3 py-2 leading-normal [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-3 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-2 [&_h3]:text-[var(--color-accent-teal)] [&_p]:mt-0 [&_p]:mb-1 [&_p]:leading-normal [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:ml-4 [&_ul]:my-0 [&_ol]:list-decimal [&_ol]:ml-4 [&_ol]:my-0 [&_li]:my-0 [&_li]:leading-normal';
 
 /**
  * Convert markdown syntax to HTML for TipTap rendering
@@ -168,6 +172,7 @@ export function RichTextEditor({
   className,
   editorClassName,
   transparentBg = false,
+  toolbarExtra,
 }: RichTextEditorProps) {
   // Convert markdown to HTML for initial content
   const processedContent = React.useMemo(() => markdownToHtml(content), [content]);
@@ -191,6 +196,7 @@ export function RichTextEditor({
       }),
       TextStyle,
       Color,
+      InlineInstructionHighlight,
     ],
     content: processedContent,
     editable: !disabled,
@@ -411,6 +417,13 @@ export function RichTextEditor({
                 <Redo className={iconSize} />
               </ToolbarButton>
             </>
+          )}
+
+          {/* Extra toolbar content (e.g. Generate button) */}
+          {toolbarExtra && (
+            <div className="ml-auto flex items-center">
+              {toolbarExtra}
+            </div>
           )}
         </div>
       )}

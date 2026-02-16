@@ -85,12 +85,18 @@ export function CategoryUploadTiles({
                 {/* All category tiles */}
                 {categories.map(category => {
                     const isKnowledgeCategory = category.isKnowledgeSource === true;
+                    const hasActiveSubcategoryFilter = !!(
+                        filterCategoryId === category.id &&
+                        filterSubcategoryId &&
+                        !expandedCategories.has(category.id)
+                    );
                     return (
                         <CategoryTile
                             key={category.id}
                             category={category}
                             onFilesDropped={onFilesDropped}
                             onClick={category.hasSubcategories ? () => toggleCategory(category.id) : undefined}
+                            hasActiveSubcategoryFilter={hasActiveSubcategoryFilter}
                             onCategoryClick={() => {
                                 // Knowledge tile: toggle filter by synced documents
                                 if (isKnowledgeCategory) {

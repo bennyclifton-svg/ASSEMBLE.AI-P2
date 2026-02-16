@@ -38,6 +38,7 @@ export const meetingAgendaTypeSchema = z.enum(['standard', 'detailed', 'custom']
 
 export const createMeetingSchema = z.object({
   projectId: z.string().min(1),
+  groupId: z.string().optional(),
   title: z.string().min(1).max(200).optional(),
   meetingDate: z.string().optional(),
   agendaType: meetingAgendaTypeSchema.optional(),
@@ -90,6 +91,7 @@ export const reportContentsTypeSchema = z.enum(['standard', 'detailed', 'custom'
 
 export const createReportSchema = z.object({
   projectId: z.string().min(1),
+  groupId: z.string().optional(),
   title: z.string().min(1).max(200).optional(),
   reportDate: z.string().optional(),
   preparedFor: z.string().max(200).optional(),

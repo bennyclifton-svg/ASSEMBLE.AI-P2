@@ -191,6 +191,7 @@ export function GenerativeField({
             toast({
                 title: 'Content Generated',
                 description: `Generated using ${result.sources.length} source(s) from Knowledge Source`,
+                variant: 'success',
             });
 
             onGenerate?.(result);

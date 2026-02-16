@@ -123,6 +123,11 @@ export const projectDetails = sqliteTable('project_details', {
     lotArea: integer('lot_area'),
     numberOfStories: integer('number_of_stories'),
     buildingClass: text('building_class'),
+    // Geocoded coordinates from Google Places / Nominatim
+    latitude: text('latitude'),
+    longitude: text('longitude'),
+    placeId: text('place_id'),
+    formattedAddress: text('formatted_address'),
     updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -265,11 +270,21 @@ export const revisionHistory = sqliteTable('revision_history', {
 // GIS Cache
 export const gisCache = sqliteTable('gis_cache', {
     id: text('id').primaryKey(),
-    address: text('address').notNull().unique(),
-    zoning: text('zoning'),
-    jurisdiction: text('jurisdiction'),
-    lotArea: integer('lot_area'),
-    rawData: text('raw_data'), // JSON string
+    // Key: "{state}:{lat.toFixed(6)},{lng.toFixed(6)}"
+    coordKey: text('coord_key').notNull().unique(),
+    latitude: text('latitude').notNull(),
+    longitude: text('longitude').notNull(),
+    state: text('state').notNull(),
+    // LEP Planning Controls
+    landZone: text('land_zone'),
+    floorSpaceRatio: text('floor_space_ratio'),
+    buildingHeight: text('building_height'),
+    heritageStatus: text('heritage_status'),
+    floodZone: text('flood_zone'),
+    bushfireProne: text('bushfire_prone'),
+    minLotSize: text('min_lot_size'),
+    // Extracted fields from API response
+    rawData: text('raw_data'),
     cachedAt: text('cached_at').default(sql`CURRENT_TIMESTAMP`),
     expiresAt: text('expires_at').notNull(),
 });
@@ -291,7 +306,7 @@ export const consultants = sqliteTable('consultants', {
     address: text('address'),
     abn: text('abn'),
     notes: text('notes'),
-    shortlisted: integer('shortlisted', { mode: 'boolean' }).default(false),
+    shortlisted: integer('shortlisted', { mode: 'boolean' }).default(true),
     awarded: integer('awarded', { mode: 'boolean' }).default(false), // Links to Cost Planning
     companyId: text('company_id').references(() => companies.id), // FK to companies master list
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -310,7 +325,7 @@ export const contractors = sqliteTable('contractors', {
     address: text('address'),
     abn: text('abn'),
     notes: text('notes'),
-    shortlisted: integer('shortlisted', { mode: 'boolean' }).default(false),
+    shortlisted: integer('shortlisted', { mode: 'boolean' }).default(true),
     awarded: integer('awarded', { mode: 'boolean' }).default(false), // Links to Cost Planning
     companyId: text('company_id').references(() => companies.id), // FK to companies master list
     createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
@@ -1368,6 +1383,20 @@ export const noteTransmittalsRelations = relations(noteTransmittals, ({ one }) =
 }));
 
 // ============================================================================
+// MEETING GROUPS SCHEMA
+// ============================================================================
+
+export const meetingGroups = sqliteTable('meeting_groups', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    groupNumber: integer('group_number').notNull().default(1),
+    title: text('title').notNull().default('New Meeting'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
 // MEETINGS SCHEMA
 // ============================================================================
 
@@ -1378,6 +1407,7 @@ export const meetings = sqliteTable('meetings', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    groupId: text('group_id').references(() => meetingGroups.id, { onDelete: 'cascade' }),
     title: text('title').notNull().default('New Meeting'),
     meetingDate: text('meeting_date'),
     agendaType: text('agenda_type').$type<MeetingAgendaType>().default('standard'),
@@ -1421,6 +1451,19 @@ export const meetingTransmittals = sqliteTable('meeting_transmittals', {
     addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+// Meeting Groups Relations
+export const meetingGroupsRelations = relations(meetingGroups, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [meetingGroups.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [meetingGroups.organizationId],
+        references: [organizations.id],
+    }),
+    meetings: many(meetings),
+}));
+
 // Meetings Relations
 export const meetingsRelations = relations(meetings, ({ one, many }) => ({
     project: one(projects, {
@@ -1430,6 +1473,10 @@ export const meetingsRelations = relations(meetings, ({ one, many }) => ({
     organization: one(organizations, {
         fields: [meetings.organizationId],
         references: [organizations.id],
+    }),
+    group: one(meetingGroups, {
+        fields: [meetings.groupId],
+        references: [meetingGroups.id],
     }),
     sections: many(meetingSections),
     attendees: many(meetingAttendees),
@@ -1476,6 +1523,20 @@ export const meetingTransmittalsRelations = relations(meetingTransmittals, ({ on
 }));
 
 // ============================================================================
+// REPORT GROUPS SCHEMA
+// ============================================================================
+
+export const reportGroups = sqliteTable('report_groups', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    groupNumber: integer('group_number').notNull().default(1),
+    title: text('title').notNull().default('New Report'),
+    createdAt: text('created_at').default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text('updated_at').default(sql`CURRENT_TIMESTAMP`),
+});
+
+// ============================================================================
 // REPORTS SCHEMA
 // ============================================================================
 
@@ -1486,6 +1547,7 @@ export const reports = sqliteTable('reports', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
+    groupId: text('group_id').references(() => reportGroups.id, { onDelete: 'cascade' }),
     title: text('title').notNull().default('New Report'),
     reportDate: text('report_date'),
     preparedFor: text('prepared_for'),
@@ -1530,6 +1592,19 @@ export const reportTransmittals = sqliteTable('report_transmittals', {
     addedAt: text('added_at').default(sql`CURRENT_TIMESTAMP`),
 });
 
+// Report Groups Relations
+export const reportGroupsRelations = relations(reportGroups, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [reportGroups.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [reportGroups.organizationId],
+        references: [organizations.id],
+    }),
+    reports: many(reports),
+}));
+
 // Reports Relations
 export const reportsRelations = relations(reports, ({ one, many }) => ({
     project: one(projects, {
@@ -1539,6 +1614,10 @@ export const reportsRelations = relations(reports, ({ one, many }) => ({
     organization: one(organizations, {
         fields: [reports.organizationId],
         references: [organizations.id],
+    }),
+    group: one(reportGroups, {
+        fields: [reports.groupId],
+        references: [reportGroups.id],
     }),
     sections: many(reportSections),
     attendees: many(reportAttendees),

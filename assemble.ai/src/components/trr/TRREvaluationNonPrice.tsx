@@ -87,12 +87,12 @@ export function TRREvaluationNonPrice({
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-black uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                 Evaluation Non-Price
             </h3>
             <div className="overflow-hidden">
                 {isLoading ? (
-                    <div className="px-4 py-3 text-black/60 text-sm">
+                    <div className="px-4 py-3 text-[var(--color-text-secondary)] text-sm">
                         Loading non-price evaluation data...
                     </div>
                 ) : hasData && hasAnyEvaluation ? (
@@ -100,13 +100,13 @@ export function TRREvaluationNonPrice({
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-[var(--color-border)]">
-                                    <th className="px-4 py-2.5 text-left text-black font-medium min-w-[140px]">
+                                    <th className="px-4 py-2.5 text-left text-[var(--color-text-primary)] font-medium min-w-[140px]">
                                         Criteria
                                     </th>
                                     {data?.firms.map((firm) => (
                                         <th
                                             key={firm.id}
-                                            className="px-4 py-2.5 text-left text-black font-medium min-w-[180px]"
+                                            className="px-4 py-2.5 text-left text-[var(--color-text-primary)] font-medium min-w-[180px]"
                                         >
                                             {firm.companyName}
                                         </th>
@@ -116,7 +116,7 @@ export function TRREvaluationNonPrice({
                             <tbody>
                                 {sortedCriteria.map((criteria) => (
                                     <tr key={criteria.id}>
-                                        <td className="px-4 py-2.5 text-black font-medium align-top">
+                                        <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-medium align-top">
                                             {criteria.criteriaLabel}
                                         </td>
                                         {data?.firms.map((firm) => {
@@ -132,7 +132,7 @@ export function TRREvaluationNonPrice({
                                                     <div className="flex flex-col min-h-[40px]">
                                                         {/* Content - top */}
                                                         {content && (
-                                                            <p className="text-black text-xs flex-1 mb-1">
+                                                            <p className="text-[var(--color-text-primary)] text-xs flex-1 mb-1">
                                                                 {content}
                                                             </p>
                                                         )}
@@ -154,7 +154,7 @@ export function TRREvaluationNonPrice({
                         </table>
                     </div>
                 ) : (
-                    <div className="px-4 py-3 text-black/60 text-sm">
+                    <div className="px-4 py-3 text-[var(--color-text-secondary)] text-sm">
                         No non-price evaluation completed
                     </div>
                 )}

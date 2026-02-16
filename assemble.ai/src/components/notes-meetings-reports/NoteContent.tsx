@@ -9,9 +9,10 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Star, Copy, Sparkles, Loader2 } from 'lucide-react';
+import { Star, Copy, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { NoteEditor } from './NoteEditor';
 import { NoteColorPicker } from './NoteColorPicker';
 import { AttachmentSection } from './shared/AttachmentSection';
@@ -142,10 +143,13 @@ export function NoteContent({
 
     return (
         <div
-            className={cn('space-y-4 px-4 pt-2 pb-4 transition-colors', className)}
+            className={cn('px-4 pb-4 transition-colors note-colored-scrollbar note-dark-text', hideTitle && hideToolbar ? 'pt-0' : 'pt-2', className)}
             style={{
                 backgroundColor: colorStyles.bg,
-            }}
+                color: colorStyles.text,
+                '--note-scrollbar-thumb': colorStyles.scrollbar,
+                '--note-scrollbar-track': colorStyles.bg,
+            } as React.CSSProperties}
         >
             {/* Toolbar with title, color picker, and actions (hidden when both hideTitle and hideToolbar are true) */}
             {(!hideTitle || !hideToolbar) && (
@@ -165,7 +169,7 @@ export function NoteContent({
                             ) : (
                                 <h2
                                     onClick={handleTitleClick}
-                                    className="text-lg font-semibold text-[var(--color-text-primary)] cursor-pointer hover:text-[var(--color-accent-copper)] truncate"
+                                    className="text-lg font-semibold text-inherit cursor-pointer hover:text-[var(--color-accent-copper)] truncate"
                                     title="Click to edit title"
                                 >
                                     {note.title}
@@ -193,28 +197,12 @@ export function NoteContent({
                                     'p-1 rounded transition-colors',
                                     note.isStarred
                                         ? 'text-yellow-500 hover:text-yellow-600'
-                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                        : 'opacity-60 hover:opacity-100'
                                 )}
                                 title={note.isStarred ? 'Unstar note' : 'Star note'}
                             >
                                 <Star className={cn('w-4 h-4', note.isStarred && 'fill-current')} />
                             </button>
-
-                            {/* Generate button */}
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleGenerate}
-                                disabled={isGenerating}
-                                className="h-8 px-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
-                                title="Generate content with AI"
-                            >
-                                {isGenerating ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                    <Sparkles className="w-4 h-4" />
-                                )}
-                            </Button>
 
                             {/* Copy button */}
                             <Button
@@ -222,7 +210,7 @@ export function NoteContent({
                                 size="sm"
                                 onClick={handleCopy}
                                 disabled={isCopying}
-                                className="h-8 px-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
+                                className="h-8 px-2 opacity-60 hover:opacity-100 hover:bg-[var(--color-border)]"
                                 title="Copy note"
                             >
                                 {isCopying ? (
@@ -237,20 +225,46 @@ export function NoteContent({
             )}
 
             {/* Content editor - borderless to match RFT */}
-            <NoteEditor
-                content={note.content || ''}
-                onContentChange={handleContentChange}
-                transparentBg={true}
-            />
+            <div className={cn('flex-1 min-h-0', (!hideTitle || !hideToolbar) && 'mt-4')}>
+                <NoteEditor
+                    content={note.content || ''}
+                    onContentChange={handleContentChange}
+                    transparentBg={true}
+                    className="h-full"
+                    toolbarExtra={
+                        <button
+                            onClick={handleGenerate}
+                            disabled={isGenerating}
+                            className={cn(
+                                'flex items-center gap-1.5 text-sm font-medium transition-all',
+                                isGenerating
+                                    ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                            )}
+                            title="Generate content with AI"
+                        >
+                            <DiamondIcon
+                                className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
+                                variant="empty"
+                            />
+                            <span className={isGenerating ? 'animate-text-aurora' : ''}>
+                                {isGenerating ? 'Generating...' : 'Generate'}
+                            </span>
+                        </button>
+                    }
+                />
+            </div>
 
             {/* Attachment section - compact for notes */}
-            <AttachmentSection
-                documents={documents}
-                isLoading={transmittalLoading}
-                onSave={onSaveTransmittal}
-                onLoad={onLoadTransmittal}
-                compact={true}
-            />
+            <div className="mt-4 shrink-0">
+                <AttachmentSection
+                    documents={documents}
+                    isLoading={transmittalLoading}
+                    onSave={onSaveTransmittal}
+                    onLoad={onLoadTransmittal}
+                    compact={true}
+                />
+            </div>
         </div>
     );
 }

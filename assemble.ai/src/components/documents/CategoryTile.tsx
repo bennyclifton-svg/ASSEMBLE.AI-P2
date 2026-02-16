@@ -38,6 +38,8 @@ interface CategoryTileProps {
     isSelected?: boolean;
     /** Whether this tile is currently filtered (solid fill highlight). */
     isFiltered?: boolean;
+    /** Whether a subcategory filter is active while the tile is collapsed. */
+    hasActiveSubcategoryFilter?: boolean;
 }
 
 /**
@@ -59,6 +61,7 @@ export function CategoryTile({
     isUploadTile = false,
     isSelected = false,
     isFiltered = false,
+    hasActiveSubcategoryFilter = false,
 }: CategoryTileProps) {
     // Check if this is the Knowledge category (triggers auto-RAG)
     const isKnowledgeCategory = category.isKnowledgeSource === true;
@@ -191,9 +194,9 @@ export function CategoryTile({
                 // Compact size
                 isSubcategory ? 'h-10 px-3 py-1' : 'h-11 px-3 py-1',
                 // Upload tile special styling - dashed border
-                isUploadTile && 'border-2 border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)] hover:border-[var(--color-accent-copper)]/50 hover:bg-[var(--color-accent-copper-tint)]',
+                isUploadTile && 'border-2 border-dashed border-[var(--color-border-strong)] hover:border-[var(--color-accent-copper)]/50 hover:bg-[var(--color-accent-copper-tint)]',
                 // All category tiles - base styling
-                !isUploadTile && 'border border-[var(--color-border)] bg-[var(--color-bg-secondary)]',
+                !isUploadTile && 'border border-[var(--color-border)]',
                 // Hover styles (when not selected or filtered)
                 !isUploadTile && !isSelected && !isFiltered && getHoverStyles(),
                 // Selected state - permanent highlight (transparent tint)
@@ -206,6 +209,9 @@ export function CategoryTile({
                     : 'ring-2 ring-[var(--color-accent-copper)]')
             )}
             style={{
+                ...(!isSelected && !isFiltered && !isDragActive && {
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)',
+                }),
                 ...(isDragActive && isUploadTile && {
                     borderColor: 'var(--color-accent-copper)',
                     backgroundColor: 'var(--color-accent-copper-tint)',
@@ -289,6 +295,11 @@ export function CategoryTile({
                 <div className="absolute inset-0 bg-[var(--color-bg-primary)]/80 flex items-center justify-center rounded-lg z-10">
                     <Loader2 className="h-6 w-6 animate-spin text-[var(--color-text-primary)]" />
                 </div>
+            )}
+
+            {/* Active subcategory filter indicator (shown when collapsed) */}
+            {hasActiveSubcategoryFilter && (
+                <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--color-accent-copper)] animate-in fade-in duration-200" />
             )}
         </div>
     );

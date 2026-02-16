@@ -128,6 +128,78 @@ export function sumInvoicesForCostLine(
     );
 }
 
+/**
+ * Sum contract-only invoices for a cost line (excludes variation-tagged invoices).
+ * Used by Payment Schedule to show only base contract amounts in contract rows.
+ */
+export function sumContractOnlyInvoicesForCostLine(
+  invoices: Invoice[],
+  costLineId: string,
+  currentPeriod?: { year: number; month: number }
+): { claimedToDateCents: number; currentMonthCents: number } {
+  return invoices
+    .filter((inv) => inv.costLineId === costLineId && !inv.deletedAt && !inv.variationId)
+    .reduce(
+      (acc, inv) => {
+        const isUpToSelectedPeriod = currentPeriod
+          ? inv.periodYear < currentPeriod.year ||
+            (inv.periodYear === currentPeriod.year && inv.periodMonth <= currentPeriod.month)
+          : true;
+
+        if (isUpToSelectedPeriod) {
+          acc.claimedToDateCents += inv.amountCents;
+        }
+
+        if (
+          currentPeriod &&
+          inv.periodYear === currentPeriod.year &&
+          inv.periodMonth === currentPeriod.month
+        ) {
+          acc.currentMonthCents += inv.amountCents;
+        }
+
+        return acc;
+      },
+      { claimedToDateCents: 0, currentMonthCents: 0 }
+    );
+}
+
+/**
+ * Sum invoices for a specific variation.
+ * Used by Payment Schedule to show claimed amounts on variation rows.
+ */
+export function sumInvoicesForVariation(
+  invoices: Invoice[],
+  variationId: string,
+  currentPeriod?: { year: number; month: number }
+): { claimedToDateCents: number; currentMonthCents: number } {
+  return invoices
+    .filter((inv) => inv.variationId === variationId && !inv.deletedAt)
+    .reduce(
+      (acc, inv) => {
+        const isUpToSelectedPeriod = currentPeriod
+          ? inv.periodYear < currentPeriod.year ||
+            (inv.periodYear === currentPeriod.year && inv.periodMonth <= currentPeriod.month)
+          : true;
+
+        if (isUpToSelectedPeriod) {
+          acc.claimedToDateCents += inv.amountCents;
+        }
+
+        if (
+          currentPeriod &&
+          inv.periodYear === currentPeriod.year &&
+          inv.periodMonth === currentPeriod.month
+        ) {
+          acc.currentMonthCents += inv.amountCents;
+        }
+
+        return acc;
+      },
+      { claimedToDateCents: 0, currentMonthCents: 0 }
+    );
+}
+
 // ============================================================================
 // COST LINE CALCULATIONS
 // ============================================================================

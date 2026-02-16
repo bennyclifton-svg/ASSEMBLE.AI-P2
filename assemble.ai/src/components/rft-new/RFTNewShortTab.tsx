@@ -162,6 +162,16 @@ function flattenVisibleActivities(activities: ProgramActivity[]): ProgramActivit
     return result;
 }
 
+// Format date as DD/MM/YY for display
+function formatDateDisplay(dateStr: string | null): string {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
+    return `${day}/${month}/${year}`;
+}
+
 // Program Gantt Section Component - matches Program module appearance
 function ProgramGanttSection({ activities, zoomLevel }: { activities: ProgramActivity[]; zoomLevel: ZoomLevel }) {
     // Filter visible activities based on collapsed state
@@ -243,11 +253,17 @@ function ProgramGanttSection({ activities, zoomLevel }: { activities: ProgramAct
             </h3>
             <div className="border border-[var(--color-border)] rounded overflow-hidden bg-[var(--color-bg-primary)]">
                 <div className="overflow-x-auto">
-                    <div style={{ minWidth: `${160 + timelineColumns.length * columnWidth}px` }}>
+                    <div style={{ minWidth: `${160 + 140 + timelineColumns.length * columnWidth}px` }}>
                         {/* Header: Month row */}
                         <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
                             <div className="w-40 flex-shrink-0 px-3 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)]">
                                 Activity
+                            </div>
+                            <div className="w-[70px] flex-shrink-0 px-2 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center">
+                                Start
+                            </div>
+                            <div className="w-[70px] flex-shrink-0 px-2 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center">
+                                End
                             </div>
                             <div className="flex">
                                 {monthGroups.map((group, i) => (
@@ -266,6 +282,8 @@ function ProgramGanttSection({ activities, zoomLevel }: { activities: ProgramAct
                         {zoomLevel === 'week' && (
                             <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
                                 <div className="w-40 flex-shrink-0 border-r border-[var(--color-border)]" />
+                                <div className="w-[70px] flex-shrink-0 border-r border-[var(--color-border)]" />
+                                <div className="w-[70px] flex-shrink-0 border-r border-[var(--color-border)]" />
                                 <div className="flex">
                                     {timelineColumns.map((col, i) => (
                                         <div
@@ -319,6 +337,19 @@ function ProgramGanttSection({ activities, zoomLevel }: { activities: ProgramAct
                                         )}
                                         <span className={`text-xs truncate ${isChild ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)] font-medium'}`}>
                                             {activity.name}
+                                        </span>
+                                    </div>
+
+                                    {/* Start date cell */}
+                                    <div className="w-[70px] flex-shrink-0 px-2 py-2 border-r border-[var(--color-border)] text-center">
+                                        <span className="text-xs text-[var(--color-text-muted)]">
+                                            {formatDateDisplay(activity.startDate)}
+                                        </span>
+                                    </div>
+                                    {/* End date cell */}
+                                    <div className="w-[70px] flex-shrink-0 px-2 py-2 border-r border-[var(--color-border)] text-center">
+                                        <span className="text-xs text-[var(--color-text-muted)]">
+                                            {formatDateDisplay(activity.endDate)}
                                         </span>
                                     </div>
 
@@ -581,6 +612,7 @@ export function RFTNewShortTab({
             toast({
                 title: 'Service Generated',
                 description: buildSourceDescription(result.metadata, result.sources.length),
+                variant: 'success',
             });
         } catch (error) {
             toast({
@@ -621,6 +653,7 @@ export function RFTNewShortTab({
             toast({
                 title: 'Service Polished',
                 description: buildSourceDescription(result.metadata, result.sources.length),
+                variant: 'success',
             });
         } catch (error) {
             toast({
@@ -654,6 +687,7 @@ export function RFTNewShortTab({
             toast({
                 title: 'Deliverables Generated',
                 description: buildSourceDescription(result.metadata, result.sources.length),
+                variant: 'success',
             });
         } catch (error) {
             toast({
@@ -694,6 +728,7 @@ export function RFTNewShortTab({
             toast({
                 title: 'Deliverables Polished',
                 description: buildSourceDescription(result.metadata, result.sources.length),
+                variant: 'success',
             });
         } catch (error) {
             toast({
@@ -714,7 +749,8 @@ export function RFTNewShortTab({
         );
     }
 
-    const rftLabel = `RFT ${contextName}`;
+    const rftNum = String(rftNew.rftNumber).padStart(2, '0');
+    const rftLabel = `Request For Tender, ${contextName} ${rftNum}`;
 
     // Helper to check if HTML content has actual text (not just empty tags)
     const hasContent = (html: string) => {
@@ -808,7 +844,7 @@ export function RFTNewShortTab({
                             {objectives.functionalQuality ? (
                                 objectives.functionalQuality.includes('<') ? (
                                     <div
-                                        className="[&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline"
+                                        className="[&_p]:mb-1 [&_p]:leading-normal [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-3 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-2 [&_h3]:text-[var(--color-accent-teal)] [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:my-0"
                                         dangerouslySetInnerHTML={{ __html: objectives.functionalQuality }}
                                     />
                                 ) : (
@@ -826,7 +862,7 @@ export function RFTNewShortTab({
                             {objectives.planningCompliance ? (
                                 objectives.planningCompliance.includes('<') ? (
                                     <div
-                                        className="[&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline"
+                                        className="[&_p]:mb-1 [&_p]:leading-normal [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-3 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-2 [&_h3]:text-[var(--color-accent-teal)] [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:my-0"
                                         dangerouslySetInnerHTML={{ __html: objectives.planningCompliance }}
                                     />
                                 ) : (
@@ -863,7 +899,7 @@ export function RFTNewShortTab({
                                     `}
                                     title="Generate short bullet points (2-5 words each)"
                                 >
-                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingService && 'animate-spin [animation-duration:2.5s]')} variant="empty" />
+                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingService && 'animate-diamond-spin')} variant="empty" />
                                     <span className={isGeneratingService ? 'animate-text-aurora' : ''}>{isGeneratingService ? 'Generating...' : 'Generate'}</span>
                                 </button>
                                 <button
@@ -880,7 +916,7 @@ export function RFTNewShortTab({
                                     `}
                                     title="Expand bullets to full descriptions (10-15 words)"
                                 >
-                                    <DiamondIcon className={cn('w-4 h-4', isPolishingService && 'animate-spin [animation-duration:2.5s]')} variant="filled" />
+                                    <DiamondIcon className={cn('w-4 h-4', isPolishingService && 'animate-diamond-spin')} variant="filled" />
                                     <span className={isPolishingService ? 'animate-text-aurora' : ''}>{isPolishingService ? 'Polishing...' : 'Polish'}</span>
                                 </button>
                             </div>
@@ -917,7 +953,7 @@ export function RFTNewShortTab({
                                     `}
                                     title="Generate short bullet points (2-5 words each)"
                                 >
-                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingDeliverables && 'animate-spin [animation-duration:2.5s]')} variant="empty" />
+                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingDeliverables && 'animate-diamond-spin')} variant="empty" />
                                     <span className={isGeneratingDeliverables ? 'animate-text-aurora' : ''}>{isGeneratingDeliverables ? 'Generating...' : 'Generate'}</span>
                                 </button>
                                 <button
@@ -934,7 +970,7 @@ export function RFTNewShortTab({
                                     `}
                                     title="Expand bullets to full descriptions (10-15 words)"
                                 >
-                                    <DiamondIcon className={cn('w-4 h-4', isPolishingDeliverables && 'animate-spin [animation-duration:2.5s]')} variant="filled" />
+                                    <DiamondIcon className={cn('w-4 h-4', isPolishingDeliverables && 'animate-diamond-spin')} variant="filled" />
                                     <span className={isPolishingDeliverables ? 'animate-text-aurora' : ''}>{isPolishingDeliverables ? 'Polishing...' : 'Polish'}</span>
                                 </button>
                             </div>

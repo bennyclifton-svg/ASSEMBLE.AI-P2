@@ -9,6 +9,7 @@
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
+import Image from 'next/image';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -59,8 +60,8 @@ export function NotesPanel({
         });
     }, []);
 
-    const handleCreateNote = useCallback(async () => {
-        await createNote({ projectId });
+    const handleCreateNote = useCallback(async (color: NoteColor = 'yellow') => {
+        await createNote({ projectId, color });
         // Note stays collapsed by default
     }, [createNote, projectId]);
 
@@ -89,34 +90,36 @@ export function NotesPanel({
     // Error state
     if (error) {
         return (
-            <div className={cn('mt-6', className)}>
-                <div className="mx-2 mb-2">
-                    {/* New Note Button - Sticky note pad */}
-                    <button
-                        onClick={handleCreateNote}
-                        disabled={isLoading}
-                        className="relative w-[140px] h-[140px] bg-[#fef9c3] hover:bg-[#fde68a] shadow-md transition-colors disabled:opacity-50 group"
-                        title="Create new note"
-                    >
-                        <div className="absolute -bottom-1 -right-1 w-[140px] h-[140px] bg-[#fef9c3]/70 shadow-sm" />
-                        <div className="absolute -bottom-0.5 -right-0.5 w-[140px] h-[140px] bg-[#fef9c3]/85 shadow-sm" />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <div className="absolute top-0 right-0 w-6 h-6 overflow-hidden">
-                                <div className="absolute top-0 right-0 w-8 h-8 bg-[var(--color-bg-primary)] origin-top-right rotate-0 transform translate-x-2 -translate-y-2"
-                                     style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
-                                <div className="absolute top-0 right-0 w-6 h-6 bg-[#fde68a] shadow-sm"
-                                     style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+            <div className={cn('mt-6 flex gap-4', className)}>
+                {/* Sticky note buttons - vertical column */}
+                <div className="flex flex-col gap-1 shrink-0">
+                    {[
+                        { name: 'sticky_yellow', color: 'yellow' as NoteColor },
+                        { name: 'sticky_blue', color: 'blue' as NoteColor },
+                        { name: 'sticky_pink', color: 'pink' as NoteColor },
+                        { name: 'sticky_green', color: 'green' as NoteColor },
+                    ].map(({ name, color }, i) => (
+                        <button
+                            key={name}
+                            onClick={() => handleCreateNote(color)}
+                            disabled={isLoading}
+                            className="relative cursor-pointer hover:scale-105 transition-transform disabled:opacity-50"
+                            title={`Create ${color} note`}
+                        >
+                            <Image
+                                src={`/images/${name}.svg`}
+                                alt={`Create ${color} note`}
+                                width={100}
+                                height={100}
+                                priority={i === 0}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center pb-3">
+                                <span className="text-4xl font-light text-black/40">+</span>
                             </div>
-                            <div className="text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-copper)] transition-colors">
-                                <svg className="w-8 h-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                </svg>
-                                <span className="text-xs font-medium">New Note</span>
-                            </div>
-                        </div>
-                    </button>
+                        </button>
+                    ))}
                 </div>
-                <div className="flex flex-col items-center justify-center p-8 bg-[var(--color-bg-secondary)] rounded-md mx-2">
+                <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[var(--color-bg-secondary)] rounded-md">
                     <div className="rounded-full bg-red-500/10 p-4 mb-4">
                         <AlertCircle className="h-8 w-8 text-red-500" />
                     </div>
@@ -137,78 +140,120 @@ export function NotesPanel({
     // Loading state
     if (isLoading) {
         return (
-            <div className={cn('mt-6', className)}>
-                <div className="mx-2 mb-2">
-                    <Skeleton className="w-[140px] h-[140px]" />
+            <div className={cn('mt-6 flex gap-4', className)}>
+                {/* Sticky note buttons - vertical column */}
+                <div className="flex flex-col gap-1 shrink-0">
+                    {['sticky_yellow', 'sticky_blue', 'sticky_pink', 'sticky_green'].map((name, i) => (
+                        <div key={name} className="relative">
+                            <Image
+                                src={`/images/${name}.svg`}
+                                alt="Sticky Notes"
+                                width={100}
+                                height={100}
+                                priority={i === 0}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center pb-3">
+                                <span className="text-4xl font-light text-black/40">+</span>
+                            </div>
+                        </div>
+                    ))}
                 </div>
-                <div className="space-y-2 mx-2">
-                    <Skeleton className="h-[140px] w-[140px]" />
-                    <Skeleton className="h-[140px] w-[140px]" />
+                <div className="flex-1 min-w-0 grid gap-x-2 gap-y-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+                    <Skeleton className="h-[140px]" />
+                    <Skeleton className="h-[140px]" />
+                    <Skeleton className="h-[140px]" />
+                    <Skeleton className="h-[140px]" />
                 </div>
             </div>
         );
     }
 
+    const stickyButtons: { name: string; color: NoteColor }[] = [
+        { name: 'sticky_yellow', color: 'yellow' },
+        { name: 'sticky_blue', color: 'blue' },
+        { name: 'sticky_pink', color: 'pink' },
+        { name: 'sticky_green', color: 'green' },
+    ];
+
+    const hasExpanded = expandedNotes.size > 0;
+
     return (
-        <div className={cn('mt-6', className)}>
-            {/* New Note Button - Sticky note pad with peeling corner */}
-            <div className="mx-2 mb-2">
-                <button
-                    onClick={handleCreateNote}
-                    disabled={isLoading}
-                    className="relative w-[140px] h-[140px] bg-[#fef9c3] hover:bg-[#fde68a] shadow-md transition-colors disabled:opacity-50 group"
-                    title="Create new note"
-                >
-                    {/* Stacked pages effect - bottom layers */}
-                    <div className="absolute -bottom-1 -right-1 w-[140px] h-[140px] bg-[#fef9c3]/70 shadow-sm" />
-                    <div className="absolute -bottom-0.5 -right-0.5 w-[140px] h-[140px] bg-[#fef9c3]/85 shadow-sm" />
-
-                    {/* Main note surface */}
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        {/* Peeling corner */}
-                        <div className="absolute top-0 right-0 w-6 h-6 overflow-hidden">
-                            <div className="absolute top-0 right-0 w-8 h-8 bg-[var(--color-bg-primary)] origin-top-right rotate-0 transform translate-x-2 -translate-y-2"
-                                 style={{ clipPath: 'polygon(100% 0, 0 100%, 100% 100%)' }} />
-                            <div className="absolute top-0 right-0 w-6 h-6 bg-[#fde68a] shadow-sm"
-                                 style={{ clipPath: 'polygon(100% 0, 0 0, 100% 100%)' }} />
+        <div className={cn('mt-6 flex gap-4', className)}>
+            {/* Sticky note buttons - vertical column */}
+            <div className="flex flex-col gap-1 shrink-0 sticky top-0 self-start">
+                {stickyButtons.map(({ name, color }, i) => (
+                    <button
+                        key={name}
+                        onClick={() => handleCreateNote(color)}
+                        disabled={isLoading}
+                        className="relative cursor-pointer hover:scale-105 transition-transform disabled:opacity-50"
+                        title={`Create ${color} note`}
+                    >
+                        <Image
+                            src={`/images/${name}.svg`}
+                            alt={`Create ${color} note`}
+                            width={100}
+                            height={100}
+                            priority={i === 0}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center pb-3">
+                            <span className="text-4xl font-light text-black/40">+</span>
                         </div>
-
-                        {/* Plus icon and text */}
-                        <div className="text-[var(--color-text-muted)] group-hover:text-[var(--color-accent-copper)] transition-colors">
-                            <svg className="w-8 h-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                            </svg>
-                            <span className="text-xs font-medium">New Note</span>
-                        </div>
-                    </div>
-                </button>
+                    </button>
+                ))}
             </div>
 
-            {/* Render each note vertically */}
-            {notes.length === 0 ? (
-                <div className="mx-2 p-4 text-center">
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        Click the note pad to create your first note.
-                    </p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-2 gap-2">
-                    {(notes as NoteWithCount[]).map((note, index) => (
-                        <SingleNotePanel
-                            key={note.id}
-                            note={note}
-                            noteNumber={index + 1}
-                            isExpanded={expandedNotes.has(note.id)}
-                            onToggleExpand={() => toggleNoteExpanded(note.id)}
-                            onUpdate={(data) => handleUpdateNote(note.id, data)}
-                            onCopy={() => handleCopyNote(note.id)}
-                            onDelete={() => handleDeleteNote(note.id)}
-                            onSaveTransmittal={onSaveTransmittal ? () => onSaveTransmittal(note.id) : undefined}
-                            onLoadTransmittal={onLoadTransmittal ? () => onLoadTransmittal(note.id) : undefined}
-                        />
-                    ))}
-                </div>
-            )}
+            {/* Notes grid - to the right of sticky buttons */}
+            <div className="flex-1 min-w-0">
+                {notes.length === 0 ? (
+                    <div className="p-4 text-center">
+                        <p className="text-sm text-[var(--color-text-muted)]">
+                            Click a sticky note to create your first note.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col gap-4">
+                        {/* Collapsed notes in grid */}
+                        <div className="grid gap-x-2 gap-y-4 shrink-0" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+                            {[...(notes as NoteWithCount[])].sort((a, b) =>
+                                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                            ).filter(note => !expandedNotes.has(note.id)).map((note, index) => (
+                                <SingleNotePanel
+                                    key={note.id}
+                                    note={note}
+                                    noteNumber={index + 1}
+                                    isExpanded={false}
+                                    onToggleExpand={() => toggleNoteExpanded(note.id)}
+                                    onUpdate={(data) => handleUpdateNote(note.id, data)}
+                                    onCopy={() => handleCopyNote(note.id)}
+                                    onDelete={() => handleDeleteNote(note.id)}
+                                    onSaveTransmittal={onSaveTransmittal ? () => onSaveTransmittal(note.id) : undefined}
+                                    onLoadTransmittal={onLoadTransmittal ? () => onLoadTransmittal(note.id) : undefined}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Expanded notes below the grid, each fills remaining space */}
+                        {[...(notes as NoteWithCount[])].sort((a, b) =>
+                            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                        ).filter(note => expandedNotes.has(note.id)).map((note, index) => (
+                            <div key={note.id}>
+                                <SingleNotePanel
+                                    note={note}
+                                    noteNumber={index + 1}
+                                    isExpanded={true}
+                                    onToggleExpand={() => toggleNoteExpanded(note.id)}
+                                    onUpdate={(data) => handleUpdateNote(note.id, data)}
+                                    onCopy={() => handleCopyNote(note.id)}
+                                    onDelete={() => handleDeleteNote(note.id)}
+                                    onSaveTransmittal={onSaveTransmittal ? () => onSaveTransmittal(note.id) : undefined}
+                                    onLoadTransmittal={onLoadTransmittal ? () => onLoadTransmittal(note.id) : undefined}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

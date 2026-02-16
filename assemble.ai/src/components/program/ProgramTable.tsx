@@ -18,12 +18,15 @@ import {
     SortableContext,
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
+    useSortable,
 } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { ProgramRow } from './ProgramRow';
 import { DependencyArrows } from './DependencyArrows';
 import { DateColumnsRow } from './DateColumnsRow';
 import { useCreateDependency, useDeleteDependency, useDeleteActivity, useReorderActivities } from '@/lib/hooks/use-program';
 import { useRefetch } from './ProgramPanel';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import type { ProgramActivity, ProgramDependency, ProgramMilestone, ZoomLevel } from '@/types/program';
 
 interface LinkingState {
@@ -110,12 +113,14 @@ function groupColumnsByMonth(columns: Array<{ date: Date; label: string }>, zoom
 }
 
 // Flatten the tree while respecting collapsed state
-function flattenVisibleActivities(activities: ProgramActivity[]): ProgramActivity[] {
-    const result: ProgramActivity[] = [];
+type FlatActivity = ProgramActivity & { _depth: number };
+
+function flattenVisibleActivities(activities: ProgramActivity[]): FlatActivity[] {
+    const result: FlatActivity[] = [];
 
     function traverse(items: ProgramActivity[], depth: number = 0) {
         for (const item of items) {
-            result.push({ ...item, sortOrder: depth }); // Use sortOrder to store depth temporarily
+            result.push({ ...item, _depth: depth });
             if (item.children && item.children.length > 0 && !item.collapsed) {
                 traverse(item.children, depth + 1);
             }
@@ -124,6 +129,38 @@ function flattenVisibleActivities(activities: ProgramActivity[]): ProgramActivit
 
     traverse(activities);
     return result;
+}
+
+// Thin wrapper that calls useSortable and passes props down to ProgramRow
+function SortableNameRow({ id, children }: { id: string; children: (props: {
+    sortableRef: (node: HTMLElement | null) => void;
+    sortableStyle: React.CSSProperties;
+    dragHandleAttributes: Record<string, any>;
+    dragHandleListeners: Record<string, any>;
+}) => React.ReactNode }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id });
+
+    return (
+        <>
+            {children({
+                sortableRef: setNodeRef,
+                sortableStyle: {
+                    transform: CSS.Transform.toString(transform),
+                    transition,
+                    opacity: isDragging ? 0.5 : 1,
+                },
+                dragHandleAttributes: attributes,
+                dragHandleListeners: listeners as Record<string, any>,
+            })}
+        </>
+    );
 }
 
 export function ProgramTable({
@@ -140,6 +177,7 @@ export function ProgramTable({
     const [linkingState, setLinkingState] = useState<LinkingState | null>(null);
     const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
     const createDependency = useCreateDependency(projectId);
     const deleteDependency = useDeleteDependency(projectId);
@@ -197,11 +235,19 @@ export function ProgramTable({
         if (oldIndex === -1 || newIndex === -1) return;
 
         const reordered = arrayMove(visibleActivities, oldIndex, newIndex);
-        const updates = reordered.map((activity, index) => ({
-            id: activity.id,
-            parentId: activity.parentId,
-            sortOrder: index,
-        }));
+
+        // Compute per-parent sortOrder so tree rebuild preserves new order
+        const parentCounters = new Map<string, number>();
+        const updates = reordered.map((activity) => {
+            const parentKey = activity.parentId || '__root__';
+            const counter = parentCounters.get(parentKey) || 0;
+            parentCounters.set(parentKey, counter + 1);
+            return {
+                id: activity.id,
+                parentId: activity.parentId,
+                sortOrder: counter,
+            };
+        });
 
         await reorderActivities.mutate({ activities: updates }, refetch);
     }, [visibleActivities, reorderActivities, refetch]);
@@ -223,7 +269,7 @@ export function ProgramTable({
     });
 
     const columnWidth = zoomLevel === 'week' ? 40 : 80;
-    const activityColumnWidth = 200;
+    const activityColumnWidth = 300;
     const startDateColumnWidth = 70;
     const endDateColumnWidth = 70;
     const rowHeight = 32;
@@ -343,12 +389,7 @@ export function ProgramTable({
                     return;
                 }
                 e.preventDefault();
-                if (confirm('Delete this activity and all its children, dependencies, and milestones?')) {
-                    deleteActivity.mutate(selectedActivityId, () => {
-                        setSelectedActivityId(null);
-                        refetch();
-                    });
-                }
+                setDeleteDialogOpen(true);
             }
             // Escape to deselect
             if (e.key === 'Escape') {
@@ -358,6 +399,15 @@ export function ProgramTable({
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [selectedActivityId]);
+
+    const handleConfirmDeleteActivity = useCallback(() => {
+        if (selectedActivityId) {
+            deleteActivity.mutate(selectedActivityId, () => {
+                setSelectedActivityId(null);
+                refetch();
+            });
+        }
     }, [selectedActivityId, deleteActivity, refetch]);
 
     // Handle selecting an activity
@@ -368,10 +418,10 @@ export function ProgramTable({
     return (
         <div className="flex h-full flex-col">
             {/* Header */}
-            <div className="flex border-b border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)]">
+            <div className="flex border-b border-[var(--color-border)]" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
                 {/* Activity column header */}
                 <div
-                    className="shrink-0 border-r border-[var(--color-accent-copper)] px-4 py-1.5 text-xs font-medium text-[var(--color-accent-copper)] uppercase tracking-wide flex items-center"
+                    className="shrink-0 border-r border-[var(--color-border)] px-4 py-1.5 text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wide flex items-center"
                     style={{ width: activityColumnWidth }}
                 >
                     Activity
@@ -379,7 +429,7 @@ export function ProgramTable({
 
                 {/* Start date column header */}
                 <div
-                    className="shrink-0 border-r border-[var(--color-accent-copper)] px-2 py-1.5 text-xs font-medium text-[var(--color-accent-copper)] text-center uppercase tracking-wide flex items-center justify-center"
+                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-1.5 text-xs font-bold text-[var(--color-text-primary)] text-center uppercase tracking-wide flex items-center justify-center"
                     style={{ width: startDateColumnWidth }}
                 >
                     Start
@@ -387,7 +437,7 @@ export function ProgramTable({
 
                 {/* End date column header */}
                 <div
-                    className="shrink-0 border-r border-[var(--color-accent-copper)] px-2 py-1.5 text-xs font-medium text-[var(--color-accent-copper)] text-center uppercase tracking-wide flex items-center justify-center"
+                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-1.5 text-xs font-bold text-[var(--color-text-primary)] text-center uppercase tracking-wide flex items-center justify-center"
                     style={{ width: endDateColumnWidth }}
                 >
                     End
@@ -397,11 +447,11 @@ export function ProgramTable({
                 <div className="flex-1 overflow-hidden" ref={scrollContainerRef}>
                     <div className="flex flex-col" style={{ minWidth: columns.length * columnWidth }}>
                         {/* Month row */}
-                        <div className="flex border-b border-[var(--color-accent-copper)]">
+                        <div className="flex border-b border-[var(--color-border)]">
                             {monthGroups.map((group, i) => (
                                 <div
                                     key={i}
-                                    className="shrink-0 border-r border-[var(--color-accent-copper)] px-2 py-1 text-center text-xs font-medium text-[var(--color-accent-copper)] uppercase tracking-wide"
+                                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-1 text-center text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wide"
                                     style={{ width: columnWidth * group.span }}
                                 >
                                     {group.month}
@@ -415,8 +465,8 @@ export function ProgramTable({
                                 {columns.map((col, i) => (
                                     <div
                                         key={i}
-                                        className={`shrink-0 border-r border-[var(--color-accent-copper)] px-1 py-1 text-center text-xs text-[var(--color-accent-copper)] ${
-                                            i === todayIndex ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                        className={`shrink-0 border-r border-[var(--color-border)] px-1 py-1 text-center text-xs font-bold text-[var(--color-text-primary)] ${
+                                            i === todayIndex ? 'bg-[var(--color-text-primary)]/10' : ''
                                         }`}
                                         style={{ width: columnWidth }}
                                     >
@@ -437,19 +487,78 @@ export function ProgramTable({
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <SortableContext items={visibleActivities.map(a => a.id)} strategy={verticalListSortingStrategy}>
-                    <div className="flex flex-1 overflow-hidden">
-                        {/* Activity column (sticky) */}
-                        <div
-                            className="shrink-0 overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-bg-primary)]"
-                            style={{ width: activityColumnWidth }}
-                        >
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Activity column (sticky) - sortable */}
+                    <div
+                        className="shrink-0 overflow-y-auto border-r border-[var(--color-border)]"
+                        style={{ width: activityColumnWidth, backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}
+                    >
+                        <SortableContext items={visibleActivities.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                            {visibleActivities.map((activity) => (
+                                <SortableNameRow key={activity.id} id={activity.id}>
+                                    {(sortableProps) => (
+                                        <ProgramRow
+                                            projectId={projectId}
+                                            activity={activity}
+                                            depth={activity._depth}
+                                            hasChildren={
+                                                allActivities.some((a) => a.parentId === activity.id)
+                                            }
+                                            columns={columns}
+                                            columnWidth={columnWidth}
+                                            zoomLevel={zoomLevel}
+                                            milestones={milestones.filter((m) => m.activityId === activity.id)}
+                                            isNameColumn={true}
+                                            allActivities={allActivities}
+                                            {...sortableProps}
+                                        />
+                                    )}
+                                </SortableNameRow>
+                            ))}
+                        </SortableContext>
+
+                        {visibleActivities.length === 0 && (
+                            <div className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
+                                No activities yet. Click &quot;Add Activity&quot; or insert a template to get started.
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Date columns (sticky with activity column) */}
+                    <div
+                        className="shrink-0 overflow-y-auto border-r border-[var(--color-border)]"
+                        style={{ width: startDateColumnWidth + endDateColumnWidth, backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}
+                    >
+                        {visibleActivities.map((activity) => (
+                            <DateColumnsRow
+                                key={activity.id}
+                                projectId={projectId}
+                                activity={activity}
+                                rowHeight={rowHeight}
+                                startDateWidth={startDateColumnWidth}
+                                endDateWidth={endDateColumnWidth}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Timeline area (scrollable) */}
+                    <div ref={timelineAreaRef} className="relative flex-1 overflow-auto" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
+                        {/* Today marker */}
+                        {todayIndex >= 0 && (
+                            <div
+                                className="absolute top-0 bottom-0 w-0.5 bg-[var(--color-accent-coral)]/50 z-10"
+                                style={{ left: todayIndex * columnWidth + columnWidth / 2 }}
+                            />
+                        )}
+
+                        {/* Rows */}
+                        <div style={{ minWidth: columns.length * columnWidth }}>
                             {visibleActivities.map((activity) => (
                                 <ProgramRow
                                     key={activity.id}
                                     projectId={projectId}
                                     activity={activity}
-                                    depth={activity.sortOrder} // We stored depth in sortOrder temporarily
+                                    depth={activity._depth}
                                     hasChildren={
                                         allActivities.some((a) => a.parentId === activity.id)
                                     }
@@ -457,110 +566,55 @@ export function ProgramTable({
                                     columnWidth={columnWidth}
                                     zoomLevel={zoomLevel}
                                     milestones={milestones.filter((m) => m.activityId === activity.id)}
-                                    isNameColumn={true}
+                                    isNameColumn={false}
                                     allActivities={allActivities}
+                                    onStartLinkDrag={handleStartLinkDrag}
+                                    selectedActivityId={selectedActivityId}
+                                    onSelectActivity={handleSelectActivity}
                                 />
                             ))}
 
-                    {visibleActivities.length === 0 && (
-                        <div className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
-                            No activities yet. Click "Add Activity" or insert a template to get started.
-                        </div>
-                    )}
-                </div>
-
-                {/* Date columns (sticky with activity column) */}
-                <div
-                    className="shrink-0 overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-bg-primary)]"
-                    style={{ width: startDateColumnWidth + endDateColumnWidth }}
-                >
-                    {visibleActivities.map((activity) => (
-                        <DateColumnsRow
-                            key={activity.id}
-                            projectId={projectId}
-                            activity={activity}
-                            rowHeight={rowHeight}
-                            startDateWidth={startDateColumnWidth}
-                            endDateWidth={endDateColumnWidth}
-                        />
-                    ))}
-                </div>
-
-                {/* Timeline area (scrollable) */}
-                <div ref={timelineAreaRef} className="relative flex-1 overflow-auto">
-                    {/* Today marker */}
-                    {todayIndex >= 0 && (
-                        <div
-                            className="absolute top-0 bottom-0 w-0.5 bg-[var(--color-accent-coral)]/50 z-10"
-                            style={{ left: todayIndex * columnWidth + columnWidth / 2 }}
-                        />
-                    )}
-
-                    {/* Rows */}
-                    <div style={{ minWidth: columns.length * columnWidth }}>
-                        {visibleActivities.map((activity) => (
-                            <ProgramRow
-                                key={activity.id}
-                                projectId={projectId}
-                                activity={activity}
-                                depth={activity.sortOrder}
-                                hasChildren={
-                                    allActivities.some((a) => a.parentId === activity.id)
-                                }
+                            {/* Dependency arrows overlay */}
+                            <DependencyArrows
+                                activities={visibleActivities}
+                                dependencies={dependencies}
                                 columns={columns}
                                 columnWidth={columnWidth}
                                 zoomLevel={zoomLevel}
-                                milestones={milestones.filter((m) => m.activityId === activity.id)}
-                                isNameColumn={false}
-                                allActivities={allActivities}
-                                onStartLinkDrag={handleStartLinkDrag}
-                                selectedActivityId={selectedActivityId}
-                                onSelectActivity={handleSelectActivity}
+                                rowHeight={rowHeight}
+                                onDeleteDependency={handleDeleteDependency}
                             />
-                        ))}
 
-                        {/* Dependency arrows overlay */}
-                        <DependencyArrows
-                            activities={visibleActivities}
-                            dependencies={dependencies}
-                            columns={columns}
-                            columnWidth={columnWidth}
-                            zoomLevel={zoomLevel}
-                            rowHeight={rowHeight}
-                            onDeleteDependency={handleDeleteDependency}
-                        />
-
-                        {/* Linking visual feedback */}
-                        {linkingState && (() => {
-                            const line = getLinkLine();
-                            if (!line) return null;
-                            return (
-                                <svg
-                                    className="absolute inset-0 pointer-events-none z-20"
-                                    style={{ width: columns.length * columnWidth, height: visibleActivities.length * rowHeight }}
-                                >
-                                    <line
-                                        x1={line.fromX}
-                                        y1={line.fromY}
-                                        x2={line.toX}
-                                        y2={line.toY}
-                                        stroke="var(--color-accent-teal)"
-                                        strokeWidth="2"
-                                        strokeDasharray="4,4"
-                                    />
-                                    <circle
-                                        cx={line.fromX}
-                                        cy={line.fromY}
-                                        r="4"
-                                        fill="var(--color-accent-teal)"
-                                    />
-                                </svg>
-                            );
-                        })()}
+                            {/* Linking visual feedback */}
+                            {linkingState && (() => {
+                                const line = getLinkLine();
+                                if (!line) return null;
+                                return (
+                                    <svg
+                                        className="absolute inset-0 pointer-events-none z-20"
+                                        style={{ width: columns.length * columnWidth, height: visibleActivities.length * rowHeight }}
+                                    >
+                                        <line
+                                            x1={line.fromX}
+                                            y1={line.fromY}
+                                            x2={line.toX}
+                                            y2={line.toY}
+                                            stroke="var(--color-accent-teal)"
+                                            strokeWidth="2"
+                                            strokeDasharray="4,4"
+                                        />
+                                        <circle
+                                            cx={line.fromX}
+                                            cy={line.fromY}
+                                            r="4"
+                                            fill="var(--color-accent-teal)"
+                                        />
+                                    </svg>
+                                );
+                            })()}
+                        </div>
                     </div>
                 </div>
-                    </div>
-                </SortableContext>
 
                 {/* Drag overlay for visual feedback */}
                 <DragOverlay>
@@ -576,6 +630,15 @@ export function ProgramTable({
                     ) : null}
                 </DragOverlay>
             </DndContext>
+
+            {/* Delete Activity Confirmation Dialog */}
+            <AuroraConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                onConfirm={handleConfirmDeleteActivity}
+                title="Delete this activity?"
+                description="This will delete the activity and all its children, dependencies, and milestones."
+            />
         </div>
     );
 }

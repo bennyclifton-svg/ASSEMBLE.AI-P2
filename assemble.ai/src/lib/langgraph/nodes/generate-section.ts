@@ -20,6 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ragDb } from '@/lib/db/rag-client';
 import { reportSections } from '@/lib/db/rag-schema';
 import { eq, and } from 'drizzle-orm';
+import { buildSystemPrompt } from '@/lib/prompts/system-prompts';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic();
@@ -92,53 +93,42 @@ ${state.templateBaseline}
 7. Cover essential points concisely
 8. Prioritize the most important information`;
 
-    return `You are a construction project management expert generating content for a Tender Request document.
-
-${templateBaselineSection}${hybridContext}
+    return `${templateBaselineSection}${hybridContext}
 
 ## Current Section
 Section ${sectionNumber} of ${totalSections}: "${section.title}"
 ${section.description ? `Description: ${section.description}` : ''}
 Level: ${isSubsection ? 'Subsection (##)' : 'Main Section (#)'}
+Discipline: ${state.discipline || 'construction'}
 
 ${feedbackInstructions}
 
 ## Instructions
 
-${state.templateBaseline ? `IMPORTANT: You are ENHANCING the template baseline above. Your response should:
-
+${state.templateBaseline ? `You are ENHANCING the template baseline above. Your response should:
 1. START with the template baseline content as the foundation
 2. EXPAND each point with additional professional analysis and context
-3. INCORPORATE relevant information from the Document Context below
+3. INCORPORATE relevant information from the Document Context
 4. ADD professional recommendations and considerations
 5. MAINTAIN the structure while enriching the content
-` : `Generate professional content for this section of the tender request. Your response should:
-
-1. Be appropriate for the ${state.discipline || 'construction'} discipline
-2. Reference specific details from the Project Context above
-3. Address relevant objectives and stakeholder needs
-4. Consider identified risks where appropriate
-5. Use professional construction industry terminology
+` : `Generate professional content for this section of the tender request:
+1. Be specific to the ${state.discipline || 'construction'} discipline — use terminology a ${state.discipline || 'construction'} professional would expect
+2. Reference specific details from the Project Context (project name, address, building class, objectives)
+3. Include measurable criteria wherever possible (quantities, timeframes, standards references)
+4. State what's included AND what's excluded to prevent scope disputes
+5. Consider identified risks where appropriate
 `}${contentLengthInstructions}
 
 ${state.currentRetrievedChunks.length > 0 ? `
 ## Citation Instructions
-
-When using information from the Document Context, include citations in this format:
+When using information from the Document Context, include citations:
 - After specific technical requirements: [Source: document title]
 - After standards references: [Ref: standard name]
-
-The retrieved documents contain relevant technical specifications and standards.
 ` : ''}
 
 ## Response Format
-
 Start directly with the section content. Do not include the section title (it will be added automatically).
-Use markdown formatting for:
-- Bullet points for lists of requirements
-- Numbered lists for procedures or steps
-- Bold for key terms
-- Tables if presenting structured data
+Use markdown formatting: bullet points for requirements, numbered lists for procedures, bold for key terms, tables for structured data.
 
 Generate the section content now:`;
 }
@@ -189,9 +179,11 @@ export async function generateSectionNode(
         console.log('[generate-section] Calling Claude with streaming... (max_tokens:', maxTokens, ')');
 
         let content = '';
+        const rftSystemPrompt = buildSystemPrompt('rft');
         const stream = anthropic.messages.stream({
-            model: 'claude-haiku-4-5-20251001',
+            model: 'claude-sonnet-4-20250514',
             max_tokens: maxTokens,
+            system: rftSystemPrompt,
             messages: [
                 {
                     role: 'user',
@@ -495,7 +487,7 @@ export async function generatePolishedSection(
         const rawContent = buildBriefContent(discipline);
 
         // Light polish with Claude (grammar and formatting only)
-        const prompt = `Polish the following tender request brief for grammar and formatting only. Do not add content, do not change meaning, do not expand. Only fix grammar errors and improve formatting for professional presentation.
+        const polishPrompt = `Polish the following tender request brief for grammar and formatting only. Do not add content, do not change meaning, do not expand. Only fix grammar errors and improve formatting for professional presentation.
 
 Brief content:
 ${rawContent}
@@ -503,13 +495,15 @@ ${rawContent}
 Return the polished version:`;
 
         let content = '';
+        const rftSystemPrompt = buildSystemPrompt('rft');
         const stream = anthropic.messages.stream({
-            model: 'claude-haiku-4-5-20251001',
+            model: 'claude-sonnet-4-20250514',
             max_tokens: 1500,
+            system: rftSystemPrompt,
             messages: [
                 {
                     role: 'user',
-                    content: prompt,
+                    content: polishPrompt,
                 },
             ],
         });
@@ -677,7 +671,7 @@ function formatProjectRisks(context: PlanningContext): string {
     }
 
     const tableRows = context.risks.map(risk =>
-        `| ${risk.description} | ${risk.severity ?? 'Medium'} | ${risk.mitigation ?? '-'} |`
+        `| ${risk.description ?? risk.title} | ${risk.likelihood ?? 'Medium'} | ${risk.mitigation ?? '-'} |`
     );
 
     return `| Risk Description | Severity | Mitigation Strategy |

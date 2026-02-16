@@ -19,7 +19,7 @@ export async function POST(
             );
         }
 
-        const now = new Date().toISOString();
+        const now = new Date();
 
         // Update each activity's sortOrder and parentId
         for (const activity of activities) {

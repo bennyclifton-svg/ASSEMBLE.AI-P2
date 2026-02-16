@@ -8,17 +8,17 @@
 
 'use client';
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { MeetingStakeholderSelector } from './MeetingStakeholderSelector';
 import { MeetingStakeholderTable } from './MeetingStakeholderTable';
-import { ReportContentsToolbar } from './ReportContentsToolbar';
+import { SectionSelectorDialog } from './SectionSelectorDialog';
 import { ReportContentsSection } from './ReportContentsSection';
 import { DateRangePicker } from './shared/DateRangePicker';
 import { useReport, useReportSections, useReportAttendees } from '@/lib/hooks/use-reports';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus, User, UserCircle, FileText, X } from 'lucide-react';
+import { Loader2, Plus, User, UserCircle, FileText, X, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ReportContentsType, GenerateContentResponse } from '@/types/notes-meetings-reports';
 import type { StakeholderGroup } from '@/types/stakeholder';
@@ -40,6 +40,8 @@ interface ReportEditorProps {
     projectId: string;
     contentsType: ReportContentsType;
     reportDate: string | null;
+    title: string;
+    onTitleChange: (title: string) => Promise<void>;
     preparedFor: string | null;
     preparedBy: string | null;
     reportingPeriodStart: string | null;
@@ -57,6 +59,8 @@ export function ReportEditor({
     projectId,
     contentsType,
     reportDate,
+    title,
+    onTitleChange,
     preparedFor,
     preparedBy,
     reportingPeriodStart,
@@ -73,7 +77,7 @@ export function ReportEditor({
         sections,
         isLoading: sectionsLoading,
         updateSection,
-        generateSections,
+        syncSections,
     } = useReportSections(reportId);
     const {
         attendees,
@@ -84,7 +88,8 @@ export function ReportEditor({
         addStakeholderGroup,
     } = useReportAttendees(reportId, projectId);
 
-    const [isGeneratingSections, setIsGeneratingSections] = useState(false);
+    const [isSyncingSections, setIsSyncingSections] = useState(false);
+    const [isSectionDialogOpen, setIsSectionDialogOpen] = useState(false);
     const [isAddingAdhoc, setIsAddingAdhoc] = useState(false);
     const [isAddingGroup, setIsAddingGroup] = useState(false);
     const [groupFeedback, setGroupFeedback] = useState<string | null>(null);
@@ -98,6 +103,39 @@ export function ReportEditor({
     const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null);
     const [polishingSectionId, setPolishingSectionId] = useState<string | null>(null);
     const [lastSourceInfo, setLastSourceInfo] = useState<SourceInfo | null>(null);
+
+    // Title editing state
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [localTitle, setLocalTitle] = useState(title);
+    const titleInputRef = useRef<HTMLInputElement>(null);
+
+    // Sync local title when prop changes
+    useEffect(() => {
+        setLocalTitle(title);
+    }, [title]);
+
+    const handleTitleClick = useCallback(() => {
+        setIsEditingTitle(true);
+    }, []);
+
+    const handleTitleBlur = useCallback(async () => {
+        setIsEditingTitle(false);
+        if (localTitle !== title) {
+            await onTitleChange(localTitle);
+        }
+    }, [localTitle, title, onTitleChange]);
+
+    const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            setIsEditingTitle(false);
+            if (localTitle !== title) {
+                onTitleChange(localTitle);
+            }
+        } else if (e.key === 'Escape') {
+            setLocalTitle(title);
+            setIsEditingTitle(false);
+        }
+    }, [localTitle, title, onTitleChange]);
 
     // Date picker ref and handler
     const dateInputRef = useRef<HTMLInputElement>(null);
@@ -118,18 +156,22 @@ export function ReportEditor({
         return Array.from(groups);
     }, [attendees]);
 
-    // Handle contents type change
-    const handleContentsTypeChange = async (type: ReportContentsType) => {
+    // Handle section selection sync
+    const handleSyncSections = useCallback(async (selectedKeys: string[]) => {
         try {
-            setIsGeneratingSections(true);
-            await generateSections(type);
-            await onContentsTypeChange(type);
+            setIsSyncingSections(true);
+            await syncSections(selectedKeys);
         } catch (error) {
-            console.error('Failed to change contents type:', error);
+            console.error('Failed to sync sections:', error);
         } finally {
-            setIsGeneratingSections(false);
+            setIsSyncingSections(false);
         }
-    };
+    }, [syncSections]);
+
+    // Current section keys for pre-checking in dialog
+    const currentSectionKeys = useMemo(() =>
+        sections.map(s => s.sectionKey),
+    [sections]);
 
     // Handle stakeholder group selection
     const handleSelectGroup = async (group: StakeholderGroup) => {
@@ -304,42 +346,72 @@ export function ReportEditor({
 
     return (
         <div className={cn('divide-y divide-[var(--color-border)]', className)}>
-            {/* Project Info & Report Date */}
+            {/* Project Info Header Table - TRR style */}
             {report?.project && (
-                <div className="px-4 py-3 bg-[var(--color-bg-secondary)]">
-                    <div className="grid grid-cols-[auto_1fr_auto] gap-6 text-sm">
-                        <div className="whitespace-nowrap">
-                            <span className="text-[var(--color-text-muted)]">Project:</span>
-                            <span className="ml-2 text-[var(--color-text-primary)]">
-                                {report.project.name}
-                            </span>
-                        </div>
-                        <div className="min-w-0">
-                            <span className="text-[var(--color-text-muted)]">Address:</span>
-                            <span className="ml-2 text-[var(--color-text-primary)]">
-                                {report.project.address || 'Not set'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                            <span className="text-[var(--color-text-muted)]">Report Date:</span>
-                            <div
-                                className="relative cursor-pointer hover:bg-[var(--color-bg-tertiary)] px-2 py-0.5 rounded transition-colors"
-                                onClick={handleDateClick}
-                            >
-                                <span className="text-[var(--color-text-primary)] select-none">
-                                    {formatDisplayDate(reportDate)}
-                                </span>
-                                <input
-                                    ref={dateInputRef}
-                                    type="date"
-                                    value={reportDate || ''}
-                                    onChange={(e) => onReportDateChange(e.target.value || null)}
-                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                    tabIndex={-1}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                <div className="overflow-hidden rounded-lg">
+                    <table className="w-full text-sm">
+                        <tbody>
+                            <tr className="border-b border-[var(--color-border)]">
+                                <td className="w-36 px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                                    Project Name
+                                </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
+                                    {report.project.name}
+                                </td>
+                            </tr>
+                            <tr className="border-b border-[var(--color-border)]">
+                                <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                                    Address
+                                </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
+                                    {report.project.address || '-'}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                                    Document
+                                </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
+                                    {isEditingTitle ? (
+                                        <Input
+                                            value={localTitle}
+                                            onChange={(e) => setLocalTitle(e.target.value)}
+                                            onBlur={handleTitleBlur}
+                                            onKeyDown={handleTitleKeyDown}
+                                            autoFocus
+                                            ref={titleInputRef}
+                                            className="h-7 text-sm font-semibold bg-transparent border-[var(--color-border)] focus:border-[var(--color-accent-copper)]"
+                                        />
+                                    ) : (
+                                        <span
+                                            onClick={handleTitleClick}
+                                            className="cursor-pointer hover:text-[var(--color-accent-copper)] transition-colors"
+                                            title="Click to edit title"
+                                        >
+                                            {title}
+                                        </span>
+                                    )}
+                                </td>
+                                <td
+                                    className="px-4 py-2.5 text-[var(--color-document-header)] font-medium cursor-pointer relative whitespace-nowrap text-right"
+                                    onClick={handleDateClick}
+                                >
+                                    <span className="select-none">
+                                        <span className="text-[var(--color-document-header)] font-medium">Issued</span>
+                                        <span className="ml-4">{formatDisplayDate(reportDate)}</span>
+                                    </span>
+                                    <input
+                                        ref={dateInputRef}
+                                        type="date"
+                                        value={reportDate || ''}
+                                        onChange={(e) => onReportDateChange(e.target.value || null)}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                        tabIndex={-1}
+                                    />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             )}
 
@@ -483,23 +555,32 @@ export function ReportEditor({
                     <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
                         Contents:
                     </h3>
-                    <ReportContentsToolbar
-                        currentType={contentsType}
-                        onSelectType={handleContentsTypeChange}
-                        isLoading={isGeneratingSections}
-                    />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsSectionDialogOpen(true)}
+                        disabled={isSyncingSections}
+                        className="h-8 gap-1.5"
+                    >
+                        {isSyncingSections ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <ListChecks className="h-4 w-4" />
+                        )}
+                        Select Sections
+                    </Button>
                 </div>
 
-                {sectionsLoading || isGeneratingSections ? (
+                {sectionsLoading || isSyncingSections ? (
                     <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-5 w-5 animate-spin text-[var(--color-text-muted)]" />
                         <span className="ml-2 text-sm text-[var(--color-text-muted)]">
-                            {isGeneratingSections ? 'Generating sections...' : 'Loading...'}
+                            {isSyncingSections ? 'Updating sections...' : 'Loading...'}
                         </span>
                     </div>
                 ) : topLevelSections.length === 0 ? (
                     <div className="text-sm text-[var(--color-text-muted)] py-4 text-center border border-dashed border-[var(--color-border)] rounded-md">
-                        No content sections. Select a contents type above to generate sections.
+                        No content sections. Click &quot;Select Sections&quot; to choose which sections to include.
                     </div>
                 ) : (
                     <>
@@ -537,6 +618,17 @@ export function ReportEditor({
                     </>
                 )}
             </div>
+
+            {/* Section Selector Dialog */}
+            <SectionSelectorDialog
+                projectId={projectId}
+                isOpen={isSectionDialogOpen}
+                onClose={() => setIsSectionDialogOpen(false)}
+                onApply={handleSyncSections}
+                currentSectionKeys={currentSectionKeys}
+                variant="report"
+                entityTitle={title}
+            />
         </div>
     );
 }

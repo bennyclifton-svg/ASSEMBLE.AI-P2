@@ -64,6 +64,7 @@ function processTextContent(element: Element): string {
  */
 function createInfoTable(element: Element): Table | null {
   const rows: TableRow[] = [];
+  const isProjectInfo = (element.getAttribute('class') || '').includes('project-info');
 
   // Process header row if present
   const thead = element.querySelector('thead');
@@ -84,6 +85,7 @@ function createInfoTable(element: Element): Table | null {
                 ],
               }),
             ],
+            margins: { top: 80, bottom: 80, left: 80, right: 80 },
             shading: {
               type: ShadingType.SOLID,
               color: 'F5F5F5',
@@ -109,8 +111,12 @@ function createInfoTable(element: Element): Table | null {
       const rowCells: TableCell[] = [];
       cells.forEach((cell, index) => {
         const isFirstCol = index === 0;
+        const isLastCol = index === cells.length - 1;
         const isHeader = cell.tagName.toLowerCase() === 'th';
         const isBold = cell.querySelector('strong') !== null || isHeader;
+        const className = cell.className || '';
+        const isLabelCol = className.includes('label-col');
+        const isIssuedCol = className.includes('issued-col');
 
         rowCells.push(
           new TableCell({
@@ -119,13 +125,22 @@ function createInfoTable(element: Element): Table | null {
                 children: [
                   new TextRun({
                     text: cell.textContent?.trim() || '',
-                    bold: isBold,
+                    bold: isBold || isLabelCol,
+                    color: (isLabelCol || isIssuedCol) ? '1A6FB5' : undefined,
                   }),
                 ],
+                alignment: isIssuedCol ? AlignmentType.RIGHT : AlignmentType.LEFT,
               }),
             ],
-            // Apply gray background to first column for label-style tables
-            ...(isFirstCol && cells.length === 2 ? {
+            margins: { top: 80, bottom: 80, left: 80, right: 80 },
+            // For project info: label column width; for generic 2-col: gray background
+            ...(isProjectInfo && isFirstCol ? {
+              width: { size: 18, type: WidthType.PERCENTAGE },
+            } : {}),
+            ...(isProjectInfo && isIssuedCol ? {
+              width: { size: 22, type: WidthType.PERCENTAGE },
+            } : {}),
+            ...(!isProjectInfo && isFirstCol && cells.length === 2 ? {
               shading: {
                 type: ShadingType.SOLID,
                 color: 'F5F5F5',
@@ -139,27 +154,38 @@ function createInfoTable(element: Element): Table | null {
     }
   });
 
-  // Return null if no rows (caller should handle this)
   if (rows.length === 0) {
     return null;
   }
 
+  // Project info uses subtle bottom-only borders; generic tables use grid borders
+  const borderColor = isProjectInfo ? 'DDDDDD' : 'DDDDDD';
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const subtleBorder = { style: BorderStyle.SINGLE, size: 1, color: borderColor };
+
   return new Table({
     rows,
     width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: {
-      top: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      left: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      right: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+    borders: isProjectInfo ? {
+      top: noBorder,
+      bottom: noBorder,
+      left: noBorder,
+      right: noBorder,
+      insideHorizontal: subtleBorder,
+      insideVertical: noBorder,
+    } : {
+      top: subtleBorder,
+      bottom: subtleBorder,
+      left: subtleBorder,
+      right: subtleBorder,
+      insideHorizontal: subtleBorder,
+      insideVertical: subtleBorder,
     },
   });
 }
 
 /**
- * Create transmittal table with proper columns
+ * Create transmittal table with proper columns (6 columns matching screen)
  */
 function createTransmittalTable(element: Element): Table | null {
   const rows: TableRow[] = [];
@@ -170,10 +196,13 @@ function createTransmittalTable(element: Element): Table | null {
     const ths = thead.querySelectorAll('th');
     const headerCells: TableCell[] = [];
 
+    // Column widths: #=5%, DWG#=10%, Name=35%, Rev=8%, Category=21%, Subcategory=21%
+    const widths = [5, 10, 35, 8, 21, 21];
+
     ths.forEach((th, index) => {
       const text = th.textContent?.trim() || '';
-      // Column widths: #=8%, Document=40%, Rev=10%, Category=21%, Subcategory=21%
-      const widths = [8, 40, 10, 21, 21];
+      const className = th.className || '';
+      const isRevCol = className.includes('rev-col');
 
       headerCells.push(
         new TableCell({
@@ -183,17 +212,17 @@ function createTransmittalTable(element: Element): Table | null {
                 new TextRun({
                   text: text,
                   bold: true,
-                  color: '666666',
+                  color: '333333',
                 }),
               ],
-              alignment: index === 2 ? AlignmentType.CENTER : AlignmentType.LEFT,
+              alignment: isRevCol ? AlignmentType.CENTER : AlignmentType.LEFT,
             }),
           ],
-          width: { size: widths[index] || 20, type: WidthType.PERCENTAGE },
+          width: { size: widths[index] || 15, type: WidthType.PERCENTAGE },
           shading: {
             type: ShadingType.SOLID,
-            color: 'F5F5F5',
-            fill: 'F5F5F5',
+            color: 'F8F8F8',
+            fill: 'F8F8F8',
           },
         })
       );
@@ -208,11 +237,11 @@ function createTransmittalTable(element: Element): Table | null {
   const tbody = element.querySelector('tbody');
   if (tbody) {
     const trs = tbody.querySelectorAll('tr');
+    const widths = [5, 10, 35, 8, 21, 21];
 
     trs.forEach(tr => {
       const tds = tr.querySelectorAll('td');
       const cells: TableCell[] = [];
-      const widths = [8, 40, 10, 21, 21];
 
       tds.forEach((td, index) => {
         const text = td.textContent?.trim() || '';
@@ -243,7 +272,7 @@ function createTransmittalTable(element: Element): Table | null {
                 alignment: isRevCol ? AlignmentType.CENTER : AlignmentType.LEFT,
               }),
             ],
-            width: { size: widths[index] || 20, type: WidthType.PERCENTAGE },
+            width: { size: widths[index] || 15, type: WidthType.PERCENTAGE },
           })
         );
       });
@@ -254,7 +283,6 @@ function createTransmittalTable(element: Element): Table | null {
     });
   }
 
-  // Return null if no rows (caller should handle this)
   if (rows.length === 0) {
     return null;
   }
@@ -263,13 +291,123 @@ function createTransmittalTable(element: Element): Table | null {
     rows,
     width: { size: 100, type: WidthType.PERCENTAGE },
     borders: {
-      top: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      left: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      right: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
-      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'DDDDDD' },
+      top: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+      left: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+      right: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'EEEEEE' },
     },
+  });
+}
+
+/**
+ * Extract inline text runs from an element, preserving bold/italic formatting
+ */
+function extractTextRuns(element: Element): TextRun[] {
+  const runs: TextRun[] = [];
+
+  element.childNodes.forEach(node => {
+    if (node.nodeType === 3) {
+      // Text node
+      const text = node.textContent || '';
+      if (text) {
+        runs.push(new TextRun({ text }));
+      }
+    } else if (node.nodeType === 1) {
+      const el = node as Element;
+      const tag = el.tagName.toLowerCase();
+
+      if (tag === 'br') {
+        runs.push(new TextRun({ text: '', break: 1 }));
+      } else if (tag === 'strong' || tag === 'b') {
+        const innerText = el.textContent || '';
+        if (innerText) {
+          runs.push(new TextRun({ text: innerText, bold: true }));
+        }
+      } else if (tag === 'em' || tag === 'i') {
+        const innerText = el.textContent || '';
+        if (innerText) {
+          runs.push(new TextRun({ text: innerText, italics: true }));
+        }
+      } else {
+        // Recurse for other inline elements (span, etc.)
+        runs.push(...extractTextRuns(el));
+      }
+    }
+  });
+
+  return runs;
+}
+
+/**
+ * Process rich HTML content recursively into DOCX paragraphs
+ */
+function processRichContent(element: Element, children: (Paragraph | Table)[]): void {
+  element.childNodes.forEach(node => {
+    if (node.nodeType !== 1) return;
+
+    const child = node as Element;
+    const tagName = child.tagName.toLowerCase();
+
+    if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3') {
+      const text = child.textContent?.trim() || '';
+      const fontSize = tagName === 'h1' ? 28 : tagName === 'h2' ? 24 : 22;
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text, bold: true, size: fontSize })],
+          spacing: { before: 200, after: 100 },
+        })
+      );
+    } else if (tagName === 'p') {
+      const textRuns = extractTextRuns(child);
+      if (textRuns.length > 0) {
+        children.push(
+          new Paragraph({
+            children: textRuns,
+            spacing: { after: 80 },
+          })
+        );
+      }
+    } else if (tagName === 'ul') {
+      const items = child.querySelectorAll(':scope > li');
+      items.forEach(li => {
+        const textRuns = extractTextRuns(li);
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: '\u2022  ' }),
+              ...textRuns,
+            ],
+            spacing: { after: 40 },
+            indent: { left: 360 },
+          })
+        );
+      });
+    } else if (tagName === 'ol') {
+      const items = child.querySelectorAll(':scope > li');
+      items.forEach((li, idx) => {
+        const textRuns = extractTextRuns(li);
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: `${idx + 1}.  ` }),
+              ...textRuns,
+            ],
+            spacing: { after: 40 },
+            indent: { left: 360 },
+          })
+        );
+      });
+    } else if (tagName === 'div') {
+      // Recurse into divs
+      processRichContent(child, children);
+    } else if (tagName === 'table') {
+      const table = createTransmittalTable(child);
+      if (table) {
+        children.push(table);
+      }
+    }
   });
 }
 
@@ -277,11 +415,9 @@ function createTransmittalTable(element: Element): Table | null {
  * Process a div element and its children
  */
 function processDiv(element: Element, children: (Paragraph | Table)[]): void {
-  const className = element.className || '';
-
   // Process each child element
   element.childNodes.forEach(node => {
-    if (node.nodeType !== 1) return; // Skip non-element nodes
+    if (node.nodeType !== 1) return;
 
     const child = node as Element;
     const tagName = child.tagName.toLowerCase();
@@ -311,30 +447,59 @@ function processDiv(element: Element, children: (Paragraph | Table)[]): void {
         })
       );
     } else if (tagName === 'div') {
-      // Content div - extract text
-      const text = processTextContent(child);
-      if (text.trim()) {
-        // Split by newlines and create paragraphs
-        const lines = text.split('\n').filter(line => line.trim());
-        lines.forEach(line => {
-          children.push(
-            new Paragraph({
-              text: line.trim(),
-              spacing: { after: 120 },
-            })
-          );
-        });
+      // Rich content div — parse nested HTML (bold, italic, lists)
+      const className = child.className || '';
+      if (className.includes('content-body')) {
+        processRichContent(child, children);
+      } else {
+        // Fallback: extract text
+        const text = processTextContent(child);
+        if (text.trim()) {
+          const lines = text.split('\n').filter(line => line.trim());
+          lines.forEach(line => {
+            children.push(
+              new Paragraph({
+                text: line.trim(),
+                spacing: { after: 120 },
+              })
+            );
+          });
+        }
       }
     } else if (tagName === 'p') {
-      const text = child.textContent?.trim() || '';
-      if (text) {
+      const textRuns = extractTextRuns(child);
+      if (textRuns.length > 0) {
         children.push(
           new Paragraph({
-            text: text,
+            children: textRuns,
             spacing: { after: 120 },
           })
         );
       }
+    } else if (tagName === 'ul') {
+      const items = child.querySelectorAll(':scope > li');
+      items.forEach(li => {
+        const textRuns = extractTextRuns(li);
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: '\u2022  ' }), ...textRuns],
+            spacing: { after: 40 },
+            indent: { left: 360 },
+          })
+        );
+      });
+    } else if (tagName === 'ol') {
+      const items = child.querySelectorAll(':scope > li');
+      items.forEach((li, idx) => {
+        const textRuns = extractTextRuns(li);
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: `${idx + 1}.  ` }), ...textRuns],
+            spacing: { after: 40 },
+            indent: { left: 360 },
+          })
+        );
+      });
     } else if (tagName === 'table') {
       const table = createTransmittalTable(child);
       if (table) {
@@ -982,6 +1147,7 @@ function createInfoRow(label: string, value: string): TableRow {
             ],
           }),
         ],
+        margins: { top: 80, bottom: 80, left: 80, right: 80 },
         width: { size: 25, type: WidthType.PERCENTAGE },
         shading: {
           type: ShadingType.SOLID,
@@ -995,6 +1161,7 @@ function createInfoRow(label: string, value: string): TableRow {
             text: value,
           }),
         ],
+        margins: { top: 80, bottom: 80, left: 80, right: 80 },
         width: { size: 75, type: WidthType.PERCENTAGE },
       }),
     ],
@@ -1013,6 +1180,7 @@ function createHeaderCell(text: string): TableCell {
         ],
       }),
     ],
+    margins: { top: 80, bottom: 80, left: 80, right: 80 },
     shading: {
       type: ShadingType.SOLID,
       color: 'F5F5F5',
@@ -1029,5 +1197,387 @@ function createBodyCell(text: string, center: boolean = false): TableCell {
         alignment: center ? AlignmentType.CENTER : AlignmentType.LEFT,
       }),
     ],
+    margins: { top: 80, bottom: 80, left: 80, right: 80 },
   });
+}
+
+// ============================================================================
+// RFT NEW EXPORT - Dedicated DOCX export matching screen layout
+// ============================================================================
+
+import {
+  type RFTExportData,
+  type ContentBlock,
+  RFT_COLORS,
+  parseHtmlContent,
+  generateWeekColumns,
+  groupByMonth,
+  isWeekInRange,
+  formatDateShort,
+  buildOrderedActivities,
+} from './rft-export';
+
+/**
+ * Convert content blocks into docx Paragraph array with rich formatting
+ */
+function blocksToDocxParagraphs(blocks: ContentBlock[]): Paragraph[] {
+  const paras: Paragraph[] = [];
+  let isFirstHeading = true;
+
+  for (const block of blocks) {
+    if (block.type === 'heading') {
+      paras.push(new Paragraph({
+        children: [new TextRun({ text: block.text, bold: true, size: 17, color: RFT_COLORS.darkHex })],
+        spacing: { before: isFirstHeading ? 0 : 120, after: 40 },
+      }));
+      isFirstHeading = false;
+    } else if (block.type === 'bullet') {
+      paras.push(new Paragraph({
+        children: [
+          new TextRun({ text: '\u2022  ', size: 15 }),
+          new TextRun({ text: block.text, size: 15, color: RFT_COLORS.bodyHex }),
+        ],
+        spacing: { after: 20 },
+        indent: { left: 180 },
+      }));
+    } else {
+      paras.push(new Paragraph({
+        children: [new TextRun({ text: block.text, size: 15, color: RFT_COLORS.bodyHex })],
+        spacing: { after: 40 },
+      }));
+    }
+  }
+
+  return paras;
+}
+
+/**
+ * Create a standard bordered table for DOCX
+ */
+function rftTable(rows: TableRow[], colWidths?: number[]): Table {
+  return new Table({
+    rows,
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+      bottom: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+      left: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+      right: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+      insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+      insideVertical: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+    },
+  });
+}
+
+function rftHeaderCell(text: string, opts?: { center?: boolean; width?: number }): TableCell {
+  return new TableCell({
+    children: [new Paragraph({
+      children: [new TextRun({ text, bold: true, color: RFT_COLORS.blueHex, size: 18 })],
+      alignment: opts?.center ? AlignmentType.CENTER : AlignmentType.LEFT,
+    })],
+    margins: { top: 80, bottom: 80, left: 80, right: 80 },
+    ...(opts?.width ? { width: { size: opts.width, type: WidthType.PERCENTAGE } } : {}),
+  });
+}
+
+function rftLabelCell(text: string, width?: number): TableCell {
+  return new TableCell({
+    children: [new Paragraph({
+      children: [new TextRun({ text, bold: true, color: RFT_COLORS.blueHex, size: 18 })],
+    })],
+    margins: { top: 80, bottom: 80, left: 80, right: 80 },
+    ...(width ? { width: { size: width, type: WidthType.PERCENTAGE } } : {}),
+  });
+}
+
+function rftValueCell(text: string, opts?: { bold?: boolean; center?: boolean; width?: number; color?: string }): TableCell {
+  return new TableCell({
+    children: [new Paragraph({
+      children: [new TextRun({ text, bold: opts?.bold, size: 18, color: opts?.color })],
+      alignment: opts?.center ? AlignmentType.CENTER : AlignmentType.LEFT,
+    })],
+    margins: { top: 80, bottom: 80, left: 80, right: 80 },
+    ...(opts?.width ? { width: { size: opts.width, type: WidthType.PERCENTAGE } } : {}),
+  });
+}
+
+function rftContentCell(paragraphs: Paragraph[], width?: number): TableCell {
+  return new TableCell({
+    children: paragraphs.length > 0 ? paragraphs : [new Paragraph({ text: '-' })],
+    ...(width ? { width: { size: width, type: WidthType.PERCENTAGE } } : {}),
+  });
+}
+
+/**
+ * Export RFT report to DOCX matching the screen layout
+ */
+export async function exportRFTNewToDOCX(data: RFTExportData): Promise<Buffer> {
+  const children: (Paragraph | Table)[] = [];
+
+  // ===== 1. PROJECT INFO TABLE =====
+  children.push(rftTable([
+    new TableRow({ children: [
+      rftLabelCell('Project Name', 15),
+      rftValueCell(data.projectName, { width: 85 }),
+    ]}),
+    new TableRow({ children: [
+      rftLabelCell('Address', 15),
+      rftValueCell(data.address, { width: 85 }),
+    ]}),
+    new TableRow({ children: [
+      rftLabelCell('Document', 15),
+      new TableCell({
+        children: [new Paragraph({
+          children: [
+            new TextRun({ text: data.documentLabel, bold: true, size: 18 }),
+            new TextRun({ text: `\t\tIssued ${data.issuedDate}`, bold: true, color: RFT_COLORS.blueHex, size: 18 }),
+          ],
+        })],
+        margins: { top: 80, bottom: 80, left: 80, right: 80 },
+        width: { size: 85, type: WidthType.PERCENTAGE },
+      }),
+    ]}),
+  ]));
+
+  children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+
+  // ===== 2. OBJECTIVES SECTION =====
+  children.push(new Paragraph({
+    children: [new TextRun({ text: 'OBJECTIVES', bold: true, size: 20, color: RFT_COLORS.darkHex })],
+    spacing: { before: 100, after: 100 },
+  }));
+
+  const fqBlocks = parseHtmlContent(data.objectives.functionalQuality);
+  const pcBlocks = parseHtmlContent(data.objectives.planningCompliance);
+  const fqParas = blocksToDocxParagraphs(fqBlocks);
+  const pcParas = blocksToDocxParagraphs(pcBlocks);
+
+  children.push(rftTable([
+    // Header row
+    new TableRow({ children: [
+      rftHeaderCell('Functional & Quality', { width: 50 }),
+      rftHeaderCell('Planning & Compliance', { width: 50 }),
+    ]}),
+    // Content row
+    new TableRow({ children: [
+      rftContentCell(fqParas, 50),
+      rftContentCell(pcParas, 50),
+    ]}),
+  ]));
+
+  children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+
+  // ===== 3. BRIEF SECTION =====
+  children.push(new Paragraph({
+    children: [new TextRun({ text: 'BRIEF', bold: true, size: 20, color: RFT_COLORS.darkHex })],
+    spacing: { before: 100, after: 100 },
+  }));
+
+  const svcBlocks = parseHtmlContent(data.brief.service);
+  const delBlocks = parseHtmlContent(data.brief.deliverables);
+  const svcParas = blocksToDocxParagraphs(svcBlocks);
+  const delParas = blocksToDocxParagraphs(delBlocks);
+
+  children.push(rftTable([
+    new TableRow({ children: [
+      rftHeaderCell('Service', { width: 50 }),
+      rftHeaderCell('Deliverables', { width: 50 }),
+    ]}),
+    new TableRow({ children: [
+      rftContentCell(svcParas, 50),
+      rftContentCell(delParas, 50),
+    ]}),
+  ]));
+
+  children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+
+  // ===== 4. PROGRAM SECTION =====
+  children.push(new Paragraph({
+    children: [new TextRun({ text: 'PROGRAM', bold: true, size: 20, color: RFT_COLORS.darkHex })],
+    spacing: { before: 100, after: 100 },
+  }));
+
+  const withDates = data.activities.filter(a => a.startDate && a.endDate);
+  if (withDates.length > 0) {
+    const allDates = withDates.flatMap(a => [new Date(a.startDate!), new Date(a.endDate!)]);
+    const minD = new Date(Math.min(...allDates.map(d => d.getTime())));
+    const maxD = new Date(Math.max(...allDates.map(d => d.getTime())));
+    const wCols = generateWeekColumns(minD, maxD);
+    const mGroups = groupByMonth(wCols);
+    const ordered = buildOrderedActivities(data.activities);
+
+    // Calculate column widths (percentages)
+    const actW = 20, startW = 8, endW = 8;
+    const timeW = 100 - actW - startW - endW;
+    const colW = wCols.length > 0 ? timeW / wCols.length : 0;
+
+    // Month header row (with colspan via columnSpan)
+    const monthCells: TableCell[] = [
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: 'Activity', bold: true, color: RFT_COLORS.blueHex, size: 16 })] })],
+        rowSpan: 2,
+        width: { size: actW, type: WidthType.PERCENTAGE },
+        shading: { type: ShadingType.SOLID, color: RFT_COLORS.headerBgHex, fill: RFT_COLORS.headerBgHex },
+      }),
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: 'Start', bold: true, color: RFT_COLORS.blueHex, size: 14 })], alignment: AlignmentType.CENTER })],
+        rowSpan: 2,
+        width: { size: startW, type: WidthType.PERCENTAGE },
+        shading: { type: ShadingType.SOLID, color: RFT_COLORS.headerBgHex, fill: RFT_COLORS.headerBgHex },
+      }),
+      new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: 'End', bold: true, color: RFT_COLORS.blueHex, size: 14 })], alignment: AlignmentType.CENTER })],
+        rowSpan: 2,
+        width: { size: endW, type: WidthType.PERCENTAGE },
+        shading: { type: ShadingType.SOLID, color: RFT_COLORS.headerBgHex, fill: RFT_COLORS.headerBgHex },
+      }),
+    ];
+
+    mGroups.forEach(g => {
+      monthCells.push(new TableCell({
+        children: [new Paragraph({ children: [new TextRun({ text: g.label, color: RFT_COLORS.mutedHex, size: 14 })], alignment: AlignmentType.CENTER })],
+        columnSpan: g.count,
+        shading: { type: ShadingType.SOLID, color: RFT_COLORS.headerBgHex, fill: RFT_COLORS.headerBgHex },
+      }));
+    });
+
+    // Day number header row
+    const dayCells: TableCell[] = wCols.map(c => new TableCell({
+      children: [new Paragraph({ children: [new TextRun({ text: String(c.dayLabel), color: RFT_COLORS.mutedHex, size: 12 })], alignment: AlignmentType.CENTER })],
+      width: { size: colW, type: WidthType.PERCENTAGE },
+      shading: { type: ShadingType.SOLID, color: RFT_COLORS.headerBgHex, fill: RFT_COLORS.headerBgHex },
+    }));
+
+    // Activity rows
+    const actRows = ordered.map(act => {
+      const isChild = !!act.parentId;
+      const aS = act.startDate ? new Date(act.startDate) : null;
+      const aE = act.endDate ? new Date(act.endDate) : null;
+
+      const nameCells: TableCell[] = [
+        new TableCell({
+          children: [new Paragraph({
+            children: [new TextRun({
+              text: `${isChild ? '    ' : '\u25B8 '}${act.name}`,
+              bold: !isChild,
+              size: 15,
+              color: isChild ? RFT_COLORS.mutedHex : RFT_COLORS.darkHex,
+            })],
+          })],
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: formatDateShort(act.startDate), size: 14, color: RFT_COLORS.mutedHex })], alignment: AlignmentType.CENTER })],
+        }),
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: formatDateShort(act.endDate), size: 14, color: RFT_COLORS.mutedHex })], alignment: AlignmentType.CENTER })],
+        }),
+      ];
+
+      const tlCells = wCols.map(c => {
+        const inR = aS && aE && isWeekInRange(c.start, aS, aE);
+        return new TableCell({
+          children: [new Paragraph({ text: '' })],
+          ...(inR ? { shading: { type: ShadingType.SOLID, color: RFT_COLORS.barHex, fill: RFT_COLORS.barHex } } : {}),
+        });
+      });
+
+      return new TableRow({ children: [...nameCells, ...tlCells] });
+    });
+
+    children.push(new Table({
+      rows: [
+        new TableRow({ children: monthCells }),
+        new TableRow({ children: dayCells }),
+        ...actRows,
+      ],
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: {
+        top: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+        bottom: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+        left: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+        right: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+        insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+        insideVertical: { style: BorderStyle.SINGLE, size: 1, color: RFT_COLORS.borderHex },
+      },
+    }));
+  } else {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'No program activities with dates.', color: RFT_COLORS.mutedHex, size: 16 })],
+    }));
+  }
+
+  children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+
+  // ===== 5. FEE SECTION =====
+  children.push(new Paragraph({
+    children: [new TextRun({ text: 'FEE', bold: true, size: 20, color: RFT_COLORS.darkHex })],
+    spacing: { before: 100, after: 100 },
+  }));
+
+  if (data.feeItems.length > 0) {
+    const feeRows: TableRow[] = [
+      new TableRow({ children: [
+        rftHeaderCell('Description', { width: 66 }),
+        rftHeaderCell('Amount (Excl. GST)', { width: 34 }),
+      ]}),
+      ...data.feeItems.map(f => new TableRow({ children: [
+        rftValueCell(f.activity, { width: 66 }),
+        rftValueCell('$', { width: 34, color: RFT_COLORS.mutedHex }),
+      ]})),
+    ];
+    children.push(rftTable(feeRows));
+  } else {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'No cost plan items.', color: RFT_COLORS.mutedHex, size: 16 })],
+    }));
+  }
+
+  children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+
+  // ===== 6. TRANSMITTAL SECTION =====
+  children.push(new Paragraph({
+    children: [new TextRun({ text: 'TRANSMITTAL', bold: true, size: 20, color: RFT_COLORS.darkHex })],
+    spacing: { before: 100, after: 100 },
+  }));
+
+  if (data.transmittalDocs.length > 0) {
+    const tRows: TableRow[] = [
+      new TableRow({ children: [
+        rftHeaderCell('#', { center: true, width: 5 }),
+        rftHeaderCell('DWG #', { width: 12 }),
+        rftHeaderCell('Name', { width: 35 }),
+        rftHeaderCell('Rev', { center: true, width: 8 }),
+        rftHeaderCell('Category', { width: 20 }),
+        rftHeaderCell('Subcategory', { width: 20 }),
+      ]}),
+      ...data.transmittalDocs.map((t, i) => new TableRow({ children: [
+        rftValueCell(String(i + 1), { center: true, color: RFT_COLORS.mutedHex }),
+        rftValueCell(t.drawingNumber || '-'),
+        rftValueCell(t.drawingName || t.originalName),
+        rftValueCell(t.drawingRevision || '-', { center: true }),
+        rftValueCell(t.categoryName || '-'),
+        rftValueCell(t.subcategoryName || '-'),
+      ]})),
+    ];
+    children.push(rftTable(tRows));
+  } else {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'No transmittal documents attached.', color: RFT_COLORS.mutedHex, size: 16 })],
+    }));
+  }
+
+  // Build document
+  const docx = new Document({
+    styles: {
+      default: {
+        document: { run: { font: 'Arial', size: 22 } },
+        heading1: { run: { font: 'Arial' } },
+        heading2: { run: { font: 'Arial' } },
+        heading3: { run: { font: 'Arial' } },
+      },
+    },
+    sections: [{ properties: {}, children }],
+  });
+
+  return await Packer.toBuffer(docx);
 }

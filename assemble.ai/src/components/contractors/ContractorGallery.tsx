@@ -75,6 +75,7 @@ export function ContractorGallery({
           toast({
             title: 'Success',
             description: 'Contractor added successfully',
+            variant: 'success',
           });
           setNewFirm(null);
         } else {
@@ -121,6 +122,7 @@ export function ContractorGallery({
       toast({
         title: 'Success',
         description: 'Contractor deleted successfully',
+        variant: 'success',
       });
     } catch (error) {
       toast({
@@ -170,6 +172,7 @@ export function ContractorGallery({
             ? `Contract value of ${formatCurrency(contractValue)} recorded in Cost Plan.`
             : 'Company has been added to the master list and is now available in Cost Planning.'
           : 'Award status has been removed.',
+        variant: 'success',
       });
     } catch (error) {
       toast({
@@ -200,30 +203,20 @@ export function ContractorGallery({
       const result = await response.json();
       const { data, confidence } = result;
 
-      if (confidence < 70) {
-        toast({
-          title: 'Low Confidence',
-          description: `Extraction confidence is ${confidence}%. Please review the data carefully.`,
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Success',
-          description: `Data extracted with ${confidence}% confidence`,
-        });
-      }
-
       return {
-        companyName: data.companyName || '',
-        contactPerson: data.contactPerson || '',
-        email: data.email || '',
-        address: data.address || '',
-        abn: data.abn || '',
-        notes: data.notes || '',
-        shortlisted: false,
-        awarded: false,
-        companyId: null,
-        trade,
+        confidence,
+        data: {
+          companyName: data.companyName || '',
+          contactPerson: data.contactPerson || '',
+          email: data.email || '',
+          address: data.address || '',
+          abn: data.abn || '',
+          notes: data.notes || '',
+          shortlisted: true,
+          awarded: false,
+          companyId: null,
+          trade,
+        },
       };
     } catch (error) {
       toast({
@@ -249,7 +242,7 @@ export function ContractorGallery({
     }
 
     try {
-      const extractedData = await handleFileExtraction(file);
+      const { confidence, data: extractedData } = await handleFileExtraction(file);
 
       // Build form data from extracted data
       const formData = {
@@ -271,9 +264,19 @@ export function ContractorGallery({
       } else {
         // Add as new
         await addContractor(formData);
+      }
+
+      if (confidence < 70) {
+        toast({
+          title: 'Low Confidence',
+          description: `Extraction confidence is ${confidence}%. Please review the data carefully.`,
+          variant: 'destructive',
+        });
+      } else {
         toast({
           title: 'Success',
-          description: 'New contractor added from extracted data',
+          description: `Data extracted with ${confidence}% confidence`,
+          variant: 'success',
         });
       }
     } catch {
@@ -293,7 +296,7 @@ export function ContractorGallery({
     }
 
     try {
-      const extractedData = await handleFileExtraction(file);
+      const { confidence, data: extractedData } = await handleFileExtraction(file);
       const formData = {
         companyName: extractedData.companyName || '',
         contactPerson: extractedData.contactPerson || '',
@@ -304,10 +307,20 @@ export function ContractorGallery({
         trade,
       };
       await addContractor(formData);
-      toast({
-        title: 'Success',
-        description: 'New contractor added from extracted data',
-      });
+
+      if (confidence < 70) {
+        toast({
+          title: 'Low Confidence',
+          description: `Extraction confidence is ${confidence}%. Please review the data carefully.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: `Data extracted with ${confidence}% confidence`,
+          variant: 'success',
+        });
+      }
     } catch {
       // Error already handled
     }
@@ -345,7 +358,7 @@ export function ContractorGallery({
       address: '',
       abn: '',
       notes: '',
-      shortlisted: false,
+      shortlisted: true,
       awarded: false,
       companyId: null,
       trade,
@@ -367,11 +380,11 @@ export function ContractorGallery({
   return (
     <div className="space-y-6">
       {/* Firms Section */}
-      <div className={`relative ${isExtracting ? 'z-[200]' : ''}`}>
+      <div className="relative">
         {/* Extraction Progress Overlay */}
         {isExtracting && (
-          <div className="absolute inset-0 z-[200] bg-[var(--color-bg-primary)]/80 flex items-center justify-center rounded-lg">
-            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
+          <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center">
+            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3 shadow-lg">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
               <p className="text-[var(--color-text-primary)] font-semibold">Extracting contractor data...</p>
               <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
@@ -379,7 +392,7 @@ export function ContractorGallery({
           </div>
         )}
 
-        <div className="flex overflow-x-auto py-3 px-1 items-start gap-4" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex overflow-x-auto py-3 px-1 items-stretch gap-4 firms-scrollbar" style={{ scrollbarWidth: 'thin' }}>
           {/* Existing contractors */}
           {contractors.map((contractor) => (
             <FirmCard

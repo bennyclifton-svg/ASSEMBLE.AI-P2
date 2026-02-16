@@ -110,6 +110,7 @@ export function useEvaluationPrice({
             toast({
                 title: 'Evaluation created',
                 description: `Created Evaluation ${String(newInstance.evaluationPriceNumber).padStart(2, '0')}`,
+                variant: 'success',
             });
 
             return newInstance;
@@ -144,6 +145,7 @@ export function useEvaluationPrice({
             toast({
                 title: 'Evaluation deleted',
                 description: 'Evaluation has been removed',
+                variant: 'success',
             });
 
             return true;

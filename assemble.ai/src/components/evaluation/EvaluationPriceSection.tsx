@@ -11,7 +11,7 @@ import { useEvaluationPrice, type EvaluationPriceInstance } from '@/lib/hooks/us
 import { useEvaluationPriceSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { EvaluationPriceTabs } from './EvaluationPriceTabs';
 import { EvaluationPriceTab } from './EvaluationPriceTab';
-import { FileText, MoreHorizontal, Loader2 } from 'lucide-react';
+import { FileText, MoreHorizontal, MoreVertical, Loader2 } from 'lucide-react';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon, XlsxIcon } from '@/components/ui/file-type-icons';
@@ -78,6 +78,15 @@ export function EvaluationPriceSection({
         }
     }, [createEvaluationPrice, setActiveEvaluationPriceId, setIsExpanded]);
 
+    // Auto-create first evaluation price when expanding with none
+    const handleExpandToggle = useCallback(async () => {
+        if (!isExpanded && evaluationPrices.length === 0 && !isLoading && !isCreating) {
+            await handleCreateEvaluationPrice();
+        } else {
+            setIsExpanded(!isExpanded);
+        }
+    }, [isExpanded, evaluationPrices.length, isLoading, isCreating, handleCreateEvaluationPrice, setIsExpanded]);
+
     const handleDeleteEvaluationPrice = useCallback(async (id: string) => {
         const success = await deleteEvaluationPrice(id);
         if (success && id === activeEvaluationPriceId) {
@@ -139,7 +148,7 @@ export function EvaluationPriceSection({
             {/* Header - Segmented white ribbons with grey surround */}
             <div className="flex items-stretch gap-0.5 p-2">
                 {/* Evaluation Price segment */}
-                <div className="flex items-center w-[220px] px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
+                <div className="flex items-center w-fit h-11 px-3 py-1.5 border border-[var(--color-border)] shadow-sm rounded-l-md" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
                     <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
                     <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                         Evaluation Price
@@ -147,8 +156,9 @@ export function EvaluationPriceSection({
                 </div>
                 {/* Corner bracket segment - square, points out to expand, in to collapse */}
                 <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center justify-center p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    onClick={handleExpandToggle}
+                    className="flex items-center justify-center w-11 h-11 border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}
                     title={isExpanded ? 'Collapse' : 'Expand'}
                 >
                     <CornerBracketIcon
@@ -157,13 +167,13 @@ export function EvaluationPriceSection({
                     />
                 </button>
                 {/* More options segment - expandable to show tabs and export buttons */}
-                <div className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md transition-all">
+                <div className="flex items-center h-11 border border-[var(--color-border)] shadow-sm rounded-r-md transition-all" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
                     <button
                         onClick={() => setIsMenuExpanded(!isMenuExpanded)}
-                        className="flex items-center justify-center w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                        className="flex items-center justify-center w-11 h-11 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                         title={isMenuExpanded ? 'Hide options' : 'Show options'}
                     >
-                        <MoreHorizontal className="w-4 h-4" />
+                        {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
                     </button>
                     {/* Expanded content: tabs and export buttons */}
                     {isMenuExpanded && (
@@ -223,7 +233,7 @@ export function EvaluationPriceSection({
             <div>
                 {/* Tab Content - only shown when expanded */}
                 {isExpanded && (
-                    <div className="mx-2 p-4 bg-[var(--color-bg-secondary)] rounded-md shadow-sm">
+                    <div className="mx-2 p-4 rounded-md shadow-sm" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
                         {isLoading ? (
                             <div className="p-8 text-center text-[var(--color-text-muted)]">
                                 <p>Loading evaluations...</p>

@@ -5,6 +5,7 @@
 
 // Shared components
 export { Button } from './shared/Button';
+export { AnimatedDotGrid } from './shared/AnimatedDotGrid';
 export { DotGridPattern } from './shared/DotGridPattern';
 export { SectionContainer } from './shared/SectionContainer';
 export { ScrollReveal } from './shared/ScrollReveal';

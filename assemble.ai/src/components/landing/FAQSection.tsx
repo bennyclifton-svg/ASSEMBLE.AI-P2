@@ -4,7 +4,7 @@ import { faqContent } from './data/landing-data';
 
 export function FAQSection() {
     return (
-        <SectionContainer id="faq" pattern="fine" background="bg-[var(--gray-50)]" className="py-24">
+        <SectionContainer id="faq" pattern="fine" patternOffset={21} background="bg-[var(--gray-50)]" className="py-24">
             <ScrollReveal>
                 <h2 className="serif text-[clamp(36px,4vw,52px)] leading-[1.1] text-[var(--gray-800)] text-center mb-12">
                     {faqContent.headline}

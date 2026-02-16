@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Box } from 'lucide-react';
 import { DetailsSection } from './planning/DetailsSection';
 import { ObjectivesNav } from './planning/ObjectivesNav';
 import { ProfileSection } from '@/components/profiler/ProfileSection';
 import { StakeholderNav } from '@/components/stakeholders/StakeholderNav';
+import { ProjectSwitcher } from './ProjectSwitcher';
 
 interface Project {
     id: string;
@@ -15,8 +17,6 @@ interface Project {
 
 interface PlanningCardProps {
     projectId: string;
-    selectedProject?: Project | null;
-    onSelectProject?: (project: Project | null) => void;
     selectedDocumentIds?: string[];
     onSetSelectedDocumentIds?: (ids: string[]) => void;
     onProjectNameChange?: () => void;
@@ -27,12 +27,12 @@ interface PlanningCardProps {
     onShowProjectDetails?: () => void;
     activeMainTab?: string;
     refreshKey?: number;
+    selectedProject?: Project | null;
+    onSelectProject?: (project: Project | null) => void;
 }
 
 export function PlanningCard({
     projectId,
-    selectedProject,
-    onSelectProject,
     selectedDocumentIds = [],
     onSetSelectedDocumentIds,
     onProjectNameChange,
@@ -43,6 +43,8 @@ export function PlanningCard({
     onShowProjectDetails,
     activeMainTab,
     refreshKey,
+    selectedProject,
+    onSelectProject,
 }: PlanningCardProps) {
     const [data, setData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -76,7 +78,7 @@ export function PlanningCard({
 
     return (
         <div className="h-full overflow-y-auto section-planning">
-            <div className="nav-panel-unified">
+            <div className="nav-panel-unified pt-[60px]">
                 <DetailsSection
                     key={projectId}
                     projectId={projectId}
@@ -85,9 +87,6 @@ export function PlanningCard({
                     onProjectNameChange={onProjectNameChange}
                     isActive={activeMainTab === 'project-details'}
                     onToggle={onShowProjectDetails}
-                    selectedProject={selectedProject}
-                    onSelectProject={onSelectProject}
-                    refreshTrigger={refreshKey}
                 />
 
                 <ProfileSection
@@ -112,6 +111,26 @@ export function PlanningCard({
                     onNavigate={onStakeholderNavigate}
                     isActive={activeMainTab === 'stakeholders'}
                 />
+
+                {/* Project Switcher */}
+                {onSelectProject && selectedProject && (
+                    <div className="nav-panel-section py-3 overflow-hidden">
+                        <div className="nav-panel-header w-full overflow-hidden">
+                            <ProjectSwitcher
+                                selectedProject={selectedProject}
+                                onSelectProject={onSelectProject}
+                                refreshTrigger={refreshKey}
+                            >
+                                <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+                                    <Box className="w-5 h-5 text-[var(--color-text-secondary)] flex-shrink-0" />
+                                    <span className="text-base font-medium text-[var(--color-text-primary)] truncate">
+                                        {selectedProject.name}
+                                    </span>
+                                </div>
+                            </ProjectSwitcher>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

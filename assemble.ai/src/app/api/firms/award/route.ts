@@ -8,6 +8,7 @@ import {
     evaluationRows,
     evaluationCells,
     costLines,
+    projectStakeholders,
 } from '@/lib/db';
 import { eq, and, ne, desc, isNull, inArray } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
@@ -238,8 +239,25 @@ export async function POST(request: NextRequest) {
                     costLineId = cl.id;
                 }
             }
+
+            // 5b. Sync awarded firm's contact details to the stakeholder record
+            const contactPhone = firmType === 'consultant'
+                ? ((firm as typeof consultants.$inferSelect).mobile || firm.phone || null)
+                : (firm.phone || null);
+
+            await db
+                .update(projectStakeholders)
+                .set({
+                    organization: firm.companyName.trim(),
+                    contactName: firm.contactPerson || null,
+                    contactEmail: firm.email || null,
+                    contactPhone,
+                    companyId: companyId || null,
+                    updatedAt: new Date(),
+                })
+                .where(eq(projectStakeholders.id, stakeholderId));
         }
-        // Note: When de-awarding, we do NOT modify cost line values (preserve existing)
+        // Note: When de-awarding, we do NOT modify cost line or stakeholder values (preserve existing)
 
         // 6. Update firm's awarded status
         await db

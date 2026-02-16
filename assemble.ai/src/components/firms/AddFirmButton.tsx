@@ -52,7 +52,7 @@ export function AddFirmButton({ onAdd, onFileDrop }: Omit<AddFirmButtonProps, 'i
         flex items-center justify-center px-3 py-2 cursor-pointer
         border-2 border-dashed transition-all duration-150 shadow-md
         ${isDragOver || isHovered ? 'border-[var(--color-accent-teal)] bg-[var(--color-card-firm-hover)]' : 'border-[var(--color-border-strong)] bg-[var(--color-card-firm)]'}
-        w-[220px] flex-shrink-0 min-h-[66px]
+        w-[220px] flex-shrink-0 self-stretch min-h-[66px]
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -64,10 +64,18 @@ export function AddFirmButton({ onAdd, onFileDrop }: Omit<AddFirmButtonProps, 'i
     >
       <Plus
         className={`
-          w-6 h-6 transition-colors
+          w-5 h-5 transition-colors
           ${isDragOver || isHovered ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)]'}
         `}
       />
+      <span
+        className={`
+          text-sm font-medium transition-colors
+          ${isDragOver || isHovered ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)]'}
+        `}
+      >
+        New Firm
+      </span>
 
       {/* Hidden file input */}
       <input

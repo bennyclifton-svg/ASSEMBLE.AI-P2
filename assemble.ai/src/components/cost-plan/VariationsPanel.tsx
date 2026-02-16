@@ -156,9 +156,9 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
 
     return (
         <VariationDropZone projectId={projectId} onUploadComplete={handleUploadComplete}>
-            <div className="h-full flex flex-col bg-[var(--color-bg-primary)] text-xs">
+            <div className="h-full flex flex-col text-xs">
                 {/* Toolbar */}
-                <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[#f0f0f0]">
+                <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
                     <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
                         <Upload className="h-3 w-3" />
                         Drop Variation
@@ -168,10 +168,10 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                 {/* Table */}
                 <div className="flex-1 overflow-auto @container">
                     <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
-                        <thead className="sticky top-0 z-10 bg-[var(--color-accent-copper-tint)]">
+                        <thead className="sticky top-0 z-10 backdrop-blur-sm shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
                         <tr>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[70px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[70px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('variationNumber')}
                             >
                                 <div className="flex items-center gap-1">
@@ -180,7 +180,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('description')}
                             >
                                 <div className="flex items-center gap-1">
@@ -189,7 +189,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[180px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none hidden @[800px]:table-cell"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[180px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none hidden @[800px]:table-cell border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('costLine')}
                             >
                                 <div className="flex items-center gap-1">
@@ -198,7 +198,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[90px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none hidden @[700px]:table-cell"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[90px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none hidden @[700px]:table-cell border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('status')}
                             >
                                 <div className="flex items-center gap-1">
@@ -207,7 +207,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-right text-[var(--color-accent-copper)] font-medium w-[85px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-right text-[var(--color-text-primary)] font-bold w-[85px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('forecast')}
                             >
                                 <div className="flex items-center justify-end gap-1">
@@ -216,7 +216,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-right text-[var(--color-accent-copper)] font-medium w-[85px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none"
+                                className="px-2 py-2 text-right text-[var(--color-text-primary)] font-bold w-[85px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('approved')}
                             >
                                 <div className="flex items-center justify-end gap-1">
@@ -225,7 +225,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-left text-[var(--color-accent-copper)] font-medium w-[90px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none hidden @[600px]:table-cell"
+                                className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[90px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none hidden @[600px]:table-cell border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('date')}
                             >
                                 <div className="flex items-center gap-1">
@@ -234,7 +234,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                 </div>
                             </th>
                             <th
-                                className="border border-[var(--color-accent-copper)] px-2 py-2 text-center text-[var(--color-accent-copper)] font-medium w-[50px] cursor-pointer hover:bg-[var(--color-accent-copper)]/20 select-none hidden @[500px]:table-cell"
+                                className="px-2 py-2 text-center text-[var(--color-text-primary)] font-bold w-[50px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none hidden @[500px]:table-cell border-b border-b-[var(--color-border)]"
                                 onClick={() => handleSort('category')}
                             >
                                 <div className="flex items-center justify-center gap-1">
@@ -242,11 +242,11 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                                     <SortIndicator column="category" />
                                 </div>
                             </th>
-                            <th className="border border-[var(--color-accent-copper)] px-2 py-2 text-center text-[var(--color-accent-copper)] font-medium w-[40px]">
+                            <th className="px-2 py-2 text-center text-[var(--color-text-primary)] font-bold w-[40px] border-b border-b-[var(--color-border)]">
                                 <button
                                     onClick={() => setShowAddRow(true)}
                                     disabled={showAddRow}
-                                    className="p-0.5 text-[var(--color-accent-copper)] hover:text-[var(--color-accent-teal)] transition-colors disabled:opacity-50"
+                                    className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
                                     title="Add Variation"
                                 >
                                     <Plus className="h-4 w-4" />

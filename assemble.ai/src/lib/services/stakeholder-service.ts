@@ -407,6 +407,7 @@ export async function updateStakeholder(
       contactName: data.contactName,
       contactEmail: data.contactEmail,
       contactPhone: data.contactPhone,
+      disciplineOrTrade: data.disciplineOrTrade,
       isEnabled: data.isEnabled,
       briefServices: data.briefServices,
       briefDeliverables: data.briefDeliverables,

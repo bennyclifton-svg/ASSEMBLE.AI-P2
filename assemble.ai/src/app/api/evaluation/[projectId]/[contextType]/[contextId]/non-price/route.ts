@@ -147,13 +147,17 @@ export async function GET(
         });
 
         if (stakeholder) {
+            // Use disciplineOrTrade (preferred) or name to match firms
+            // This must match what ProcurementCard passes to galleries: s.disciplineOrTrade || s.name
+            const matchName = stakeholder.disciplineOrTrade || stakeholder.name;
+
             if (stakeholder.stakeholderGroup === 'consultant') {
                 firmType = 'consultant';
                 // Order by createdAt to match firm tiles display order
                 const stakeholderConsultants = await db.query.consultants.findMany({
                     where: and(
                         eq(consultants.projectId, projectId),
-                        eq(consultants.discipline, stakeholder.name)
+                        eq(consultants.discipline, matchName)
                     ),
                     orderBy: [asc(consultants.createdAt)],
                 });
@@ -172,7 +176,7 @@ export async function GET(
                 const stakeholderContractors = await db.query.contractors.findMany({
                     where: and(
                         eq(contractors.projectId, projectId),
-                        eq(contractors.trade, stakeholder.name)
+                        eq(contractors.trade, matchName)
                     ),
                     orderBy: [asc(contractors.createdAt)],
                 });

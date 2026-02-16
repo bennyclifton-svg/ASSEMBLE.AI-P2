@@ -104,6 +104,7 @@ export function useRftNewTransmittal({
             toast({
                 title: 'Transmittal saved',
                 description: `Saved ${documentIds.length} document(s) to transmittal`,
+                variant: 'success',
             });
 
             return true;

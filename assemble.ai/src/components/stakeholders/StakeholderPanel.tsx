@@ -79,7 +79,8 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
     await createStakeholder({
       stakeholderGroup: quickAddGroup,
       name: subgroup,
-      isEnabled: quickAddGroup === 'consultant' || quickAddGroup === 'contractor',
+      disciplineOrTrade: subgroup,
+      isEnabled: true,
     });
     setQuickAddGroup(null);
   };
@@ -294,21 +295,24 @@ function GroupCard({
     : `Delete all ${GROUP_LABELS[group]} stakeholders`;
 
   return (
-    <div className="border border-[var(--color-border)] rounded overflow-hidden flex flex-col">
+    <div className="border border-[var(--color-border)]/50 rounded overflow-hidden flex flex-col">
       {/* Header with copper tint background - matches Objectives section */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--color-accent-copper-tint)] border-b border-[var(--color-border)]">
+      <div
+        className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
+        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
+      >
         <div className="flex items-center gap-2">
           <button
             onClick={() => onQuickAdd(group)}
             className={cn(
               'p-1 rounded transition-colors',
-              'text-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/10'
+              'text-blue-500 hover:text-blue-400 hover:bg-blue-500/10'
             )}
             title={`Add ${GROUP_LABELS[group]}`}
           >
             <Plus className="w-4 h-4" />
           </button>
-          <span className="text-[var(--color-accent-copper)] font-medium text-sm uppercase tracking-wide">
+          <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
             {GROUP_LABELS[group]} ({stakeholders.length})
           </span>
         </div>
@@ -319,13 +323,13 @@ function GroupCard({
             className={cn(
               'flex items-center gap-1.5 text-sm font-medium transition-all',
               isGenerating
-                ? 'text-[var(--color-accent-copper)] cursor-wait'
-                : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                ? 'text-blue-500 cursor-wait'
+                : 'text-blue-500 hover:text-blue-400'
             )}
             title={isGenerating ? 'Generating...' : `Generate ${GROUP_LABELS[group]}`}
           >
             <DiamondIcon
-              className={cn('w-4 h-4', isGenerating && 'animate-spin [animation-duration:2.5s]')}
+              className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
               variant="empty"
             />
             <span className={isGenerating ? 'animate-text-aurora' : ''}>
@@ -337,8 +341,8 @@ function GroupCard({
             className={cn(
               'p-1 rounded transition-colors',
               stakeholders.length > 0 || hasSelectedInGroup
-                ? 'text-[var(--color-accent-copper)] hover:text-[var(--color-accent-coral)] hover:bg-[var(--color-accent-coral)]/10'
-                : 'text-[var(--color-accent-copper)]/30 cursor-not-allowed'
+                ? 'text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10'
+                : 'text-[var(--color-text-muted)]/30 cursor-not-allowed'
             )}
             title={trashTitle}
             disabled={stakeholders.length === 0 && !hasSelectedInGroup}
@@ -349,29 +353,32 @@ function GroupCard({
       </div>
 
       {/* Content area */}
-      <div className="flex-1 bg-[var(--color-bg-secondary)]">
+      <div
+        className="flex-1 backdrop-blur-md"
+        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+      >
         <table className="w-full">
           <thead>
-            <tr className="border-b border-[var(--color-border)]">
-              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-28">
+            <tr className="border-b border-[var(--color-border)]/50">
+              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-24">
                 Group
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-48">
+              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-40">
                 SubGroup
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-32">
+              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-44">
                 Firm
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-36">
                 Name
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-28">
+              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-36">
                 Phone
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-40">
+              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-48">
                 Email
               </th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider w-24">
+              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-24">
                 Status
               </th>
               <th className="px-3 py-2 w-10" />

@@ -112,6 +112,7 @@ export function useRftNew({
             toast({
                 title: 'RFT created',
                 description: `Created RFT ${String(newRft.rftNumber).padStart(2, '0')}`,
+                variant: 'success',
             });
 
             return newRft;
@@ -181,6 +182,7 @@ export function useRftNew({
             toast({
                 title: 'RFT deleted',
                 description: 'RFT has been removed',
+                variant: 'success',
             });
 
             return true;

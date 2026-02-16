@@ -95,6 +95,7 @@ export function EvaluationNonPriceTab({
             toast({
                 title: 'Tender parsed successfully',
                 description: `Extracted ${result.extractedCount} criteria (${Math.round(result.overallConfidence * 100)}% average confidence)`,
+                variant: 'success',
             });
         } else {
             toast({

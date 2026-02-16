@@ -49,7 +49,7 @@ export function SectionHeader({
     return (
         <div className={`flex items-stretch gap-0.5 p-2 ${className}`}>
             {/* Title segment */}
-            <div className="flex items-center w-[220px] px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-l-md">
+            <div className="flex items-center w-fit h-11 px-3 py-1.5 border border-[var(--color-border)] shadow-sm rounded-l-md" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
                 <Icon className="w-4 h-4" style={{ color: accentColor }} />
                 <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     {title}
@@ -59,7 +59,8 @@ export function SectionHeader({
             {/* Corner bracket segment - expand/collapse toggle */}
             <button
                 onClick={onToggleExpand}
-                className="flex items-center justify-center p-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                className="flex items-center justify-center w-11 h-11 border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}
                 title={isExpanded ? 'Collapse' : 'Expand'}
             >
                 <CornerBracketIcon
@@ -69,10 +70,10 @@ export function SectionHeader({
             </button>
 
             {/* Options menu segment - expandable */}
-            <div className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-border)] shadow-sm rounded-r-md transition-all">
+            <div className="flex items-center h-11 border border-[var(--color-border)] shadow-sm rounded-r-md transition-all" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
                 <button
                     onClick={onToggleMenu}
-                    className="flex items-center justify-center w-8 h-8 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    className="flex items-center justify-center w-11 h-11 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                     title={isMenuExpanded ? 'Hide options' : 'Show options'}
                 >
                     {isMenuExpanded ? (

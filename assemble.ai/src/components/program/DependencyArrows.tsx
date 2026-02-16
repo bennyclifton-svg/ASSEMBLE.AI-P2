@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import type { ProgramActivity, ProgramDependency, ZoomLevel } from '@/types/program';
 
 interface DependencyArrowsProps {
@@ -51,6 +52,8 @@ export function DependencyArrows({
     onDeleteDependency,
 }: DependencyArrowsProps) {
     const [hoveredId, setHoveredId] = useState<string | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
     // Build activity index map for quick lookup
     const activityIndexMap = useMemo(() => {
@@ -120,15 +123,24 @@ export function DependencyArrows({
             }>;
     }, [activities, dependencies, activityIndexMap, columns, columnWidth, zoomLevel, rowHeight]);
 
-    if (arrows.length === 0) return null;
-
     const handleClick = (id: string) => {
-        if (onDeleteDependency && confirm('Delete this dependency?')) {
-            onDeleteDependency(id);
+        if (onDeleteDependency) {
+            setPendingDeleteId(id);
+            setDeleteDialogOpen(true);
         }
     };
 
+    const handleConfirmDelete = () => {
+        if (pendingDeleteId && onDeleteDependency) {
+            onDeleteDependency(pendingDeleteId);
+            setPendingDeleteId(null);
+        }
+    };
+
+    if (arrows.length === 0) return null;
+
     return (
+        <>
         <svg
             className="absolute inset-0 z-5"
             style={{ width: columns.length * columnWidth, height: activities.length * rowHeight, pointerEvents: 'none' }}
@@ -272,5 +284,14 @@ export function DependencyArrows({
                 );
             })}
         </svg>
+
+        {/* Delete Confirmation Dialog */}
+        <AuroraConfirmDialog
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onConfirm={handleConfirmDelete}
+            title="Delete this dependency?"
+        />
+        </>
     );
 }

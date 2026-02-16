@@ -9,12 +9,6 @@
 import { useState, useEffect } from 'react';
 import { Folder, Save, RotateCcw, Download } from 'lucide-react';
 import { TRRAttachment } from '@/types/trr';
-import { Button } from '@/components/ui/button';
-
-// Aurora accent button styling - consistent across procurement components
-const BUTTON_BG = 'var(--color-accent-copper-tint)';
-const BUTTON_TEXT = 'var(--color-accent-copper)';
-const BUTTON_BORDER = 'rgba(0, 255, 255, 0.3)';
 
 interface TRRAttachmentsProps {
     trrId: string;
@@ -93,51 +87,30 @@ export function TRRAttachments({
                     Attachments
                 </h3>
                 <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
+                    <button
                         onClick={onSaveTransmittal}
                         disabled={!canSaveTransmittal}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: BUTTON_BG,
-                            color: BUTTON_TEXT,
-                            border: `1px solid ${BUTTON_BORDER}`,
-                        }}
+                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
                     >
-                        <Save className="w-3 h-3 mr-1" />
+                        <Save className="h-3.5 w-3.5" />
                         Save Attachments
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
+                    </button>
+                    <button
                         onClick={onLoadTransmittal}
                         disabled={!hasAttachments}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: BUTTON_BG,
-                            color: BUTTON_TEXT,
-                            border: `1px solid ${BUTTON_BORDER}`,
-                        }}
+                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
                     >
-                        <RotateCcw className="w-3 h-3 mr-1" />
+                        <RotateCcw className="h-3.5 w-3.5" />
                         Recall {(transmittalCount ?? 0) > 0 && `(${transmittalCount})`}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
+                    </button>
+                    <button
                         onClick={onDownloadTransmittal}
                         disabled={!hasAttachments || isDownloading}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: BUTTON_BG,
-                            color: BUTTON_TEXT,
-                            border: `1px solid ${BUTTON_BORDER}`,
-                        }}
+                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
                     >
-                        <Download className="w-3 h-3 mr-1" />
+                        <Download className="h-3.5 w-3.5" />
                         Download
-                    </Button>
+                    </button>
                 </div>
             </div>
             <div className="overflow-hidden rounded-lg">
@@ -148,13 +121,13 @@ export function TRRAttachments({
                 ) : attachments.length > 0 ? (
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-[var(--color-border)]">
-                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium w-10">#</th>
-                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium w-24">DWG #</th>
-                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium">Name</th>
-                                <th className="text-center text-[var(--color-document-header)] px-4 py-1.5 font-medium w-16">Rev</th>
-                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium w-36">Category</th>
-                                <th className="text-left text-[var(--color-document-header)] px-4 py-1.5 font-medium w-40">Subcategory</th>
+                            <tr className="border-b border-[var(--color-border)] bg-[var(--color-bg-tertiary)]">
+                                <th className="text-left text-[var(--color-text-primary)] px-4 py-1.5 font-medium w-10">#</th>
+                                <th className="text-left text-[var(--color-text-primary)] px-4 py-1.5 font-medium w-24">DWG #</th>
+                                <th className="text-left text-[var(--color-text-primary)] px-4 py-1.5 font-medium">Name</th>
+                                <th className="text-center text-[var(--color-text-primary)] px-4 py-1.5 font-medium w-16">Rev</th>
+                                <th className="text-left text-[var(--color-text-primary)] px-4 py-1.5 font-medium w-36">Category</th>
+                                <th className="text-left text-[var(--color-text-primary)] px-4 py-1.5 font-medium w-40">Subcategory</th>
                             </tr>
                         </thead>
                         <tbody>

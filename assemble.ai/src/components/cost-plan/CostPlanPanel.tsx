@@ -26,9 +26,12 @@ import { useStakeholders } from '@/lib/hooks/use-stakeholders';
 import { formatCurrency } from '@/lib/calculations/cost-plan-formulas';
 import { VariationsPanel } from './VariationsPanel';
 import { InvoicesPanel } from './InvoicesPanel';
+import { PaymentSchedulePanel } from './PaymentSchedulePanel';
+import { ApplyEstimateDialog, type BudgetUpdate, type NewBudgetLine } from './ApplyEstimateDialog';
 import { DisciplineDropdown } from './cells/DisciplineDropdown';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { ProgramActivitySelector } from './ProgramActivitySelector';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import type { CostLineSection, CostLineWithCalculations, GroupedLine, GroupedLineTotals } from '@/types/cost-plan';
 import type { ProgramActivity } from '@/types/program';
 
@@ -51,11 +54,11 @@ const COLORS = {
     },
     accent: {
         blue: '#0080FF',           // Aurora Blue
-        cyan: '#00FFFF',           // Aurora Cyan (primary accent)
+        cyan: '#1776c1',           // Aurora Cyan (primary accent)
         teal: '#14B8A6',           // Aurora Teal
-        costPlan: '#00FFFF',       // Aurora Cyan - unified accent
-        variation: '#00FFFF',      // Aurora Cyan - unified accent
-        invoice: '#00FFFF',        // Aurora Cyan - unified accent
+        costPlan: '#1776c1',       // Aurora Cyan - unified accent
+        variation: '#1776c1',      // Aurora Cyan - unified accent
+        invoice: '#1776c1',        // Aurora Cyan - unified accent
     },
     status: {
         positive: '#4ade80',
@@ -64,7 +67,7 @@ const COLORS = {
 };
 
 const SECTION_NAMES: Record<CostLineSection, string> = {
-    FEES: 'AUTHORITIES',
+    FEES: 'DEVELOPER',
     CONSULTANTS: 'CONSULTANTS',
     CONSTRUCTION: 'CONSTRUCTION',
     CONTINGENCY: 'CONTINGENCY',
@@ -80,30 +83,36 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
     const [activeTab, setActiveTab] = useState('cost-plan');
 
     return (
-        <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
+        <div className="h-full flex flex-col">
             <Tabs
                 value={activeTab}
                 onValueChange={setActiveTab}
                 className="flex-1 flex flex-col min-h-0"
             >
-                <TabsList className="w-full justify-start bg-[#f0f0f0] border-b border-[var(--color-border)] rounded-none h-auto p-0 px-2">
+                <TabsList className="w-full justify-start bg-transparent border-b border-[var(--color-border)]/50 rounded-none h-auto p-0 pl-[20%]">
                     <TabsTrigger
                         value="cost-plan"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-white"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]"
                     >
                         Cost Plan
                     </TabsTrigger>
                     <TabsTrigger
                         value="variations"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-white"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]"
                     >
                         Variations
                     </TabsTrigger>
                     <TabsTrigger
                         value="invoices"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]/50 data-[state=active]:bg-white"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]"
                     >
                         Invoices
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="payment-schedule"
+                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]"
+                    >
+                        Payment Schedule
                     </TabsTrigger>
                 </TabsList>
 
@@ -117,6 +126,10 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
 
                 <TabsContent value="invoices" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
                     <InvoicesPanel projectId={projectId} />
+                </TabsContent>
+
+                <TabsContent value="payment-schedule" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
+                    <PaymentSchedulePanel projectId={projectId} />
                 </TabsContent>
             </Tabs>
         </div>
@@ -166,6 +179,73 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; activity: string } | null>(null);
     const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
     const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+    const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
+    const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+    const [estimateDialogOpen, setEstimateDialogOpen] = useState(false);
+
+    // Profiler estimate data for Apply Budget Estimate
+    const [profilerData, setProfilerData] = useState<{
+        buildingClass: string | null;
+        estimateLowCents: number;
+        estimateHighCents: number;
+    } | null>(null);
+
+    // Fetch profiler data on mount
+    useEffect(() => {
+        async function fetchProfile() {
+            try {
+                const res = await fetch(`/api/projects/${projectId}/profile`);
+                if (!res.ok) return;
+                const json = await res.json();
+                const data = json.data || json;
+                if (!data?.buildingClass || !data?.scaleData) return;
+
+                const { buildingClass, subclass, scaleData, complexity } = data;
+                const region = data.region || 'AU';
+
+                // Replicate ContextChips NCC class lookup
+                const NCC_CLASS_MAP: Record<string, Record<string, string>> = {
+                    residential: { house: 'Class 1a', apartments: 'Class 2', townhouses: 'Class 1a/2', btr: 'Class 2', student_housing: 'Class 3', retirement_living_ilu: 'Class 1a/2/3', aged_care_9c: 'Class 9c', social_affordable: 'Class 2' },
+                    commercial: { office: 'Class 5', retail_shopping: 'Class 6', retail_standalone: 'Class 6', hotel: 'Class 3', food_beverage: 'Class 6', serviced_office: 'Class 5' },
+                    industrial: { warehouse: 'Class 7b', logistics: 'Class 7b', manufacturing: 'Class 8', cold_storage: 'Class 7b', data_centre: 'Class 7b', dangerous_goods: 'Class 7a' },
+                    institution: { education_early: 'Class 9b', education_school: 'Class 9b', education_tertiary: 'Class 9b', healthcare_hospital: 'Class 9a', healthcare_medical: 'Class 5/9a', healthcare_clinic: 'Class 5/9a', government: 'Class 5/9b', religious: 'Class 9b' },
+                };
+                const nccClass = NCC_CLASS_MAP[buildingClass]?.[subclass?.[0]] || null;
+
+                // Replicate ContextChips cost range lookup
+                const COST_RANGES: Record<string, { low: number; high: number }> = {
+                    residential_standard: { low: 2500, high: 4500 },
+                    residential_premium: { low: 4000, high: 7500 },
+                    residential_luxury: { low: 6000, high: 12000 },
+                    commercial_office: { low: 3000, high: 6000 },
+                    commercial_hotel: { low: 4000, high: 10000 },
+                    commercial_retail: { low: 2500, high: 6000 },
+                    industrial_warehouse: { low: 800, high: 2000 },
+                    industrial_data_centre: { low: 15000, high: 30000 },
+                    institution_education: { low: 3500, high: 7000 },
+                    institution_healthcare: { low: 6000, high: 18000 },
+                };
+                const qualityTierValue = complexity?.quality_tier || complexity?.grade;
+                const qualityTier = (Array.isArray(qualityTierValue) ? qualityTierValue[0] : qualityTierValue) || 'standard';
+                const costKey = `${buildingClass}_${qualityTier}`;
+                const altKey = `${buildingClass}_${subclass?.[0]}`;
+                const costRange = COST_RANGES[costKey] || COST_RANGES[altKey];
+
+                const gfa = scaleData.gfa_sqm || scaleData.nla_sqm || scaleData.total_gfa_sqm || 0;
+
+                if (nccClass && costRange && gfa > 0) {
+                    setProfilerData({
+                        buildingClass: nccClass,
+                        estimateLowCents: Math.round(gfa * costRange.low * 100),
+                        estimateHighCents: Math.round(gfa * costRange.high * 100),
+                    });
+                }
+            } catch {
+                // Profiler not available - button stays disabled
+            }
+        }
+        fetchProfile();
+    }, [projectId]);
 
     // Drag and drop state
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -220,6 +300,11 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             processedValue = numValue !== null ? Math.round(numValue * 100) : null;
         }
 
+        // Virtual Developer option for FEES — don't persist as a real stakeholderId
+        if (field === 'stakeholderId' && value === '_developer') {
+            return;
+        }
+
         // stakeholderId can be null (to clear assignment)
         await updateCostLine(id, { [field]: processedValue });
         setEditingCell(null);
@@ -232,17 +317,15 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         refetch();
     };
 
-    const handleClearAll = async () => {
+    const handleClearAllClick = () => {
         if (costLines.length === 0) {
             alert('Cost plan is already empty');
             return;
         }
+        setClearAllDialogOpen(true);
+    };
 
-        const confirmed = window.confirm(
-            `Are you sure you want to clear all ${costLines.length} cost plan items?\n\nThis action cannot be undone.`
-        );
-        if (!confirmed) return;
-
+    const handleConfirmClearAll = async () => {
         setIsLoadingTemplate(true);
         try {
             const response = await fetch(`/api/projects/${projectId}/cost-plan/clear`, {
@@ -257,47 +340,49 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
 
             // Success - refetch the cost plan
             await refetch();
-
-            alert(`Successfully cleared ${result.data.linesDeleted} cost plan items`);
         } catch (error) {
             console.error('Failed to clear cost plan:', error);
-            alert(error instanceof Error ? error.message : 'Failed to clear cost plan');
         } finally {
             setIsLoadingTemplate(false);
         }
     };
 
-    const handleLoadTemplate = async () => {
+    const handleApplyEstimate = async (updates: BudgetUpdate[], newLines: NewBudgetLine[]) => {
+        // Update existing cost lines
+        for (const update of updates) {
+            await updateCostLine(update.costLineId, { budgetCents: update.budgetCents });
+        }
+        // Create new cost lines, tracking sort order per section
+        const sectionCounts: Record<string, number> = {};
+        for (const cl of costLines) {
+            sectionCounts[cl.section] = (sectionCounts[cl.section] || 0) + 1;
+        }
+        for (const newLine of newLines) {
+            const sortOrder = sectionCounts[newLine.section] || 0;
+            await createCostLine({
+                section: newLine.section,
+                activity: newLine.activity,
+                budgetCents: newLine.budgetCents,
+                sortOrder,
+            });
+            sectionCounts[newLine.section] = sortOrder + 1;
+        }
+        await refetch();
+    };
+
+    const handleLoadTemplateClick = () => {
         if (isLoadingTemplate) return;
 
         // Check if there are existing cost lines and offer to clear them first
         if (costLines.length > 0) {
-            const choice = window.confirm(
-                `There are ${costLines.length} existing cost plan items.\n\nClick OK to CLEAR existing items and load template.\nClick Cancel to KEEP existing items and add template items.`
-            );
-
-            if (choice) {
-                // User chose to clear first
-                try {
-                    setIsLoadingTemplate(true);
-                    const clearResponse = await fetch(`/api/projects/${projectId}/cost-plan/clear`, {
-                        method: 'DELETE',
-                    });
-
-                    if (!clearResponse.ok) {
-                        throw new Error('Failed to clear existing items');
-                    }
-
-                    await refetch();
-                } catch (error) {
-                    console.error('Failed to clear cost plan:', error);
-                    alert(error instanceof Error ? error.message : 'Failed to clear cost plan');
-                    setIsLoadingTemplate(false);
-                    return;
-                }
-            }
+            setTemplateDialogOpen(true);
+        } else {
+            // No existing items, just load template directly
+            loadTemplateWithoutClearing();
         }
+    };
 
+    const loadTemplateWithoutClearing = async () => {
         setIsLoadingTemplate(true);
         try {
             const response = await fetch(`/api/projects/${projectId}/cost-plan/generate-from-template`, {
@@ -316,7 +401,6 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             // Success - refetch the cost plan
             await refetch();
 
-            // Show success message (you can add a toast notification here if available)
             alert(`Successfully loaded ${result.data.linesCreated} cost plan items from ${result.data.projectType} template`);
         } catch (error) {
             console.error('Failed to load template:', error);
@@ -325,6 +409,28 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             setIsLoadingTemplate(false);
         }
     };
+
+    const handleConfirmReplaceAndLoad = async () => {
+        // User chose to clear first, then load template
+        try {
+            setIsLoadingTemplate(true);
+            const clearResponse = await fetch(`/api/projects/${projectId}/cost-plan/clear`, {
+                method: 'DELETE',
+            });
+
+            if (!clearResponse.ok) {
+                throw new Error('Failed to clear existing items');
+            }
+
+            await refetch();
+            await loadTemplateWithoutClearing();
+        } catch (error) {
+            console.error('Failed to clear cost plan:', error);
+            alert(error instanceof Error ? error.message : 'Failed to clear cost plan');
+            setIsLoadingTemplate(false);
+        }
+    };
+
 
     // Handler for generating a single section from stakeholders
     const handleGenerateSection = async (section: CostLineSection) => {
@@ -711,7 +817,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
 
     if (error) {
         return (
-            <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
+            <div className="h-full flex items-center justify-center">
                 <div className="text-center">
                     <p className="text-[var(--color-accent-coral)] mb-2">Failed to load cost plan</p>
                     <button onClick={() => refetch()} className="text-sm text-[var(--color-accent-teal)] hover:opacity-80">
@@ -752,13 +858,24 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     const monthOptions = generateMonthOptions();
 
     return (
-        <div className="flex-1 flex flex-col bg-[var(--color-bg-primary)] min-h-0">
+        <div className="flex-1 flex flex-col min-h-0">
             {/* Toolbar */}
-            <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)] bg-[#f0f0f0] flex-shrink-0">
-                {/* Right side - Clear All + Month Selector */}
+            <div
+                className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}
+            >
+                {/* Right side - Apply Estimate + Clear All + Month Selector */}
                 <div className="flex gap-2 items-center">
                     <button
-                        onClick={handleClearAll}
+                        onClick={() => setEstimateDialogOpen(true)}
+                        disabled={!profilerData}
+                        className="text-xs bg-[#1776c1] text-white px-3 py-1.5 rounded hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#1776c1] focus:ring-opacity-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!profilerData ? 'Complete the building profiler first to generate an estimate' : 'Distribute budget estimate across cost plan items'}
+                    >
+                        Apply Budget Estimate
+                    </button>
+                    <button
+                        onClick={handleClearAllClick}
                         disabled={isLoadingTemplate || costLines.length === 0}
                         className="text-xs bg-[var(--color-accent-coral)] text-white px-3 py-1.5 rounded hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-coral)] focus:ring-opacity-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Clear all cost plan items"
@@ -790,15 +907,21 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <div className="cost-plan-container flex-1 h-0 overflow-x-auto overflow-y-auto" style={{ scrollbarGutter: 'stable' }}>
+                <div
+                    className="cost-plan-container flex-1 h-0 overflow-x-auto overflow-y-auto"
+                    style={{ scrollbarGutter: 'stable', backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 40%, transparent)' }}
+                >
                     <table className="border-collapse text-xs w-full select-none">
-                        <thead className="sticky top-0 z-10">
-                            <tr className="bg-[var(--color-accent-copper-tint)] border border-[var(--color-accent-copper)]">
-                                <th className="border border-[var(--color-accent-copper)] px-0 py-1.5 w-8" rowSpan={2}>
+                        <thead
+                            className="sticky top-0 z-10 backdrop-blur-sm shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]"
+                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}
+                        >
+                            <tr>
+                                <th className="px-0 py-1.5 w-8 border-b border-b-[var(--color-border)]" rowSpan={2}>
                                     <div className="flex items-center justify-center px-1">
                                         <button
                                             onClick={toggleRollUpMode}
-                                            className="p-0.5 text-[var(--color-accent-copper)]/70 hover:text-[var(--color-accent-copper)] transition-colors"
+                                            className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                                             title={isRollUpMode ? "Expand all rows" : "Roll up by discipline/trade"}
                                         >
                                             {isRollUpMode ? (
@@ -809,18 +932,18 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                                         </button>
                                     </div>
                                 </th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-left w-20" rowSpan={2}>Discipline</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-left w-[200px]" rowSpan={2}>Description</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Budget</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Contract</th>
-                                <th className="col-priority-3 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-center text-[var(--color-accent-copper)] font-medium w-[120px]" colSpan={2}>VARIATIONS</th>
-                                <th className="col-priority-3 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Forecast</th>
-                                <th className="col-priority-2 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Variance</th>
-                                <th className="col-priority-2 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Claimed</th>
-                                <th className="col-priority-1 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[60px]" rowSpan={2}>Month</th>
-                                <th className="col-priority-1 border border-[var(--color-accent-copper)] px-1.5 py-1.5 text-[var(--color-accent-copper)] font-medium text-right w-[72px]" rowSpan={2}>Remaining</th>
-                                <th className="border border-[var(--color-accent-copper)] px-1 py-1.5 w-7" rowSpan={2}></th>
-                                <th className="border border-[var(--color-accent-copper)] px-1 py-1.5 w-7" rowSpan={2}>
+                                <th className="px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-left w-20 border-b border-b-[var(--color-border)]" rowSpan={2}>Discipline</th>
+                                <th className="px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-left w-[200px] border-b border-b-[var(--color-border)]" rowSpan={2}>Description</th>
+                                <th className="px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-right w-[72px] border-b border-b-[var(--color-border)]" rowSpan={2}>Budget</th>
+                                <th className="px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-right w-[72px] border-b border-b-[var(--color-border)]" rowSpan={2}>Contract</th>
+                                <th className="col-priority-3 px-1.5 py-1.5 text-center text-[var(--color-text-primary)] font-bold w-[120px] border-b border-b-[var(--color-border)]" colSpan={2}>VARIATIONS</th>
+                                <th className="col-priority-3 px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-right w-[72px] border-b border-b-[var(--color-border)]" rowSpan={2}>Forecast</th>
+                                <th className="col-priority-2 px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-right w-[72px] border-b border-b-[var(--color-border)]" rowSpan={2}>Variance</th>
+                                <th className="col-priority-2 px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-right w-[72px] border-b border-b-[var(--color-border)]" rowSpan={2}>Claimed</th>
+                                <th className="col-priority-1 px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-right w-[60px] border-b border-b-[var(--color-border)]" rowSpan={2}>Month</th>
+                                <th className="col-priority-1 px-1.5 py-1.5 text-[var(--color-text-primary)] font-bold text-right w-[72px] border-b border-b-[var(--color-border)]" rowSpan={2}>Remaining</th>
+                                <th className="px-1 py-1.5 w-7 border-b border-b-[var(--color-border)]" rowSpan={2}></th>
+                                <th className="px-1 py-1.5 w-7 border-b border-b-[var(--color-border)]" rowSpan={2}>
                                     {selectedIds.size > 0 && (
                                         <button
                                             onClick={() => setBulkDeleteConfirm(true)}
@@ -832,9 +955,9 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                                     )}
                                 </th>
                             </tr>
-                            <tr className="bg-[var(--color-accent-copper-tint)]">
-                                <th className="col-priority-3 border border-[var(--color-accent-copper)] px-1.5 py-1 text-center text-[var(--color-accent-copper)] font-medium w-[60px]">Forecast</th>
-                                <th className="col-priority-3 border border-[var(--color-accent-copper)] px-1.5 py-1 text-center text-[var(--color-accent-copper)] font-medium w-[60px]">Approved</th>
+                            <tr>
+                                <th className="col-priority-3 px-1.5 py-1 text-center text-[var(--color-text-primary)] font-bold w-[60px] border-b border-b-[var(--color-border)]">Forecast</th>
+                                <th className="col-priority-3 px-1.5 py-1 text-center text-[var(--color-text-primary)] font-bold w-[60px] border-b border-b-[var(--color-border)]">Approved</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -876,7 +999,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                             })}
 
                             {/* GRAND TOTAL Row */}
-                            <tr className="bg-[var(--color-bg-tertiary)] font-semibold">
+                            <tr className="font-semibold" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 50%, transparent)' }}>
                                 <td className="border border-[var(--color-border)] px-0.5 py-1.5 w-8"></td>
                                 <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-[var(--color-text-primary)]" colSpan={2}>GRAND TOTAL</td>
                                 <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">{formatCurrency(totals?.budgetCents || 0)}</td>
@@ -959,6 +1082,41 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                     activity: programSelectorSourceLine.activity,
                     stakeholderId: programSelectorSourceLine.stakeholderId,
                 } : undefined}
+            />
+
+            {/* Apply Budget Estimate Dialog */}
+            {profilerData && (
+                <ApplyEstimateDialog
+                    open={estimateDialogOpen}
+                    onOpenChange={setEstimateDialogOpen}
+                    costLines={costLines}
+                    buildingClass={profilerData.buildingClass}
+                    estimateLowCents={profilerData.estimateLowCents}
+                    estimateHighCents={profilerData.estimateHighCents}
+                    onApply={handleApplyEstimate}
+                />
+            )}
+
+            {/* Clear All Confirmation Dialog */}
+            <AuroraConfirmDialog
+                open={clearAllDialogOpen}
+                onOpenChange={setClearAllDialogOpen}
+                onConfirm={handleConfirmClearAll}
+                title="Clear all cost plan items?"
+                description={`This will delete all ${costLines.length} items. This action cannot be undone.`}
+                variant="destructive"
+                confirmLabel="Clear All"
+            />
+
+            {/* Template Dialog - Replace or Add */}
+            <AuroraConfirmDialog
+                open={templateDialogOpen}
+                onOpenChange={setTemplateDialogOpen}
+                onConfirm={handleConfirmReplaceAndLoad}
+                title="Replace existing items?"
+                description={`There are ${costLines.length} existing items. Click Replace to clear and load template, or Cancel to add template items to existing.`}
+                variant="warning"
+                confirmLabel="Replace"
             />
         </div>
     );
@@ -1047,9 +1205,9 @@ function SectionBlock({
     return (
         <>
             {/* Section Header */}
-            <tr className="bg-[var(--color-bg-hover)]">
+            <tr style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-hover) 40%, transparent)' }}>
                 {/* Plus button at far left */}
-                <td className="border border-[var(--color-border)] px-1 py-1.5 w-8 text-center">
+                <td className="border border-[var(--color-border)]/50 px-1 py-1.5 w-8 text-center">
                     <button
                         onClick={onAddLine}
                         disabled={showAddRow || shouldShowRolledUp}
@@ -1157,7 +1315,7 @@ function SectionBlock({
             )}
 
             {/* Sub-Total Row */}
-            <tr className="bg-[var(--color-bg-tertiary)]">
+            <tr style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 40%, transparent)' }}>
                 <td className="border border-[var(--color-border)] px-0.5 py-1 w-8"></td>
                 <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)] font-medium" colSpan={2}>Sub-Total</td>
                 <td className="border border-[var(--color-border)] px-1.5 py-1 text-right text-[var(--color-text-primary)]">{formatCurrency(sectionTotals.budget)}</td>
@@ -1280,8 +1438,8 @@ const CostLineRow = React.forwardRef<HTMLTableRowElement, CostLineRowProps>(func
             style={style}
             className={`
                 transition-colors group cursor-pointer
-                ${isDragging ? 'opacity-50 bg-[var(--color-bg-hover)]' : 'bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]'}
-                ${isSelected ? 'bg-[var(--color-bg-hover)]' : ''}
+                ${isDragging ? 'opacity-50 bg-[var(--color-bg-hover)]' : 'hover:bg-[var(--color-bg-hover)]/50'}
+                ${isSelected ? 'bg-[var(--color-bg-hover)]/50' : ''}
             `}
             onClick={(e) => onRowClick(line.id, section, e)}
         >
@@ -1541,7 +1699,7 @@ function AddCostLineRow({ onSave, onCancel, isSubmitting }: AddCostLineRowProps)
     const numberInputClass = `${inputClass} text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`;
 
     return (
-        <tr className="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]" onKeyDown={handleKeyDown}>
+        <tr className="bg-transparent hover:bg-[var(--color-bg-hover)]/50" onKeyDown={handleKeyDown}>
             <td className="border border-[var(--color-border)] px-0.5 py-1 w-8"></td>
             <td className="border border-[var(--color-border)] px-1.5 py-1 text-[var(--color-text-muted)]">-</td>
             <td className="border border-[var(--color-border)] px-1 py-1">
@@ -1619,7 +1777,7 @@ function CollapsedGroupRow({ group, isExpanded, onToggle }: CollapsedGroupRowPro
 
     return (
         <tr
-            className="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] cursor-pointer transition-colors"
+            className="bg-transparent hover:bg-[var(--color-bg-hover)]/50 cursor-pointer transition-colors"
             onClick={onToggle}
         >
             {/* Chevron Column */}
@@ -1646,7 +1804,7 @@ function CollapsedGroupRow({ group, isExpanded, onToggle }: CollapsedGroupRowPro
             </td>
 
             {/* Aggregated numeric columns */}
-            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)] font-medium">
+            <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)] font-bold">
                 {formatCurrency(totals.budget)}
             </td>
             <td className="border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)]">
@@ -1658,7 +1816,7 @@ function CollapsedGroupRow({ group, isExpanded, onToggle }: CollapsedGroupRowPro
             <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-muted)]">
                 {totals.approvedVars ? formatCurrency(totals.approvedVars) : '-'}
             </td>
-            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)] font-medium">
+            <td className="col-priority-3 border border-[var(--color-border)] px-1.5 py-1.5 text-right text-[var(--color-text-primary)] font-bold">
                 {formatCurrency(totals.finalForecast)}
             </td>
             <td className="col-priority-2 border border-[var(--color-border)] px-1.5 py-1.5 text-right">
@@ -1696,7 +1854,7 @@ function ReadOnlyLineRow({ line, isIndented = false, showDiscipline = false, dis
     const variance = line.calculated.varianceToBudgetCents;
 
     return (
-        <tr className={`bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] ${isIndented ? 'opacity-90' : ''}`}>
+        <tr className={`bg-transparent hover:bg-[var(--color-bg-hover)]/50 ${isIndented ? 'opacity-90' : ''}`}>
             {/* Chevron to collapse (only on first row when expanded) */}
             <td className="border border-[var(--color-border)] px-0.5 py-1 w-8">
                 {showDiscipline && onCollapse ? (

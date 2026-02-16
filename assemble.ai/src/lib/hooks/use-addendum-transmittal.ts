@@ -110,6 +110,7 @@ export function useAddendumTransmittal({
             toast({
                 title: 'Transmittal saved',
                 description: `Saved ${result.documentCount} document${result.documentCount !== 1 ? 's' : ''} to addendum`,
+                variant: 'success',
             });
 
             return { success: true };
@@ -142,6 +143,7 @@ export function useAddendumTransmittal({
         toast({
             title: 'Transmittal loaded',
             description: `Loaded ${data.count} document${data.count !== 1 ? 's' : ''} from addendum`,
+            variant: 'success',
         });
 
         return documentIds;
@@ -170,6 +172,7 @@ export function useAddendumTransmittal({
             toast({
                 title: 'Transmittal cleared',
                 description: 'All documents removed from addendum transmittal',
+                variant: 'success',
             });
 
             return true;

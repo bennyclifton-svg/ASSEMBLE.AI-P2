@@ -192,6 +192,22 @@ export const CORE_DISCIPLINES: DisciplineDef[] = [
   { name: 'Hydraulic', disciplineOrTrade: 'Hydraulic', required: true, reason: 'Core project discipline' },
 ];
 
+// Subclass-specific core discipline overrides
+// When a subclass is listed here, these disciplines REPLACE CORE_DISCIPLINES entirely
+export const SUBCLASS_CORE_OVERRIDES: Record<string, DisciplineDef[]> = {
+  house: [
+    { name: 'Architecture', disciplineOrTrade: 'Architecture', required: true, reason: 'Design and documentation' },
+    { name: 'Structural', disciplineOrTrade: 'Structural', required: true, reason: 'Structural design' },
+    { name: 'Town Planning', disciplineOrTrade: 'Town Planning', required: false, reason: 'DA/CDC preparation' },
+    { name: 'Hydraulic', disciplineOrTrade: 'Hydraulic', required: false, reason: 'Plumbing and drainage design' },
+    { name: 'Geotech', disciplineOrTrade: 'Geotech', required: false, reason: 'Site classification and footing design' },
+    { name: 'BASIX', disciplineOrTrade: 'BASIX', required: false, reason: 'Energy and water compliance' },
+    { name: 'Landscape', disciplineOrTrade: 'Landscape', required: false, reason: 'Landscape design' },
+    { name: 'Survey', disciplineOrTrade: 'Survey', required: true, reason: 'Site survey and setout' },
+    { name: 'Building Certifier', disciplineOrTrade: 'Building Certifier', required: true, reason: 'CDC/CC certification' },
+  ],
+};
+
 // Class-specific disciplines
 export const CLASS_DISCIPLINES: DisciplineDef[] = [
   // Residential

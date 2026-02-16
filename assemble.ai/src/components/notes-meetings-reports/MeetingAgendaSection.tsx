@@ -164,7 +164,7 @@ export function MeetingAgendaSection({
                                 title="Generate content"
                             >
                                 <DiamondIcon
-                                    className={cn('w-4 h-4', isGenerating && 'animate-spin [animation-duration:2.5s]')}
+                                    className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
                                     variant="empty"
                                 />
                                 <span className={isGenerating ? 'animate-text-aurora' : ''}>
@@ -187,7 +187,7 @@ export function MeetingAgendaSection({
                                 title="Polish content"
                             >
                                 <DiamondIcon
-                                    className={cn('w-4 h-4', isPolishing && 'animate-spin [animation-duration:2.5s]')}
+                                    className={cn('w-4 h-4', isPolishing && 'animate-diamond-spin')}
                                     variant="filled"
                                 />
                                 <span className={isPolishing ? 'animate-text-aurora' : ''}>
@@ -201,14 +201,16 @@ export function MeetingAgendaSection({
 
             {/* Section Content */}
             {isExpanded && !hasChildren && (
-                <div className="px-3 pb-3" style={{ paddingLeft: `${12 + level * 16}px` }}>
+                <div className="pb-1" style={{ paddingLeft: `${12 + level * 16}px` }}>
                     <RichTextEditor
                         content={localContent}
                         onChange={handleContentChange}
                         placeholder="Enter content..."
                         variant="mini"
                         toolbarVariant="mini"
-                        className="bg-[var(--color-bg-primary)]"
+                        transparentBg
+                        className="border-0 rounded-none"
+                        editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors"
                     />
                 </div>
             )}

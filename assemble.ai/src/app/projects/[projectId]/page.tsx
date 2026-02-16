@@ -55,6 +55,16 @@ export default function ProjectWorkspace() {
     if (region) setProfileRegion(region);
   }, []);
 
+  // Handler for building class change from middle panel
+  const handleClassChange = useCallback((cls: BuildingClass) => {
+    setProfileBuildingClass(cls);
+  }, []);
+
+  // Handler for project type change from middle panel
+  const handleTypeChange = useCallback((type: ProjectType) => {
+    setProfileProjectType(type);
+  }, []);
+
   // Handler for profile completion - refresh planning data
   const handleProfileComplete = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1);
@@ -145,12 +155,15 @@ export default function ProjectWorkspace() {
   const handleSelectProject = useCallback(
     (newProject: Project | null) => {
       if (newProject) {
-        router.push(`/projects/${newProject.id}`);
+        setProject(newProject);
+        if (newProject.id !== projectId) {
+          router.push(`/projects/${newProject.id}`);
+        }
       } else {
         router.push('/');
       }
     },
-    [router]
+    [router, projectId]
   );
 
   if (isLoading) {
@@ -177,8 +190,6 @@ export default function ProjectWorkspace() {
           leftContent={
             <PlanningCard
               projectId={project.id}
-              selectedProject={project}
-              onSelectProject={handleSelectProject}
               selectedDocumentIds={Array.from(selectedDocumentIds)}
               onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
               onProjectNameChange={handleProjectNameChange}
@@ -189,6 +200,8 @@ export default function ProjectWorkspace() {
               onShowProjectDetails={handleShowProjectDetails}
               activeMainTab={centerActiveTab}
               refreshKey={refreshTrigger}
+              selectedProject={project}
+              onSelectProject={handleSelectProject}
             />
           }
           centerContent={
@@ -198,6 +211,8 @@ export default function ProjectWorkspace() {
               onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
               buildingClass={profileBuildingClass}
               projectType={profileProjectType}
+              onClassChange={handleClassChange}
+              onTypeChange={handleTypeChange}
               region={profileRegion}
               onRegionChange={setProfileRegion}
               onProfileComplete={handleProfileComplete}

@@ -35,6 +35,7 @@ interface ReportWithCount extends Report {
 
 interface UseReportsOptions {
     projectId: string;
+    groupId?: string;
 }
 
 interface UseReportsReturn {
@@ -90,6 +91,7 @@ interface UseReportSectionsReturn {
     updateSection: (sectionId: string, data: UpdateSectionRequest) => Promise<ReportSection>;
     reorderSections: (sectionIds: string[]) => Promise<void>;
     generateSections: (contentsType: ReportContentsType) => Promise<ReportSection[]>;
+    syncSections: (selectedSectionKeys: string[]) => Promise<void>;
     refetch: () => void;
 }
 
@@ -130,8 +132,11 @@ const fetcher = async <T>(url: string): Promise<T> => {
 /**
  * Hook for fetching a list of reports for a project
  */
-export function useReports({ projectId }: UseReportsOptions): UseReportsReturn {
-    const swrKey = projectId ? `/api/project-reports?projectId=${projectId}` : null;
+export function useReports({ projectId, groupId }: UseReportsOptions): UseReportsReturn {
+    const params = new URLSearchParams();
+    if (projectId) params.set('projectId', projectId);
+    if (groupId) params.set('groupId', groupId);
+    const swrKey = projectId ? `/api/project-reports?${params.toString()}` : null;
 
     const { data, error, isLoading, mutate } = useSWR<ReportsListResponse>(
         swrKey,
@@ -185,8 +190,11 @@ export function useReport({ reportId }: UseReportOptions): UseReportReturn {
 /**
  * Hook for managing report mutations (create, update, delete, copy)
  */
-export function useReportMutations(projectId: string): UseReportMutationsReturn {
-    const listKey = `/api/project-reports?projectId=${projectId}`;
+export function useReportMutations(projectId: string, groupId?: string): UseReportMutationsReturn {
+    const params = new URLSearchParams();
+    params.set('projectId', projectId);
+    if (groupId) params.set('groupId', groupId);
+    const listKey = `/api/project-reports?${params.toString()}`;
 
     /**
      * Create a new report
@@ -374,6 +382,31 @@ export function useReportSections(reportId: string | null): UseReportSectionsRet
         return result.sections;
     }, [reportId, mutate]);
 
+    /**
+     * Sync sections based on user selection (non-destructive)
+     * Preserves content for kept sections, adds new ones, removes unchecked.
+     */
+    const syncSections = useCallback(async (selectedSectionKeys: string[]): Promise<void> => {
+        if (!reportId) {
+            throw new Error('Report ID is required');
+        }
+
+        const response = await fetch(`/api/project-reports/${reportId}/sync-sections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ selectedSectionKeys }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Failed to sync sections' }));
+            throw new Error(error.error || 'Failed to sync sections');
+        }
+
+        // Revalidate sections and report
+        mutate();
+        globalMutate(`/api/project-reports/${reportId}`);
+    }, [reportId, mutate]);
+
     const refetch = useCallback(() => {
         mutate();
     }, [mutate]);
@@ -397,6 +430,7 @@ export function useReportSections(reportId: string | null): UseReportSectionsRet
         updateSection,
         reorderSections,
         generateSections,
+        syncSections,
         refetch,
     };
 }
@@ -451,6 +485,20 @@ export function useReportAttendees(reportId: string | null, projectId?: string):
             throw new Error('Report ID is required');
         }
 
+        // Optimistic update: update the flag in place without reordering
+        mutate(
+            (current) => {
+                if (!current) return current;
+                return {
+                    ...current,
+                    attendees: current.attendees.map((a: ReportAttendee) =>
+                        a.id === attendeeId ? { ...a, ...updateData } : a
+                    ),
+                };
+            },
+            { revalidate: false }
+        );
+
         const response = await fetch(`/api/project-reports/${reportId}/attendees/${attendeeId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -458,14 +506,13 @@ export function useReportAttendees(reportId: string | null, projectId?: string):
         });
 
         if (!response.ok) {
+            // Revert on error
+            mutate();
             const error = await response.json().catch(() => ({ error: 'Failed to update attendee' }));
             throw new Error(error.error || 'Failed to update attendee');
         }
 
         const updated = await response.json();
-
-        // Revalidate attendees
-        mutate();
 
         return updated;
     }, [reportId, mutate]);

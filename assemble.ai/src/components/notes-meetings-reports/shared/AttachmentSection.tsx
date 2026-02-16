@@ -14,10 +14,10 @@ import { Button } from '@/components/ui/button';
 import { AttachmentTable, type AttachmentDocument } from './AttachmentTable';
 import { cn } from '@/lib/utils';
 
-// Aurora accent button styling - consistent with RFT TransmittalSchedule
-const BUTTON_BG = 'var(--color-accent-copper-tint)';
-const BUTTON_TEXT = 'var(--color-accent-copper)';
-const BUTTON_BORDER = 'rgba(0, 255, 255, 0.3)';
+// Greyscale button styling - readable on all note colors
+const BUTTON_BG = 'rgba(0, 0, 0, 0.08)';
+const BUTTON_TEXT = 'rgba(0, 0, 0, 0.6)';
+const BUTTON_BORDER = 'rgba(0, 0, 0, 0.15)';
 
 interface AttachmentSectionProps {
     documents: AttachmentDocument[];

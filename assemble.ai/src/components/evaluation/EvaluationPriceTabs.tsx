@@ -113,7 +113,7 @@ export function EvaluationPriceTabs({
                 <button
                     onClick={onCreateEvaluationPrice}
                     disabled={isLoading}
-                    className="flex items-center justify-center px-2 py-1 mx-1 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/15 hover:scale-110 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:bg-transparent"
+                    className="flex items-center justify-center px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Create new evaluation"
                 >
                     {isLoading ? (

@@ -45,7 +45,7 @@ export function AIGenerateButton({
             <DiamondIcon
                 className={cn(
                     'w-4 h-4',
-                    isLoading && 'animate-spin [animation-duration:2.5s]'
+                    isLoading && 'animate-diamond-spin'
                 )}
                 variant="empty"
             />

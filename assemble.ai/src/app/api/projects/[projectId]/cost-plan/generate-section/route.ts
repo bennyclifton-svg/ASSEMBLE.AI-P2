@@ -72,9 +72,9 @@ export async function POST(
 
     // Execute in a transaction
     const result = await db.transaction(async (tx) => {
-      // Get the current max sort order for this section (only non-deleted lines)
+      // Get existing cost lines for this section (only non-deleted)
       const existingLines = await tx
-        .select({ sortOrder: costLines.sortOrder })
+        .select({ sortOrder: costLines.sortOrder, stakeholderId: costLines.stakeholderId })
         .from(costLines)
         .where(
           and(
@@ -89,10 +89,24 @@ export async function POST(
         maxSortOrder = Math.max(...existingLines.map(l => l.sortOrder));
       }
 
+      // Skip stakeholders that already have cost lines in this section
+      const existingStakeholderIds = new Set(
+        existingLines.map(l => l.stakeholderId).filter(Boolean)
+      );
+      const newStakeholders = stakeholders.filter(s => !existingStakeholderIds.has(s.id));
+
+      if (newStakeholders.length === 0) {
+        return {
+          linesCreated: 0,
+          section,
+          message: 'All stakeholders already have cost lines in this section.',
+        };
+      }
+
       const codePrefix = SECTION_CODE_PREFIX[section];
 
-      // Create cost lines from stakeholders (stakeholderId FK now points to projectStakeholders)
-      const insertValues = stakeholders.map((stakeholder, index) => {
+      // Create cost lines only for stakeholders that don't already have one
+      const insertValues = newStakeholders.map((stakeholder, index) => {
         const uniqueId = crypto.randomUUID();
 
         // Use stakeholder discipline/trade name as the activity description
@@ -114,7 +128,7 @@ export async function POST(
           projectId,
           section,
           activity,
-          costCode: `${codePrefix}-${String(index + 1).padStart(3, '0')}`,
+          costCode: `${codePrefix}-${String(existingLines.length + index + 1).padStart(3, '0')}`,
           reference: null,
           budgetCents,
           approvedContractCents: 0,

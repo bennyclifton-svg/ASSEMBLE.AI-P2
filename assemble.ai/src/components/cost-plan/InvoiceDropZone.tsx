@@ -153,6 +153,7 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
         toast({
           title: toastMessage,
           description: toastDescription,
+          variant: 'success',
         });
 
         // Notify parent
@@ -319,11 +320,11 @@ export function InvoiceDropZone({ projectId, children, onUploadComplete }: Invoi
             {/* Success state */}
             {status === 'success' && lastResult?.invoice && (
               <>
-                <div className="w-16 h-16 rounded-full bg-green-900/30 flex items-center justify-center">
-                  <CheckCircle className="w-8 h-8 text-green-400" />
+                <div className="w-16 h-16 rounded-full bg-[var(--color-accent-green-tint)] flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-[var(--color-accent-green)]" />
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-medium text-green-400">Invoice Created</p>
+                  <p className="text-lg font-medium text-[var(--color-accent-green)]">Invoice Created</p>
                   <div className="mt-3 p-3 bg-[var(--color-bg-primary)] rounded border border-[var(--color-border)] text-left">
                     <div className="flex items-center gap-2 mb-2">
                       <FileText className="w-4 h-4 text-[var(--primitive-copper)]" />

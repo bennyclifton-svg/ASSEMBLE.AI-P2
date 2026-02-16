@@ -311,45 +311,38 @@ export function ComplexityScore({
   };
 
   return (
-    <div className="mt-4 p-4 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-[var(--color-accent-teal)]" />
-          <span className="text-sm font-medium text-[var(--color-text-primary)]">
-            Complexity Score
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className={`text-2xl font-bold ${getScoreColor()}`}>{score}</span>
-          <span className="text-xs text-[var(--color-text-muted)]">/10</span>
-          <span className={`px-2 py-0.5 rounded-full text-xs ${getScoreColor()} bg-current/10`}>
-            {getScoreLabel()}
-          </span>
-        </div>
+    <div className="p-3 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
+      {/* Header: score display */}
+      <div className="flex items-center gap-1.5 mb-2">
+        <TrendingUp className="w-3.5 h-3.5 text-[var(--color-accent-teal)]" />
+        <span className="text-xs font-medium text-[var(--color-text-primary)]">
+          Complexity
+        </span>
+      </div>
+      <div className="flex items-baseline gap-1.5 mb-3">
+        <span className={`text-2xl font-bold ${getScoreColor()}`}>{score}</span>
+        <span className="text-xs text-[var(--color-text-muted)]">/10</span>
+        <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${getScoreColor()} bg-current/10`}>
+          {getScoreLabel()}
+        </span>
       </div>
 
       {/* Contributing Factors */}
       {factors.length > 0 && (
-        <div className="space-y-2 mb-3">
-          <span className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
-            <Info className="w-3 h-3" />
-            Contributing Factors
+        <div className="space-y-1.5 mb-3">
+          <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
+            <Info className="w-2.5 h-2.5" />
+            Factors
           </span>
           <div className="space-y-1">
             {factors.map((factor, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between text-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <span className={`px-1.5 py-0.5 rounded ${impactColors[factor.impact]}`}>
+              <div key={index} className="text-[10px]">
+                <div className="flex items-center gap-1">
+                  <span className={`px-1 py-0.5 rounded text-[9px] ${impactColors[factor.impact]}`}>
                     +{factor.points}
                   </span>
-                  <span className="text-[var(--color-text-secondary)]">{factor.label}</span>
+                  <span className="text-[var(--color-text-secondary)] truncate">{factor.label}</span>
                 </div>
-                <span className="text-[var(--color-text-muted)] truncate max-w-[120px]">
-                  {factor.description}
-                </span>
               </div>
             ))}
           </div>
@@ -357,14 +350,12 @@ export function ComplexityScore({
       )}
 
       {/* Contingency Recommendation */}
-      <div className="pt-3 border-t border-[var(--color-border)]">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-[var(--color-text-muted)]">
-            Suggested Contingency
-          </span>
-          <span className="text-sm font-medium text-[var(--color-accent-purple)]">
-            {contingencyRange.low}% - {contingencyRange.high}%
-          </span>
+      <div className="pt-2 border-t border-[var(--color-border)]">
+        <div className="text-[10px] text-[var(--color-text-muted)] mb-0.5">
+          Contingency
+        </div>
+        <div className="text-xs font-medium text-[var(--color-accent-purple)]">
+          {contingencyRange.low}% - {contingencyRange.high}%
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projects, projectObjectives, costLines, consultantDisciplines } from '@/lib/db/pg-schema';
+import { projects, projectObjectives, costLines, projectStakeholders } from '@/lib/db/pg-schema';
 import { generateCostPlan } from '@/lib/utils/cost-plan-generation';
 
 export async function POST(
@@ -57,30 +57,40 @@ export async function POST(
       );
     }
 
-    // Fetch enabled consultant disciplines for auto-mapping
-    const enabledDisciplines = await db
+    // Fetch enabled stakeholders for auto-mapping (consultants, contractors, authorities)
+    const enabledStakeholders = await db
       .select({
-        id: consultantDisciplines.id,
-        disciplineName: consultantDisciplines.disciplineName,
+        id: projectStakeholders.id,
+        name: projectStakeholders.name,
+        disciplineOrTrade: projectStakeholders.disciplineOrTrade,
+        stakeholderGroup: projectStakeholders.stakeholderGroup,
       })
-      .from(consultantDisciplines)
+      .from(projectStakeholders)
       .where(
         and(
-          eq(consultantDisciplines.projectId, projectId),
-          eq(consultantDisciplines.isEnabled, true)
+          eq(projectStakeholders.projectId, projectId),
+          eq(projectStakeholders.isEnabled, true),
+          isNull(projectStakeholders.deletedAt)
         )
       );
 
-    // Build a map of discipline names to IDs for auto-mapping
-    const disciplinesMap = new Map(
-      enabledDisciplines.map(d => [d.disciplineName.toLowerCase().trim(), d.id])
-    );
+    // Build maps of stakeholder names to IDs for auto-mapping (by group)
+    // Match on both name and disciplineOrTrade for flexible matching
+    const stakeholderMap = new Map<string, string>();
+    for (const s of enabledStakeholders) {
+      if (s.disciplineOrTrade) {
+        stakeholderMap.set(s.disciplineOrTrade.toLowerCase().trim(), s.id);
+      }
+      if (s.name) {
+        stakeholderMap.set(s.name.toLowerCase().trim(), s.id);
+      }
+    }
 
     // Log for debugging
     console.log('Generating cost plan for:', {
       projectType: project.projectType,
       answers: answers,
-      enabledDisciplines: enabledDisciplines.length,
+      enabledStakeholders: enabledStakeholders.length,
     });
 
     // Generate cost plan lines
@@ -128,16 +138,13 @@ export async function POST(
         // Use crypto.randomUUID() for guaranteed unique IDs
         const uniqueId = crypto.randomUUID();
 
-        // Auto-map consultants section items to disciplines
-        let disciplineId: string | null = null;
-        if (line.section === 'CONSULTANTS') {
-          // Extract discipline name from description: "Architect - Initiation" → "architect"
-          const match = line.description.match(/^(.+?)\s*-\s*/);
-          if (match) {
-            const disciplineName = match[1].toLowerCase().trim();
-            disciplineId = disciplinesMap.get(disciplineName) || null;
-          }
-        }
+        // Auto-map template lines to project stakeholders
+        let stakeholderId: string | null = null;
+
+        // Extract base name from description: "Architect - Initiation" → "architect"
+        const match = line.description.match(/^(.+?)\s*-\s*/);
+        const baseName = match ? match[1].toLowerCase().trim() : line.description.toLowerCase().trim();
+        stakeholderId = stakeholderMap.get(baseName) || null;
 
         return {
           id: `cl-${projectId}-${uniqueId}`,
@@ -148,10 +155,9 @@ export async function POST(
           reference: null,
           budgetCents: Math.round(line.budgetedCost * 100), // Convert to cents
           approvedContractCents: 0,
-          masterStage: line.masterStage || null,  // NEW: Link to master stage
+          masterStage: line.masterStage || null,
           sortOrder: maxSortOrder + index + 1,
-          disciplineId: disciplineId,  // NEW: Auto-mapped from description
-          tradeId: null,
+          stakeholderId,
         };
       });
 

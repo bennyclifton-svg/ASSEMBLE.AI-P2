@@ -84,7 +84,7 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
   };
 
   const baseStyles = `
-    w-full px-1 py-0.5 text-[var(--color-text-primary)] text-xs
+    w-full px-1 py-0 text-[var(--color-text-primary)] text-xs
     bg-transparent border-none outline-none
     transition-colors duration-150
     disabled:opacity-50
@@ -106,7 +106,7 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isSaving}
-          className={baseStyles + ' min-h-[40px]'}
+          className={baseStyles + ' min-h-[32px]'}
           rows={2}
         />
       ) : (
@@ -119,7 +119,7 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isSaving}
-          className={baseStyles + ' h-5'}
+          className={baseStyles + ' h-4'}
         />
       )}
     </div>
@@ -224,7 +224,7 @@ export function FirmCardExpanded({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header */}
-      <div className="flex flex-col px-3 py-1.5 border-b border-[var(--color-border)]">
+      <div className="flex flex-col px-3 py-1 border-b border-[var(--color-border)]">
         {/* Row 1: Company name - full width */}
         <div className="w-full h-6 flex items-center">
           <input
@@ -240,7 +240,7 @@ export function FirmCardExpanded({
             onKeyDown={handleNameKeyDown}
             onClick={(e) => e.stopPropagation()}
             disabled={isSaving}
-            placeholder="Enter company name"
+            placeholder="Enter Firm Name"
             className={`
               w-full h-6 px-1 py-0.5 text-[var(--color-text-primary)] text-sm font-medium
               bg-transparent border-none outline-none
@@ -298,7 +298,7 @@ export function FirmCardExpanded({
       </div>
 
       {/* Fields */}
-      <div className="px-3 py-1.5 space-y-1">
+      <div className="px-3 py-1 space-y-0">
         <InlineField
           label="Contact Person"
           value={firm.contactPerson}
@@ -344,17 +344,17 @@ export function FirmCardExpanded({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center px-3 py-1.5 border-t border-[var(--color-border)]">
-        <div className="flex items-center gap-1">
-          <Label className="text-[var(--color-text-secondary)] text-[10px]">Award</Label>
+      <div className="flex items-center px-3 py-1 border-t border-[var(--color-border)]">
+        <div className="flex items-center gap-1.5">
+          <Label className="text-[var(--color-text-secondary)] text-xs font-medium">Award</Label>
           <Switch
             checked={firm.awarded}
             onCheckedChange={handleAwardToggle}
             disabled={!firm.id || isAwarding}
-            className="scale-[0.6]"
+            className="scale-75"
           />
           {firm.awarded && (
-            <span className="text-[10px] text-[var(--color-accent-green)]">Awarded</span>
+            <span className="text-xs font-medium text-[var(--color-accent-green)]">Awarded</span>
           )}
         </div>
       </div>

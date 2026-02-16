@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, programActivities, programMilestones, projects } from '@/lib/db';
+import { db, programActivities, programDependencies, programMilestones, projects } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { exportProgramToPDF } from '@/lib/export/program-pdf';
 
@@ -31,6 +31,12 @@ export async function GET(
             .from(programActivities)
             .where(eq(programActivities.projectId, projectId));
 
+        // Get dependencies
+        const dependencies = await db
+            .select()
+            .from(programDependencies)
+            .where(eq(programDependencies.projectId, projectId));
+
         // Get milestones
         const milestones = await db
             .select()
@@ -49,6 +55,13 @@ export async function GET(
                 startDate: a.startDate,
                 endDate: a.endDate,
                 color: a.color,
+                sortOrder: a.sortOrder,
+            })),
+            dependencies: dependencies.map((d) => ({
+                id: d.id,
+                fromActivityId: d.fromActivityId,
+                toActivityId: d.toActivityId,
+                type: d.type as 'FS' | 'SS' | 'FF',
             })),
             milestones: projectMilestones.map((m) => ({
                 id: m.id,

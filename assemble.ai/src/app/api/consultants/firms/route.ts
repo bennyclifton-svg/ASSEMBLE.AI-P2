@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       address,
       abn,
       notes,
-      shortlisted = false,
+      shortlisted = true,
       awarded = false,
       companyId = null,
     } = body;

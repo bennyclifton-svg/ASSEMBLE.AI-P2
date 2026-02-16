@@ -13,7 +13,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Trash, Plus, AlertTriangle, Merge, GripVertical } from 'lucide-react';
+import { Trash, Plus, AlertTriangle, Merge, GripVertical, Upload } from 'lucide-react';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import type { EvaluationRow, EvaluationFirm, EvaluationRowSource } from '@/types/evaluation';
 import { EVALUATION_TABLE_COLUMNS, getEvaluationTableWidth } from '@/types/evaluation';
@@ -71,9 +71,11 @@ export function EvaluationSheet({
     // Row drag state
     const [draggedRowId, setDraggedRowId] = useState<string | null>(null);
     const [dragOverRowId, setDragOverRowId] = useState<string | null>(null);
-    // Column drop zone state
+    // Container-level file drag state (replaces per-cell drag handlers)
+    const [isFileDragActive, setIsFileDragActive] = useState(false);
     const [dragOverFirmId, setDragOverFirmId] = useState<string | null>(null);
-    const dragCounterRef = useRef<{ [key: string]: number }>({});
+    const dragOverFirmIdRef = useRef<string | null>(null);
+    const fileDragCounterRef = useRef(0);
 
     // Focus input when editing starts
     useEffect(() => {
@@ -235,51 +237,70 @@ export function EvaluationSheet({
         setDragOverRowId(null);
     }, [rows, onRowReorder]);
 
-    // Column file drop handlers
+    // Container-level file drag handlers
+    // Uses mouse position + known column widths to detect target firm column.
+    // Single drag counter on the container eliminates flicker from crossing
+    // internal cell boundaries.
+
     const validateFile = useCallback((file: File): boolean => {
         return file.name.toLowerCase().endsWith('.pdf');
     }, []);
 
-    const handleColumnDragEnter = useCallback((e: React.DragEvent, firmId: string) => {
-        e.preventDefault();
-        e.stopPropagation();
+    const getFirmIdFromTarget = useCallback((target: EventTarget | null): string | null => {
+        if (!target || !(target instanceof HTMLElement)) return null;
+        const el = target.closest('[data-firm-id]');
+        return el?.getAttribute('data-firm-id') ?? null;
+    }, []);
+
+    const handleContainerDragEnter = useCallback((e: React.DragEvent) => {
         if (!e.dataTransfer.types.includes('Files')) return;
-
-        if (!dragCounterRef.current[firmId]) {
-            dragCounterRef.current[firmId] = 0;
-        }
-        dragCounterRef.current[firmId]++;
-        if (dragCounterRef.current[firmId] === 1) {
-            setDragOverFirmId(firmId);
-        }
-    }, []);
-
-    const handleColumnDragLeave = useCallback((e: React.DragEvent, firmId: string) => {
+        // Block drag visuals while a parse is in-flight
+        if (parsingFirmId) return;
         e.preventDefault();
-        e.stopPropagation();
-        if (!dragCounterRef.current[firmId]) return;
 
-        dragCounterRef.current[firmId]--;
-        if (dragCounterRef.current[firmId] === 0) {
+        fileDragCounterRef.current++;
+        if (fileDragCounterRef.current === 1) {
+            setIsFileDragActive(true);
+        }
+    }, [parsingFirmId]);
+
+    const handleContainerDragLeave = useCallback((e: React.DragEvent) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+
+        fileDragCounterRef.current--;
+        if (fileDragCounterRef.current <= 0) {
+            fileDragCounterRef.current = 0;
+            setIsFileDragActive(false);
             setDragOverFirmId(null);
+            dragOverFirmIdRef.current = null;
         }
     }, []);
 
-    const handleColumnDragOver = useCallback((e: React.DragEvent) => {
+    const handleContainerDragOver = useCallback((e: React.DragEvent) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
         e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.types.includes('Files')) {
-            e.dataTransfer.dropEffect = 'copy';
-        }
-    }, []);
+        e.dataTransfer.dropEffect = 'copy';
 
-    const handleColumnDrop = useCallback(async (e: React.DragEvent, firmId: string) => {
+        const firmId = getFirmIdFromTarget(e.target);
+        setDragOverFirmId(firmId);
+        dragOverFirmIdRef.current = firmId;
+    }, [getFirmIdFromTarget]);
+
+    const handleContainerDrop = useCallback(async (e: React.DragEvent) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
         e.preventDefault();
-        e.stopPropagation();
-        dragCounterRef.current[firmId] = 0;
+
+        fileDragCounterRef.current = 0;
+        setIsFileDragActive(false);
+        const targetFirmId = dragOverFirmIdRef.current;
         setDragOverFirmId(null);
+        dragOverFirmIdRef.current = null;
 
-        if (!onFileDrop) return;
+        // Block drops while a parse is in-flight
+        if (parsingFirmId) return;
+
+        if (!onFileDrop || !targetFirmId) return;
 
         const files = Array.from(e.dataTransfer.files);
         if (files.length === 0) return;
@@ -287,8 +308,8 @@ export function EvaluationSheet({
         const file = files[0];
         if (!validateFile(file)) return;
 
-        await onFileDrop(file, firmId);
-    }, [onFileDrop, validateFile]);
+        await onFileDrop(file, targetFirmId);
+    }, [onFileDrop, validateFile, parsingFirmId]);
 
     // Fixed cell height style
     const cellHeight = 28;
@@ -307,7 +328,13 @@ export function EvaluationSheet({
     const tableWidth = getEvaluationTableWidth(firms.length);
 
     return (
-        <div className="relative overflow-x-auto w-full">
+        <div
+            className="relative overflow-x-auto w-full"
+            onDragEnter={handleContainerDragEnter}
+            onDragLeave={handleContainerDragLeave}
+            onDragOver={handleContainerDragOver}
+            onDrop={handleContainerDrop}
+        >
             <table className="border-collapse w-full">
                 <colgroup>
                     {/* Drag handle / add row column */}
@@ -367,14 +394,12 @@ export function EvaluationSheet({
                             return showFirmHeaders ? (
                                 <th
                                     key={firm.id}
+                                    data-firm-id={firm.id}
                                     className={`p-0 relative ${
-                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' :
+                                        isFileDragActive ? 'bg-[var(--color-accent-copper)]/5' : ''
                                     }`}
                                     style={{ height: cellHeight }}
-                                    onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
-                                    onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
-                                    onDragOver={handleColumnDragOver}
-                                    onDrop={(e) => handleColumnDrop(e, firm.id)}
                                 >
                                     <div
                                         className="px-3 text-right text-xs font-medium text-black flex items-center justify-end"
@@ -382,26 +407,27 @@ export function EvaluationSheet({
                                     >
                                         <span className="truncate">{firm.companyName}</span>
                                     </div>
-                                    {/* Top and left/right borders of column drop zone */}
+                                    {/* Column drop zone borders + upload indicator */}
                                     {isColumnDragOver && (
                                         <>
                                             <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
                                             <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
                                             <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                <Upload className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+                                            </div>
                                         </>
                                     )}
                                 </th>
                             ) : (
                                 <th
                                     key={firm.id}
+                                    data-firm-id={firm.id}
                                     className={`p-0 relative ${
-                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' :
+                                        isFileDragActive ? 'bg-[var(--color-accent-copper)]/5' : ''
                                     }`}
                                     style={{ height: cellHeight }}
-                                    onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
-                                    onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
-                                    onDragOver={handleColumnDragOver}
-                                    onDrop={(e) => handleColumnDrop(e, firm.id)}
                                 >
                                     {isColumnDragOver && (
                                         <>
@@ -433,12 +459,30 @@ export function EvaluationSheet({
                                 style={{ height: cellHeight }}
                             />
                             <td
-                                colSpan={firms.length + 1}
-                                className="px-3 text-center text-sm text-black/40"
+                                className="px-3 text-sm text-black/40"
                                 style={{ height: cellHeight }}
                             >
                                 No line items
                             </td>
+                            {/* Individual firm cells so column highlight flows through */}
+                            {firms.map(firm => {
+                                const isColumnDragOver = dragOverFirmId === firm.id;
+                                return (
+                                    <td
+                                        key={firm.id}
+                                        data-firm-id={firm.id}
+                                        className={`relative ${isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''}`}
+                                        style={{ height: cellHeight }}
+                                    >
+                                        {isColumnDragOver && (
+                                            <>
+                                                <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                                <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            </>
+                                        )}
+                                    </td>
+                                );
+                            })}
                             {/* Empty AI indicator cell */}
                             <td
                                 style={{ height: cellHeight }}
@@ -522,6 +566,7 @@ export function EvaluationSheet({
                                         return (
                                             <td
                                                 key={firm.id}
+                                                data-firm-id={firm.id}
                                                 className={`px-0 cursor-pointer relative ${
                                                     // Low confidence warning indicator only
                                                     isAI && lowConfidence
@@ -533,10 +578,6 @@ export function EvaluationSheet({
                                                     e.stopPropagation();
                                                     handleCellClick(row.id, firm.id, value, e);
                                                 }}
-                                                onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
-                                                onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
-                                                onDragOver={handleColumnDragOver}
-                                                onDrop={(e) => handleColumnDrop(e, firm.id)}
                                                 title={isAI ? `AI-extracted (${confidence || 0}% confidence)` : undefined}
                                             >
                                                 {isEditing ? (
@@ -630,14 +671,11 @@ export function EvaluationSheet({
                             return (
                                 <td
                                     key={firm.id}
+                                    data-firm-id={firm.id}
                                     className={`px-3 text-right text-sm font-semibold text-[var(--color-accent-copper)] relative ${
                                         isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
                                     }`}
                                     style={{ height: cellHeight }}
-                                    onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
-                                    onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
-                                    onDragOver={handleColumnDragOver}
-                                    onDrop={(e) => handleColumnDrop(e, firm.id)}
                                 >
                                     {formatCurrency(subtotals[firm.id] || 0)}
                                     {/* Bottom border and left/right borders for unified rectangle */}

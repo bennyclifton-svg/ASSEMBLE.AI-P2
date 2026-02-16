@@ -160,10 +160,10 @@ export function StakeholderRow({
         .submissionStatus
     : undefined;
 
-  // Handler for saving subgroup (the discipline/role name stored in 'name' field)
+  // Handler for saving subgroup (the discipline/role name stored in 'name' and 'disciplineOrTrade' fields)
   const handleSaveSubgroup = async (newValue: string) => {
     if (onUpdate && newValue.trim()) {
-      await onUpdate(stakeholder.id, { name: newValue.trim() });
+      await onUpdate(stakeholder.id, { name: newValue.trim(), disciplineOrTrade: newValue.trim() });
     }
   };
 

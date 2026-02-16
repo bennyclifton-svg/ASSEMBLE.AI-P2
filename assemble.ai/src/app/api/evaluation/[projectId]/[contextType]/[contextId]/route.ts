@@ -104,7 +104,8 @@ export async function GET(
             where: and(
                 eq(costLines.projectId, projectId),
                 eq(costLines.stakeholderId, stakeholderId),
-                eq(costLines.section, expectedSection)
+                eq(costLines.section, expectedSection),
+                isNull(costLines.deletedAt)
             ),
             orderBy: [asc(costLines.sortOrder)],
         });
@@ -199,6 +200,16 @@ export async function GET(
             }
         });
 
+        // Remove evaluation rows whose cost lines have been deleted from the cost plan
+        const activeCostLineIds = new Set(currentCostLines.map(l => l.id));
+        const rowsToDelete = existingRows.filter(
+            r => r.costLineId && r.source === 'cost_plan' && !activeCostLineIds.has(r.costLineId)
+        );
+
+        for (const row of rowsToDelete) {
+            await db.delete(evaluationRows).where(eq(evaluationRows.id, row.id));
+        }
+
         // Insert new rows
         if (rowsToCreate.length > 0) {
             await db.insert(evaluationRows).values(rowsToCreate);
@@ -231,13 +242,17 @@ export async function GET(
         // Fetch firms from consultants/contractors tables based on stakeholder group
         let firms: Array<{ id: string; companyName: string; shortlisted: boolean; awarded: boolean; firmType: 'consultant' | 'contractor' }> = [];
 
+        // Use disciplineOrTrade (preferred) or name to match firms
+        // This must match what ProcurementCard passes to galleries: s.disciplineOrTrade || s.name
+        const matchName = stakeholder.disciplineOrTrade || stakeholder.name;
+
         if (stakeholder.stakeholderGroup === 'consultant') {
             // Query consultants table matching the stakeholder's discipline
             // Order by createdAt to match firm tiles display order
             const stakeholderConsultants = await db.query.consultants.findMany({
                 where: and(
                     eq(consultants.projectId, projectId),
-                    eq(consultants.discipline, stakeholder.name)
+                    eq(consultants.discipline, matchName)
                 ),
                 orderBy: [asc(consultants.createdAt)],
             });
@@ -255,7 +270,7 @@ export async function GET(
             const stakeholderContractors = await db.query.contractors.findMany({
                 where: and(
                     eq(contractors.projectId, projectId),
-                    eq(contractors.trade, stakeholder.name)
+                    eq(contractors.trade, matchName)
                 ),
                 orderBy: [asc(contractors.createdAt)],
             });

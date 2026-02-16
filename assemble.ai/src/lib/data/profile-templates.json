@@ -2620,7 +2620,7 @@
           { "value": "decontamination", "label": "Decontamination", "consultants": ["Environmental"], "riskFlag": "contaminated_land" },
           { "value": "bulk_earthworks", "label": "Bulk Earthworks", "consultants": ["Civil", "Geotech"] },
           { "value": "temporary_works", "label": "Temporary Works", "consultants": ["Structural"] },
-          { "value": "utility_diversions", "label": "Utility Diversions", "consultants": ["Civil", "Services"] }
+          { "value": "utility_diversions", "label": "Utility Diversions", "consultants": ["Civil", "Electrical", "Hydraulic"] }
         ]
       },
       "civil_works": {
@@ -2697,7 +2697,7 @@
           { "value": "environmental_dd", "label": "Environmental Due Diligence", "consultants": ["Environmental"] },
           { "value": "compliance_audit", "label": "Compliance Audit", "consultants": ["Building Certifier", "Fire Engineer"] },
           { "value": "capex_assessment", "label": "CapEx Assessment", "consultants": ["Cost Planning"] },
-          { "value": "services_assessment", "label": "Services Assessment", "consultants": ["Services"] }
+          { "value": "services_assessment", "label": "Services Assessment", "consultants": ["Mechanical", "Electrical", "Hydraulic", "Fire"] }
         ]
       },
       "feasibility": {
@@ -2715,7 +2715,7 @@
           { "value": "design_audit", "label": "Design Audit", "consultants": ["Project Manager", "Architect"] },
           { "value": "value_engineering", "label": "Value Engineering", "consultants": ["Cost Planning", "Architect"] },
           { "value": "constructability_review", "label": "Constructability Review", "consultants": ["Construction Manager"] },
-          { "value": "peer_review", "label": "Peer Review (Structural/Services)", "consultants": ["Structural", "Services"] }
+          { "value": "peer_review", "label": "Peer Review (Structural/Services)", "consultants": ["Structural", "Mechanical", "Electrical", "Hydraulic", "Fire"] }
         ]
       },
       "procurement_support": {

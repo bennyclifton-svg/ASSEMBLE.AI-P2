@@ -7,12 +7,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectProfiles, profilerObjectives } from '@/lib/db/pg-schema';
+import { projectProfiles, profilerObjectives, objectivesTransmittals } from '@/lib/db/pg-schema';
 import Anthropic from '@anthropic-ai/sdk';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import { evaluateRules, formatRulesForPrompt, type ProjectData } from '@/lib/services/inference-engine';
+import { retrieve } from '@/lib/rag/retrieval';
 
-const anthropic = new Anthropic();
+const anthropic = new Anthropic({ maxRetries: 4 });
 
 type ObjectiveSection = 'functionalQuality' | 'planningCompliance';
 
@@ -58,97 +59,197 @@ export async function POST(
       .where(eq(projectProfiles.projectId, projectId))
       .limit(1);
 
-    if (!profile) {
-      return NextResponse.json(
-        { success: false, error: { code: 'PROFILE_NOT_FOUND', message: 'Project profile not found. Please complete the profile first.' } },
-        { status: 404 }
-      );
+    // Check for attached documents
+    const [objectives] = await db
+      .select({ id: profilerObjectives.id })
+      .from(profilerObjectives)
+      .where(eq(profilerObjectives.projectId, projectId))
+      .limit(1);
+
+    let attachedDocumentIds: string[] = [];
+    if (objectives) {
+      const transmittals = await db
+        .select({ documentId: objectivesTransmittals.documentId })
+        .from(objectivesTransmittals)
+        .where(eq(objectivesTransmittals.objectivesId, objectives.id));
+      attachedDocumentIds = transmittals.map(t => t.documentId);
     }
 
-    // Parse profile data
-    const buildingClass = profile.buildingClass;
-    const projectType = profile.projectType;
-    const subclass = JSON.parse(profile.subclass || '[]');
-    const scaleData = JSON.parse(profile.scaleData || '{}');
-    const complexity = JSON.parse(profile.complexity || '{}');
-    const workScope = JSON.parse(profile.workScope || '[]');
+    const hasAttachedDocuments = attachedDocumentIds.length > 0;
 
-    // Resolve work scope IDs to human-readable labels
-    // Work scope only applies to refurb/remediation projects, not new builds
-    const isWorkScopeApplicable = projectType === 'refurb' || projectType === 'remediation';
-    const workScopeLabels = isWorkScopeApplicable ? resolveWorkScopeLabels(workScope, projectType) : [];
-    const hasSpecificScope = workScopeLabels.length > 0;
+    let response;
 
-    // Log if work scope was ignored due to project type mismatch
-    if (workScope.length > 0 && !isWorkScopeApplicable) {
-      console.log(`[objectives-generate] Ignoring work scope for ${projectType} project (work scope only applies to refurb/remediation)`);
-    }
+    if (hasAttachedDocuments) {
+      // === DOCUMENT EXTRACTION PATH ===
+      console.log(`[objectives-generate] Extracting from ${attachedDocumentIds.length} attached documents`);
 
-    // Build ProjectData for inference engine
-    const projectData: ProjectData = {
-      projectDetails: {
-        projectName: 'Project',
-        jurisdiction: undefined,
-      },
-      profiler: {
-        buildingClass,
-        subclass,
-        projectType,
-        scaleData,
-        complexity,
-        workScope,
-      }
-    };
+      // RAG retrieval — broad queries to cover both sections
+      const functionalQuery = 'project objectives, functional requirements, quality standards, design features, performance criteria, operational requirements, spatial requirements, material specifications';
+      const planningQuery = 'planning approvals, compliance requirements, building codes, authority requirements, certifications, statutory requirements, environmental compliance, regulatory framework';
 
-    // Evaluate inference rules for each section
-    const functionalRules = evaluateRules('objectives_functional_quality', projectData);
-    const planningRules = evaluateRules('objectives_planning_compliance', projectData);
+      const [functionalResults, planningResults] = await Promise.all([
+        retrieve(functionalQuery, {
+          documentIds: attachedDocumentIds,
+          topK: 30,
+          rerankTopK: 15,
+          includeParentContext: true,
+          minRelevanceScore: 0.2,
+        }),
+        retrieve(planningQuery, {
+          documentIds: attachedDocumentIds,
+          topK: 30,
+          rerankTopK: 15,
+          includeParentContext: true,
+          minRelevanceScore: 0.2,
+        }),
+      ]);
 
-    // Format rules for prompt
-    const functionalRulesFormatted = formatRulesForPrompt(functionalRules, { includeConfidence: true, groupBySource: false });
-    const planningRulesFormatted = formatRulesForPrompt(planningRules, { includeConfidence: true, groupBySource: false });
+      // Build context from retrieved chunks
+      const formatChunks = (results: { content: string; sectionTitle: string | null }[]) => results
+        .map((r, i) => `[Source ${i + 1}${r.sectionTitle ? `: ${r.sectionTitle}` : ''}]\n${r.content}`)
+        .join('\n\n');
 
-    // Log matched rules for debugging
-    console.log(`[objectives-generate] Matched ${functionalRules.length} functional rules, ${planningRules.length} planning rules`);
+      const functionalContext = formatChunks(functionalResults);
+      const planningContext = formatChunks(planningResults);
 
-    // Build prompt based on section (or both if not specified)
-    const generateBoth = !section;
-    const generateFunctional = generateBoth || section === 'functionalQuality';
-    const generatePlanning = generateBoth || section === 'planningCompliance';
+      const extractionPrompt = `You are an expert construction project manager in Australia.
 
-    const responseFormat = generateBoth
-      ? `{
+You have been given excerpts from project documents (briefs, Statements of Environmental Effects, client design objectives, etc.). Extract project objectives from these documents and sort them into two categories.
+
+## Retrieved Content — Functional & Quality Related
+${functionalContext || '(No relevant content found)'}
+
+## Retrieved Content — Planning & Compliance Related
+${planningContext || '(No relevant content found)'}
+
+## Section Definitions — CRITICAL:
+
+FUNCTIONAL & QUALITY — What the building provides and how well:
+- Physical attributes (bedrooms, floors, spaces, areas)
+- Design features (open plan, layout, configuration)
+- Operational requirements (storage, parking, amenities)
+- Quality/finish standards (premium finishes, materials, fixtures)
+- Performance requirements (acoustic, thermal, structural)
+- User experience (accessibility features, natural light)
+Headers to use: Design Requirements, Quality Standards, Operational Requirements
+
+PLANNING & COMPLIANCE — Approvals, regulations, and certifications needed:
+- Building codes (NCC, BCA classification)
+- Regulatory approvals (DA, CDC, permits)
+- Australian Standards (AS 2419.1, AS 3959, etc.)
+- Certifications required (BASIX, NatHERS, fire engineering)
+- Authority requirements (council, fire brigade, utilities)
+- Environmental compliance (contamination, stormwater)
+Headers to use: Regulatory Compliance, Certification Requirements, Authority Approvals
+
+## Instructions:
+1. Extract ONLY objectives/requirements that are explicitly stated or clearly implied in the source documents
+2. DO NOT invent or hallucinate any objectives not supported by the documents
+3. Sort each item into the correct section (functional vs planning)
+4. Format as SHORT bullet points (2-5 words each)
+5. Group by category using bold headers
+6. Output 8-15 bullets per section where the documents support it
+7. DO NOT duplicate items between sections
+8. OUTPUT FORMAT: HTML tags — <p><strong>Header</strong></p> for headers, <ul><li>item</li></ul> for bullets
+
+Respond in JSON format:
+{
   "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points",
-  "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
-}`
-      : section === 'functionalQuality'
-      ? `{
-  "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
-}`
-      : `{
   "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
 }`;
 
-    // Build work scope constraint for the AI prompt
-    const workScopeConstraint = hasSpecificScope
-      ? `
+      response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: extractionPrompt }],
+      });
+    } else {
+      // === INFERENCE RULES PATH (existing behaviour) ===
+
+      if (!profile) {
+        return NextResponse.json(
+          { success: false, error: { code: 'PROFILE_NOT_FOUND', message: 'Project profile not found. Please complete the profile first.' } },
+          { status: 404 }
+        );
+      }
+
+      // Parse profile data
+      const buildingClass = profile.buildingClass;
+      const projectType = profile.projectType;
+      const subclass = JSON.parse(profile.subclass || '[]');
+      const scaleData = JSON.parse(profile.scaleData || '{}');
+      const complexity = JSON.parse(profile.complexity || '{}');
+      const workScope = JSON.parse(profile.workScope || '[]');
+
+      // Resolve work scope IDs to human-readable labels
+      const isWorkScopeApplicable = projectType === 'refurb' || projectType === 'remediation';
+      const workScopeLabels = isWorkScopeApplicable ? resolveWorkScopeLabels(workScope, projectType) : [];
+      const hasSpecificScope = workScopeLabels.length > 0;
+
+      if (workScope.length > 0 && !isWorkScopeApplicable) {
+        console.log(`[objectives-generate] Ignoring work scope for ${projectType} project (work scope only applies to refurb/remediation)`);
+      }
+
+      // Build ProjectData for inference engine
+      const projectData: ProjectData = {
+        projectDetails: {
+          projectName: 'Project',
+          jurisdiction: undefined,
+        },
+        profiler: {
+          buildingClass,
+          subclass,
+          projectType,
+          scaleData,
+          complexity,
+          workScope,
+        }
+      };
+
+      // Evaluate inference rules for each section
+      const functionalRules = evaluateRules('objectives_functional_quality', projectData);
+      const planningRules = evaluateRules('objectives_planning_compliance', projectData);
+
+      const functionalRulesFormatted = formatRulesForPrompt(functionalRules, { includeConfidence: true, groupBySource: false });
+      const planningRulesFormatted = formatRulesForPrompt(planningRules, { includeConfidence: true, groupBySource: false });
+
+      console.log(`[objectives-generate] Matched ${functionalRules.length} functional rules, ${planningRules.length} planning rules`);
+
+      // Build prompt based on section (or both if not specified)
+      const generateBoth = !section;
+      const generateFunctional = generateBoth || section === 'functionalQuality';
+      const generatePlanning = generateBoth || section === 'planningCompliance';
+
+      const responseFormat = generateBoth
+        ? `{
+  "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points",
+  "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
+}`
+        : section === 'functionalQuality'
+        ? `{
+  "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
+}`
+        : `{
+  "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
+}`;
+
+      const workScopeConstraint = hasSpecificScope
+        ? `
 CRITICAL SCOPE CONSTRAINT:
 The client has specifically selected: ${workScopeLabels.join(', ')}.
 Your objectives MUST focus EXCLUSIVELY on these selected items.
 `
-      : '';
+        : '';
 
-    // Build suggested items section from inference rules
-    const suggestedItemsSection = [];
-    if (generateFunctional && functionalRulesFormatted) {
-      suggestedItemsSection.push(`## Functional & Quality\n${functionalRulesFormatted}`);
-    }
-    if (generatePlanning && planningRulesFormatted) {
-      suggestedItemsSection.push(`## Planning & Compliance\n${planningRulesFormatted}`);
-    }
+      const suggestedItemsSection = [];
+      if (generateFunctional && functionalRulesFormatted) {
+        suggestedItemsSection.push(`## Functional & Quality\n${functionalRulesFormatted}`);
+      }
+      if (generatePlanning && planningRulesFormatted) {
+        suggestedItemsSection.push(`## Planning & Compliance\n${planningRulesFormatted}`);
+      }
 
-    // ITERATION 1: Generate SHORT bullet points (2-5 words each)
-    const prompt = `You are an expert construction project manager in Australia.
+      const prompt = `You are an expert construction project manager in Australia.
 
 PROJECT PROFILE:
 - Building Class: ${buildingClass}
@@ -202,11 +303,12 @@ Example PLANNING & COMPLIANCE output (use this exact HTML structure):
 Respond in JSON format:
 ${responseFormat}`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      messages: [{ role: 'user', content: prompt }],
-    });
+      response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{ role: 'user', content: prompt }],
+      });
+    }
 
     // Extract text from response
     const textContent = response.content.find(c => c.type === 'text');
@@ -226,21 +328,24 @@ ${responseFormat}`;
       generated = JSON.parse(jsonText.trim());
     } catch (e) {
       console.error('Failed to parse AI response:', e);
-      // Fallback to empty content
-      generated = {};
-      if (generateFunctional) generated.functionalQuality = '';
-      if (generatePlanning) generated.planningCompliance = '';
+      generated = {
+        functionalQuality: '',
+        planningCompliance: '',
+      };
     }
 
-    // Create profile context snapshot
-    const profileContext = {
-      buildingClass,
-      projectType,
-      subclass,
-      scale: scaleData,
-      complexity,
-      workScope: workScopeLabels,
-    };
+    // Determine source label
+    const sourceLabel = hasAttachedDocuments ? 'ai_extracted' : 'ai_generated';
+
+    // Create profile context snapshot (use profile if available)
+    const profileContext = profile ? {
+      buildingClass: profile.buildingClass,
+      projectType: profile.projectType,
+      subclass: JSON.parse(profile.subclass || '[]'),
+      scale: JSON.parse(profile.scaleData || '{}'),
+      complexity: JSON.parse(profile.complexity || '{}'),
+      workScope: JSON.parse(profile.workScope || '[]'),
+    } : null;
 
     // Check if objectives exist
     const existing = await db
@@ -251,14 +356,14 @@ ${responseFormat}`;
 
     // Build update data based on what was generated
     const objectivesData: Record<string, any> = {
-      profileContext: JSON.stringify(profileContext),
+      profileContext: profileContext ? JSON.stringify(profileContext) : null,
       updatedAt: new Date(),
     };
 
     if (generated.functionalQuality) {
       objectivesData.functionalQuality = JSON.stringify({
         content: generated.functionalQuality,
-        source: 'ai_generated',
+        source: sourceLabel,
         originalAi: generated.functionalQuality,
         editHistory: null,
       });
@@ -268,7 +373,7 @@ ${responseFormat}`;
     if (generated.planningCompliance) {
       objectivesData.planningCompliance = JSON.stringify({
         content: generated.planningCompliance,
-        source: 'ai_generated',
+        source: sourceLabel,
         originalAi: generated.planningCompliance,
         editHistory: null,
       });
@@ -282,7 +387,6 @@ ${responseFormat}`;
         .where(eq(profilerObjectives.projectId, projectId));
     } else {
       // For new records, both fields are required (NOT NULL)
-      // Provide empty defaults for any missing fields
       const emptyObjective = JSON.stringify({
         content: '',
         source: 'pending',
@@ -309,8 +413,16 @@ ${responseFormat}`;
         generatedAt: new Date().toISOString(),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to generate objectives:', error);
+
+    if (error?.status === 529) {
+      return NextResponse.json(
+        { success: false, error: { code: 'AI_OVERLOADED', message: 'AI service is temporarily busy. Please try again in a moment.' } },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { success: false, error: { code: 'GENERATION_ERROR', message: 'Failed to generate objectives' } },
       { status: 500 }

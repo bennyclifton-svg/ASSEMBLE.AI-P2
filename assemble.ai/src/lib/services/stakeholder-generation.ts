@@ -8,6 +8,7 @@
 import { fetchProfileExportData } from './planning-context';
 import {
   CORE_DISCIPLINES,
+  SUBCLASS_CORE_OVERRIDES,
   CLASS_DISCIPLINES,
   COMPLEXITY_DISCIPLINES,
   SUBCLASS_DISCIPLINES,
@@ -162,8 +163,16 @@ function generateConsultants(profile: ProfileContext): GeneratedStakeholder[] {
   const result: GeneratedStakeholder[] = [];
   const addedDisciplines = new Set<string>();
 
-  // Always add core disciplines
-  for (const def of CORE_DISCIPLINES) {
+  // Check if any subclass has a core discipline override (e.g. house)
+  console.log('[generateConsultants] Profile subclass:', JSON.stringify(profile.subclass), 'buildingClass:', profile.buildingClass);
+  const subclassOverride = profile.subclass.find(sc => SUBCLASS_CORE_OVERRIDES[sc]);
+  console.log('[generateConsultants] Subclass override match:', subclassOverride || 'NONE (using default cores)');
+  const coreDisciplines = subclassOverride
+    ? SUBCLASS_CORE_OVERRIDES[subclassOverride]
+    : CORE_DISCIPLINES;
+
+  // Add core/override disciplines
+  for (const def of coreDisciplines) {
     result.push({
       stakeholderGroup: 'consultant',
       name: def.name,
@@ -395,6 +404,7 @@ export async function generateStakeholders(
 ): Promise<GenerateStakeholdersResponse> {
   // Fetch profile data from Profiler module
   const profileData = await fetchProfileExportData(projectId);
+  console.log('[generateStakeholders] Profile data found:', !!profileData, profileData ? { buildingClass: profileData.buildingClass, subclass: profileData.subclass, projectType: profileData.projectType } : 'NONE - using defaults');
 
   // Default profile if no profiler data exists
   const profile: ProfileContext = profileData

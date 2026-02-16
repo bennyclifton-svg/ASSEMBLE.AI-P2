@@ -7,12 +7,6 @@
 
 import { useRftNewTransmittal } from '@/lib/hooks/use-rft-new-transmittal';
 import { FileText, Loader2, Folder, Save, RotateCcw, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
-// Aurora accent button styling - consistent across procurement components
-const BUTTON_BG = 'var(--color-accent-copper-tint)';
-const BUTTON_TEXT = 'var(--color-accent-copper)';
-const BUTTON_BORDER = 'rgba(0, 255, 255, 0.3)';
 
 interface RFTNewTransmittalScheduleProps {
     rftNewId: string;
@@ -51,51 +45,30 @@ export function RFTNewTransmittalSchedule({
                     Transmittal
                 </h3>
                 <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="sm"
+                    <button
                         onClick={onSaveTransmittal}
                         disabled={!canSaveTransmittal}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: BUTTON_BG,
-                            color: BUTTON_TEXT,
-                            border: `1px solid ${BUTTON_BORDER}`,
-                        }}
+                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
                     >
-                        <Save className="w-3 h-3 mr-1" />
+                        <Save className="h-3.5 w-3.5" />
                         Save Transmittal
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
+                    </button>
+                    <button
                         onClick={onLoadTransmittal}
                         disabled={!hasTransmittal}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: BUTTON_BG,
-                            color: BUTTON_TEXT,
-                            border: `1px solid ${BUTTON_BORDER}`,
-                        }}
+                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
                     >
-                        <RotateCcw className="w-3 h-3 mr-1" />
+                        <RotateCcw className="h-3.5 w-3.5" />
                         Recall {documentCount > 0 && `(${documentCount})`}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
+                    </button>
+                    <button
                         onClick={onDownloadTransmittal}
                         disabled={!hasTransmittal || isDownloading}
-                        className="h-7 px-2 text-xs font-medium"
-                        style={{
-                            backgroundColor: BUTTON_BG,
-                            color: BUTTON_TEXT,
-                            border: `1px solid ${BUTTON_BORDER}`,
-                        }}
+                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
                     >
-                        <Download className="w-3 h-3 mr-1" />
-                        Download
-                    </Button>
+                        <Download className="h-3.5 w-3.5" />
+                        {isDownloading ? 'Downloading...' : 'Download'}
+                    </button>
                 </div>
             </div>
 

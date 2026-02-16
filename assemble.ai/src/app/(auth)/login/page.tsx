@@ -29,12 +29,12 @@ export default async function LoginPage({
             <Image
               src="/logo-foundry.svg"
               alt="Foundry Logo"
-              width={48}
-              height={48}
-              className="flex-shrink-0"
+              width={38}
+              height={38}
+              className="flex-shrink-0 logo-icon-glow"
               priority
             />
-            <span className="text-3xl font-[family-name:var(--font-exo-2)] font-bold italic text-white">
+            <span className="text-2xl font-[family-name:var(--font-exo-2)] font-bold italic text-white">
               Foundry
             </span>
           </div>

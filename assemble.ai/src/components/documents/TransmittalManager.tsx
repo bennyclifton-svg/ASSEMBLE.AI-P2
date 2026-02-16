@@ -71,6 +71,7 @@ export function TransmittalManager({ selectedIds, onComplete, onCancel }: Transm
                 toast({
                     title: "Transmittal created",
                     description: "Successfully created transmittal.",
+                    variant: "success",
                 });
                 onComplete();
             } else {

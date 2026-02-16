@@ -29,6 +29,12 @@ import type {
     AITone,
 } from '@/types/notes-meetings-reports';
 import { getSectionLabel } from '@/lib/constants/sections';
+import {
+    BASE_SYSTEM_PROMPT,
+    buildSystemPrompt,
+    getSectionPrompt as getEnrichedSectionPrompt,
+    type ContentFeature,
+} from '@/lib/prompts/system-prompts';
 
 // ============================================================================
 // FORMATTING CLEANUP
@@ -78,41 +84,6 @@ interface ProjectContext {
     budget: string | null;
     program: string | null;
 }
-
-// ============================================================================
-// SECTION-SPECIFIC PROMPTS
-// ============================================================================
-
-const SECTION_PROMPTS: Record<string, string> = {
-    // Meeting Agenda Sections
-    brief: `Write a concise meeting brief covering the project overview, current status, and key discussion points.`,
-
-    procurement: `Summarize the procurement status including tendering progress, consultant/contractor appointments, and upcoming procurement activities.`,
-
-    planning_authorities: `Describe the planning and regulatory status including permit applications, authority responses, conditions, and compliance matters.`,
-
-    design: `Report on design progress including current design phase, key decisions, design coordination issues, and upcoming milestones.`,
-
-    construction: `Summarize construction activities including site progress, contractor performance, quality issues, and program status.`,
-
-    cost_planning: `Report on cost planning status including budget tracking, variations, contingency status, and forecast completion cost.`,
-
-    programme: `Describe program status including milestone tracking, critical path activities, delays, and schedule recovery measures.`,
-
-    other: `Summarize any other relevant project matters not covered in previous sections.`,
-
-    // Report Contents Sections
-    summary: `Write an executive summary covering key project highlights, achievements, risks, and upcoming priorities for the reporting period.`,
-
-    // Cost Planning Sub-sections
-    cost_planning_summary: `Provide a high-level cost summary including current estimate, budget comparison, and key variances.`,
-
-    cost_planning_provisional_sums: `Report on provisional sums status including items expended, remaining allowances, and anticipated adjustments.`,
-
-    cost_planning_variations: `Summarize project variations including approved changes, pending variations, and cost impact.`,
-};
-
-const DEFAULT_PROMPT = `Write professional content for this section based on the available project information and context.`;
 
 // ============================================================================
 // FETCH FUNCTIONS
@@ -368,13 +339,6 @@ function shouldIncludeDocument(
 // ============================================================================
 
 /**
- * Get the prompt for a specific section key
- */
-function getSectionPrompt(sectionKey: string): string {
-    return SECTION_PROMPTS[sectionKey] || DEFAULT_PROMPT;
-}
-
-/**
  * Build the full context string from notes and procurement docs
  */
 function buildContextString(
@@ -492,49 +456,42 @@ export async function generateSectionContent(
         existingContent
     );
 
-    // Get section-specific prompt
-    const sectionPrompt = getSectionPrompt(sectionKey);
+    // Get enriched section-specific prompt
+    const sectionPrompt = getEnrichedSectionPrompt(sectionKey);
 
     // Get stakeholder name if provided
     let stakeholderContext = '';
     if (stakeholderId) {
         const stakeholderName = await getStakeholderName(stakeholderId);
         if (stakeholderName) {
-            stakeholderContext = `\n\nThis content is specifically for: ${stakeholderName}`;
+            stakeholderContext = `\nThis content is specifically for: ${stakeholderName}`;
         }
     }
 
-    // Build the full prompt
-    const fullPrompt = `You are a professional project management assistant writing content for a ${contextType === 'meeting' ? 'meeting agenda' : 'project report'}.
+    // Determine feature type for system prompt
+    const feature: ContentFeature = contextType === 'meeting' ? 'meeting' : 'report';
+    const systemPrompt = buildSystemPrompt(feature);
 
-## Section: ${sectionLabel}
+    // Build the user message (context + section instructions)
+    const userMessage = `## Section: ${sectionLabel}
 
 ${sectionPrompt}${stakeholderContext}
 
-## Available Context
+## Available Project Context
 
-${contextString || 'No specific context available. Generate general content based on typical project management practices.'}
-
-## Instructions
-
-1. Write professional, concise content appropriate for this section
-2. Use the available context to make the content specific and relevant
-3. If there's existing content, enhance and improve it
-4. Keep the tone professional and suitable for ${contextType === 'meeting' ? 'meeting minutes/agendas' : 'formal project reports'}
-5. Focus on facts and actionable information
-6. Use bullet points where appropriate for clarity
-7. Keep the content to 2-4 paragraphs or equivalent bullet points
+${contextString || 'No specific project data available. Generate content based on professional best practices for this section type, and clearly indicate where project-specific data should be inserted.'}
 
 Generate only the section content. Do not include headers, titles, or meta-commentary.`;
 
-    // Call Claude API
+    // Call Claude API with system prompt separation
     const anthropic = new Anthropic();
     const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1500,
+        system: systemPrompt,
         messages: [{
             role: 'user',
-            content: fullPrompt,
+            content: userMessage,
         }],
     });
 
@@ -569,35 +526,34 @@ export async function polishContent(
 
     const sectionLabel = getSectionLabel(sectionKey);
 
-    const prompt = `You are an expert editor improving project documentation content.
+    const systemPrompt = `${BASE_SYSTEM_PROMPT}
 
-## Section: ${sectionLabel}
+You are polishing existing project documentation content. Your job is to improve the writing quality without changing the meaning or adding new information. ${toneInstructions[tone]}`;
 
-## Original Content
+    const userMessage = `## Section: ${sectionLabel}
+
+## Content to Polish
 ${content}
 
 ## Instructions
-
-Polish and refine this content with the following goals:
-
-1. ${toneInstructions[tone]}
-2. Improve clarity and readability
-3. Fix any grammar or spelling issues
-4. Ensure consistent formatting
-5. Make sentences more direct and impactful
-6. Remove redundancy while preserving key information
-7. Maintain the original meaning and intent
+1. Improve clarity and readability — make every sentence count
+2. Fix grammar, spelling, and punctuation
+3. Make sentences more direct and impactful — remove filler words
+4. Ensure consistent formatting (bullet style, bold usage)
+5. Remove redundancy while preserving all key information
+6. Maintain the original meaning and intent exactly
 
 Return only the polished content. Do not include commentary or explanations.`;
 
-    // Call Claude API
+    // Call Claude API with system prompt separation
     const anthropic = new Anthropic();
     const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1500,
+        system: systemPrompt,
         messages: [{
             role: 'user',
-            content: prompt,
+            content: userMessage,
         }],
     });
 

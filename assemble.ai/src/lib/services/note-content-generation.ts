@@ -29,6 +29,7 @@ import type {
     GenerateNoteContentRequest,
     GenerateNoteContentResponse,
 } from '@/types/notes-meetings-reports';
+import { buildSystemPrompt } from '@/lib/prompts/system-prompts';
 
 // ============================================================================
 // TYPES
@@ -307,10 +308,11 @@ export async function generateNoteContent(
     // Build context string
     const contextString = buildContextString(attachedDocs, ragResults, projectContext);
 
-    // Build the smart detection prompt
-    const fullPrompt = `You are a professional project management assistant helping with note-taking and documentation.
+    // Build system prompt with note-specific layer
+    const systemPrompt = buildSystemPrompt('note');
 
-## Note Title
+    // Build the user message with smart detection
+    const userMessage = `## Note Title
 ${existingTitle || '(Untitled Note)'}
 
 ## Note Content
@@ -323,58 +325,35 @@ ${contextString || 'No additional context available.'}
 
 First, analyze the note content to determine the user's intent:
 
-**PROMPT MODE** - If the note content appears to be an instruction or request (e.g., starts with words like "summarize", "review", "list", "create", "analyze", "extract", "please", or phrases like "give me", "I need", "can you"), then:
+**PROMPT MODE** — If the note content is an instruction (starts with "summarize", "review", "list", "create", "extract", "please", "give me", "I need", "can you"):
 - Treat the note content as instructions to follow
-- Use the attached documents and retrieved context as your source material
-- Generate new content based on the instruction
-- The output should be the result of following the instruction, NOT the instruction itself
+- Use the attached documents and retrieved context as source material
+- Generate new content that is the result of following the instruction
 
-**CONTENT MODE** - If the note content appears to be actual notes, observations, or content (e.g., meeting notes, project observations, bullet points, paragraphs of information), then:
+**CONTENT MODE** — If the note content is actual observations or notes (meeting notes, bullet points, paragraphs of information):
 - Preserve the key points and intent of the existing content
 - Expand and enhance with relevant details from attached documents and context
 - Improve structure, clarity, and completeness
 - Maintain the user's voice and style
 
-## Examples of Prompt Mode triggers:
-- "Please summarize the attached document"
-- "Review and list the key points"
-- "Create a summary of the project status"
-- "Summarize the specifications"
-- "Extract the main requirements"
-
-## Examples of Content Mode triggers:
-- "Met with contractor today to discuss delays..."
-- "Key risks identified: 1. Budget overrun..."
-- "Project update: foundation works complete..."
-- Bullet point lists of observations
-- Paragraphs describing project activities
-
 ## Critical Rules
 
 1. **ONLY use information explicitly stated in the Retrieved Project Context above**
-2. **DO NOT invent, fabricate, or hallucinate any information** - no made-up names, addresses, dates, or details
-3. If the retrieved context doesn't contain the requested information, clearly state what was found and what is missing
-4. Quote or paraphrase directly from the source material when possible
-
-## Formatting Rules
-
-- Use compact formatting with NO extra blank lines between items
-- Use consistent bullet points (• or -) for lists
-- Keep related information together on the same line or consecutive lines
-- Format contact details inline: "Company Name - Contact: Name, Tel: XXX"
-- NO double line breaks - single line breaks only between sections
-- Output clean, readable content without excessive whitespace
+2. **DO NOT invent, fabricate, or hallucinate any information**
+3. If the retrieved context doesn't contain requested information, clearly state what was found and what is missing
+4. Quote or paraphrase directly from source material when possible
 
 Output only the generated content with no headers or meta-commentary.`;
 
-    // Call Claude API
+    // Call Claude API with system prompt separation
     const anthropic = new Anthropic();
     const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
+        system: systemPrompt,
         messages: [{
             role: 'user',
-            content: fullPrompt,
+            content: userMessage,
         }],
     });
 

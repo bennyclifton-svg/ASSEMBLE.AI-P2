@@ -9,12 +9,13 @@
 'use client';
 
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { Trash, Star, Copy, Diamond, Loader2 } from 'lucide-react';
+import { Trash, Star, Copy, Loader2 } from 'lucide-react';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { NoteColorPicker } from './NoteColorPicker';
 import { NoteContent } from './NoteContent';
 import { cn } from '@/lib/utils';
-import type { Note, NoteColor, GenerateNoteContentResponse } from '@/types/notes-meetings-reports';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
+import type { Note, NoteColor } from '@/types/notes-meetings-reports';
 import { NOTE_COLOR_MAP } from '@/types/notes-meetings-reports';
 
 interface NoteWithCount extends Note {
@@ -47,9 +48,9 @@ export function SingleNotePanel({
     className,
 }: SingleNotePanelProps) {
     const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [localTitle, setLocalTitle] = useState(note.title || 'New Note');
-    const [isGenerating, setIsGenerating] = useState(false);
     const [isCopying, setIsCopying] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -96,14 +97,16 @@ export function SingleNotePanel({
         }
     };
 
-    const handleDelete = useCallback(async () => {
-        if (confirm('Delete this note? This will permanently delete this note and all its attachments. This action cannot be undone.')) {
-            setIsDeleting(true);
-            try {
-                await onDelete();
-            } finally {
-                setIsDeleting(false);
-            }
+    const handleDeleteClick = useCallback(() => {
+        setDeleteDialogOpen(true);
+    }, []);
+
+    const handleConfirmDelete = useCallback(async () => {
+        setIsDeleting(true);
+        try {
+            await onDelete();
+        } finally {
+            setIsDeleting(false);
         }
     }, [onDelete]);
 
@@ -124,35 +127,6 @@ export function SingleNotePanel({
         }
     }, [onCopy]);
 
-    const handleGenerate = useCallback(async () => {
-        try {
-            setIsGenerating(true);
-
-            const response = await fetch('/api/ai/generate-note-content', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    noteId: note.id,
-                    projectId: note.projectId,
-                    existingContent: note.content || undefined,
-                    existingTitle: note.title,
-                }),
-            });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to generate content');
-            }
-
-            const result: GenerateNoteContentResponse = await response.json();
-            await onUpdate({ content: result.content });
-        } catch (error) {
-            console.error('[SingleNotePanel] Failed to generate content:', error);
-        } finally {
-            setIsGenerating(false);
-        }
-    }, [note.id, note.projectId, note.content, note.title, onUpdate]);
-
     // Get note color for header styling
     const noteColor = note.color || 'yellow';
     const colorStyles = NOTE_COLOR_MAP[noteColor];
@@ -160,88 +134,99 @@ export function SingleNotePanel({
     // Collapsed state: Square sticky note
     if (!isExpanded) {
         return (
-            <div className={cn('', className)}>
-                <div
-                    className="relative w-[140px] h-[140px] pt-1 pr-1.5 pb-2 pl-1.5 shadow-md flex flex-col"
-                    style={{ backgroundColor: colorStyles.bg }}
-                >
-                    {/* Top toolbar: Color dot, copy, delete, expand */}
-                    <div className="flex items-center justify-end gap-1 mb-1">
-                        {/* Color picker - compact mode */}
-                        <NoteColorPicker
-                            selectedColor={noteColor}
-                            onColorChange={handleColorChange}
-                            compact={true}
-                        />
-
-                        {/* Copy button */}
-                        <button
-                            onClick={handleCopy}
-                            disabled={isCopying}
-                            className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
-                            title="Copy note"
-                        >
-                            {isCopying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Copy className="w-3 h-3" />}
-                        </button>
-
-                        {/* Delete button */}
-                        <button
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                            className="p-0.5 text-[var(--color-text-muted)] hover:text-red-500 transition-colors disabled:opacity-50"
-                            title="Delete note"
-                        >
-                            <Trash className="w-3 h-3" />
-                        </button>
-
-                        {/* Expand button */}
-                        <button
-                            onClick={onToggleExpand}
-                            className="p-0.5 -mt-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                            title="Expand"
-                        >
-                            <CornerBracketIcon direction="left" className="w-3 h-3" />
-                        </button>
-                    </div>
-
-                    {/* Editable Title - fills remaining space, entire area clickable */}
+            <>
+                <div className={cn('', className)}>
                     <div
-                        className="flex-1 overflow-hidden cursor-pointer"
-                        onClick={!isEditingTitle ? handleTitleClick : undefined}
-                        title={!isEditingTitle ? "Click to edit title" : undefined}
+                        className="relative w-[140px] h-[140px] pt-1 pr-1.5 pb-2 pl-1.5 shadow-md flex flex-col"
+                        style={{ backgroundColor: colorStyles.bg, color: colorStyles.text }}
                     >
-                        {isEditingTitle ? (
-                            <textarea
-                                ref={textareaRef}
-                                value={localTitle}
-                                onChange={(e) => setLocalTitle(e.target.value)}
-                                onBlur={handleTitleBlur}
-                                onKeyDown={handleTitleKeyDown}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full h-full text-xs font-medium bg-transparent border-none outline-none focus:outline-none focus:ring-0 resize-none text-[var(--color-text-primary)] selection:bg-[var(--color-accent-copper)]/20 selection:text-[var(--color-text-primary)]"
-                                style={{ boxShadow: 'none' }}
-                                placeholder="New Note"
+                        {/* Top toolbar: Color dot, copy, delete, expand */}
+                        <div className="flex items-center justify-end gap-2 mb-1">
+                            {/* Color picker - compact mode */}
+                            <NoteColorPicker
+                                selectedColor={noteColor}
+                                onColorChange={handleColorChange}
+                                compact={true}
                             />
-                        ) : (
-                            <span className="block text-xs font-medium text-[var(--color-text-primary)] hover:text-[var(--color-accent-copper)] line-clamp-6 transition-colors">
-                                {localTitle || 'New Note'}
-                            </span>
-                        )}
+
+                            {/* Copy button */}
+                            <button
+                                onClick={handleCopy}
+                                disabled={isCopying}
+                                className="p-0.5 opacity-60 hover:opacity-100 transition-colors disabled:opacity-50"
+                                title="Copy note"
+                            >
+                                {isCopying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Copy className="w-3 h-3" />}
+                            </button>
+
+                            {/* Delete button */}
+                            <button
+                                onClick={handleDeleteClick}
+                                disabled={isDeleting}
+                                className="p-0.5 opacity-60 hover:text-red-500 hover:opacity-100 transition-colors disabled:opacity-50"
+                                title="Delete note"
+                            >
+                                <Trash className="w-3 h-3" />
+                            </button>
+
+                            {/* Expand button */}
+                            <button
+                                onClick={onToggleExpand}
+                                className="p-0.5 -mt-0.5 opacity-60 hover:opacity-100 transition-colors"
+                                title="Expand"
+                            >
+                                <CornerBracketIcon direction="left" className="w-3 h-3" />
+                            </button>
+                        </div>
+
+                        {/* Editable Title - fills remaining space, entire area clickable */}
+                        <div
+                            className="flex-1 overflow-hidden cursor-pointer"
+                            onClick={!isEditingTitle ? handleTitleClick : undefined}
+                            title={!isEditingTitle ? "Click to edit title" : undefined}
+                        >
+                            {isEditingTitle ? (
+                                <textarea
+                                    ref={textareaRef}
+                                    value={localTitle}
+                                    onChange={(e) => setLocalTitle(e.target.value)}
+                                    onBlur={handleTitleBlur}
+                                    onKeyDown={handleTitleKeyDown}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-full h-full text-xs font-medium bg-transparent border-none outline-none focus:outline-none focus:ring-0 resize-none text-inherit selection:bg-[var(--color-accent-copper)]/20 selection:text-inherit"
+                                    style={{ boxShadow: 'none' }}
+                                    placeholder="New Note"
+                                />
+                            ) : (
+                                <span className="block text-xs font-medium text-inherit hover:text-[var(--color-accent-copper)] line-clamp-6 transition-colors">
+                                    {localTitle || 'New Note'}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                {/* Delete Confirmation Dialog */}
+                <AuroraConfirmDialog
+                    open={deleteDialogOpen}
+                    onOpenChange={setDeleteDialogOpen}
+                    onConfirm={handleConfirmDelete}
+                    title="Delete this note?"
+                    description="This will permanently delete this note and all its attachments."
+                />
+            </>
         );
     }
 
     // Expanded state: Full note with header and content (spans full grid width)
     return (
-        <div className={cn('w-full col-span-2', className)}>
+        <div className={cn('w-full col-span-2 flex flex-col', className)}>
             {/* Custom Header with Editable Title */}
-            <div className="flex items-stretch gap-0.5 px-2 pt-1 pb-1">
+            <div className="flex items-stretch gap-0.5 p-2">
                 {/* Title segment with editable note name */}
                 <div
-                    className="flex items-center flex-1 min-w-0 px-2 py-1"
-                    style={{ backgroundColor: colorStyles.bg }}
+                    className="flex items-center flex-1 min-w-0 px-3 py-3 border border-[var(--color-border)] shadow-sm rounded-l-md"
+                    style={{ backgroundColor: colorStyles.bg, color: colorStyles.text }}
                 >
                     {/* Editable Title */}
                     {isEditingTitle ? (
@@ -253,14 +238,14 @@ export function SingleNotePanel({
                             onBlur={handleTitleBlur}
                             onKeyDown={handleTitleKeyDown}
                             onClick={(e) => e.stopPropagation()}
-                            className="flex-1 min-w-0 h-4 leading-4 text-xs font-semibold bg-transparent text-[var(--color-text-primary)] p-0 m-0"
+                            className="flex-1 min-w-0 h-5 leading-5 text-sm font-semibold bg-transparent text-inherit p-0 m-0"
                             style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
                             placeholder="New Note"
                         />
                     ) : (
                         <span
                             onClick={handleTitleClick}
-                            className="flex-1 min-w-0 h-4 leading-4 text-xs font-semibold text-[var(--color-text-primary)] cursor-pointer hover:text-[var(--color-accent-copper)] truncate transition-colors"
+                            className="flex-1 min-w-0 h-5 leading-5 text-sm font-semibold text-inherit cursor-pointer hover:text-[var(--color-accent-copper)] truncate transition-colors"
                             title="Click to edit title"
                         >
                             {localTitle || 'New Note'}
@@ -271,8 +256,8 @@ export function SingleNotePanel({
                 {/* Corner bracket segment - expand/collapse toggle */}
                 <button
                     onClick={onToggleExpand}
-                    className="flex items-center justify-center p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                    style={{ backgroundColor: colorStyles.bg }}
+                    className="flex items-center justify-center aspect-square px-3 border border-[var(--color-border)] shadow-sm opacity-60 hover:opacity-100 transition-colors"
+                    style={{ backgroundColor: colorStyles.bg, color: colorStyles.text }}
                     title="Collapse"
                 >
                     <CornerBracketIcon direction="right" className="w-3.5 h-3.5" />
@@ -280,31 +265,17 @@ export function SingleNotePanel({
 
                 {/* Tools segment - always visible */}
                 <div
-                    className="flex items-center"
-                    style={{ backgroundColor: colorStyles.bg }}
+                    className="flex items-center gap-1.5 px-2 border border-[var(--color-border)] shadow-sm rounded-r-md"
+                    style={{ backgroundColor: colorStyles.bg, color: colorStyles.text }}
                 >
-                    {/* Generate button (Diamond) */}
-                    <button
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                        className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
-                        title="Generate content with AI"
-                    >
-                        {isGenerating ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                            <Diamond className="w-3.5 h-3.5" />
-                        )}
-                    </button>
-
                     {/* Star button */}
                     <button
                         onClick={handleStarToggle}
                         className={cn(
-                            'p-1 rounded transition-colors',
+                            'p-1.5 rounded transition-colors',
                             note.isStarred
                                 ? 'text-yellow-500 hover:text-yellow-600'
-                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                : 'opacity-60 hover:opacity-100'
                         )}
                         title={note.isStarred ? 'Unstar note' : 'Star note'}
                     >
@@ -315,7 +286,7 @@ export function SingleNotePanel({
                     <button
                         onClick={handleCopy}
                         disabled={isCopying}
-                        className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors disabled:opacity-50"
+                        className="p-1.5 opacity-60 hover:opacity-100 transition-colors disabled:opacity-50"
                         title="Copy note"
                     >
                         {isCopying ? (
@@ -335,15 +306,24 @@ export function SingleNotePanel({
 
                     {/* Delete button */}
                     <button
-                        onClick={handleDelete}
+                        onClick={handleDeleteClick}
                         disabled={isDeleting}
-                        className="p-1 text-[var(--color-text-muted)] hover:text-red-500 transition-colors disabled:opacity-50"
+                        className="p-1.5 opacity-60 hover:text-red-500 hover:opacity-100 transition-colors disabled:opacity-50"
                         title="Delete note"
                     >
                         <Trash className="w-3.5 h-3.5" />
                     </button>
                 </div>
             </div>
+
+            {/* Delete Confirmation Dialog */}
+            <AuroraConfirmDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                onConfirm={handleConfirmDelete}
+                title="Delete this note?"
+                description="This will permanently delete this note and all its attachments."
+            />
 
             {/* Content Area */}
             <div className="mx-2 -mt-px">

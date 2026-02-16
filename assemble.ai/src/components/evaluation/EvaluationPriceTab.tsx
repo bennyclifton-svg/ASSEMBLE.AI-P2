@@ -60,6 +60,10 @@ export function EvaluationPriceTab({
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const saveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
+    // Guard: prevent concurrent tender parsing (ref avoids stale closure issues)
+    const isParsingRef = useRef(false);
+    const [parsingFileName, setParsingFileName] = useState<string | null>(null);
+
     // T089-T093: Row selection state
     const [selectedInitialPriceRowIds, setSelectedInitialPriceRowIds] = useState<Set<string>>(new Set());
     const [selectedAddSubsRowIds, setSelectedAddSubsRowIds] = useState<Set<string>>(new Set());
@@ -185,7 +189,21 @@ export function EvaluationPriceTab({
     }, [deleteRow]);
 
     // T048-T051: Handle file drop for tender parsing
+    // Uses ref-based guard to prevent duplicate ingestion from rapid drops
     const handleFileDrop = useCallback(async (file: File, firmId: string) => {
+        // Guard: reject if a parse is already in-flight
+        if (isParsingRef.current) {
+            console.log(`[EvaluationPriceTab] Ignoring drop — parse already in progress`);
+            toast({
+                title: 'Parse already in progress',
+                description: 'Please wait for the current tender to finish processing.',
+            });
+            return;
+        }
+
+        isParsingRef.current = true;
+        setParsingFileName(file.name);
+
         console.log(`[EvaluationPriceTab] handleFileDrop called for firm ${firmId}, file: ${file.name}`);
         const firm = shortlistedFirms.find(f => f.id === firmId);
         const firmName = firm?.companyName || 'Unknown';
@@ -195,24 +213,30 @@ export function EvaluationPriceTab({
             description: `Extracting pricing from ${file.name} for ${firmName}`,
         });
 
-        console.log(`[EvaluationPriceTab] Calling parseTender...`);
-        const result = await parseTender(file, firmId);
-        console.log(`[EvaluationPriceTab] parseTender result:`, result);
+        try {
+            console.log(`[EvaluationPriceTab] Calling parseTender...`);
+            const result = await parseTender(file, firmId);
+            console.log(`[EvaluationPriceTab] parseTender result:`, result);
 
-        if (result.success) {
-            const newRowsMsg = result.newRowsCreated > 0
-                ? `, ${result.newRowsCreated} new rows created`
-                : '';
-            toast({
-                title: 'Tender parsed successfully',
-                description: `Mapped ${result.mappedCount} items (${Math.round(result.overallConfidence * 100)}% confidence)${newRowsMsg}`,
-            });
-        } else {
-            toast({
-                title: 'Failed to parse tender',
-                description: result.error || 'An error occurred while parsing the tender',
-                variant: 'destructive',
-            });
+            if (result.success) {
+                const newRowsMsg = result.newRowsCreated > 0
+                    ? `, ${result.newRowsCreated} new rows created`
+                    : '';
+                toast({
+                    title: 'Tender parsed successfully',
+                    description: `Mapped ${result.mappedCount} items (${Math.round(result.overallConfidence * 100)}% confidence)${newRowsMsg}`,
+                    variant: 'success',
+                });
+            } else {
+                toast({
+                    title: 'Failed to parse tender',
+                    description: result.error || 'An error occurred while parsing the tender',
+                    variant: 'destructive',
+                });
+            }
+        } finally {
+            isParsingRef.current = false;
+            setParsingFileName(null);
         }
     }, [parseTender, shortlistedFirms, toast]);
 
@@ -292,6 +316,7 @@ export function EvaluationPriceTab({
             toast({
                 title: 'Rows merged successfully',
                 description: `${selectedRowIds.size} rows merged into one`,
+                variant: 'success',
             });
             // Clear selection after merge
             if (mergeTableType === 'initial_price') {
@@ -377,11 +402,20 @@ export function EvaluationPriceTab({
         <div className="space-y-6">
             {/* Save Status & Upload Instruction */}
             <div className="flex items-center justify-between">
-                {/* Upload instruction - left side */}
-                <div className="flex items-center gap-1.5 text-xs text-black/60">
-                    <Upload className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
-                    <span>Drag submission PDF onto firm column</span>
-                </div>
+                {/* Upload instruction / parsing status - left side */}
+                {isParsing ? (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--color-accent-copper)]/10 border border-[var(--color-accent-copper)]/30">
+                        <Loader2 className="w-3.5 h-3.5 text-[var(--color-accent-copper)] animate-spin" />
+                        <span className="text-xs text-[var(--color-accent-copper)] font-medium">
+                            Ingesting tender pricing{parsingFileName ? ` — ${parsingFileName}` : ''}…
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-1.5 text-xs text-black/60">
+                        <Upload className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+                        <span>Drag submission PDF onto firm column</span>
+                    </div>
+                )}
                 {/* Save status - right side */}
                 <div className="flex items-center gap-2 text-xs text-black/60">
                     {saveStatus === 'saving' && (

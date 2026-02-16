@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 const STAGES = [
   { key: 'brief', label: 'RFT' },
   { key: 'tender', label: 'SUB' },
-  { key: 'rec', label: 'TRR' },
+  { key: 'rec', label: 'TENDER RECOMMENDATION REPORT' },
   { key: 'award', label: 'LET' },
 ] as const;
 

@@ -124,31 +124,21 @@ export function MarketContext({
   if (!hasRealData) return null;
 
   return (
-    <div className="mt-4 p-4 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
-      <div className="flex items-center gap-2 mb-3">
-        <BarChart3 className="w-4 h-4 text-[var(--color-accent-teal)]" />
-        <span className="text-sm font-medium text-[var(--color-text-primary)]">
-          Market Context
+    <div className="p-3 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-border)]">
+      <div className="flex items-center gap-1.5 mb-2">
+        <BarChart3 className="w-3.5 h-3.5 text-[var(--color-accent-teal)]" />
+        <span className="text-xs font-medium text-[var(--color-text-primary)]">
+          Market
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-2">
         {benchmarks.map((benchmark, index) => (
-          <div
-            key={index}
-            className="p-2 bg-[var(--color-bg-tertiary)] rounded-lg"
-          >
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="text-[var(--color-accent-teal)]">{benchmark.icon}</span>
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {benchmark.metric}
-              </span>
-            </div>
-            <div className="text-sm font-medium text-[var(--color-text-primary)]">
-              {benchmark.value}
-            </div>
-            <div className="text-xs text-[var(--color-text-muted)] mt-0.5">
-              {benchmark.source}
+          <div key={index} className="flex items-start gap-1.5">
+            <span className="mt-0.5 flex-shrink-0 text-[var(--color-accent-teal)]">{benchmark.icon}</span>
+            <div className="min-w-0">
+              <div className="text-[10px] text-[var(--color-text-muted)]">{benchmark.metric}</div>
+              <div className="text-xs font-medium text-[var(--color-text-primary)]">{benchmark.value}</div>
             </div>
           </div>
         ))}

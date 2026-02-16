@@ -115,7 +115,7 @@ export function FirmCardCompact({
           onKeyDown={handleKeyDown}
           onClick={(e) => e.stopPropagation()}
           disabled={isSaving}
-          placeholder="Enter company name"
+          placeholder="Enter Firm Name"
           className={`
             w-full h-7 px-1 py-1 text-[var(--color-text-primary)] text-sm font-medium
             bg-transparent border-none outline-none

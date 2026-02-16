@@ -7,7 +7,7 @@ const problemIcons = [FileX, Clock, TrendingDown, Users];
 
 export function ProblemSection() {
     return (
-        <SectionContainer pattern="dark" background="bg-black" className="py-24">
+        <SectionContainer pattern="dark" patternOffset={9} background="bg-black" className="py-24">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
                 <ScrollReveal>
                     <div>

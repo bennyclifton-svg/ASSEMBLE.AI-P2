@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { DotGridPattern } from './DotGridPattern';
+import { AnimatedDotGrid } from './AnimatedDotGrid';
 
 type PatternVariant = 'none' | 'standard' | 'dark' | 'fine' | 'green' | 'hero';
 
@@ -8,6 +8,7 @@ interface SectionContainerProps {
     id?: string;
     className?: string;
     pattern?: PatternVariant;
+    patternOffset?: number;
     background?: string;
     containerClassName?: string;
 }
@@ -17,12 +18,13 @@ export function SectionContainer({
     id,
     className,
     pattern = 'none',
+    patternOffset = 0,
     background = 'bg-white',
     containerClassName,
 }: SectionContainerProps) {
     return (
         <section id={id} className={cn('relative overflow-hidden', background, className)}>
-            {pattern !== 'none' && <DotGridPattern variant={pattern} />}
+            {pattern !== 'none' && <AnimatedDotGrid variant={pattern} phaseOffset={patternOffset} />}
             <div className={cn('relative max-w-[1280px] mx-auto px-8', containerClassName)}>
                 {children}
             </div>

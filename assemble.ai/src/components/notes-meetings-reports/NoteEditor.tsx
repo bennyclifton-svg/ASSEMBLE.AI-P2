@@ -19,6 +19,8 @@ interface NoteEditorProps {
     className?: string;
     /** Use transparent background (inherits from parent) */
     transparentBg?: boolean;
+    /** Extra content rendered at the right end of the toolbar */
+    toolbarExtra?: React.ReactNode;
 }
 
 export function NoteEditor({
@@ -28,6 +30,7 @@ export function NoteEditor({
     debounceMs = 500,
     className,
     transparentBg = false,
+    toolbarExtra,
 }: NoteEditorProps) {
     const [localContent, setLocalContent] = useState(content);
     const [isSaving, setIsSaving] = useState(false);
@@ -93,7 +96,7 @@ export function NoteEditor({
     }, [localContent, onContentChange]);
 
     return (
-        <div className={cn('relative', className)}>
+        <div className={cn('relative flex flex-col', className)}>
             <RichTextEditor
                 content={localContent}
                 onChange={handleChange}
@@ -102,6 +105,8 @@ export function NoteEditor({
                 variant="compact"
                 toolbarVariant="full"
                 transparentBg={transparentBg}
+                toolbarExtra={toolbarExtra}
+                className="flex-1 min-h-0"
             />
 
             {/* Saving indicator */}

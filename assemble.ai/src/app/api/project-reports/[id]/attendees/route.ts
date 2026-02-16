@@ -12,7 +12,7 @@ import { db, reports, reportAttendees, projectStakeholders } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { addAttendeeSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, asc } from 'drizzle-orm';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -73,7 +73,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             })
             .from(reportAttendees)
             .leftJoin(projectStakeholders, eq(reportAttendees.stakeholderId, projectStakeholders.id))
-            .where(eq(reportAttendees.reportId, id));
+            .where(eq(reportAttendees.reportId, id))
+            .orderBy(asc(projectStakeholders.sortOrder));
 
         // Transform to nested stakeholder structure expected by MeetingStakeholderTable
         const attendees = rawAttendees.map(a => ({

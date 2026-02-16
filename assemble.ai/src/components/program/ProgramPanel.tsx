@@ -45,7 +45,7 @@ export function ProgramPanel({ projectId }: ProgramPanelProps) {
 
         if (!data?.activities) {
             const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const end = new Date(now.getFullYear(), now.getMonth() + 12, 0);
+            const end = new Date(now.getFullYear(), now.getMonth() + 24, 0);
             return { start, end };
         }
 
@@ -59,19 +59,19 @@ export function ProgramPanel({ projectId }: ProgramPanelProps) {
         }
 
         if (dates.length === 0) {
-            // Default to current month + 12 months
+            // Default to current month + 24 months
             const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const end = new Date(now.getFullYear(), now.getMonth() + 12, 0);
+            const end = new Date(now.getFullYear(), now.getMonth() + 24, 0);
             return { start, end };
         }
 
         const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
         let maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
 
-        // Ensure timeline extends at least 6 months from today
-        const sixMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 6, 0);
-        if (maxDate < sixMonthsFromNow) {
-            maxDate = sixMonthsFromNow;
+        // Ensure timeline extends at least 18 months from today
+        const eighteenMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 18, 0);
+        if (maxDate < eighteenMonthsFromNow) {
+            maxDate = eighteenMonthsFromNow;
         }
 
         // Add padding (1 week before and 1 month after)
@@ -81,7 +81,7 @@ export function ProgramPanel({ projectId }: ProgramPanelProps) {
         return { start: minDate, end: maxDate };
     }, [data?.activities, data?.milestones]);
 
-    if (isLoading) {
+    if (isLoading && !data) {
         return (
             <div className="flex h-full items-center justify-center bg-[var(--color-bg-primary)]">
                 <div className="text-sm text-[var(--color-text-muted)]">Loading program...</div>
@@ -99,9 +99,9 @@ export function ProgramPanel({ projectId }: ProgramPanelProps) {
 
     return (
         <RefetchContext.Provider value={refetch}>
-            <div className="flex h-full flex-col bg-[var(--color-bg-primary)]">
-                {/* Grey spacer above toolbar */}
-                <div className="h-10 shrink-0 bg-[#f0f0f0]" />
+            <div className="flex h-full flex-col">
+                {/* Spacer above toolbar */}
+                <div className="h-10 shrink-0" />
                 <ProgramToolbar
                     projectId={projectId}
                     zoomLevel={zoomLevel}

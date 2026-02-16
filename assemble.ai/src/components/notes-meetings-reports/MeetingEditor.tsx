@@ -11,12 +11,12 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { MeetingStakeholderSelector } from './MeetingStakeholderSelector';
 import { MeetingStakeholderTable } from './MeetingStakeholderTable';
-import { MeetingAgendaToolbar } from './MeetingAgendaToolbar';
+import { SectionSelectorDialog } from './SectionSelectorDialog';
 import { MeetingAgendaSection } from './MeetingAgendaSection';
 import { useMeeting, useMeetingSections, useMeetingAttendees } from '@/lib/hooks/use-meetings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, FileText, X } from 'lucide-react';
+import { Loader2, Plus, FileText, X, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MeetingAgendaType, GenerateContentResponse } from '@/types/notes-meetings-reports';
 import type { StakeholderGroup } from '@/types/stakeholder';
@@ -33,6 +33,8 @@ interface MeetingEditorProps {
     projectId: string;
     agendaType: MeetingAgendaType;
     meetingDate: string | null;
+    title: string;
+    onTitleChange: (title: string) => Promise<void>;
     reportingPeriodStart?: string | null;
     reportingPeriodEnd?: string | null;
     onAgendaTypeChange: (type: MeetingAgendaType) => Promise<void>;
@@ -50,6 +52,8 @@ export function MeetingEditor({
     projectId,
     agendaType,
     meetingDate,
+    title,
+    onTitleChange,
     reportingPeriodStart,
     reportingPeriodEnd,
     onAgendaTypeChange,
@@ -61,7 +65,7 @@ export function MeetingEditor({
         sections,
         isLoading: sectionsLoading,
         updateSection,
-        generateSections,
+        syncSections,
     } = useMeetingSections(meetingId);
     const {
         attendees,
@@ -72,7 +76,8 @@ export function MeetingEditor({
         addStakeholderGroup,
     } = useMeetingAttendees(meetingId, projectId);
 
-    const [isGeneratingSections, setIsGeneratingSections] = useState(false);
+    const [isSyncingSections, setIsSyncingSections] = useState(false);
+    const [isSectionDialogOpen, setIsSectionDialogOpen] = useState(false);
     const [isAddingAdhoc, setIsAddingAdhoc] = useState(false);
     const [isAddingGroup, setIsAddingGroup] = useState(false);
     const [groupFeedback, setGroupFeedback] = useState<string | null>(null);
@@ -86,6 +91,39 @@ export function MeetingEditor({
     const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null);
     const [polishingSectionId, setPolishingSectionId] = useState<string | null>(null);
     const [lastSourceInfo, setLastSourceInfo] = useState<SourceInfo | null>(null);
+
+    // Title editing state
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [localTitle, setLocalTitle] = useState(title);
+    const titleInputRef = useRef<HTMLInputElement>(null);
+
+    // Sync local title when prop changes
+    useEffect(() => {
+        setLocalTitle(title);
+    }, [title]);
+
+    const handleTitleClick = useCallback(() => {
+        setIsEditingTitle(true);
+    }, []);
+
+    const handleTitleBlur = useCallback(async () => {
+        setIsEditingTitle(false);
+        if (localTitle !== title) {
+            await onTitleChange(localTitle);
+        }
+    }, [localTitle, title, onTitleChange]);
+
+    const handleTitleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            setIsEditingTitle(false);
+            if (localTitle !== title) {
+                onTitleChange(localTitle);
+            }
+        } else if (e.key === 'Escape') {
+            setLocalTitle(title);
+            setIsEditingTitle(false);
+        }
+    }, [localTitle, title, onTitleChange]);
 
     // Date picker ref and handler
     const dateInputRef = useRef<HTMLInputElement>(null);
@@ -106,18 +144,22 @@ export function MeetingEditor({
         return Array.from(groups);
     }, [attendees]);
 
-    // Handle agenda type change
-    const handleAgendaTypeChange = async (type: MeetingAgendaType) => {
+    // Handle section selection sync
+    const handleSyncSections = useCallback(async (selectedKeys: string[]) => {
         try {
-            setIsGeneratingSections(true);
-            await generateSections(type);
-            await onAgendaTypeChange(type);
+            setIsSyncingSections(true);
+            await syncSections(selectedKeys);
         } catch (error) {
-            console.error('Failed to change agenda type:', error);
+            console.error('Failed to sync sections:', error);
         } finally {
-            setIsGeneratingSections(false);
+            setIsSyncingSections(false);
         }
-    };
+    }, [syncSections]);
+
+    // Current section keys for pre-checking in dialog
+    const currentSectionKeys = useMemo(() =>
+        sections.map(s => s.sectionKey),
+    [sections]);
 
     // Handle stakeholder group selection
     const handleSelectGroup = async (group: StakeholderGroup) => {
@@ -296,42 +338,72 @@ export function MeetingEditor({
 
     return (
         <div className={cn('divide-y divide-[var(--color-border)]', className)}>
-            {/* Project Info & Meeting Date */}
+            {/* Project Info Header Table - TRR style */}
             {meeting?.project && (
-                <div className="px-4 py-3 bg-[var(--color-bg-secondary)]">
-                    <div className="grid grid-cols-[auto_1fr_auto] gap-6 text-sm">
-                        <div className="whitespace-nowrap">
-                            <span className="text-[var(--color-text-muted)]">Project:</span>
-                            <span className="ml-2 text-[var(--color-text-primary)]">
-                                {meeting.project.name}
-                            </span>
-                        </div>
-                        <div className="min-w-0">
-                            <span className="text-[var(--color-text-muted)]">Address:</span>
-                            <span className="ml-2 text-[var(--color-text-primary)]">
-                                {meeting.project.address || 'Not set'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                            <span className="text-[var(--color-text-muted)]">Meeting Date:</span>
-                            <div
-                                className="relative cursor-pointer hover:bg-[var(--color-bg-tertiary)] px-2 py-0.5 rounded transition-colors"
-                                onClick={handleDateClick}
-                            >
-                                <span className="text-[var(--color-text-primary)] select-none">
-                                    {formatDisplayDate(meetingDate)}
-                                </span>
-                                <input
-                                    ref={dateInputRef}
-                                    type="date"
-                                    value={meetingDate || ''}
-                                    onChange={(e) => onMeetingDateChange(e.target.value || null)}
-                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                    tabIndex={-1}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                <div className="overflow-hidden rounded-lg">
+                    <table className="w-full text-sm">
+                        <tbody>
+                            <tr className="border-b border-[var(--color-border)]">
+                                <td className="w-36 px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                                    Project Name
+                                </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
+                                    {meeting.project.name}
+                                </td>
+                            </tr>
+                            <tr className="border-b border-[var(--color-border)]">
+                                <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                                    Address
+                                </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
+                                    {meeting.project.address || '-'}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                                    Document
+                                </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
+                                    {isEditingTitle ? (
+                                        <Input
+                                            value={localTitle}
+                                            onChange={(e) => setLocalTitle(e.target.value)}
+                                            onBlur={handleTitleBlur}
+                                            onKeyDown={handleTitleKeyDown}
+                                            autoFocus
+                                            ref={titleInputRef}
+                                            className="h-7 text-sm font-semibold bg-transparent border-[var(--color-border)] focus:border-[var(--color-accent-copper)]"
+                                        />
+                                    ) : (
+                                        <span
+                                            onClick={handleTitleClick}
+                                            className="cursor-pointer hover:text-[var(--color-accent-copper)] transition-colors"
+                                            title="Click to edit title"
+                                        >
+                                            {title}
+                                        </span>
+                                    )}
+                                </td>
+                                <td
+                                    className="px-4 py-2.5 text-[var(--color-document-header)] font-medium cursor-pointer relative whitespace-nowrap text-right"
+                                    onClick={handleDateClick}
+                                >
+                                    <span className="select-none">
+                                        <span className="text-[var(--color-document-header)] font-medium">Issued</span>
+                                        <span className="ml-4">{formatDisplayDate(meetingDate)}</span>
+                                    </span>
+                                    <input
+                                        ref={dateInputRef}
+                                        type="date"
+                                        value={meetingDate || ''}
+                                        onChange={(e) => onMeetingDateChange(e.target.value || null)}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                        tabIndex={-1}
+                                    />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             )}
 
@@ -434,23 +506,32 @@ export function MeetingEditor({
                     <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
                         Agenda:
                     </h3>
-                    <MeetingAgendaToolbar
-                        currentType={agendaType}
-                        onSelectType={handleAgendaTypeChange}
-                        isLoading={isGeneratingSections}
-                    />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsSectionDialogOpen(true)}
+                        disabled={isSyncingSections}
+                        className="h-8 gap-1.5"
+                    >
+                        {isSyncingSections ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                            <ListChecks className="h-4 w-4" />
+                        )}
+                        Select Sections
+                    </Button>
                 </div>
 
-                {sectionsLoading || isGeneratingSections ? (
+                {sectionsLoading || isSyncingSections ? (
                     <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-5 w-5 animate-spin text-[var(--color-text-muted)]" />
                         <span className="ml-2 text-sm text-[var(--color-text-muted)]">
-                            {isGeneratingSections ? 'Generating sections...' : 'Loading...'}
+                            {isSyncingSections ? 'Updating sections...' : 'Loading...'}
                         </span>
                     </div>
                 ) : topLevelSections.length === 0 ? (
                     <div className="text-sm text-[var(--color-text-muted)] py-4 text-center border border-dashed border-[var(--color-border)] rounded-md">
-                        No agenda sections. Select an agenda type above to generate sections.
+                        No agenda sections. Click &quot;Select Sections&quot; to choose which sections to include.
                     </div>
                 ) : (
                     <>
@@ -488,6 +569,17 @@ export function MeetingEditor({
                     </>
                 )}
             </div>
+
+            {/* Section Selector Dialog */}
+            <SectionSelectorDialog
+                projectId={projectId}
+                isOpen={isSectionDialogOpen}
+                onClose={() => setIsSectionDialogOpen(false)}
+                onApply={handleSyncSections}
+                currentSectionKeys={currentSectionKeys}
+                variant="meeting"
+                entityTitle={title}
+            />
         </div>
     );
 }

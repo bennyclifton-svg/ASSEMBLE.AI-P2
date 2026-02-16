@@ -13,7 +13,6 @@ import { addenda, addendumTransmittals, documents, versions, fileAssets, project
 import { eq } from 'drizzle-orm';
 import { exportToPDF } from '@/lib/export/pdf-enhanced';
 import { exportToDOCX } from '@/lib/export/docx-enhanced';
-import { getCategoryById } from '@/lib/constants/categories';
 
 type RouteParams = {
     params: Promise<{ id: string }>;
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .where(eq(projectDetails.projectId, addendum.projectId))
             .limit(1);
 
-        // Fetch transmittal documents with category/subcategory info
+        // Fetch transmittal documents with category/subcategory and drawing info
         const transmittalDocs = await db
             .select({
                 originalName: fileAssets.originalName,
@@ -74,6 +73,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 categoryName: categories.name,
                 subcategoryId: documents.subcategoryId,
                 subcategoryName: subcategories.name,
+                drawingNumber: fileAssets.drawingNumber,
+                drawingName: fileAssets.drawingName,
+                drawingRevision: fileAssets.drawingRevision,
             })
             .from(addendumTransmittals)
             .innerJoin(documents, eq(addendumTransmittals.documentId, documents.id))
@@ -89,11 +91,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const projectName = details?.projectName || project?.name || 'Untitled Project';
         const address = details?.address || '';
 
+        // Format issued date for display (fallback to today's date, matching screen component)
+        const addendumDate = addendum.addendumDate || new Date().toISOString().split('T')[0];
+        let issuedDateDisplay = '';
+        if (addendumDate) {
+            const [year, month, day] = addendumDate.split('-');
+            issuedDateDisplay = `Issued ${day}/${month}/${year}`;
+        }
+
         // Generate HTML content
         const htmlContent = generateAddendumHTML({
             projectName,
             address,
             addendumLabel,
+            issuedDate: issuedDateDisplay,
             content: addendum.content || '',
             transmittalDocs,
         });
@@ -153,36 +164,46 @@ interface TransmittalDoc {
     categoryName: string | null;
     subcategoryId: string | null;
     subcategoryName: string | null;
+    drawingNumber: string | null;
+    drawingName: string | null;
+    drawingRevision: string | null;
 }
 
 interface AddendumHTMLParams {
     projectName: string;
     address: string;
     addendumLabel: string;
+    issuedDate: string;
     content: string;
     transmittalDocs: TransmittalDoc[];
 }
 
 function generateAddendumHTML(params: AddendumHTMLParams): string {
-    const { projectName, address, addendumLabel, content, transmittalDocs } = params;
+    const { projectName, address, addendumLabel, issuedDate, content, transmittalDocs } = params;
 
-    // Generate transmittal table rows matching webpage format
+    // Generate transmittal table rows matching screen layout (6 columns)
     const transmittalRows = transmittalDocs.length > 0
         ? transmittalDocs.map((doc, index) => {
-            // Get color from constants based on categoryId
-            const category = doc.categoryId ? getCategoryById(doc.categoryId) : null;
-            const categoryColor = category?.color || '#666';
+            const displayName = doc.drawingName || doc.originalName;
+            const rev = doc.drawingRevision || '-';
+            const dwg = doc.drawingNumber || '-';
             return `
             <tr>
-                <td class="num-col">${index + 1}</td>
-                <td>${escapeHtml(doc.originalName)}</td>
-                <td class="rev-col">${String(doc.versionNumber).padStart(2, '0')}</td>
-                <td style="color: ${categoryColor}">${doc.categoryName ? escapeHtml(doc.categoryName) : '-'}</td>
-                <td style="color: ${categoryColor}">${doc.subcategoryName ? escapeHtml(doc.subcategoryName) : '-'}</td>
+                <td class="num-col" style="color: #999">${index + 1}</td>
+                <td class="dwg-col">${escapeHtml(dwg)}</td>
+                <td>${escapeHtml(displayName)}</td>
+                <td class="rev-col">${escapeHtml(rev)}</td>
+                <td>${doc.categoryName ? escapeHtml(doc.categoryName) : '-'}</td>
+                <td>${doc.subcategoryName ? escapeHtml(doc.subcategoryName) : '-'}</td>
             </tr>
         `;
         }).join('')
-        : '<tr><td colspan="5" style="text-align: center; color: #666;">No documents attached</td></tr>';
+        : '<tr><td colspan="6" style="text-align: center; color: #666;">No documents attached</td></tr>';
+
+    // Sanitize rich content (allow safe HTML tags from the editor)
+    const sanitizedContent = content
+        ? sanitizeHtml(content)
+        : '<p style="color: #666;">No content provided.</p>';
 
     return `
 <!DOCTYPE html>
@@ -204,32 +225,58 @@ function generateAddendumHTML(params: AddendumHTMLParams): string {
         }
         .project-info-table td {
             padding: 10px 12px;
-            border: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
         }
-        .project-info-table td:first-child {
+        .project-info-table .label-col {
             width: 140px;
-            font-weight: bold;
-            background-color: #f5f5f5;
+            font-weight: 500;
+            color: #1a6fb5;
+        }
+        .project-info-table .issued-col {
+            width: 180px;
+            text-align: right;
+            font-weight: 500;
+            color: #1a6fb5;
         }
         .content-section {
             margin: 24px 0;
-            padding: 16px;
-            background-color: #fafafa;
-            border: 1px solid #eee;
-            border-radius: 4px;
         }
         .content-section h3 {
             margin-top: 0;
-            color: #444;
+            margin-bottom: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #333;
         }
+        .content-section .content-body {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .content-section .content-body h1,
+        .content-section .content-body h2,
+        .content-section .content-body h3 {
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        .content-section .content-body h1 { font-size: 18px; margin: 16px 0 8px; }
+        .content-section .content-body h2 { font-size: 16px; margin: 14px 0 6px; }
+        .content-section .content-body h3 { font-size: 14px; margin: 12px 0 4px; }
+        .content-section .content-body p { margin: 4px 0; }
+        .content-section .content-body ul { margin: 4px 0; padding-left: 24px; }
+        .content-section .content-body ol { margin: 4px 0; padding-left: 24px; }
+        .content-section .content-body li { margin: 2px 0; }
         .transmittal-section {
             margin-top: 32px;
         }
         .transmittal-section h3 {
-            color: #c65d00;
-            border-bottom: 2px solid #c65d00;
-            padding-bottom: 8px;
-            margin-bottom: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #333;
+            margin-bottom: 8px;
         }
         .transmittal-table {
             width: 100%;
@@ -237,21 +284,25 @@ function generateAddendumHTML(params: AddendumHTMLParams): string {
         }
         .transmittal-table th,
         .transmittal-table td {
-            padding: 10px 12px;
+            padding: 6px 12px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #eee;
         }
         .transmittal-table th {
-            background-color: #f5f5f5;
-            font-weight: 600;
-            color: #666;
+            background-color: #f8f8f8;
+            font-weight: 500;
+            color: #333;
+            font-size: 13px;
         }
         .transmittal-table .num-col {
-            width: 40px;
+            width: 35px;
             color: #999;
         }
+        .transmittal-table .dwg-col {
+            width: 90px;
+        }
         .transmittal-table .rev-col {
-            width: 60px;
+            width: 50px;
             text-align: center;
         }
         .transmittal-table th.rev-col {
@@ -262,22 +313,25 @@ function generateAddendumHTML(params: AddendumHTMLParams): string {
 <body>
     <table class="project-info-table">
         <tr>
-            <td>Project Name</td>
+            <td class="label-col">Project Name</td>
             <td>${escapeHtml(projectName)}</td>
+            <td></td>
         </tr>
         <tr>
-            <td>Address</td>
+            <td class="label-col">Address</td>
             <td>${escapeHtml(address)}</td>
+            <td></td>
         </tr>
         <tr>
-            <td>Document</td>
+            <td class="label-col">Document</td>
             <td><strong>${escapeHtml(addendumLabel)}</strong></td>
+            <td class="issued-col">${escapeHtml(issuedDate)}</td>
         </tr>
     </table>
 
     <div class="content-section">
         <h3>Addendum Details</h3>
-        <div>${content ? escapeHtml(content).replace(/\n/g, '<br>') : '<p style="color: #666;">No content provided.</p>'}</div>
+        <div class="content-body">${sanitizedContent}</div>
     </div>
 
     <div class="transmittal-section">
@@ -286,7 +340,8 @@ function generateAddendumHTML(params: AddendumHTMLParams): string {
             <thead>
                 <tr>
                     <th class="num-col">#</th>
-                    <th>Document</th>
+                    <th class="dwg-col">DWG #</th>
+                    <th>Name</th>
                     <th class="rev-col">Rev</th>
                     <th>Category</th>
                     <th>Subcategory</th>
@@ -309,4 +364,18 @@ function escapeHtml(text: string): string {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+/**
+ * Sanitize HTML from the rich text editor — allow safe tags only.
+ * Strips dangerous tags (script, iframe, etc.) while preserving formatting.
+ */
+function sanitizeHtml(html: string): string {
+    // Remove script/iframe/object/embed tags and their content
+    let sanitized = html.replace(/<(script|iframe|object|embed|form|input|textarea|select|button)[^>]*>[\s\S]*?<\/\1>/gi, '');
+    // Remove event handlers
+    sanitized = sanitized.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
+    // Remove javascript: URLs
+    sanitized = sanitized.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '');
+    return sanitized;
 }

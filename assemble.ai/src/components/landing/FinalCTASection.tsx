@@ -5,7 +5,7 @@ import { finalCtaContent } from './data/landing-data';
 
 export function FinalCTASection() {
     return (
-        <SectionContainer pattern="dark" background="bg-black" className="py-24">
+        <SectionContainer pattern="dark" patternOffset={4} background="bg-black" className="py-24">
             <ScrollReveal>
                 <div className="text-center max-w-3xl mx-auto">
                     <h2 className="serif text-[clamp(44px,5.5vw,72px)] leading-[1.05] tracking-[-1px] mb-6">

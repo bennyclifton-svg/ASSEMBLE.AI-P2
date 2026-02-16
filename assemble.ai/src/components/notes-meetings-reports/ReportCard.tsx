@@ -127,6 +127,8 @@ export function ReportCard({
                         projectId={projectId}
                         contentsType={report.contentsType}
                         reportDate={report.reportDate}
+                        title={report.title}
+                        onTitleChange={async (title) => { await onUpdate({ title }); }}
                         preparedFor={report.preparedFor}
                         preparedBy={report.preparedBy}
                         reportingPeriodStart={report.reportingPeriodStart}

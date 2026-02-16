@@ -30,6 +30,18 @@ const testFilenames = [
     'H-103 [D].pdf',
     'H-000 [C].pdf',
     'H-100 [C].pdf',
+    // Architectural drawings from screenshot (AI was extracting incorrectly)
+    '1115 CC-46 WET AREAS A.pdf',
+    '1115 CC-52 FIXTURES & FINISHES A.pdf',
+    '1115 CC-08 LEVEL 05 E.pdf',
+    '1115 CC-43 ELEC LEVEL 07 B.pdf',
+    '1115 CC-29 RCP LEVEL 02 C.pdf',
+    '1115 CC-28 RCP LEVEL 01 C.pdf',
+    '1115 CC-31 RCP LEVEL 05 C.pdf',
+    '1115 CC-32 RCP LEVEL 06 C.pdf',
+    '1115 CC-33 RCP LEVEL 07 C.pdf',
+    '1115 CC-37 ELEC GROUND FLOOR B.pdf',
+    '1115 CC-34 RCP LEVEL 08 C.pdf',
 ];
 
 console.log('Drawing Extraction Test Results\n');
