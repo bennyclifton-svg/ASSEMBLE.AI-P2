@@ -26,7 +26,7 @@ async function parseWithLlamaParse(
 
     // Create form data for file upload
     const formData = new FormData();
-    formData.append('file', new Blob([fileBuffer]), filename);
+    formData.append('file', new Blob([new Uint8Array(fileBuffer)]), filename);
 
     // Upload file to LlamaParse
     const uploadResponse = await fetch('https://api.cloud.llamaindex.ai/api/parsing/upload', {
@@ -120,7 +120,7 @@ async function parseWithUnstructured(
     }
 
     const formData = new FormData();
-    formData.append('files', new Blob([fileBuffer]), filename);
+    formData.append('files', new Blob([new Uint8Array(fileBuffer)]), filename);
 
     const response = await fetch('https://api.unstructured.io/general/v0/general', {
         method: 'POST',
