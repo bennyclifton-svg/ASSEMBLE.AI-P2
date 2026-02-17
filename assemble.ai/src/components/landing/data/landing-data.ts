@@ -10,7 +10,7 @@ export const navLinks = [
 
 export const heroContent = {
     headline: [
-        { gray: 'Tender,', white: 'at speed' },
+        { gray: 'Tender,', white: 'at speed.' },
         { gray: 'Award,', white: 'with clarity.' },
     ],
     subtitle: 'AI-powered construction management',
@@ -26,9 +26,9 @@ export const statsContent = {
     label: 'Results speak',
     headline: 'Less admin. More delivery.',
     stats: [
-        { value: '80%', label: 'Reduction in tender preparation, evaluation and award time' },
-        { value: '10+', label: 'Hours saved per week on document & information management' },
-        { value: '10X', label: 'admin speed and skill' },
+        { value: '80%', label: 'Reduction in tender preparation, evaluation and award time.' },
+        { value: '10+', label: 'Hours saved per week on document & information management.' },
+        { value: '10X', label: 'Administration productivity.' },
     ],
 };
 
@@ -40,8 +40,8 @@ export const aiSectionContent = {
 };
 
 export const problemContent = {
-    headline: 'Big projects are hard.',
-    description: 'Pushing to deadlines, mitigating scope creep, variation and delay.  Foundry forges forward, information flows, empowers iteration.',
+    headline: 'Construction management is hard.',
+    description: 'Constant pushing to deadlines, dealing with scope creep, variations and EOT. Foundry forges forward, information flows, empowers iteration.',
     problems: [
         'Document intelligence',
         'Tender automation',
@@ -62,7 +62,7 @@ export const featuresContent = {
     features: [
         {
             title: 'Project Setup',
-            description: 'Evolve your project. Not your spreadsheet. Start with what you know, fill gaps as you go. AI generates objectives and stakeholders from your profiler data.',
+            description: 'Evolve your project. Not your spreadsheet. Start with what you know, AI fill the gaps as you go.',
             benefit: 'Organic growth. Define what you know, when you know it.',
         },
         {
@@ -189,5 +189,5 @@ export const finalCtaContent = {
 };
 
 export const footerContent = {
-    copyright: '2025 ASSEMBLE.AI - Built for the teams who build our world.',
+    copyright: '2026 FOUNDRYCM',
 };

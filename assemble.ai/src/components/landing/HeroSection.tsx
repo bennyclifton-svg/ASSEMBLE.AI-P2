@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { SectionContainer } from './shared/SectionContainer';
 import { Button } from './shared/Button';
 import { heroContent } from './data/landing-data';
@@ -60,16 +59,6 @@ function HeroMockup() {
 }
 
 export function HeroSection() {
-    const [email, setEmail] = useState('');
-    const router = useRouter();
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (email) {
-            router.push(`/register?email=${encodeURIComponent(email)}`);
-        }
-    };
-
     return (
         <SectionContainer pattern="hero" patternOffset={0} background="bg-black" className="pt-[120px] pb-[80px]">
             {/* Gradient fade at bottom of hero pattern */}
@@ -91,24 +80,6 @@ export function HeroSection() {
                         {heroContent.subtitle}
                     </p>
 
-                    <form onSubmit={handleSubmit} className="flex gap-3 flex-wrap">
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Enter your email"
-                            className="px-4 py-3 bg-[var(--gray-900)] border border-[var(--gray-700)] rounded-lg text-white text-sm w-full max-w-[280px] focus:outline-none focus:border-[var(--gray-500)] placeholder:text-[var(--gray-500)]"
-                            required
-                        />
-
-                    </form>
-
-                    <p className="text-[13px] text-[var(--gray-500)] mt-4">
-                        By signing up, you agree to our{' '}
-                        <a href="/terms" className="underline hover:text-[var(--gray-400)]">Terms</a>
-                        {' '}and{' '}
-                        <a href="/privacy" className="underline hover:text-[var(--gray-400)]">Privacy Policy</a>
-                    </p>
                 </div>
 
                 {/* Hero Mockup - hidden on tablet/mobile */}

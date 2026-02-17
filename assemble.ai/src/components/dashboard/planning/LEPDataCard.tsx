@@ -194,7 +194,7 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
                     </button>
                 )}
                 {status === 'loading' && (
-                    <div className="w-3.5 h-3.5 border-2 border-[var(--color-accent-copper)] border-t-transparent rounded-full animate-spin" />
+                    <DiamondIcon variant="empty" className="w-3.5 h-3.5 text-[var(--color-accent-copper)] animate-diamond-spin" />
                 )}
             </div>
 

@@ -6,7 +6,6 @@
 
 import { NavBar } from '@/components/landing/NavBar';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { LogoBar } from '@/components/landing/LogoBar';
 import { StatsSection } from '@/components/landing/StatsSection';
 import { AISection } from '@/components/landing/AISection';
 import { ProblemSection } from '@/components/landing/ProblemSection';
@@ -26,7 +25,6 @@ export default function LandingPage() {
             <NavBar />
             <main>
                 <HeroSection />
-                <LogoBar />
                 <StatsSection />
                 <AISection />
                 <ProblemSection />

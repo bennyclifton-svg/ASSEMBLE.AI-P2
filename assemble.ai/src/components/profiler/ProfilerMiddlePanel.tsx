@@ -607,7 +607,7 @@ export function ProfilerMiddlePanel({
           </div>
 
           {/* Column 3: Context Chips + Complexity Score + Risk Flags */}
-          <div className="w-[175px] flex-shrink-0 space-y-4">
+          <div className="w-[175px] flex-shrink-0 space-y-4 mt-7">
             {/* Context Chips (NCC class, estimated cost, programme) */}
             {selectedSubclasses.length > 0 && (
               <ContextChips

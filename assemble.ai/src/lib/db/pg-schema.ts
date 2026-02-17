@@ -1624,6 +1624,20 @@ export const reportTransmittalsRelations = relations(reportTransmittals, ({ one 
 }));
 
 // ============================================================================
+// DEMO REQUESTS / LEADS (Landing Page Lead Capture)
+// ============================================================================
+
+export const demoRequests = pgTable('demo_requests', {
+    id: text('id').primaryKey(),
+    name: text('name'),
+    email: text('email').notNull(),
+    company: text('company'),
+    message: text('message'),
+    source: text('source').notNull().default('demo_form'), // 'demo_form' | 'hero_email'
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
+// ============================================================================
 // BILLING / PRODUCTS SCHEMA (Phase 5 - Polar Integration)
 // ============================================================================
 

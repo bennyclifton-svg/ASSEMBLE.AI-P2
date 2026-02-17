@@ -105,6 +105,8 @@ export const {
     reportSections,
     reportAttendees,
     reportTransmittals,
+    // Demo requests / leads
+    demoRequests,
     // Billing tables (Phase 5)
     products,
     transactions,

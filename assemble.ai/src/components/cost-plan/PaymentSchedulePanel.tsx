@@ -214,7 +214,7 @@ export function PaymentSchedulePanel({ projectId }: PaymentSchedulePanelProps) {
                     <select
                         value=""
                         onChange={(e) => setSelectedStakeholderId(e.target.value || null)}
-                        className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-primary)] px-2 py-1 rounded hover:border-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-teal)] transition-colors cursor-pointer min-w-[200px]"
+                        className="text-xs text-white bg-[#1776c1] px-2.5 py-1.5 rounded font-medium hover:opacity-90 focus:outline-none transition-colors cursor-pointer min-w-[200px]"
                     >
                         <option value="">Discipline...</option>
                         {stakeholdersWithCostLines.map(s => (
@@ -229,7 +229,7 @@ export function PaymentSchedulePanel({ projectId }: PaymentSchedulePanelProps) {
                             const [year, month] = e.target.value.split('-').map(Number);
                             setSelectedMonth({ year, month });
                         }}
-                        className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-primary)] px-2 py-1 rounded hover:border-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-teal)] transition-colors cursor-pointer"
+                        className="text-xs text-[var(--primary-foreground)] bg-[var(--color-accent-green)] px-2.5 py-1.5 rounded font-medium hover:bg-[var(--primitive-green-dark)] focus:outline-none transition-colors cursor-pointer"
                     >
                         {monthOptions.map(option => (
                             <option key={option.value} value={option.value}>
@@ -253,7 +253,7 @@ export function PaymentSchedulePanel({ projectId }: PaymentSchedulePanelProps) {
                 <select
                     value={selectedStakeholderId}
                     onChange={(e) => setSelectedStakeholderId(e.target.value || null)}
-                    className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-primary)] px-2 py-1 rounded hover:border-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-teal)] transition-colors cursor-pointer min-w-[200px]"
+                    className="text-xs text-white bg-[#1776c1] px-2.5 py-1.5 rounded font-medium hover:opacity-90 focus:outline-none transition-colors cursor-pointer min-w-[200px]"
                 >
                     <option value="">Discipline...</option>
                     {stakeholdersWithCostLines.map(s => (
@@ -268,7 +268,7 @@ export function PaymentSchedulePanel({ projectId }: PaymentSchedulePanelProps) {
                         const [year, month] = e.target.value.split('-').map(Number);
                         setSelectedMonth({ year, month });
                     }}
-                    className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-primary)] px-2 py-1 rounded hover:border-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-teal)] transition-colors cursor-pointer"
+                    className="text-xs text-[var(--primary-foreground)] bg-[var(--color-accent-green)] px-2.5 py-1.5 rounded font-medium hover:bg-[var(--primitive-green-dark)] focus:outline-none transition-colors cursor-pointer"
                 >
                     {monthOptions.map(option => (
                         <option key={option.value} value={option.value}>

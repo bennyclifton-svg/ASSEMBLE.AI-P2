@@ -6,9 +6,11 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from './shared/Button';
 import { TypingLogo } from '@/components/brand/TypingLogo';
+import { BookDemoDialog } from './BookDemoDialog';
 
 export function NavBar() {
     const [isScrolled, setIsScrolled] = useState(false);
+    const [demoOpen, setDemoOpen] = useState(false);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -21,6 +23,7 @@ export function NavBar() {
 
 
     return (
+        <>
         <nav
             className={cn(
                 'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
@@ -49,7 +52,7 @@ export function NavBar() {
                     <Link href="/login" className="text-sm text-white/60 hover:text-white transition-colors duration-200 hidden sm:block">
                         Login
                     </Link>
-                    <Button variant="ghost" hasArrow={false} href="/demo" className="hidden sm:flex">
+                    <Button variant="ghost" hasArrow={false} onClick={() => setDemoOpen(true)} className="hidden sm:flex">
                         Book a demo
                     </Button>
                     <Button variant="black" href="/register">
@@ -58,5 +61,7 @@ export function NavBar() {
                 </div>
             </div>
         </nav>
+        <BookDemoDialog open={demoOpen} onOpenChange={setDemoOpen} />
+        </>
     );
 }

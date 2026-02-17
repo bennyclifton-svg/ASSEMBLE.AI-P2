@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MapPin, Search } from 'lucide-react';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 import type { PlaceSelection } from '@/types/lep';
 
 interface AddressAutocompleteProps {
@@ -420,7 +421,7 @@ export function AddressAutocomplete({ value, onSelect, onManualEdit, placeholder
                     />
                     {(isLoading || isSaving) && (
                         <div className="absolute right-4 top-2.5 pointer-events-none">
-                            <div className="w-3 h-3 border-2 border-[var(--color-accent-copper)] border-t-transparent rounded-full animate-spin" />
+                            <DiamondIcon variant="empty" className="w-3.5 h-3.5 text-[var(--color-accent-copper)] animate-diamond-spin" />
                         </div>
                     )}
                     {!isLoading && !isSaving && isFocused && inputValue.length > 0 && (

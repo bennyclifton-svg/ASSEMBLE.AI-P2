@@ -9,8 +9,8 @@ export function StatsSection() {
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 mb-12">
                 <div>
                     <h2 className="serif text-[clamp(36px,4vw,52px)] leading-[1.1] text-[var(--gray-800)] max-w-xl">
-                        Every trade tendered, evaluated, awarded.{' '}
-                        <span className="text-[var(--primary)]">With detail and accuracy.</span>
+                        Objectives, cost plans, programmes and reports –{' '}
+                        <span className="text-[var(--primary)]">aligned, automated and integrated</span>, powered by AI.
                     </h2>
                 </div>
 

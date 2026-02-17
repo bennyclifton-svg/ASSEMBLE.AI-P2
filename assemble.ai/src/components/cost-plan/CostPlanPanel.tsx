@@ -888,7 +888,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                         const [year, month] = e.target.value.split('-').map(Number);
                         setSelectedMonth({ year, month });
                     }}
-                    className="text-xs bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] text-[var(--color-text-primary)] px-2 py-1 rounded hover:border-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-teal)] transition-colors cursor-pointer"
+                    className="text-xs text-[var(--primary-foreground)] bg-[var(--color-accent-green)] px-2.5 py-1.5 rounded font-medium hover:bg-[var(--primitive-green-dark)] focus:outline-none transition-colors cursor-pointer"
                     title="Select reporting month"
                 >
                     {monthOptions.map(option => (

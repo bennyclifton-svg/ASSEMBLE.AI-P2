@@ -9,12 +9,13 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { Calendar, AlertCircle, Copy, Loader2 } from 'lucide-react';
+import { Calendar, AlertCircle, Copy, Loader2, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionHeader } from '@/components/shared/SectionHeader';
 import { NumberedTabs } from '@/components/shared/NumberedTabs';
 import { ExportButtonGroup } from '@/components/shared/ExportButtonGroup';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import { MeetingContent } from './MeetingContent';
 import { useMeetings, useMeetingMutations, useMeetingExport } from '@/lib/hooks/use-meetings';
 import { useMeetingsSectionUI } from '@/lib/contexts/procurement-ui-context';
@@ -68,6 +69,7 @@ export function MeetingsPanel({
     // Export and email hooks for active meeting
     const { exportMeeting } = useMeetingExport(activeMeeting?.id || null);
     const [isCopying, setIsCopying] = useState(false);
+    const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
 
     // Auto-select first meeting when loaded
     useEffect(() => {
@@ -207,6 +209,19 @@ export function MeetingsPanel({
                     )}
                 </Button>
             </div>
+            {onDeleteGroup && (
+                <div className="flex items-center gap-1">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowDeleteGroupDialog(true)}
+                        className="h-7 w-7 p-0 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-border)] transition-colors"
+                        title="Delete meeting group"
+                    >
+                        <Trash className="w-4 h-4" />
+                    </Button>
+                </div>
+            )}
             <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
             <ExportButtonGroup
                 onExportPdf={() => handleExport('pdf')}
@@ -252,6 +267,16 @@ export function MeetingsPanel({
                     )}
                 </div>
             )}
+
+            <AuroraConfirmDialog
+                open={showDeleteGroupDialog}
+                onOpenChange={setShowDeleteGroupDialog}
+                onConfirm={() => onDeleteGroup?.()}
+                title={`Delete "${groupTitle || 'Meetings'}" group`}
+                description="This will permanently delete this meeting group and all meetings within it, including their sections, attendees, and attachments."
+                confirmLabel="Delete Group"
+                variant="destructive"
+            />
         </div>
     );
 }
