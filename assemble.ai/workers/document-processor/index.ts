@@ -39,7 +39,7 @@ async function bootstrap() {
     const { generateEmbedding, generateEmbeddings } = await import('../../src/lib/rag/embeddings');
     const { QUEUE_NAMES, getConnection } = await import('../../src/lib/queue/client');
     const { eq, and } = await import('drizzle-orm');
-    const { storage } = await import('../../src/lib/storage/local');
+    const { storage } = await import('../../src/lib/storage');
 
     // Types
     interface DocumentProcessingJob {
