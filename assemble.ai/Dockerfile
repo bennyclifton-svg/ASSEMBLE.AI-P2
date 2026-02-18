@@ -86,4 +86,4 @@ ENV PORT=3000
 #   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
 # Start both Next.js and worker processes
-CMD ["concurrently", "-n", "next,doc-worker,draw-worker", "node server.js", "node dist/workers/workers/document-processor/index.js", "node dist/workers/workers/drawing-extractor/index.js"]
+CMD ["concurrently", "-n", "next,doc-worker,draw-worker", "node server.js", "node dist/workers/document-processor/index.js", "node dist/workers/drawing-extractor/index.js"]
