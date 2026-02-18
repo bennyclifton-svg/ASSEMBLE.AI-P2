@@ -37,7 +37,7 @@ async function bootstrap() {
     const { extractDrawingInfo } = await import('../../src/lib/services/drawing-extraction');
     const { QUEUE_NAMES, getConnection } = await import('../../src/lib/queue/client');
     const { eq } = await import('drizzle-orm');
-    const { storage } = await import('../../src/lib/storage/local');
+    const { storage } = await import('../../src/lib/storage');
 
     // Types
     interface DrawingExtractionJob {

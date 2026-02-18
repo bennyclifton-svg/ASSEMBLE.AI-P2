@@ -13,7 +13,7 @@
     "test": "jest",
     "worker:dev": "tsx workers/document-processor/index.ts",
     "worker:drawing": "tsx workers/drawing-extractor/index.ts",
-    "worker:build": "node -e \"require('esbuild').buildSync({entryPoints:['workers/document-processor/index.ts','workers/drawing-extractor/index.ts'],bundle:true,platform:'node',target:'node20',outdir:'dist/workers',format:'cjs',external:['sharp']})\"",
+    "worker:build": "node -e \"require('esbuild').buildSync({entryPoints:['workers/document-processor/index.ts','workers/drawing-extractor/index.ts'],bundle:true,platform:'node',target:'node20',outdir:'dist/workers',format:'cjs',external:['sharp'],tsconfig:'tsconfig.json'})\"",
     "worker:start": "node dist/workers/document-processor/index.js",
     "db:up": "docker-compose up -d",
     "db:down": "docker-compose down",
