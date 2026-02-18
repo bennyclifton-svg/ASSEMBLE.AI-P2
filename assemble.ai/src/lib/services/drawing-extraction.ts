@@ -11,7 +11,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { parseDocument } from '@/lib/rag/parsing';
+import { parseDocument } from '../rag/parsing';
 
 // ============================================================================
 // TYPES
