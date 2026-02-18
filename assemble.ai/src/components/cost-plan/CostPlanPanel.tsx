@@ -353,17 +353,50 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             await updateCostLine(update.costLineId, { budgetCents: update.budgetCents });
         }
         // Build stakeholder lookup by name (case-insensitive) for auto-mapping disciplines
+        // Also index by disciplineOrTrade for broader matching
         const consultantByName = new Map<string, string>();
         const contractorByName = new Map<string, string>();
         for (const s of stakeholders) {
             if (!s.isEnabled) continue;
-            const key = (s.name || s.disciplineOrTrade || '').toLowerCase().trim();
-            if (!key) continue;
+            const nameKey = (s.name || '').toLowerCase().trim();
+            const discKey = (s.disciplineOrTrade || '').toLowerCase().trim();
             if (s.stakeholderGroup === 'consultant') {
-                consultantByName.set(key, s.id);
+                if (nameKey) consultantByName.set(nameKey, s.id);
+                if (discKey && discKey !== nameKey) consultantByName.set(discKey, s.id);
             } else if (s.stakeholderGroup === 'contractor') {
-                contractorByName.set(key, s.id);
+                if (nameKey) contractorByName.set(nameKey, s.id);
+                if (discKey && discKey !== nameKey) contractorByName.set(discKey, s.id);
             }
+        }
+        // Alias map: activity names in budget profiles → possible stakeholder names
+        const ACTIVITY_ALIASES: Record<string, string[]> = {
+            'architect': ['architecture', 'architect'],
+            'architecture': ['architecture', 'architect'],
+            'cost planning': ['cost planning', 'quantity surveyor', 'qs'],
+            'building certifier': ['building certifier', 'building certification', 'certifier'],
+            'fire engineering': ['fire engineering', 'fire engineer', 'fire'],
+            'esd': ['esd', 'esd consultant', 'sustainability'],
+            'geotech': ['geotech', 'geotechnical'],
+            'survey': ['survey', 'surveyor', 'land survey'],
+        };
+        // Helper: find stakeholder ID by activity name with alias fallback
+        function findStakeholder(activityKey: string, lookup: Map<string, string>): string | undefined {
+            // Exact match first
+            const exact = lookup.get(activityKey);
+            if (exact) return exact;
+            // Try aliases
+            const aliases = ACTIVITY_ALIASES[activityKey];
+            if (aliases) {
+                for (const alias of aliases) {
+                    const match = lookup.get(alias);
+                    if (match) return match;
+                }
+            }
+            // Substring match: check if activity contains a stakeholder name or vice versa
+            for (const [name, id] of lookup) {
+                if (name.includes(activityKey) || activityKey.includes(name)) return id;
+            }
+            return undefined;
         }
         // Create new cost lines, tracking sort order per section
         const sectionCounts: Record<string, number> = {};
@@ -376,9 +409,9 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             let stakeholderId: string | undefined;
             const activityKey = newLine.activity.toLowerCase().trim();
             if (newLine.section === 'CONSULTANTS') {
-                stakeholderId = consultantByName.get(activityKey);
+                stakeholderId = findStakeholder(activityKey, consultantByName);
             } else if (newLine.section === 'CONSTRUCTION') {
-                stakeholderId = contractorByName.get(activityKey);
+                stakeholderId = findStakeholder(activityKey, contractorByName);
             }
             await createCostLine({
                 section: newLine.section,
