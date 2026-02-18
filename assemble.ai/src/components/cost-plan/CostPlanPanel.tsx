@@ -352,6 +352,19 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         for (const update of updates) {
             await updateCostLine(update.costLineId, { budgetCents: update.budgetCents });
         }
+        // Build stakeholder lookup by name (case-insensitive) for auto-mapping disciplines
+        const consultantByName = new Map<string, string>();
+        const contractorByName = new Map<string, string>();
+        for (const s of stakeholders) {
+            if (!s.isEnabled) continue;
+            const key = (s.name || s.disciplineOrTrade || '').toLowerCase().trim();
+            if (!key) continue;
+            if (s.stakeholderGroup === 'consultant') {
+                consultantByName.set(key, s.id);
+            } else if (s.stakeholderGroup === 'contractor') {
+                contractorByName.set(key, s.id);
+            }
+        }
         // Create new cost lines, tracking sort order per section
         const sectionCounts: Record<string, number> = {};
         for (const cl of costLines) {
@@ -359,10 +372,19 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         }
         for (const newLine of newLines) {
             const sortOrder = sectionCounts[newLine.section] || 0;
+            // Auto-map stakeholder by matching activity name to stakeholder name
+            let stakeholderId: string | undefined;
+            const activityKey = newLine.activity.toLowerCase().trim();
+            if (newLine.section === 'CONSULTANTS') {
+                stakeholderId = consultantByName.get(activityKey);
+            } else if (newLine.section === 'CONSTRUCTION') {
+                stakeholderId = contractorByName.get(activityKey);
+            }
             await createCostLine({
                 section: newLine.section,
                 activity: newLine.activity,
                 budgetCents: newLine.budgetCents,
+                stakeholderId,
                 sortOrder,
             });
             sectionCounts[newLine.section] = sortOrder + 1;
