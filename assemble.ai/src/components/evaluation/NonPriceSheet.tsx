@@ -160,7 +160,7 @@ export function NonPriceSheet({
                     <thead>
                         <tr className="border-b border-[var(--color-border)]">
                             <th
-                                className="px-3 text-left text-xs font-semibold text-black uppercase tracking-wide"
+                                className="px-3 text-left text-xs font-semibold text-[var(--color-text-primary)] uppercase tracking-wide"
                                 style={{ height: cellHeight }}
                             >
                                 Criteria
@@ -181,7 +181,7 @@ export function NonPriceSheet({
                                         onDrop={(e) => handleColumnDrop(e, firm.id)}
                                     >
                                         <div
-                                            className={`px-3 text-right text-xs font-medium text-black flex items-center justify-end ${
+                                            className={`px-3 text-right text-xs font-medium text-[var(--color-text-primary)] flex items-center justify-end ${
                                                 isProcessing ? 'opacity-50' : ''
                                             }`}
                                             style={{ height: cellHeight }}
@@ -199,7 +199,7 @@ export function NonPriceSheet({
                                         )}
                                         {/* Processing indicator */}
                                         {isProcessing && (
-                                            <div className="absolute inset-0 flex items-center justify-center bg-white/80 pointer-events-none">
+                                            <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-primary)]/80 pointer-events-none">
                                                 <Loader2 className="w-4 h-4 text-[var(--color-accent-copper)] animate-spin" />
                                             </div>
                                         )}
@@ -222,11 +222,11 @@ export function NonPriceSheet({
                                         className="px-3 py-2 align-top"
                                         title={definition?.description}
                                     >
-                                        <div className="text-xs font-medium text-black">
+                                        <div className="text-xs font-medium text-[var(--color-text-primary)]">
                                             {criterion.criteriaLabel}
                                         </div>
                                         {definition?.description && (
-                                            <div className="text-[10px] text-black/50 mt-0.5">
+                                            <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
                                                 {definition.description}
                                             </div>
                                         )}
@@ -280,11 +280,11 @@ export function NonPriceSheet({
 
             {/* Legend */}
             <div className="flex items-center gap-4 px-3 py-2 border-t border-[var(--color-border)]">
-                <div className="flex items-center gap-1 text-[10px] text-black/50">
+                <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
                     <span className="text-[var(--color-accent-copper)]">&#10024;</span>
                     <span>AI-extracted</span>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-black/50">
+                <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
                     <span className="text-yellow-500">&#9888;</span>
                     <span>Low confidence (manual review suggested)</span>
                 </div>

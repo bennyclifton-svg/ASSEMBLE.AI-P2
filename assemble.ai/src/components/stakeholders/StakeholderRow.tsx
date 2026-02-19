@@ -199,7 +199,7 @@ export function StakeholderRow({
     <tr
       className={cn(
         'transition-all duration-150 border-b border-[var(--color-border)] cursor-pointer select-none',
-        isSelected ? 'bg-[var(--color-bg-tertiary)]' : isHovered ? 'bg-[var(--color-bg-tertiary)]' : 'bg-transparent'
+        isSelected ? 'bg-[var(--color-bg-hover)]' : isHovered ? 'bg-[var(--color-bg-hover)]' : 'bg-transparent'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

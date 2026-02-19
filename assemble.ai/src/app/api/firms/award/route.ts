@@ -152,7 +152,19 @@ export async function POST(request: NextRequest) {
                 }
             }
 
-            // 4. Get latest evaluation price instance and map prices LINE BY LINE to cost lines
+            // 4. Get cost lines for this stakeholder (needed for both mapping and update)
+            const matchingCostLines = await db
+                .select()
+                .from(costLines)
+                .where(
+                    and(
+                        eq(costLines.projectId, projectId),
+                        eq(costLines.stakeholderId, stakeholderId),
+                        isNull(costLines.deletedAt)
+                    )
+                );
+
+            // 4b. Get latest evaluation price instance and map prices LINE BY LINE to cost lines
             const [latestEvalPrice] = await db
                 .select()
                 .from(evaluationPrice)
@@ -195,11 +207,43 @@ export async function POST(request: NextRequest) {
                         rowAmounts.set(cell.rowId, cell.amountCents || 0);
                     }
 
-                    // Map each evaluation row's amount to its linked costLineId
+                    // Pass 1: Map evaluation rows with costLineId directly
                     for (const row of rows) {
                         if (row.costLineId) {
                             const amount = rowAmounts.get(row.id) || 0;
                             costLineAmounts.set(row.costLineId, amount);
+                        }
+                    }
+
+                    // Pass 2: For unlinked rows (no costLineId), match by description to cost lines
+                    // This handles AI-parsed rows that haven't been linked yet
+                    const mappedCostLineIds = new Set(costLineAmounts.keys());
+                    const unmappedCostLines = matchingCostLines.filter(cl => !mappedCostLineIds.has(cl.id));
+
+                    // Build a lookup of normalized description → cost line for unmapped lines
+                    const descToCostLine = new Map<string, typeof matchingCostLines[number]>();
+                    for (const cl of unmappedCostLines) {
+                        const key = cl.activity.trim().toLowerCase();
+                        if (!descToCostLine.has(key)) {
+                            descToCostLine.set(key, cl);
+                        }
+                    }
+
+                    for (const row of rows) {
+                        if (!row.costLineId && row.tableType === 'initial_price') {
+                            const descKey = row.description.trim().toLowerCase();
+                            const matchedCostLine = descToCostLine.get(descKey);
+                            if (matchedCostLine) {
+                                const amount = rowAmounts.get(row.id) || 0;
+                                costLineAmounts.set(matchedCostLine.id, amount);
+                                // Remove from lookup so it can't double-match
+                                descToCostLine.delete(descKey);
+
+                                // Also link the evaluation row to the cost line for future syncs
+                                await db.update(evaluationRows)
+                                    .set({ costLineId: matchedCostLine.id, source: 'cost_plan' })
+                                    .where(eq(evaluationRows.id, row.id));
+                            }
                         }
                     }
 
@@ -212,27 +256,18 @@ export async function POST(request: NextRequest) {
             }
 
             // 5. Update cost lines with their individual amounts (line-by-line mapping)
-            const matchingCostLines = await db
-                .select()
-                .from(costLines)
-                .where(
-                    and(
-                        eq(costLines.projectId, projectId),
-                        eq(costLines.stakeholderId, stakeholderId),
-                        isNull(costLines.deletedAt)
-                    )
-                );
-
-            // Update each cost line with its specific amount from evaluation
+            // Only update cost lines that have a mapped amount — don't overwrite with $0
             for (const cl of matchingCostLines) {
-                const lineAmount = costLineAmounts.get(cl.id) ?? 0;
-                await db
-                    .update(costLines)
-                    .set({
-                        approvedContractCents: lineAmount,
-                        updatedAt: new Date(),
-                    })
-                    .where(eq(costLines.id, cl.id));
+                if (costLineAmounts.has(cl.id)) {
+                    const lineAmount = costLineAmounts.get(cl.id)!;
+                    await db
+                        .update(costLines)
+                        .set({
+                            approvedContractCents: lineAmount,
+                            updatedAt: new Date(),
+                        })
+                        .where(eq(costLines.id, cl.id));
+                }
 
                 // Store first cost line ID for response
                 if (!costLineId) {

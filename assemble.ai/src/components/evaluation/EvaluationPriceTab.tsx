@@ -366,8 +366,8 @@ export function EvaluationPriceTab({
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-5 h-5 text-black/40 animate-spin" />
-                <span className="ml-2 text-sm text-black/60">Loading evaluation data...</span>
+                <Loader2 className="w-5 h-5 text-[var(--color-text-muted)] animate-spin" />
+                <span className="ml-2 text-sm text-[var(--color-text-secondary)]">Loading evaluation data...</span>
             </div>
         );
     }
@@ -386,11 +386,11 @@ export function EvaluationPriceTab({
     if (shortlistedFirms.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-                <AlertCircle className="w-8 h-8 text-black/40 mb-3" />
-                <h3 className="text-sm font-medium text-black mb-1">
+                <AlertCircle className="w-8 h-8 text-[var(--color-text-muted)] mb-3" />
+                <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
                     No Short-listed Firms
                 </h3>
-                <p className="text-xs text-black/60 max-w-sm">
+                <p className="text-xs text-[var(--color-text-secondary)] max-w-sm">
                     To use the evaluation tables, first short-list firms by toggling the
                     "Shortlisted" option on the firm cards above.
                 </p>
@@ -411,13 +411,13 @@ export function EvaluationPriceTab({
                         </span>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-1.5 text-xs text-black/60">
+                    <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
                         <Upload className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
                         <span>Drag submission PDF onto firm column</span>
                     </div>
                 )}
                 {/* Save status - right side */}
-                <div className="flex items-center gap-2 text-xs text-black/60">
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
                     {saveStatus === 'saving' && (
                         <>
                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -474,7 +474,7 @@ export function EvaluationPriceTab({
 
             {/* Grand Total */}
             <div className="relative overflow-x-auto w-full">
-                <table className="border-collapse w-full">
+                <table className="border-collapse w-full table-fixed">
                     <colgroup>
                         {/* Drag handle column (empty for grand total) */}
                         <col style={{ width: `${EVALUATION_TABLE_COLUMNS.dragHandle}px` }} />
@@ -496,7 +496,7 @@ export function EvaluationPriceTab({
                                 style={{ height: 28 }}
                             />
                             <td
-                                className="px-3 text-sm font-bold text-black"
+                                className="px-3 text-sm font-bold text-[var(--color-text-primary)]"
                                 style={{ height: 28 }}
                             >
                                 GRAND TOTAL

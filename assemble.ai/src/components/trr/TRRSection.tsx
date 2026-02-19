@@ -6,10 +6,11 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTRR } from '@/lib/hooks/use-trr';
 import { useTRRSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { TRRShortTab } from './TRRShortTab';
+import type { TRRShortTabHandle } from './TRRShortTab';
 import { TRRTabs } from './TRRTabs';
 import { FileText, Loader2, MoreHorizontal, MoreVertical } from 'lucide-react';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
@@ -42,6 +43,7 @@ export function TRRSection({
     const [isDownloading, setIsDownloading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [isMenuExpanded, setIsMenuExpanded] = useState(false);
+    const shortTabRef = useRef<TRRShortTabHandle>(null);
 
     // Use context for expanded state persistence across tab navigation
     const { isExpanded, activeTrrId, setExpanded: setIsExpanded, setActiveTrrId } = useTRRSectionUI(stakeholderId);
@@ -190,6 +192,11 @@ export function TRRSection({
 
         setIsExporting(true);
         try {
+            // Flush any pending saves so the DB has the latest content
+            if (shortTabRef.current) {
+                await shortTabRef.current.flushSave();
+            }
+
             const response = await fetch(`/api/trr/${activeTrr.id}/export`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -333,6 +340,7 @@ export function TRRSection({
                             </div>
                         ) : activeTrr ? (
                             <TRRShortTab
+                                ref={shortTabRef}
                                 projectId={projectId}
                                 trr={activeTrr}
                                 stakeholderId={stakeholderId}

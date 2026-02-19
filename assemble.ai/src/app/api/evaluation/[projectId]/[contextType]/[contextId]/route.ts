@@ -110,12 +110,6 @@ export async function GET(
             orderBy: [asc(costLines.sortOrder)],
         });
 
-        // Debug logging - remove after fixing
-        console.log('[Evaluation API] stakeholder:', stakeholder.name, 'group:', stakeholder.stakeholderGroup);
-        console.log('[Evaluation API] expectedSection:', expectedSection);
-        console.log('[Evaluation API] costLines count:', currentCostLines.length);
-        console.log('[Evaluation API] costLines:', currentCostLines.map(l => ({ activity: l.activity, section: l.section })));
-
         // Parse deleted cost line IDs to skip during sync
         // deletedCostLineIds is now keyed by evaluationPriceId (or "null" for legacy)
         // This allows each evaluation price instance to independently track deletions
@@ -169,6 +163,21 @@ export async function GET(
             existingRows.filter(r => r.costLineId).map(r => [r.costLineId, r])
         );
 
+        // Build a map of normalized description to unlinked rows (no costLineId)
+        // for smart duplicate detection during sync — prevents creating duplicate
+        // rows when cost plan items match existing AI-parsed or manual rows
+        const descriptionToUnlinkedRow = new Map<string, typeof existingRows[number]>();
+        existingRows
+            .filter(r => !r.costLineId && r.tableType === 'initial_price')
+            .forEach(r => {
+                const key = r.description.trim().toLowerCase();
+                if (!descriptionToUnlinkedRow.has(key)) {
+                    descriptionToUnlinkedRow.set(key, r);
+                }
+            });
+
+        const rowsToLink: Array<{ id: string; costLineId: string; orderIndex: number }> = [];
+
         currentCostLines.forEach((line, i) => {
             // Skip cost lines that user has explicitly deleted
             if (deletedCostLineIds.has(line.id)) {
@@ -176,17 +185,32 @@ export async function GET(
             }
 
             if (!existingCostLineIds.has(line.id)) {
-                // New cost line - create evaluation row
-                rowsToCreate.push({
-                    id: nanoid(),
-                    evaluationId: evaluation!.id,
-                    evaluationPriceId: evaluationPriceId || undefined,
-                    tableType: 'initial_price' as const,
-                    description: line.activity,
-                    orderIndex: i,
-                    costLineId: line.id,
-                    source: 'cost_plan' as const,
-                });
+                // Check if an unlinked row with matching description exists
+                const descKey = line.activity.trim().toLowerCase();
+                const matchingRow = descriptionToUnlinkedRow.get(descKey);
+
+                if (matchingRow) {
+                    // Link existing row to this cost line instead of creating duplicate
+                    rowsToLink.push({
+                        id: matchingRow.id,
+                        costLineId: line.id,
+                        orderIndex: i,
+                    });
+                    // Remove from unlinked map so it can't match again
+                    descriptionToUnlinkedRow.delete(descKey);
+                } else {
+                    // No match found - create new evaluation row
+                    rowsToCreate.push({
+                        id: nanoid(),
+                        evaluationId: evaluation!.id,
+                        evaluationPriceId: evaluationPriceId || undefined,
+                        tableType: 'initial_price' as const,
+                        description: line.activity,
+                        orderIndex: i,
+                        costLineId: line.id,
+                        source: 'cost_plan' as const,
+                    });
+                }
             } else {
                 // Existing cost line - check if description or order needs update
                 const existingRow = costLineIdToRow.get(line.id);
@@ -220,6 +244,13 @@ export async function GET(
             await db.update(evaluationRows)
                 .set({ description: update.description, orderIndex: update.orderIndex })
                 .where(eq(evaluationRows.id, update.id));
+        }
+
+        // Link existing rows to their matching cost lines (duplicate prevention)
+        for (const link of rowsToLink) {
+            await db.update(evaluationRows)
+                .set({ costLineId: link.costLineId, orderIndex: link.orderIndex, source: 'cost_plan' })
+                .where(eq(evaluationRows.id, link.id));
         }
 
         // Fetch rows with cells (filtered by evaluationPriceId if provided)

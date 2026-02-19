@@ -65,37 +65,53 @@ function processTextContent(element: Element): string {
 function createInfoTable(element: Element): Table | null {
   const rows: TableRow[] = [];
   const isProjectInfo = (element.getAttribute('class') || '').includes('project-info');
+  const isEvalPrice = (element.getAttribute('class') || '').includes('eval-price');
 
   // Process header row if present
   const thead = element.querySelector('thead');
-  if (thead) {
-    const ths = thead.querySelectorAll('th');
-    if (ths.length > 0) {
-      const headerCells: TableCell[] = [];
-      ths.forEach(th => {
-        headerCells.push(
-          new TableCell({
-            children: [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: th.textContent?.trim() || '',
-                    bold: true,
-                  }),
-                ],
-              }),
-            ],
-            margins: { top: 80, bottom: 80, left: 80, right: 80 },
-            shading: {
-              type: ShadingType.SOLID,
-              color: 'F5F5F5',
-              fill: 'F5F5F5',
-            },
-          })
-        );
-      });
-      rows.push(new TableRow({ children: headerCells }));
-    }
+  const theadCols = thead ? thead.querySelectorAll('th') : null;
+  const totalCols = theadCols ? theadCols.length : 0;
+
+  if (thead && theadCols && theadCols.length > 0) {
+    const headerCells: TableCell[] = [];
+    theadCols.forEach((th, index) => {
+      // For eval-price: description=40%, firm cols split remaining 60% equally
+      let cellWidth: { size: number; type: (typeof WidthType)[keyof typeof WidthType] } | undefined;
+      if (isEvalPrice && totalCols > 1) {
+        cellWidth = index === 0
+          ? { size: 40, type: WidthType.PERCENTAGE }
+          : { size: Math.floor(60 / (totalCols - 1)), type: WidthType.PERCENTAGE };
+      }
+
+      // Detect text-align from inline style
+      const style = th.getAttribute('style') || '';
+      const alignMatch = style.match(/text-align:\s*(\w+)/);
+      const isRightAligned = alignMatch && alignMatch[1] === 'right';
+
+      headerCells.push(
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: th.textContent?.trim() || '',
+                  bold: true,
+                }),
+              ],
+              alignment: isRightAligned ? AlignmentType.RIGHT : AlignmentType.LEFT,
+            }),
+          ],
+          margins: { top: 80, bottom: 80, left: 80, right: 80 },
+          ...(cellWidth ? { width: cellWidth } : {}),
+          shading: {
+            type: ShadingType.SOLID,
+            color: 'F5F5F5',
+            fill: 'F5F5F5',
+          },
+        })
+      );
+    });
+    rows.push(new TableRow({ children: headerCells }));
   }
 
   // Process body rows
@@ -111,12 +127,32 @@ function createInfoTable(element: Element): Table | null {
       const rowCells: TableCell[] = [];
       cells.forEach((cell, index) => {
         const isFirstCol = index === 0;
-        const isLastCol = index === cells.length - 1;
         const isHeader = cell.tagName.toLowerCase() === 'th';
-        const isBold = cell.querySelector('strong') !== null || isHeader;
         const className = cell.className || '';
         const isLabelCol = className.includes('label-col');
         const isIssuedCol = className.includes('issued-col');
+
+        // Detect bold from <strong> tags, th, or inline font-weight
+        const style = cell.getAttribute('style') || '';
+        const fwMatch = style.match(/font-weight:\s*(\w+)/);
+        const hasInlineBold = fwMatch && (fwMatch[1] === 'bold' || fwMatch[1] === '700' || fwMatch[1] === '600');
+        const isBold = cell.querySelector('strong') !== null || isHeader || !!hasInlineBold || isLabelCol;
+
+        // Detect background-color from inline style
+        const bgMatch = style.match(/background-color:\s*([^;]+)/);
+        const hasBgColor = bgMatch && bgMatch[1].trim();
+
+        // Detect text-align right from inline style
+        const alignMatch = style.match(/text-align:\s*(\w+)/);
+        const isRightAligned = alignMatch && alignMatch[1] === 'right';
+
+        // Column width for eval-price: description=40%, rest split equally
+        let cellWidth: { size: number; type: (typeof WidthType)[keyof typeof WidthType] } | undefined;
+        if (isEvalPrice && totalCols > 1) {
+          cellWidth = isFirstCol
+            ? { size: 40, type: WidthType.PERCENTAGE }
+            : { size: Math.floor(60 / (totalCols - 1)), type: WidthType.PERCENTAGE };
+        }
 
         rowCells.push(
           new TableCell({
@@ -125,11 +161,11 @@ function createInfoTable(element: Element): Table | null {
                 children: [
                   new TextRun({
                     text: cell.textContent?.trim() || '',
-                    bold: isBold || isLabelCol,
+                    bold: isBold,
                     color: (isLabelCol || isIssuedCol) ? '1A6FB5' : undefined,
                   }),
                 ],
-                alignment: isIssuedCol ? AlignmentType.RIGHT : AlignmentType.LEFT,
+                alignment: (isIssuedCol || isRightAligned) ? AlignmentType.RIGHT : AlignmentType.LEFT,
               }),
             ],
             margins: { top: 80, bottom: 80, left: 80, right: 80 },
@@ -140,11 +176,19 @@ function createInfoTable(element: Element): Table | null {
             ...(isProjectInfo && isIssuedCol ? {
               width: { size: 22, type: WidthType.PERCENTAGE },
             } : {}),
+            ...(cellWidth ? { width: cellWidth } : {}),
             ...(!isProjectInfo && isFirstCol && cells.length === 2 ? {
               shading: {
                 type: ShadingType.SOLID,
                 color: 'F5F5F5',
                 fill: 'F5F5F5',
+              },
+            } : {}),
+            ...(hasBgColor ? {
+              shading: {
+                type: ShadingType.SOLID,
+                color: hexToRgb(hasBgColor),
+                fill: hexToRgb(hasBgColor),
               },
             } : {}),
           })
@@ -345,6 +389,20 @@ function extractTextRuns(element: Element): TextRun[] {
  */
 function processRichContent(element: Element, children: (Paragraph | Table)[]): void {
   element.childNodes.forEach(node => {
+    // Handle text nodes directly (content not wrapped in elements)
+    if (node.nodeType === 3) {
+      const text = (node.textContent || '').trim();
+      if (text) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text })],
+            spacing: { after: 80 },
+          })
+        );
+      }
+      return;
+    }
+
     if (node.nodeType !== 1) return;
 
     const child = node as Element;
@@ -399,6 +457,23 @@ function processRichContent(element: Element, children: (Paragraph | Table)[]): 
           })
         );
       });
+    } else if (tagName === 'blockquote') {
+      // Blockquote — render as indented italic text
+      const text = child.textContent?.trim() || '';
+      if (text) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text, italics: true, color: '555555' })],
+            spacing: { after: 80 },
+            indent: { left: 360 },
+          })
+        );
+      }
+    } else if (tagName === 'hr') {
+      // Horizontal rule — add spacing
+      children.push(
+        new Paragraph({ text: '', spacing: { before: 100, after: 100 } })
+      );
     } else if (tagName === 'div') {
       // Recurse into divs
       processRichContent(child, children);
@@ -406,6 +481,17 @@ function processRichContent(element: Element, children: (Paragraph | Table)[]): 
       const table = createTransmittalTable(child);
       if (table) {
         children.push(table);
+      }
+    } else {
+      // Fallback: render any unhandled element's text content
+      const text = child.textContent?.trim() || '';
+      if (text) {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text })],
+            spacing: { after: 80 },
+          })
+        );
       }
     }
   });

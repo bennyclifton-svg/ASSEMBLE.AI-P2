@@ -335,7 +335,7 @@ export function EvaluationSheet({
             onDragOver={handleContainerDragOver}
             onDrop={handleContainerDrop}
         >
-            <table className="border-collapse w-full">
+            <table className="border-collapse w-full table-fixed">
                 <colgroup>
                     {/* Drag handle / add row column */}
                     <col style={{ width: `${EVALUATION_TABLE_COLUMNS.dragHandle}px` }} />
@@ -356,12 +356,12 @@ export function EvaluationSheet({
                     <tr className="border-b border-[var(--color-border)]">
                         {/* Add row button column */}
                         <th
-                            className="px-2 text-center text-black"
+                            className="px-2 text-center"
                             style={{ height: cellHeight }}
                         >
                             <button
                                 onClick={onAddRow}
-                                className="p-1 rounded-full text-black/50 hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/15 hover:scale-110 transition-all duration-150"
+                                className="p-1 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/15 hover:scale-110 transition-all duration-150"
                                 title="Add row"
                             >
                                 <Plus className="w-3.5 h-3.5" />
@@ -369,7 +369,7 @@ export function EvaluationSheet({
                         </th>
                         {/* Title / description column header */}
                         <th
-                            className="px-3 text-left text-xs font-semibold text-black uppercase tracking-wide"
+                            className="px-3 text-left text-xs font-semibold text-[var(--color-text-primary)] uppercase tracking-wide"
                             style={{ height: cellHeight }}
                         >
                             <div className="flex items-center gap-2">
@@ -402,7 +402,7 @@ export function EvaluationSheet({
                                     style={{ height: cellHeight }}
                                 >
                                     <div
-                                        className="px-3 text-right text-xs font-medium text-black flex items-center justify-end"
+                                        className="px-3 text-right text-xs font-medium text-[var(--color-text-primary)] flex items-center justify-end"
                                         style={{ height: cellHeight }}
                                     >
                                         <span className="truncate">{firm.companyName}</span>
@@ -459,7 +459,7 @@ export function EvaluationSheet({
                                 style={{ height: cellHeight }}
                             />
                             <td
-                                className="px-3 text-sm text-black/40"
+                                className="px-3 text-sm text-[var(--color-text-muted)]"
                                 style={{ height: cellHeight }}
                             >
                                 No line items
@@ -505,7 +505,7 @@ export function EvaluationSheet({
                                         // T093: Visual highlight for selected rows
                                         isSelected
                                             ? 'bg-[var(--color-accent-copper-tint)]'
-                                            : 'hover:bg-black/5'
+                                            : 'hover:bg-[var(--color-text-primary)]/5'
                                     } ${isDragging ? 'opacity-50' : ''}`}
                                     style={isDragOver ? { boxShadow: 'inset 0 2px 0 var(--color-accent-copper)' } : undefined}
                                     onClick={(e) => onRowSelect(row.id, e)}
@@ -522,12 +522,12 @@ export function EvaluationSheet({
                                         onDragEnd={handleRowDragEnd}
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <GripVertical className="w-3.5 h-3.5 text-black/30 opacity-40 group-hover:opacity-100 transition-opacity mx-auto" />
+                                        <GripVertical className="w-3.5 h-3.5 text-[var(--color-text-muted)] opacity-40 group-hover:opacity-100 transition-opacity mx-auto" />
                                     </td>
 
                                     {/* Description cell with T101-T103 inline editing */}
                                     <td
-                                        className="px-3 text-sm text-black overflow-hidden"
+                                        className="px-3 text-sm text-[var(--color-text-primary)] overflow-hidden"
                                         style={{ height: cellHeight }}
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -545,7 +545,7 @@ export function EvaluationSheet({
                                                     onBlur={handleDescriptionBlur}
                                                     onKeyDown={handleDescriptionKeyDown}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="flex-1 bg-transparent text-sm text-black outline-none"
+                                                    className="flex-1 bg-transparent text-sm text-[var(--color-text-primary)] outline-none"
                                                 />
                                             ) : (
                                                 <span className="truncate">
@@ -588,7 +588,7 @@ export function EvaluationSheet({
                                                         onChange={(e) => setEditValue(e.target.value)}
                                                         onBlur={handleCellBlur}
                                                         onKeyDown={handleKeyDown}
-                                                        className="w-full px-3 text-right text-sm bg-transparent text-black outline-none"
+                                                        className="w-full px-3 text-right text-sm bg-transparent text-[var(--color-text-primary)] outline-none"
                                                         style={{ height: cellHeight, lineHeight: `${cellHeight}px` }}
                                                     />
                                                 ) : (
@@ -603,7 +603,7 @@ export function EvaluationSheet({
                                                         )}
                                                         <div
                                                             className={`px-2 text-right text-sm ${
-                                                                value ? 'text-black' : 'text-black/30'
+                                                                value ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'
                                                             }`}
                                                             style={{ height: cellHeight, lineHeight: `${cellHeight}px` }}
                                                         >
@@ -643,7 +643,7 @@ export function EvaluationSheet({
                                     >
                                         <button
                                             onClick={() => handleDelete(row.id)}
-                                            className="opacity-0 group-hover:opacity-100 text-black/40 hover:text-[var(--color-accent-coral)] transition-all"
+                                            className="opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-all"
                                             title="Delete row"
                                         >
                                             <Trash className="w-3 h-3 mx-auto" />
@@ -661,7 +661,7 @@ export function EvaluationSheet({
                             style={{ height: cellHeight }}
                         />
                         <td
-                            className="px-3 text-sm font-semibold text-black"
+                            className="px-3 text-sm font-semibold text-[var(--color-text-primary)]"
                             style={{ height: cellHeight }}
                         >
                             Sub-Total

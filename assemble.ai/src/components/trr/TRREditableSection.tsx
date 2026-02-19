@@ -107,20 +107,17 @@ export function TRREditableSection({
 
     // Generate button rendered inside the toolbar via toolbarExtra
     const generateButton = canGenerateAI ? (
-        <div className="flex items-center gap-2">
-            {isGenerating && (
-                <span className="text-xs animate-text-aurora">Generating...</span>
-            )}
-            <button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="flex items-center gap-1.5 text-xs text-[var(--color-accent-copper)] hover:text-[#6fd1ff] transition-colors disabled:opacity-50"
-                title={`Generate ${title.toLowerCase()} with AI`}
-            >
-                <DiamondIcon variant="empty" className="w-3.5 h-3.5" />
-                <span>Generate</span>
-            </button>
-        </div>
+        <button
+            onClick={handleGenerate}
+            disabled={isGenerating}
+            className="flex items-center gap-1.5 text-xs text-[var(--color-accent-copper)] hover:text-[#6fd1ff] transition-colors disabled:pointer-events-none"
+            title={`Generate ${title.toLowerCase()} with AI`}
+        >
+            <DiamondIcon variant="empty" className={`w-3.5 h-3.5 ${isGenerating ? 'animate-diamond-spin' : ''}`} />
+            <span className={isGenerating ? 'animate-text-aurora' : ''}>
+                {isGenerating ? 'Generating...' : 'Generate'}
+            </span>
+        </button>
     ) : undefined;
 
     return (

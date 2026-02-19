@@ -143,6 +143,7 @@
   --color-bg-secondary: var(--primitive-slate-950);
   --color-bg-tertiary: var(--primitive-slate-850);
   --color-bg-elevated: rgba(26, 29, 33, 0.7);
+  --color-bg-hover: rgba(255, 255, 255, 0.10);
   --color-bg-inverse: var(--primitive-copper-lighter);
 
   /* Text - Warm off-whites */
@@ -272,6 +273,7 @@
   --color-bg-secondary: #ffffff;
   --color-bg-tertiary: #f0f0f0;
   --color-bg-elevated: #FFFFFF;
+  --color-bg-hover: rgba(0, 0, 0, 0.10);
   --color-bg-inverse: var(--primitive-cool-gray-900);
 
   /* Text - High contrast / Deep Slate */

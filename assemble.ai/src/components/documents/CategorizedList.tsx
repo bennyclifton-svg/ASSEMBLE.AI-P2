@@ -655,8 +655,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     <TableRow
                                         key={doc.id}
                                         className={cn(
-                                            "border-[var(--color-border)] hover:bg-black/10 transition-colors cursor-pointer select-none h-9",
-                                            selectedIds.has(doc.id) && "bg-black/10"
+                                            "border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer select-none h-9",
+                                            selectedIds.has(doc.id) && "bg-[var(--color-bg-hover)]"
                                         )}
                                         onMouseEnter={() => setHoveredRowId(doc.id)}
                                         onMouseLeave={() => setHoveredRowId(null)}

@@ -352,72 +352,19 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         for (const update of updates) {
             await updateCostLine(update.costLineId, { budgetCents: update.budgetCents });
         }
-        // Build stakeholder lookup by name (case-insensitive) for auto-mapping disciplines
-        // Also index by disciplineOrTrade for broader matching
-        const consultantByName = new Map<string, string>();
-        const contractorByName = new Map<string, string>();
-        for (const s of stakeholders) {
-            if (!s.isEnabled) continue;
-            const nameKey = (s.name || '').toLowerCase().trim();
-            const discKey = (s.disciplineOrTrade || '').toLowerCase().trim();
-            if (s.stakeholderGroup === 'consultant') {
-                if (nameKey) consultantByName.set(nameKey, s.id);
-                if (discKey && discKey !== nameKey) consultantByName.set(discKey, s.id);
-            } else if (s.stakeholderGroup === 'contractor') {
-                if (nameKey) contractorByName.set(nameKey, s.id);
-                if (discKey && discKey !== nameKey) contractorByName.set(discKey, s.id);
-            }
-        }
-        // Alias map: activity names in budget profiles → possible stakeholder names
-        const ACTIVITY_ALIASES: Record<string, string[]> = {
-            'architect': ['architecture', 'architect'],
-            'architecture': ['architecture', 'architect'],
-            'cost planning': ['cost planning', 'quantity surveyor', 'qs'],
-            'building certifier': ['building certifier', 'building certification', 'certifier'],
-            'fire engineering': ['fire engineering', 'fire engineer', 'fire'],
-            'esd': ['esd', 'esd consultant', 'sustainability'],
-            'geotech': ['geotech', 'geotechnical'],
-            'survey': ['survey', 'surveyor', 'land survey'],
-        };
-        // Helper: find stakeholder ID by activity name with alias fallback
-        function findStakeholder(activityKey: string, lookup: Map<string, string>): string | undefined {
-            // Exact match first
-            const exact = lookup.get(activityKey);
-            if (exact) return exact;
-            // Try aliases
-            const aliases = ACTIVITY_ALIASES[activityKey];
-            if (aliases) {
-                for (const alias of aliases) {
-                    const match = lookup.get(alias);
-                    if (match) return match;
-                }
-            }
-            // Substring match: check if activity contains a stakeholder name or vice versa
-            for (const [name, id] of lookup) {
-                if (name.includes(activityKey) || activityKey.includes(name)) return id;
-            }
-            return undefined;
-        }
-        // Create new cost lines, tracking sort order per section
+
+        // Create new cost lines (stakeholderId is pre-matched by the dialog)
         const sectionCounts: Record<string, number> = {};
         for (const cl of costLines) {
             sectionCounts[cl.section] = (sectionCounts[cl.section] || 0) + 1;
         }
         for (const newLine of newLines) {
             const sortOrder = sectionCounts[newLine.section] || 0;
-            // Auto-map stakeholder by matching activity name to stakeholder name
-            let stakeholderId: string | undefined;
-            const activityKey = newLine.activity.toLowerCase().trim();
-            if (newLine.section === 'CONSULTANTS') {
-                stakeholderId = findStakeholder(activityKey, consultantByName);
-            } else if (newLine.section === 'CONSTRUCTION') {
-                stakeholderId = findStakeholder(activityKey, contractorByName);
-            }
             await createCostLine({
                 section: newLine.section,
                 activity: newLine.activity,
                 budgetCents: newLine.budgetCents,
-                stakeholderId,
+                stakeholderId: newLine.stakeholderId ?? undefined,
                 sortOrder,
             });
             sectionCounts[newLine.section] = sortOrder + 1;
@@ -518,38 +465,51 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
     };
 
     // Handle confirmation from program activity selector
+    // Replaces the source line with new lines, distributing budget equally
     const handleProgramActivitiesSelected = async (selectedActivities: ProgramActivity[]) => {
         if (!programSelectorSourceLine || selectedActivities.length === 0) return;
 
         const sourceLine = programSelectorSourceLine;
         const sectionLines = linesBySection[sourceLine.section] || [];
         const sourceIndex = sectionLines.findIndex(l => l.id === sourceLine.id);
+        const count = selectedActivities.length;
 
-        // Create new cost lines for each selected activity (they'll be added at end initially)
+        // Distribute source line's budget and contract equally across new lines
+        const perLineBudget = Math.floor(sourceLine.budgetCents / count);
+        const perLineContract = Math.floor(sourceLine.approvedContractCents / count);
+        const budgetRemainder = sourceLine.budgetCents - perLineBudget * count;
+        const contractRemainder = sourceLine.approvedContractCents - perLineContract * count;
+
+        // Create new cost lines for each selected activity with distributed amounts
         const newLineIds: string[] = [];
-        for (const activity of selectedActivities) {
+        for (let i = 0; i < selectedActivities.length; i++) {
+            const activity = selectedActivities[i];
             const result = await createCostLine({
                 section: sourceLine.section,
                 activity: activity.name,
                 stakeholderId: sourceLine.stakeholderId,
+                budgetCents: perLineBudget + (i === 0 ? budgetRemainder : 0),
+                approvedContractCents: perLineContract + (i === 0 ? contractRemainder : 0),
             });
             if (result?.id) {
                 newLineIds.push(result.id);
             }
         }
 
-        // Reorder to place new lines directly after source line
+        // Delete the original source line
+        await deleteCostLine(sourceLine.id);
+
+        // Reorder to place new lines where the source line was
         if (newLineIds.length > 0 && sourceIndex !== -1) {
-            // Build new order: lines before source + source + new lines + lines after source
             const updates: Array<{ id: string; sortOrder: number }> = [];
             let order = 1;
 
-            // Lines before and including source
-            for (let i = 0; i <= sourceIndex; i++) {
+            // Lines before the source (skip source since it's deleted)
+            for (let i = 0; i < sourceIndex; i++) {
                 updates.push({ id: sectionLines[i].id, sortOrder: order++ });
             }
 
-            // New lines
+            // New lines in place of source
             for (const newId of newLineIds) {
                 updates.push({ id: newId, sortOrder: order++ });
             }
@@ -1148,6 +1108,7 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                     buildingClass={profilerData.buildingClass}
                     estimateLowCents={profilerData.estimateLowCents}
                     estimateHighCents={profilerData.estimateHighCents}
+                    stakeholders={stakeholders}
                     onApply={handleApplyEstimate}
                 />
             )}

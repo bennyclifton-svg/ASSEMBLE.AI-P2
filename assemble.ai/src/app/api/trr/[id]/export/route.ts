@@ -440,8 +440,9 @@ function generateTRRHTML(params: TRRHTMLParams): string {
 
     let evalPriceHTML = '';
     if (hasEvalData) {
+        const firmColWidth = Math.floor(60 / shortlistedFirms.length);
         const firmHeaders = shortlistedFirms.map(f =>
-            `<th style="text-align: right; min-width: 110px">${escapeHtml(f.companyName)}</th>`
+            `<th style="text-align: right; width: ${firmColWidth}%">${escapeHtml(f.companyName)}</th>`
         ).join('');
 
         const initialRows = filteredEvalRows
@@ -466,14 +467,17 @@ function generateTRRHTML(params: TRRHTMLParams): string {
 
         const subtotalRowHTML = `
             <tr style="border-bottom: 1px solid #ddd">
-                <td style="font-weight: 600">SUB-TOTAL</td>
-                ${shortlistedFirms.map(f => `<td style="text-align: right; font-weight: 600">${formatCurrency(calcSubtotal(f.id, 'initial_price'))}</td>`).join('')}
+                <td style="font-weight: bold">SUB-TOTAL</td>
+                ${shortlistedFirms.map(f => `<td style="text-align: right; font-weight: bold">${formatCurrency(calcSubtotal(f.id, 'initial_price'))}</td>`).join('')}
             </tr>`;
 
         let addsSubsHTML = '';
         if (addsSubsRows.length > 0) {
             addsSubsHTML = `
-                <tr><td colspan="${shortlistedFirms.length + 1}" style="font-weight: 500; color: #666; padding-top: 8px">Adds & Subs</td></tr>
+                <tr>
+                    <td style="font-weight: bold; background-color: #F3F4F6">ADDS & SUBS</td>
+                    ${shortlistedFirms.map(() => `<td style="background-color: #F3F4F6"></td>`).join('')}
+                </tr>
                 ${addsSubsRows.map(row =>
                     `<tr>
                         <td>${escapeHtml(row.description)}</td>
@@ -484,20 +488,20 @@ function generateTRRHTML(params: TRRHTMLParams): string {
 
         const grandTotalHTML = `
             <tr style="border-top: 1px solid #ddd">
-                <td style="font-weight: 700">GRAND TOTAL</td>
+                <td style="font-weight: bold">GRAND TOTAL</td>
                 ${shortlistedFirms.map(f => {
                     const total = calcSubtotal(f.id, 'initial_price') + calcSubtotal(f.id, 'adds_subs');
-                    return `<td style="text-align: right; font-weight: 700">${formatCurrency(total)}</td>`;
+                    return `<td style="text-align: right; font-weight: bold">${formatCurrency(total)}</td>`;
                 }).join('')}
             </tr>`;
 
         evalPriceHTML = `
         <div class="content-section">
-            <h3>Evaluation Price</h3>
-            <table class="transmittal-table">
+            <h3>EVALUATION PRICE</h3>
+            <table class="transmittal-table eval-price-table">
                 <thead>
                     <tr>
-                        <th style="min-width: 200px">PRICE 01</th>
+                        <th style="width: 40%">PRICE 01</th>
                         ${firmHeaders}
                     </tr>
                 </thead>
@@ -512,7 +516,7 @@ function generateTRRHTML(params: TRRHTMLParams): string {
     } else {
         evalPriceHTML = `
         <div class="content-section">
-            <h3>Evaluation Price</h3>
+            <h3>EVALUATION PRICE</h3>
             <p style="color: #666;">No price evaluation completed</p>
         </div>`;
     }
@@ -548,7 +552,7 @@ function generateTRRHTML(params: TRRHTMLParams): string {
 
         evalNonPriceHTML = `
         <div class="content-section">
-            <h3>Evaluation Non-Price</h3>
+            <h3>EVALUATION NON-PRICE</h3>
             <table class="transmittal-table">
                 <thead>
                     <tr>
@@ -564,7 +568,7 @@ function generateTRRHTML(params: TRRHTMLParams): string {
     } else {
         evalNonPriceHTML = `
         <div class="content-section">
-            <h3>Evaluation Non-Price</h3>
+            <h3>EVALUATION NON-PRICE</h3>
             <p style="color: #666;">No non-price evaluation completed</p>
         </div>`;
     }
@@ -589,15 +593,22 @@ function generateTRRHTML(params: TRRHTMLParams): string {
         : '<tr><td colspan="6" style="text-align: center; color: #666;">No documents attached</td></tr>';
 
     // ── Sanitize rich content sections ──
-    const sanitizedExecSummary = executiveSummary
+    // Check for functionally empty content (e.g. "<p></p>", "<p><br></p>", whitespace-only)
+    const isContentEmpty = (html: string): boolean => {
+        if (!html) return true;
+        const stripped = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+        return stripped.length === 0;
+    };
+
+    const sanitizedExecSummary = !isContentEmpty(executiveSummary)
         ? sanitizeHtml(executiveSummary)
         : '<p style="color: #666;">No executive summary provided.</p>';
 
-    const sanitizedClarifications = clarifications
+    const sanitizedClarifications = !isContentEmpty(clarifications)
         ? sanitizeHtml(clarifications)
         : '<p style="color: #666;">No clarifications provided.</p>';
 
-    const sanitizedRecommendation = recommendation
+    const sanitizedRecommendation = !isContentEmpty(recommendation)
         ? sanitizeHtml(recommendation)
         : '<p style="color: #666;">No recommendation provided.</p>';
 
@@ -727,12 +738,12 @@ function generateTRRHTML(params: TRRHTMLParams): string {
     </table>
 
     <div class="content-section">
-        <h3>Executive Summary</h3>
+        <h3>EXECUTIVE SUMMARY</h3>
         <div class="content-body">${sanitizedExecSummary}</div>
     </div>
 
     <div class="content-section">
-        <h3>Tender Process</h3>
+        <h3>TENDER PROCESS</h3>
         <table class="transmittal-table">
             <thead>
                 <tr>
@@ -749,7 +760,7 @@ function generateTRRHTML(params: TRRHTMLParams): string {
     </div>
 
     <div class="content-section">
-        <h3>Addenda</h3>
+        <h3>ADDENDA</h3>
         <table class="transmittal-table">
             <thead>
                 <tr>
@@ -769,17 +780,17 @@ function generateTRRHTML(params: TRRHTMLParams): string {
     ${evalNonPriceHTML}
 
     <div class="content-section">
-        <h3>Clarifications</h3>
+        <h3>CLARIFICATIONS</h3>
         <div class="content-body">${sanitizedClarifications}</div>
     </div>
 
     <div class="content-section">
-        <h3>Recommendation</h3>
+        <h3>RECOMMENDATION</h3>
         <div class="content-body">${sanitizedRecommendation}</div>
     </div>
 
     <div class="transmittal-section">
-        <h3>Attachments — Transmittal Document Schedule</h3>
+        <h3>ATTACHMENTS — TRANSMITTAL DOCUMENT SCHEDULE</h3>
         <table class="transmittal-table">
             <thead>
                 <tr>
@@ -818,6 +829,9 @@ function sanitizeHtml(html: string): string {
     let sanitized = html.replace(/<(script|iframe|object|embed|form|input|textarea|select|button)[^>]*>[\s\S]*?<\/\1>/gi, '');
     sanitized = sanitized.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
     sanitized = sanitized.replace(/href\s*=\s*["']javascript:[^"']*["']/gi, '');
+    // Convert leftover markdown bold/italic to HTML (common in AI-generated content)
+    sanitized = sanitized.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    sanitized = sanitized.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
     return sanitized;
 }
 

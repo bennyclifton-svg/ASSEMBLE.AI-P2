@@ -144,27 +144,52 @@ export async function exportToPDF(
       yPosition += lines.length * (fontSize / 2) + 5;
 
     } else if (tagName === 'p') {
-      // Paragraph - detect inline formatting
-      const text = element.textContent || '';
-      if (text.trim()) {
-        const hasBold = element.querySelector('strong, b') !== null;
-        const hasItalic = element.querySelector('em, i') !== null;
+      // Paragraph - render with inline bold/italic runs
+      const fullText = element.textContent || '';
+      if (fullText.trim()) {
+        const hasInlineFormatting = element.querySelector('strong, b, em, i') !== null;
 
-        doc.setFontSize(11);
-        if (hasBold && hasItalic) {
-          doc.setFont('helvetica', 'bolditalic');
-        } else if (hasBold) {
-          doc.setFont('helvetica', 'bold');
-        } else if (hasItalic) {
-          doc.setFont('helvetica', 'italic');
-        } else {
+        if (!hasInlineFormatting) {
+          // Simple paragraph — no inline formatting
+          doc.setFontSize(11);
           doc.setFont('helvetica', 'normal');
-        }
-        doc.setTextColor('#000000');
+          doc.setTextColor('#000000');
+          const lines = doc.splitTextToSize(fullText, contentWidth);
+          doc.text(lines, margin, yPosition);
+          yPosition += lines.length * 5 + 3;
+        } else {
+          // Has inline formatting — render as segments
+          // Extract text runs: [{text, bold, italic}]
+          type TextRun = { text: string; bold: boolean; italic: boolean };
+          const runs: TextRun[] = [];
+          function extractRuns(node: ChildNode, bold: boolean, italic: boolean) {
+            if (node.nodeType === 3) {
+              const t = node.textContent || '';
+              if (t) runs.push({ text: t, bold, italic });
+            } else if (node.nodeType === 1) {
+              const el = node as Element;
+              const tag = el.tagName.toLowerCase();
+              const isBold = bold || tag === 'strong' || tag === 'b';
+              const isItalic = italic || tag === 'em' || tag === 'i';
+              el.childNodes.forEach(child => extractRuns(child, isBold, isItalic));
+            }
+          }
+          element.childNodes.forEach(child => extractRuns(child, false, false));
 
-        const lines = doc.splitTextToSize(text, contentWidth);
-        doc.text(lines, margin, yPosition);
-        yPosition += lines.length * 5 + 3;
+          // Concatenate full text for line wrapping, then render run by run
+          const plainText = runs.map(r => r.text).join('');
+          const wrappedLines = doc.splitTextToSize(plainText, contentWidth);
+          doc.setFontSize(11);
+          doc.setTextColor('#000000');
+
+          // For multi-line paragraphs with mixed formatting, render each line
+          // with the correct font style for the majority of text on that line.
+          // For simplicity (jsPDF limitation), render the whole block as normal
+          // weight since making it all bold is worse than losing inline bold.
+          doc.setFont('helvetica', 'normal');
+          doc.text(wrappedLines, margin, yPosition);
+          yPosition += wrappedLines.length * 5 + 3;
+        }
       }
 
     } else if (tagName === 'table') {
@@ -176,8 +201,8 @@ export async function exportToPDF(
 
       const rows: string[][] = [];
       const headerRow: string[] = [];
-      // Store cell styles (colors) for transmittal tables
-      const cellStyles: Array<{ row: number; col: number; textColor: [number, number, number]; fillColor?: [number, number, number] }> = [];
+      // Store cell styles (colors, bold, fill) for body cells
+      const cellStyles: Array<{ row: number; col: number; textColor?: [number, number, number]; fillColor?: [number, number, number]; fontStyle?: string }> = [];
 
       // Extract header if present
       const thead = element.querySelector('thead');
@@ -197,24 +222,24 @@ export async function exportToPDF(
         cells.forEach((cell, colIndex) => {
           row.push(cell.textContent || '');
 
-          // Extract cell color from inline style (for category colors)
-          if (isTransmittal) {
-            const style = cell.getAttribute('style') || '';
-            const colorMatch = style.match(/color:\s*([^;]+)/);
-            const bgColorMatch = style.match(/background-color:\s*([^;]+)/);
+          // Extract cell styles from inline CSS
+          const style = cell.getAttribute('style') || '';
+          const colorMatch = style.match(/(?<!background-)color:\s*([^;]+)/);
+          const bgColorMatch = style.match(/background-color:\s*([^;]+)/);
+          const fwMatch = style.match(/font-weight:\s*(\w+)/);
 
-            if (colorMatch) {
-              const hexColor = colorMatch[1].trim();
-              const rgb = hexToRgb(hexColor);
-              if (rgb) {
-                cellStyles.push({
-                  row: rowIndex,
-                  col: colIndex,
-                  textColor: rgb,
-                  fillColor: bgColorMatch ? hexToRgb(bgColorMatch[1].trim()) || undefined : undefined,
-                });
-              }
-            }
+          const textColor = colorMatch ? hexToRgb(colorMatch[1].trim()) : null;
+          const fillColor = bgColorMatch ? hexToRgb(bgColorMatch[1].trim()) : null;
+          const isBold = fwMatch && (fwMatch[1] === 'bold' || fwMatch[1] === '700' || fwMatch[1] === '600');
+
+          if (textColor || fillColor || isBold) {
+            cellStyles.push({
+              row: rowIndex,
+              col: colIndex,
+              ...(textColor ? { textColor } : {}),
+              ...(fillColor ? { fillColor } : {}),
+              ...(isBold ? { fontStyle: 'bold' } : {}),
+            });
           }
         });
         if (row.length > 0) {
@@ -224,11 +249,30 @@ export async function exportToPDF(
 
       // Add table using autotable - now with consistent light styling for all tables
       if (rows.length > 0) {
-        // Build cell-specific styles for transmittal tables
-        const bodyCellStyles: { [key: string]: { textColor?: [number, number, number]; fillColor?: [number, number, number] } } = {};
-        cellStyles.forEach(({ row, col, textColor, fillColor }) => {
-          bodyCellStyles[`${row}-${col}`] = { textColor, fillColor };
+        // Build cell-specific styles map
+        const bodyCellStyles: { [key: string]: { textColor?: [number, number, number]; fillColor?: [number, number, number]; fontStyle?: string } } = {};
+        cellStyles.forEach(({ row, col, textColor, fillColor, fontStyle }) => {
+          bodyCellStyles[`${row}-${col}`] = { textColor, fillColor, fontStyle };
         });
+
+        const isEvalPrice = className.includes('eval-price');
+        const hasCellStyles = cellStyles.length > 0;
+
+        // For eval-price tables, set equal widths: description col = 40%, rest split equally
+        let columnStyles: Record<number, Record<string, unknown>> | undefined;
+        if (isProjectInfo) {
+          columnStyles = {
+            0: { cellWidth: 35, fontStyle: 'bold', textColor: [26, 111, 181] },
+            2: { cellWidth: 45, halign: 'right' as const, fontStyle: 'bold', textColor: [26, 111, 181] },
+          };
+        } else if (isEvalPrice && headerRow.length > 1) {
+          const descWidth = contentWidth * 0.40;
+          const firmWidth = (contentWidth - descWidth) / (headerRow.length - 1);
+          columnStyles = { 0: { cellWidth: descWidth } };
+          for (let c = 1; c < headerRow.length; c++) {
+            columnStyles[c] = { cellWidth: firmWidth, halign: 'right' as const };
+          }
+        }
 
         autoTable(doc, {
           startY: yPosition,
@@ -248,12 +292,9 @@ export async function exportToPDF(
           bodyStyles: {
             fontSize: isProjectInfo ? 10 : 9,
           },
-          columnStyles: isProjectInfo ? {
-            0: { cellWidth: 35, fontStyle: 'bold', textColor: [26, 111, 181] },
-            2: { cellWidth: 45, halign: 'right' as const, fontStyle: 'bold', textColor: [26, 111, 181] },
-          } : undefined,
-          // Apply cell-specific colors for transmittal category columns
-          didParseCell: isTransmittal ? (data) => {
+          columnStyles,
+          // Apply cell-specific styles (bold, fill, text color) from inline CSS
+          didParseCell: hasCellStyles ? (data) => {
             if (data.section === 'body') {
               const key = `${data.row.index}-${data.column.index}`;
               const style = bodyCellStyles[key];
@@ -263,6 +304,9 @@ export async function exportToPDF(
                 }
                 if (style.fillColor) {
                   data.cell.styles.fillColor = style.fillColor;
+                }
+                if (style.fontStyle) {
+                  data.cell.styles.fontStyle = style.fontStyle as 'bold';
                 }
               }
             }
@@ -277,7 +321,7 @@ export async function exportToPDF(
       }
 
     } else if (tagName === 'ul' || tagName === 'ol') {
-      // Process list items
+      // Process list items — render as normal weight (inline bold lost due to jsPDF limitation)
       const items = element.querySelectorAll(':scope > li');
       items.forEach((li: Element, idx: number) => {
         if (yPosition > pageHeight - 20) {
@@ -288,20 +332,8 @@ export async function exportToPDF(
         const text = li.textContent || '';
         const prefix = tagName === 'ul' ? '\u2022  ' : `${idx + 1}.  `;
 
-        // Check if the li content has bold/italic
-        const hasBold = li.querySelector('strong, b') !== null;
-        const hasItalic = li.querySelector('em, i') !== null;
-
         doc.setFontSize(11);
-        if (hasBold && hasItalic) {
-          doc.setFont('helvetica', 'bolditalic');
-        } else if (hasBold) {
-          doc.setFont('helvetica', 'bold');
-        } else if (hasItalic) {
-          doc.setFont('helvetica', 'italic');
-        } else {
-          doc.setFont('helvetica', 'normal');
-        }
+        doc.setFont('helvetica', 'normal');
         doc.setTextColor('#000000');
 
         const lines = doc.splitTextToSize(prefix + text.trim(), contentWidth - 5);
@@ -310,15 +342,61 @@ export async function exportToPDF(
       });
       yPosition += 3;
 
-    } else if (tagName === 'div') {
-      // Process div contents recursively
-      const children = element.children;
-      if (children.length > 0) {
-        for (let j = 0; j < children.length; j++) {
-          processElement(children[j]);
+    } else if (tagName === 'blockquote') {
+      // Blockquote - render as indented italic text
+      const text = element.textContent || '';
+      if (text.trim()) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor('#555555');
+
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 20;
         }
+        const wrapped = doc.splitTextToSize(text.trim(), contentWidth - 10);
+        doc.text(wrapped, margin + 5, yPosition);
+        yPosition += wrapped.length * 5 + 3;
+      }
+
+    } else if (tagName === 'hr') {
+      // Horizontal rule
+      if (yPosition > pageHeight - 20) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.setDrawColor('#cccccc');
+      doc.setLineWidth(0.3);
+      doc.line(margin, yPosition, margin + contentWidth, yPosition);
+      yPosition += 5;
+
+    } else if (tagName === 'div') {
+      // Process div contents — handle both element children and text-only nodes
+      const elChildren = element.children;
+      if (elChildren.length > 0) {
+        for (let j = 0; j < elChildren.length; j++) {
+          processElement(elChildren[j]);
+        }
+        // Also render any direct text nodes not wrapped in elements
+        element.childNodes.forEach(node => {
+          if (node.nodeType === 3) { // Text node
+            const text = (node.textContent || '').trim();
+            if (text) {
+              doc.setFontSize(11);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor('#000000');
+              if (yPosition > pageHeight - 20) {
+                doc.addPage();
+                yPosition = 20;
+              }
+              const wrapped = doc.splitTextToSize(text, contentWidth);
+              doc.text(wrapped, margin, yPosition);
+              yPosition += wrapped.length * 5 + 2;
+            }
+          }
+        });
       } else {
-        // Text-only div
+        // Text-only div — no element children at all
         const text = element.textContent || '';
         if (text.trim()) {
           doc.setFontSize(11);
@@ -333,6 +411,23 @@ export async function exportToPDF(
           doc.text(wrapped, margin, yPosition);
           yPosition += wrapped.length * 5 + 2;
         }
+      }
+
+    } else {
+      // Fallback: render any unhandled element's text content
+      const text = element.textContent || '';
+      if (text.trim()) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor('#000000');
+
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        const wrapped = doc.splitTextToSize(text.trim(), contentWidth);
+        doc.text(wrapped, margin, yPosition);
+        yPosition += wrapped.length * 5 + 2;
       }
     }
   }

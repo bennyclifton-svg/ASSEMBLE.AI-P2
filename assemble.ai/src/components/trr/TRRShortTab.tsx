@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { TRR, TRRUpdateData, TenderProcessFirm, TRRAddendumRow } from '@/types/trr';
 import { TRRHeaderTable } from './TRRHeaderTable';
 import { TRREditableSection } from './TRREditableSection';
@@ -31,12 +31,17 @@ interface TRRShortTabProps {
     isDownloading?: boolean;
 }
 
+/** Imperative handle exposed via ref — lets parent flush pending saves */
+export interface TRRShortTabHandle {
+    flushSave: () => Promise<void>;
+}
+
 interface ProjectDetails {
     projectName: string;
     address: string;
 }
 
-export function TRRShortTab({
+export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(function TRRShortTab({
     projectId,
     trr,
     stakeholderId,
@@ -48,7 +53,7 @@ export function TRRShortTab({
     onDownloadTransmittal,
     canSaveTransmittal,
     isDownloading,
-}: TRRShortTabProps) {
+}, ref) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
     const [firms, setFirms] = useState<TenderProcessFirm[]>([]);
     const [addenda, setAddenda] = useState<TRRAddendumRow[]>([]);
@@ -63,6 +68,26 @@ export function TRRShortTab({
 
     // Debounce timer ref
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Expose flushSave so the parent can force-save before export
+    useImperativeHandle(ref, () => ({
+        flushSave: async () => {
+            // Cancel any pending debounced save
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+                saveTimeoutRef.current = null;
+            }
+            // Immediately save all dirty fields
+            const data: TRRUpdateData = {};
+            if (executiveSummary !== trr.executiveSummary) data.executiveSummary = executiveSummary;
+            if (clarifications !== trr.clarifications) data.clarifications = clarifications;
+            if (recommendation !== trr.recommendation) data.recommendation = recommendation;
+            if (reportDate !== trr.reportDate) data.reportDate = reportDate;
+            if (Object.keys(data).length > 0) {
+                await onUpdateTRR(data);
+            }
+        },
+    }), [executiveSummary, clarifications, recommendation, reportDate, trr, onUpdateTRR]);
 
     // Fetch all data when component mounts
     useEffect(() => {
@@ -187,6 +212,8 @@ export function TRRShortTab({
     }, [debouncedSave]);
 
     // TRR AI generation — calls dedicated /api/trr/[id]/generate endpoint
+    // Each handler also auto-saves the generated content so it isn't lost
+    // if the trr prop updates and resets local state.
     const createTrrGenerateHandler = useMemo(() => {
         const makeHandler = (field: 'executiveSummary' | 'clarifications' | 'recommendation') => {
             return async (_currentValue: string): Promise<string> => {
@@ -202,6 +229,8 @@ export function TRRShortTab({
                 }
 
                 const data = await res.json();
+                // Auto-save generated content to backend immediately
+                debouncedSave({ [field]: data.content });
                 return data.content;
             };
         };
@@ -211,7 +240,7 @@ export function TRRShortTab({
             clarifications: makeHandler('clarifications'),
             recommendation: makeHandler('recommendation'),
         };
-    }, [trr.id]);
+    }, [trr.id, debouncedSave]);
 
     if (isLoading) {
         return (
@@ -303,4 +332,4 @@ export function TRRShortTab({
             />
         </div>
     );
-}
+});
