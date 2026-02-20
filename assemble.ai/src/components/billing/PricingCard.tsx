@@ -42,7 +42,9 @@ export function PricingCard({ plan, isCurrentPlan, currentPlanId = 'free' }: Pri
     const isPaidPlan = plan.priceMonthly > 0;
     // Only highlight Professional if user is on Free plan (no active subscription)
     const isHighlighted = plan.id === 'professional' && currentPlanId === 'free';
-    const canCheckout = isPaidPlan && !isCurrentPlan && plan.polarProductId;
+    // Note: don't check plan.polarProductId here - it uses server-only env vars
+    // (not NEXT_PUBLIC_) so it's always undefined on the client. Checkout uses slug instead.
+    const canCheckout = isPaidPlan && !isCurrentPlan;
 
     return (
         <div

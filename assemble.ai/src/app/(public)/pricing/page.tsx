@@ -5,23 +5,16 @@
 
 'use client';
 
-import { useState } from 'react';
 import { NavBar } from '@/components/landing/NavBar';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FooterSection } from '@/components/landing/FooterSection';
 
 export default function PricingPage() {
-    const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annually'>('monthly');
-
     return (
         <>
             <NavBar />
             <main className="pt-16">
-                <PricingSection
-                    billingPeriod={billingPeriod}
-                    onPeriodChange={setBillingPeriod}
-                    showToggle={true}
-                />
+                <PricingSection showToggle={true} />
 
                 {/* FAQ Section */}
                 <section className="border-t border-gray-800 py-20">

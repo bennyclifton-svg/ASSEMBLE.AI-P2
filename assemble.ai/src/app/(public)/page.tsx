@@ -14,6 +14,7 @@ import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
 import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { PricingSection } from '@/components/landing/PricingSection';
 import { CTABannerSection } from '@/components/landing/CTABannerSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { FinalCTASection } from '@/components/landing/FinalCTASection';
@@ -33,6 +34,7 @@ export default function LandingPage() {
                 <BenefitsSection />
                 <TestimonialsSection />
                 <HowItWorksSection />
+                <PricingSection />
                 <CTABannerSection />
                 <FAQSection />
                 <FinalCTASection />

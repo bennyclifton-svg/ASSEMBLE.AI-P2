@@ -1,12 +1,15 @@
 /**
  * Pricing Section Component
  * Displays subscription tiers with CTAs
+ * Auth-aware: triggers Polar checkout for logged-in users, links to register for guests
  */
 
 'use client';
 
-import { Check } from 'lucide-react';
+import { useState } from 'react';
+import { Check, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSession, checkout } from '@/lib/auth-client';
 
 export interface PricingTier {
     id: string;
@@ -81,10 +84,36 @@ interface PricingSectionProps {
 }
 
 export function PricingSection({
-    billingPeriod = 'monthly',
+    billingPeriod: externalPeriod,
     onPeriodChange,
     showToggle = true,
 }: PricingSectionProps) {
+    // Internal state for when used standalone (e.g. landing page)
+    const [internalPeriod, setInternalPeriod] = useState<'monthly' | 'annually'>('monthly');
+    const billingPeriod = externalPeriod ?? internalPeriod;
+    const handlePeriodChange = onPeriodChange ?? setInternalPeriod;
+
+    const { data: session } = useSession();
+    const isLoggedIn = !!session?.user;
+
+    const [loadingTier, setLoadingTier] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleCheckout = async (tier: PricingTier) => {
+        if (!tier.polarProductId) return;
+
+        setLoadingTier(tier.id);
+        setError(null);
+
+        try {
+            await checkout({ slug: tier.id });
+        } catch (err) {
+            console.error('Checkout error:', err);
+            setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+            setLoadingTier(null);
+        }
+    };
+
     return (
         <section className="py-20 sm:py-32" id="pricing">
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -101,12 +130,12 @@ export function PricingSection({
                 </div>
 
                 {/* Billing toggle */}
-                {showToggle && onPeriodChange && (
+                {showToggle && (
                     <div className="mt-10 flex justify-center">
                         <div className="inline-flex rounded-lg border border-gray-700 p-1">
                             <button
                                 type="button"
-                                onClick={() => onPeriodChange('monthly')}
+                                onClick={() => handlePeriodChange('monthly')}
                                 className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                                     billingPeriod === 'monthly'
                                         ? 'bg-blue-600 text-white'
@@ -117,7 +146,7 @@ export function PricingSection({
                             </button>
                             <button
                                 type="button"
-                                onClick={() => onPeriodChange('annually')}
+                                onClick={() => handlePeriodChange('annually')}
                                 className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
                                     billingPeriod === 'annually'
                                         ? 'bg-blue-600 text-white'
@@ -128,6 +157,13 @@ export function PricingSection({
                                 <span className="ml-1.5 text-xs text-green-400">Save 20%</span>
                             </button>
                         </div>
+                    </div>
+                )}
+
+                {/* Error message */}
+                {error && (
+                    <div className="mx-auto mt-6 max-w-lg rounded-lg border border-red-500/30 bg-red-950/30 p-3 text-center text-sm text-red-400">
+                        {error}
                     </div>
                 )}
 
@@ -159,11 +195,11 @@ export function PricingSection({
                             </div>
                             {tier.price.monthly > 0 && billingPeriod === 'annually' && (
                                 <p className="mt-1 text-sm text-gray-500">
-                                    Billed annually (${tier.price.annually * 12}/year)
+                                    Billed as ${tier.price.annually * 12}/year
                                 </p>
                             )}
 
-                            <ul className="mt-8 space-y-3 text-sm leading-6 text-gray-300">
+                            <ul className="mt-8 flex-1 space-y-3 text-sm leading-6 text-gray-300">
                                 {tier.features.map((feature) => (
                                     <li key={feature} className="flex gap-x-3">
                                         <Check className="h-5 w-5 flex-none text-blue-400" />
@@ -172,16 +208,45 @@ export function PricingSection({
                                 ))}
                             </ul>
 
-                            <Link
-                                href={tier.id === 'free' ? '/register' : `/register?plan=${tier.id}`}
-                                className={`mt-8 block rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors ${
-                                    tier.highlighted
-                                        ? 'bg-blue-600 text-white hover:bg-blue-500'
-                                        : 'bg-gray-700 text-white hover:bg-gray-600'
-                                }`}
-                            >
-                                {tier.cta}
-                            </Link>
+                            {/* Auth-aware CTA: checkout for logged-in, register link for guests */}
+                            {isLoggedIn && tier.polarProductId ? (
+                                <button
+                                    onClick={() => handleCheckout(tier)}
+                                    disabled={loadingTier === tier.id}
+                                    className={`mt-8 flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors ${
+                                        tier.highlighted
+                                            ? 'bg-blue-600 text-white hover:bg-blue-500'
+                                            : 'bg-gray-700 text-white hover:bg-gray-600'
+                                    } disabled:opacity-60`}
+                                >
+                                    {loadingTier === tier.id ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        'Upgrade Now'
+                                    )}
+                                </button>
+                            ) : isLoggedIn && tier.id === 'free' ? (
+                                <Link
+                                    href="/dashboard"
+                                    className="mt-8 block rounded-lg bg-gray-700 px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-gray-600"
+                                >
+                                    Go to Dashboard
+                                </Link>
+                            ) : (
+                                <Link
+                                    href={tier.id === 'free' ? '/register' : `/register?plan=${tier.id}`}
+                                    className={`mt-8 block rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors ${
+                                        tier.highlighted
+                                            ? 'bg-blue-600 text-white hover:bg-blue-500'
+                                            : 'bg-gray-700 text-white hover:bg-gray-600'
+                                    }`}
+                                >
+                                    {tier.cta}
+                                </Link>
+                            )}
                         </div>
                     ))}
                 </div>

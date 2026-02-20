@@ -31,6 +31,11 @@ COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# NEXT_PUBLIC_* vars are inlined at build time by Next.js
+# Pass via: docker build --build-arg NEXT_PUBLIC_APP_URL=http://your-app-url .
+ARG NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+
 # Build the Next.js application
 RUN npm run build
 

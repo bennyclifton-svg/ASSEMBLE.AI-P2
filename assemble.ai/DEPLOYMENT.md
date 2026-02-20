@@ -6,7 +6,7 @@
 - **Server IP**: `45.151.153.218`
 - **OS**: Ubuntu 24.04 LTS
 - **Hostname**: `assemblep2`
-- **App URL**: `http://assembleai-assembleai-bxojdu-a97028-45-151-153-218.traefik.me`
+- **App URL**: `http://foundry-45-151-153-218.traefik.me`
 - **Orchestration**: Docker Swarm (managed by Dokploy)
 
 ## Architecture on VPS
@@ -42,11 +42,15 @@ ssh root@45.151.153.218
 
 ```bash
 cd /tmp/ASSEMBLE.AI-P2 && git pull origin master
-cd assemble.ai && docker build -t assembleai-new --build-arg DATABASE_URL='postgresql://postgres.bhiuvwofowmfrzjfkqlt:Minpin2026!@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres' .
+cd assemble.ai && docker build -t assembleai-new \
+  --build-arg DATABASE_URL='postgresql://postgres.bhiuvwofowmfrzjfkqlt:Minpin2026!@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres' \
+  --build-arg NEXT_PUBLIC_APP_URL='http://foundry-45-151-153-218.traefik.me' \
+  .
 ```
 
-The build takes ~3 minutes. The DATABASE_URL is needed at build time because Next.js
-connects to the database during static page generation.
+The build takes ~3 minutes. Build args are needed because:
+- **DATABASE_URL** - Next.js connects to the database during static page generation
+- **NEXT_PUBLIC_APP_URL** - `NEXT_PUBLIC_*` vars are inlined into the client JS bundle at build time; without this, auth session calls default to `localhost:3000` and fail in production
 
 ### 4. Update the running service
 
