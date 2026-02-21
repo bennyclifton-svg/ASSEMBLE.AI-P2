@@ -165,6 +165,17 @@ export const generateNoteContentSchema = z.object({
   existingTitle: z.string().optional(),
 });
 
+export const executeInstructionSchema = z.object({
+  projectId: z.string().min(1, 'Project ID is required'),
+  instruction: z.string()
+    .min(1, 'Instruction text is required')
+    .max(500, 'Instruction must be 500 characters or fewer'),
+  contextType: z.enum(['note', 'meeting', 'report']),
+  contextId: z.string().min(1, 'Context ID is required'),
+  sectionId: z.string().optional(),
+  existingContent: z.string().max(10000).optional(),
+});
+
 // ============================================================================
 // TYPE EXPORTS
 // ============================================================================
@@ -193,4 +204,5 @@ export type ContextType = z.infer<typeof contextTypeSchema>;
 export type Tone = z.infer<typeof toneSchema>;
 export type ExportFormat = z.infer<typeof exportFormatSchema>;
 export type GenerateNoteContentInput = z.infer<typeof generateNoteContentSchema>;
+export type ExecuteInstructionInput = z.infer<typeof executeInstructionSchema>;
 export type NoteColorInput = z.infer<typeof noteColorSchema>;

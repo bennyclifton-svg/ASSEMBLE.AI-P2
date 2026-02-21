@@ -11,7 +11,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { hasInstructions } from '@/lib/editor/instruction-utils';
 import { cn } from '@/lib/utils';
+import type { Editor } from '@tiptap/react';
 import type { MeetingSection } from '@/types/notes-meetings-reports';
 
 interface MeetingAgendaSectionProps {
@@ -21,8 +23,11 @@ interface MeetingAgendaSectionProps {
     onUpdateLabel?: (sectionId: string, label: string) => Promise<void>;
     onGenerate?: (sectionId: string) => void;
     onPolish?: (sectionId: string) => void;
+    onExecuteInstruction?: (sectionId: string) => void;
+    onEditorReady?: (sectionId: string, editor: Editor) => void;
     isGenerating?: boolean;
     isPolishing?: boolean;
+    isExecuting?: boolean;
     level?: number;
     className?: string;
 }
@@ -34,13 +39,17 @@ export function MeetingAgendaSection({
     onUpdateLabel,
     onGenerate,
     onPolish,
+    onExecuteInstruction,
+    onEditorReady,
     isGenerating = false,
     isPolishing = false,
+    isExecuting = false,
     level = 0,
     className,
 }: MeetingAgendaSectionProps) {
     const [isExpanded, setIsExpanded] = useState(true);
     const [localContent, setLocalContent] = useState(section.content || '');
+    const [hasInstruction, setHasInstruction] = useState(false);
     const [isEditingLabel, setIsEditingLabel] = useState(false);
     const [editLabel, setEditLabel] = useState(section.sectionLabel);
     const labelInputRef = useRef<HTMLInputElement>(null);
@@ -65,6 +74,14 @@ export function MeetingAgendaSection({
         setLocalContent(newContent);
         debouncedSave(newContent);
     }, [debouncedSave]);
+
+    const handleEditorReady = useCallback((editor: Editor) => {
+        onEditorReady?.(section.id, editor);
+        setHasInstruction(hasInstructions(editor.state));
+        editor.on('update', () => {
+            setHasInstruction(hasInstructions(editor.state));
+        });
+    }, [section.id, onEditorReady]);
 
     // Focus label input when editing starts
     useEffect(() => {
@@ -146,18 +163,41 @@ export function MeetingAgendaSection({
                     )}
                 </div>
 
-                {/* AI Generate/Polish buttons */}
+                {/* AI Execute/Generate/Polish buttons */}
                 {!hasChildren && (
                     <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                        {onExecuteInstruction && hasInstruction && (
+                            <button
+                                onClick={() => onExecuteInstruction(section.id)}
+                                disabled={isExecuting || isGenerating || isPolishing}
+                                className={cn(
+                                    'flex items-center gap-1.5 text-sm font-medium transition-all',
+                                    isExecuting
+                                        ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                        : (isGenerating || isPolishing)
+                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                )}
+                                title="Execute // instruction"
+                            >
+                                <DiamondIcon
+                                    className={cn('w-4 h-4', isExecuting && 'animate-diamond-spin')}
+                                    variant="empty"
+                                />
+                                <span className={isExecuting ? 'animate-text-aurora' : ''}>
+                                    {isExecuting ? 'Executing...' : 'Execute'}
+                                </span>
+                            </button>
+                        )}
                         {onGenerate && (
                             <button
                                 onClick={() => onGenerate(section.id)}
-                                disabled={isGenerating || isPolishing}
+                                disabled={isGenerating || isPolishing || isExecuting}
                                 className={cn(
                                     'flex items-center gap-1.5 text-sm font-medium transition-all',
                                     isGenerating
                                         ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                        : isPolishing
+                                        : (isPolishing || isExecuting)
                                             ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
                                             : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                 )}
@@ -175,12 +215,12 @@ export function MeetingAgendaSection({
                         {onPolish && hasContent && (
                             <button
                                 onClick={() => onPolish(section.id)}
-                                disabled={isGenerating || isPolishing}
+                                disabled={isGenerating || isPolishing || isExecuting}
                                 className={cn(
                                     'flex items-center gap-1.5 text-sm font-medium transition-all',
                                     isPolishing
                                         ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                        : isGenerating
+                                        : (isGenerating || isExecuting)
                                             ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
                                             : 'text-[var(--color-accent-copper)] hover:opacity-80'
                                 )}
@@ -205,6 +245,7 @@ export function MeetingAgendaSection({
                     <RichTextEditor
                         content={localContent}
                         onChange={handleContentChange}
+                        onEditorReady={handleEditorReady}
                         placeholder="Enter content..."
                         variant="mini"
                         toolbarVariant="mini"
@@ -227,8 +268,11 @@ export function MeetingAgendaSection({
                             onUpdateLabel={onUpdateLabel}
                             onGenerate={onGenerate}
                             onPolish={onPolish}
+                            onExecuteInstruction={onExecuteInstruction}
+                            onEditorReady={onEditorReady}
                             isGenerating={isGenerating}
                             isPolishing={isPolishing}
+                            isExecuting={isExecuting}
                             level={level + 1}
                         />
                     ))}

@@ -11,7 +11,7 @@
  */
 
 import React, { useCallback, useEffect } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
@@ -68,6 +68,10 @@ export interface RichTextEditorProps {
 
   /** Extra content rendered at the right end of the toolbar */
   toolbarExtra?: React.ReactNode;
+
+  /** Callback fired when the TipTap editor instance is ready.
+   *  Provides direct access to the Editor for programmatic operations. */
+  onEditorReady?: (editor: Editor) => void;
 }
 
 const SIZE_CLASSES: Record<RichTextEditorVariant, string> = {
@@ -173,6 +177,7 @@ export function RichTextEditor({
   editorClassName,
   transparentBg = false,
   toolbarExtra,
+  onEditorReady,
 }: RichTextEditorProps) {
   // Convert markdown to HTML for initial content
   const processedContent = React.useMemo(() => markdownToHtml(content), [content]);
@@ -217,6 +222,13 @@ export function RichTextEditor({
       onFocus?.();
     },
   });
+
+  // Fire onEditorReady callback when editor instance is available
+  useEffect(() => {
+    if (editor) {
+      onEditorReady?.(editor);
+    }
+  }, [editor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update editor content when prop changes (external updates)
   useEffect(() => {

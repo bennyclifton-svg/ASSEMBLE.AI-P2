@@ -8,7 +8,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Star, Copy, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,16 @@ import { NoteEditor } from './NoteEditor';
 import { NoteColorPicker } from './NoteColorPicker';
 import { AttachmentSection } from './shared/AttachmentSection';
 import { useNoteTransmittal } from '@/lib/hooks/use-notes';
+import {
+    findFirstInstruction,
+    refindInstruction,
+    replaceInstructionWithContent,
+    validateInstruction,
+    extractSurroundingContent,
+    hasInstructions,
+} from '@/lib/editor/instruction-utils';
+import { toast } from 'sonner';
+import type { Editor } from '@tiptap/react';
 import type { Note, NoteColor, GenerateNoteContentResponse } from '@/types/notes-meetings-reports';
 import { NOTE_COLOR_MAP } from '@/types/notes-meetings-reports';
 import { cn } from '@/lib/utils';
@@ -51,7 +61,10 @@ export function NoteContent({
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [localTitle, setLocalTitle] = useState(note.title);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isExecuting, setIsExecuting] = useState(false);
+    const [hasInstruction, setHasInstruction] = useState(false);
     const [isCopying, setIsCopying] = useState(false);
+    const editorRef = useRef<Editor | null>(null);
 
     const { documents, isLoading: transmittalLoading } = useNoteTransmittal(note.id);
 
@@ -137,6 +150,76 @@ export function NoteContent({
             setIsGenerating(false);
         }
     }, [note.id, note.projectId, note.content, note.title, onUpdate]);
+
+    const handleEditorReady = useCallback((editor: Editor) => {
+        editorRef.current = editor;
+        setHasInstruction(hasInstructions(editor.state));
+
+        // Track instruction presence on every editor update
+        const updateHandler = () => {
+            setHasInstruction(hasInstructions(editor.state));
+        };
+        editor.on('update', updateHandler);
+    }, []);
+
+    const handleExecuteInstruction = useCallback(async () => {
+        if (!editorRef.current) return;
+
+        const match = findFirstInstruction(editorRef.current.state);
+        if (!match) return;
+
+        const validation = validateInstruction(match.instruction);
+        if (!validation.valid) {
+            toast.error(validation.error);
+            return;
+        }
+
+        try {
+            setIsExecuting(true);
+
+            const response = await fetch('/api/ai/execute-instruction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    projectId: note.projectId,
+                    instruction: match.instruction,
+                    contextType: 'note',
+                    contextId: note.id,
+                    existingContent: extractSurroundingContent(editorRef.current),
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to execute instruction');
+            }
+
+            const result = await response.json();
+
+            // Re-find the instruction (may have moved if user typed during request)
+            const updatedMatch = refindInstruction(editorRef.current.state, match.instruction);
+            if (!updatedMatch) {
+                toast.error('Could not find the instruction. It may have been modified.');
+                return;
+            }
+
+            const success = replaceInstructionWithContent(
+                editorRef.current,
+                updatedMatch,
+                result.content
+            );
+
+            if (!success) {
+                toast.error('Failed to insert AI content');
+            }
+
+        } catch (error) {
+            console.error('[NoteContent] Failed to execute instruction:', error);
+            toast.error('Failed to execute instruction');
+        } finally {
+            setIsExecuting(false);
+        }
+    }, [note.id, note.projectId]);
 
     const noteColor = note.color || 'yellow';
     const colorStyles = NOTE_COLOR_MAP[noteColor];
@@ -229,28 +312,56 @@ export function NoteContent({
                 <NoteEditor
                     content={note.content || ''}
                     onContentChange={handleContentChange}
+                    onEditorReady={handleEditorReady}
                     transparentBg={true}
                     className="h-full"
                     toolbarExtra={
-                        <button
-                            onClick={handleGenerate}
-                            disabled={isGenerating}
-                            className={cn(
-                                'flex items-center gap-1.5 text-sm font-medium transition-all',
-                                isGenerating
-                                    ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                    : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                        <div className="flex items-center gap-3">
+                            {hasInstruction && (
+                                <button
+                                    onClick={handleExecuteInstruction}
+                                    disabled={isExecuting || isGenerating}
+                                    className={cn(
+                                        'flex items-center gap-1.5 text-sm font-medium transition-all',
+                                        isExecuting
+                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                            : isGenerating
+                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                    )}
+                                    title="Execute // instruction"
+                                >
+                                    <DiamondIcon
+                                        className={cn('w-4 h-4', isExecuting && 'animate-diamond-spin')}
+                                        variant="empty"
+                                    />
+                                    <span className={isExecuting ? 'animate-text-aurora' : ''}>
+                                        {isExecuting ? 'Executing...' : 'Execute'}
+                                    </span>
+                                </button>
                             )}
-                            title="Generate content with AI"
-                        >
-                            <DiamondIcon
-                                className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
-                                variant="empty"
-                            />
-                            <span className={isGenerating ? 'animate-text-aurora' : ''}>
-                                {isGenerating ? 'Generating...' : 'Generate'}
-                            </span>
-                        </button>
+                            <button
+                                onClick={handleGenerate}
+                                disabled={isGenerating || isExecuting}
+                                className={cn(
+                                    'flex items-center gap-1.5 text-sm font-medium transition-all',
+                                    isGenerating
+                                        ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                        : isExecuting
+                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                )}
+                                title="Generate content with AI"
+                            >
+                                <DiamondIcon
+                                    className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
+                                    variant="empty"
+                                />
+                                <span className={isGenerating ? 'animate-text-aurora' : ''}>
+                                    {isGenerating ? 'Generating...' : 'Generate'}
+                                </span>
+                            </button>
+                        </div>
                     }
                 />
             </div>

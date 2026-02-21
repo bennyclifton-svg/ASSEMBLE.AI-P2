@@ -18,6 +18,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Plus, FileText, X, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+    findFirstInstruction,
+    refindInstruction,
+    replaceInstructionWithContent,
+    validateInstruction,
+    extractSurroundingContent,
+} from '@/lib/editor/instruction-utils';
+import { toast } from 'sonner';
+import type { Editor } from '@tiptap/react';
 import type { MeetingAgendaType, GenerateContentResponse } from '@/types/notes-meetings-reports';
 import type { StakeholderGroup } from '@/types/stakeholder';
 import { markdownToHTML } from '@/lib/utils/report-formatting';
@@ -90,7 +99,9 @@ export function MeetingEditor({
     // AI generation state
     const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null);
     const [polishingSectionId, setPolishingSectionId] = useState<string | null>(null);
+    const [executingSectionId, setExecutingSectionId] = useState<string | null>(null);
     const [lastSourceInfo, setLastSourceInfo] = useState<SourceInfo | null>(null);
+    const editorRefs = useRef<Map<string, Editor>>(new Map());
 
     // Title editing state
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -305,6 +316,68 @@ export function MeetingEditor({
             setPolishingSectionId(null);
         }
     }, [sections, updateSection]);
+
+    // Collect editor refs from agenda sections
+    const handleEditorReady = useCallback((sectionId: string, editor: Editor) => {
+        editorRefs.current.set(sectionId, editor);
+    }, []);
+
+    // Handle AI instruction execution for a section
+    const handleExecuteInstruction = useCallback(async (sectionId: string) => {
+        const editor = editorRefs.current.get(sectionId);
+        if (!editor) return;
+
+        const match = findFirstInstruction(editor.state);
+        if (!match) return;
+
+        const validation = validateInstruction(match.instruction);
+        if (!validation.valid) {
+            toast.error(validation.error);
+            return;
+        }
+
+        try {
+            setExecutingSectionId(sectionId);
+
+            const section = sections.find(s => s.id === sectionId);
+
+            const response = await fetch('/api/ai/execute-instruction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    projectId,
+                    instruction: match.instruction,
+                    contextType: 'meeting',
+                    contextId: meetingId,
+                    sectionId: section?.sectionKey,
+                    existingContent: extractSurroundingContent(editor),
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to execute instruction');
+            }
+
+            const result = await response.json();
+
+            const updatedMatch = refindInstruction(editor.state, match.instruction);
+            if (!updatedMatch) {
+                toast.error('Could not find the instruction. It may have been modified.');
+                return;
+            }
+
+            const success = replaceInstructionWithContent(editor, updatedMatch, result.content);
+            if (!success) {
+                toast.error('Failed to insert AI content');
+            }
+        } catch (error) {
+            console.error('[MeetingEditor] Failed to execute instruction:', error);
+            toast.error('Failed to execute instruction');
+        } finally {
+            setExecutingSectionId(null);
+        }
+    }, [sections, projectId, meetingId]);
 
     // Handle ad-hoc attendee addition
     const handleAddAdhoc = async () => {
@@ -561,8 +634,11 @@ export function MeetingEditor({
                                     onUpdateContent={handleUpdateSectionContent}
                                     onGenerate={handleGenerateContent}
                                     onPolish={handlePolishContent}
+                                    onExecuteInstruction={handleExecuteInstruction}
+                                    onEditorReady={handleEditorReady}
                                     isGenerating={generatingSectionId === section.id}
                                     isPolishing={polishingSectionId === section.id}
+                                    isExecuting={executingSectionId === section.id}
                                 />
                             ))}
                         </div>

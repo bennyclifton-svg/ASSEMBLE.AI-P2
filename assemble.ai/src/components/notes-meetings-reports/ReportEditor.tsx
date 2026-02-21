@@ -20,6 +20,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Plus, User, UserCircle, FileText, X, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+    findFirstInstruction,
+    refindInstruction,
+    replaceInstructionWithContent,
+    validateInstruction,
+    extractSurroundingContent,
+} from '@/lib/editor/instruction-utils';
+import { toast } from 'sonner';
+import type { Editor } from '@tiptap/react';
 import type { ReportContentsType, GenerateContentResponse } from '@/types/notes-meetings-reports';
 import type { StakeholderGroup } from '@/types/stakeholder';
 import { markdownToHTML } from '@/lib/utils/report-formatting';
@@ -102,7 +111,11 @@ export function ReportEditor({
     // AI generation state
     const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null);
     const [polishingSectionId, setPolishingSectionId] = useState<string | null>(null);
+    const [executingSectionId, setExecutingSectionId] = useState<string | null>(null);
     const [lastSourceInfo, setLastSourceInfo] = useState<SourceInfo | null>(null);
+
+    // Editor refs for // instruction execution
+    const editorRefs = useRef<Map<string, Editor>>(new Map());
 
     // Title editing state
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -313,6 +326,62 @@ export function ReportEditor({
             setPolishingSectionId(null);
         }
     }, [sections, updateSection]);
+
+    // Handle editor ready for // instruction execution
+    const handleEditorReady = useCallback((sectionId: string, editor: Editor) => {
+        editorRefs.current.set(sectionId, editor);
+    }, []);
+
+    // Handle // instruction execution for a section
+    const handleExecuteInstruction = useCallback(async (sectionId: string) => {
+        const editor = editorRefs.current.get(sectionId);
+        if (!editor) return;
+
+        const match = findFirstInstruction(editor.state);
+        if (!match) return;
+
+        const validation = validateInstruction(match.instruction);
+        if (!validation.valid) {
+            toast.error(validation.error);
+            return;
+        }
+
+        try {
+            setExecutingSectionId(sectionId);
+
+            const response = await fetch('/api/ai/execute-instruction', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    projectId,
+                    instruction: match.instruction,
+                    contextType: 'report',
+                    contextId: reportId,
+                    sectionId,
+                    existingContent: extractSurroundingContent(editor),
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to execute instruction');
+            }
+
+            const result = await response.json();
+
+            const updatedMatch = refindInstruction(editor.state, match.instruction);
+            if (updatedMatch) {
+                replaceInstructionWithContent(editor, updatedMatch, result.content);
+            } else {
+                toast.error('Could not find the instruction. It may have been modified.');
+            }
+        } catch (error) {
+            console.error('[ReportEditor] Failed to execute instruction:', error);
+            toast.error('Failed to execute instruction');
+        } finally {
+            setExecutingSectionId(null);
+        }
+    }, [projectId, reportId]);
 
     // Handle ad-hoc attendee addition
     const handleAddAdhoc = async () => {
@@ -610,8 +679,11 @@ export function ReportEditor({
                                     onUpdateContent={handleUpdateSectionContent}
                                     onGenerate={handleGenerateContent}
                                     onPolish={handlePolishContent}
+                                    onExecuteInstruction={handleExecuteInstruction}
+                                    onEditorReady={handleEditorReady}
                                     isGenerating={generatingSectionId === section.id}
                                     isPolishing={polishingSectionId === section.id}
+                                    isExecuting={executingSectionId === section.id}
                                 />
                             ))}
                         </div>

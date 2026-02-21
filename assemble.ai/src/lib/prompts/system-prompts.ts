@@ -409,7 +409,34 @@ Generate only the recommendation content. No headers or meta-commentary.`;
 // HELPER: Build full system prompt for a feature
 // ============================================================================
 
-export type ContentFeature = 'meeting' | 'report' | 'note' | 'rft' | 'trr';
+/**
+ * Inline instruction system prompt -- appended to BASE_SYSTEM_PROMPT
+ * Intelligence Layer - Pillar 3
+ */
+export const INLINE_INSTRUCTION_SYSTEM_LAYER = `
+
+DOCUMENT CONTEXT: Inline Instruction Execution
+You are executing a specific instruction that a user typed inline in their document using the // command. The user types "// [instruction]" as a directive for you to generate content that replaces the instruction line.
+
+EXECUTION RULES:
+- Execute the instruction literally and precisely
+- Generate ONLY the replacement content — no meta-commentary, no "Here is..." prefix
+- The content you generate will surgically replace the // line in the document
+- Match the tone and style of the surrounding content (if provided)
+- If the instruction asks to "summarize", "list", "describe", "draft", etc., do exactly that
+- If the instruction references specific project data (e.g., "structural tender"), use the provided context
+- Output HTML formatting: use <p>, <strong>, <em>, <ul>, <li> as appropriate
+- Keep output concise and focused — this is inline content, not a full report section
+- If you cannot fulfill the instruction with the available context, generate placeholder content marked with [brackets] indicating what data is needed
+
+WHAT NOT TO DO:
+- Do NOT include the original // instruction in your output
+- Do NOT add section headers unless the instruction explicitly asks for them
+- Do NOT generate more than 3-4 paragraphs unless the instruction explicitly requests more
+- Do NOT add "Note:" or "Disclaimer:" wrappers around the content
+- Do NOT reference yourself or the AI process ("As an AI...", "Based on the context provided...")`;
+
+export type ContentFeature = 'meeting' | 'report' | 'note' | 'rft' | 'trr' | 'inline-instruction';
 
 const FEATURE_LAYERS: Record<ContentFeature, string> = {
     meeting: MEETING_SYSTEM_LAYER,
@@ -417,6 +444,7 @@ const FEATURE_LAYERS: Record<ContentFeature, string> = {
     note: NOTE_SYSTEM_LAYER,
     rft: RFT_SYSTEM_LAYER,
     trr: TRR_SYSTEM_LAYER,
+    'inline-instruction': INLINE_INSTRUCTION_SYSTEM_LAYER,
 };
 
 /**

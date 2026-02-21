@@ -9,6 +9,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import type { Editor } from '@tiptap/react';
 import { cn } from '@/lib/utils';
 
 interface NoteEditorProps {
@@ -21,6 +22,8 @@ interface NoteEditorProps {
     transparentBg?: boolean;
     /** Extra content rendered at the right end of the toolbar */
     toolbarExtra?: React.ReactNode;
+    /** Callback fired when the TipTap editor instance is ready */
+    onEditorReady?: (editor: Editor) => void;
 }
 
 export function NoteEditor({
@@ -31,6 +34,7 @@ export function NoteEditor({
     className,
     transparentBg = false,
     toolbarExtra,
+    onEditorReady,
 }: NoteEditorProps) {
     const [localContent, setLocalContent] = useState(content);
     const [isSaving, setIsSaving] = useState(false);
@@ -106,6 +110,7 @@ export function NoteEditor({
                 toolbarVariant="full"
                 transparentBg={transparentBg}
                 toolbarExtra={toolbarExtra}
+                onEditorReady={onEditorReady}
                 className="flex-1 min-h-0"
             />
 
