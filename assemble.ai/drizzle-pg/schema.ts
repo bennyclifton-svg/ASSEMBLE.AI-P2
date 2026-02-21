@@ -1065,3 +1065,69 @@ export const programActivities = pgTable("program_activities", {
 			name: "program_activities_project_id_projects_id_fk"
 		}),
 ]);
+
+export const coachingChecklists = pgTable("coaching_checklists", {
+	id: text().primaryKey().notNull(),
+	projectId: text("project_id").notNull(),
+	templateId: text("template_id").notNull(),
+	module: text().notNull(),
+	title: text().notNull(),
+	coachingCategory: text("coaching_category").notNull(),
+	lifecycleStages: text("lifecycle_stages").array().notNull(),
+	items: text().notNull().default('[]'),
+	source: text().notNull().default('prebuilt'),
+	domainId: text("domain_id"),
+	sortOrder: integer("sort_order").notNull().default(0),
+	isDismissed: boolean("is_dismissed").notNull().default(false),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.projectId],
+			foreignColumns: [projects.id],
+			name: "coaching_checklists_project_id_projects_id_fk"
+		}).onDelete("cascade"),
+	index("idx_checklists_project").on(table.projectId),
+	index("idx_checklists_module").on(table.projectId, table.module),
+	unique("idx_checklists_template").on(table.projectId, table.templateId),
+]);
+
+export const coachingConversations = pgTable("coaching_conversations", {
+	id: text().primaryKey().notNull(),
+	projectId: text("project_id").notNull(),
+	module: text().notNull(),
+	title: text(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.projectId],
+			foreignColumns: [projects.id],
+			name: "coaching_conversations_project_id_projects_id_fk"
+		}).onDelete("cascade"),
+	index("idx_conversations_project").on(table.projectId),
+	index("idx_conversations_module").on(table.projectId, table.module),
+]);
+
+export const coachingMessages = pgTable("coaching_messages", {
+	id: text().primaryKey().notNull(),
+	conversationId: text("conversation_id").notNull(),
+	role: text().notNull(),
+	content: text().notNull(),
+	sources: text(),
+	suggestedFollowups: text("suggested_followups").array(),
+	relatedChecklistItems: text("related_checklist_items"),
+	isSaved: boolean("is_saved").default(false),
+	isPinned: boolean("is_pinned").default(false),
+	tokensUsed: integer("tokens_used"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.conversationId],
+			foreignColumns: [coachingConversations.id],
+			name: "coaching_messages_conversation_id_coaching_conversations_id_fk"
+		}).onDelete("cascade"),
+	index("idx_messages_conversation").on(table.conversationId),
+	index("idx_messages_saved").on(table.conversationId, table.isSaved),
+	index("idx_messages_pinned").on(table.conversationId, table.isPinned),
+]);
