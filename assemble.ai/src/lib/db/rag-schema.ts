@@ -26,6 +26,7 @@ import {
     customType,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
+import { knowledgeDomainSources } from './knowledge-domain-sources-schema';
 
 // Custom vector type for pgvector
 // Using customType since drizzle-orm doesn't have native pgvector support
@@ -125,7 +126,7 @@ export const documentSets = pgTable(
 export const documentSetsRelations = relations(documentSets, ({ many }) => ({
     members: many(documentSetMembers),
     reports: many(reportTemplates),
-    // domainSources: many(knowledgeDomainSources), // Uncomment after knowledge-domain-sources-schema.ts is created
+    domainSources: many(knowledgeDomainSources),
 }));
 
 // ============================================
