@@ -99,10 +99,14 @@ export const documentSets = pgTable(
         autoSyncCategoryIds: text('auto_sync_category_ids').array(), // Categories to auto-sync
         // Phase 10: RAG Context Architecture - Global & Project Repos
         repoType: text('repo_type', {
-            enum: ['project', 'due_diligence', 'house', 'apartments', 'fitout', 'industrial', 'remediation'],
+            enum: ['project', 'due_diligence', 'house', 'apartments', 'fitout', 'industrial', 'remediation', 'knowledge_regulatory', 'knowledge_practices', 'knowledge_templates'],
         }).default('project'), // Type of repo
         organizationId: text('organization_id'), // Required for global repos, NULL for project-scoped
         isGlobal: boolean('is_global').default(false), // true for 6 project type repos (org-level)
+        domainType: text('domain_type', {
+            enum: ['reference', 'regulatory', 'best_practices', 'templates', 'project_history', 'custom'],
+        }), // NULL for non-knowledge document sets (backward compatible)
+        domainTags: text('domain_tags').array(), // e.g., ['cost-management', 'budgeting', 'variations']
         createdAt: timestamp('created_at').defaultNow(),
         updatedAt: timestamp('updated_at').defaultNow(),
     },
@@ -111,6 +115,8 @@ export const documentSets = pgTable(
         index('idx_document_sets_repo_type').on(table.repoType),
         index('idx_document_sets_organization').on(table.organizationId),
         index('idx_document_sets_is_global').on(table.isGlobal),
+        index('idx_document_sets_domain_type').on(table.domainType),
+        // Note: GIN index for domainTags array will be created via raw SQL migration (Drizzle doesn't support GIN indexes natively)
         // Note: Partial unique index for is_default=true will be created via raw SQL migration
         // Note: Partial unique index for global repos (organization_id, repo_type) WHERE is_global=true
     ]
@@ -119,6 +125,7 @@ export const documentSets = pgTable(
 export const documentSetsRelations = relations(documentSets, ({ many }) => ({
     members: many(documentSetMembers),
     reports: many(reportTemplates),
+    // domainSources: many(knowledgeDomainSources), // Uncomment after knowledge-domain-sources-schema.ts is created
 }));
 
 // ============================================
@@ -299,7 +306,29 @@ export const GLOBAL_REPO_TYPES = [
 
 export type GlobalRepoType = (typeof GLOBAL_REPO_TYPES)[number];
 
-export type RepoType = 'project' | GlobalRepoType;
+// ============================================
+// Knowledge Domain Types
+// ============================================
+
+export const KNOWLEDGE_REPO_TYPES = [
+    'knowledge_regulatory',
+    'knowledge_practices',
+    'knowledge_templates',
+] as const;
+
+export type KnowledgeRepoType = (typeof KNOWLEDGE_REPO_TYPES)[number];
+
+// Extended RepoType to include knowledge repos
+export type RepoType = 'project' | GlobalRepoType | KnowledgeRepoType;
+
+// Source type enum for knowledge domain sources
+export const KNOWLEDGE_SOURCE_TYPES = [
+    'prebuilt_seed',
+    'user_uploaded',
+    'organization_library',
+] as const;
+
+export type KnowledgeSourceType = (typeof KNOWLEDGE_SOURCE_TYPES)[number];
 
 // Display names for repo types
 export const REPO_TYPE_LABELS: Record<RepoType, string> = {
@@ -310,6 +339,9 @@ export const REPO_TYPE_LABELS: Record<RepoType, string> = {
     fitout: 'Fitout',
     industrial: 'Industrial',
     remediation: 'Remediation',
+    knowledge_regulatory: 'Knowledge - Regulatory',
+    knowledge_practices: 'Knowledge - Best Practices',
+    knowledge_templates: 'Knowledge - Templates',
 };
 
 // ============================================
