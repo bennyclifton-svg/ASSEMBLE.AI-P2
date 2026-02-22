@@ -30,6 +30,26 @@ export interface RetrievalOptions {
     minRelevanceScore?: number;
 }
 
+export interface DomainRetrievalOptions {
+    projectType?: string;          // e.g., 'new', 'refurb'
+    domainTags?: string[];         // e.g., ['cost-management', 'variations']
+    domainTypes?: string[];        // e.g., ['best_practices', 'reference']
+    organizationId?: string;       // For org-scoped domains
+    state?: string;                // e.g., 'NSW', 'VIC'
+    includePrebuilt?: boolean;     // Include seed domains (default: true)
+    includeOrganization?: boolean; // Include org-uploaded domains (default: true)
+    topK?: number;
+    rerankTopK?: number;
+    minRelevanceScore?: number;
+}
+
+export interface DomainRetrievalResult extends RetrievalResult {
+    domainName?: string;
+    domainType?: string;
+    domainTags?: string[];
+    sourceVersion?: string;
+}
+
 const DEFAULT_TOP_K = 20; // Initial vector search results
 const DEFAULT_RERANK_TOP_K = 5; // Final reranked results
 const MIN_RELEVANCE_SCORE = 0.1; // Low threshold to allow fallback scoring to pass
@@ -255,6 +275,130 @@ async function resolveDocumentSetIds(documentSetIds: string[]): Promise<string[]
 }
 
 /**
+ * Resolve matching domain document set IDs based on filter criteria.
+ * Queries document_sets joined with knowledge_domain_sources to find
+ * active domain sets matching the requested tags, types, and project context.
+ */
+async function resolveDomainDocumentSets(
+    options: DomainRetrievalOptions
+): Promise<string[]> {
+    const includePrebuilt = options.includePrebuilt ?? true;
+    const includeOrganization = options.includeOrganization ?? true;
+
+    // Early return if neither scope is requested
+    if (!includePrebuilt && !(includeOrganization && options.organizationId)) {
+        return [];
+    }
+
+    // Build dynamic SQL conditions using Drizzle sql fragments (parameterized)
+    const tagFilter = options.domainTags && options.domainTags.length > 0
+        ? sql`AND ds.domain_tags && ${`{${options.domainTags.join(',')}}`}::text[]`
+        : sql``;
+
+    const typeFilter = options.domainTypes && options.domainTypes.length > 0
+        ? sql`AND ds.domain_type = ANY(${`{${options.domainTypes.join(',')}}`}::text[])`
+        : sql``;
+
+    const projectTypeFilter = options.projectType
+        ? sql`AND (kds.applicable_project_types IS NULL OR ${options.projectType} = ANY(kds.applicable_project_types))`
+        : sql``;
+
+    const stateFilter = options.state
+        ? sql`AND (kds.applicable_states IS NULL OR ${options.state} = ANY(kds.applicable_states))`
+        : sql``;
+
+    // Scope filter: prebuilt (global), organization, or both
+    const scopeFilter = (includePrebuilt && includeOrganization && options.organizationId)
+        ? sql`AND (ds.is_global = true OR ds.organization_id = ${options.organizationId})`
+        : includePrebuilt
+            ? sql`AND ds.is_global = true`
+            : sql`AND ds.organization_id = ${options.organizationId!}`;
+
+    console.log('[retrieval] Resolving domain document sets');
+
+    const result = await ragDb.execute(sql`
+        SELECT DISTINCT ds.id
+        FROM document_sets ds
+        LEFT JOIN knowledge_domain_sources kds ON kds.document_set_id = ds.id
+        WHERE ds.domain_type IS NOT NULL
+        AND ds.repo_type IN ('knowledge_regulatory', 'knowledge_practices', 'knowledge_templates')
+        AND (kds.is_active IS NULL OR kds.is_active = true)
+        ${tagFilter}
+        ${typeFilter}
+        ${projectTypeFilter}
+        ${stateFilter}
+        ${scopeFilter}
+    `);
+
+    const setIds = ((result.rows || []) as Array<{ id: string }>).map(r => r.id);
+    console.log(`[retrieval] Resolved ${setIds.length} domain document sets`);
+
+    return setIds;
+}
+
+/**
+ * Enrich retrieval results with domain metadata (name, type, tags, version).
+ * Looks up which document set each chunk belongs to, then fetches domain metadata.
+ */
+async function enrichWithDomainMetadata(
+    results: RetrievalResult[],
+    domainSetIds: string[]
+): Promise<DomainRetrievalResult[]> {
+    if (results.length === 0 || domainSetIds.length === 0) {
+        return results.map(r => ({ ...r }));
+    }
+
+    // Get document IDs from results
+    const documentIds = [...new Set(results.map(r => r.documentId))];
+    const docIdsArray = `{${documentIds.join(',')}}`;
+    const setIdsArray = `{${domainSetIds.join(',')}}`;
+
+    // Look up document-to-set mappings, then join domain metadata
+    const metadataResult = await ragDb.execute(sql`
+        SELECT
+            dsm.document_id AS "documentId",
+            ds.id AS "setId",
+            ds.name AS "domainName",
+            ds.domain_type AS "domainType",
+            ds.domain_tags AS "domainTags",
+            kds.source_version AS "sourceVersion"
+        FROM document_set_members dsm
+        JOIN document_sets ds ON ds.id = dsm.document_set_id
+        LEFT JOIN knowledge_domain_sources kds ON kds.document_set_id = ds.id
+        WHERE dsm.document_id = ANY(${docIdsArray}::text[])
+        AND dsm.document_set_id = ANY(${setIdsArray}::uuid[])
+    `);
+
+    // Build lookup: documentId → domain metadata
+    const domainMap = new Map<string, {
+        domainName: string;
+        domainType: string;
+        domainTags: string[];
+        sourceVersion: string | null;
+    }>();
+    for (const row of (metadataResult.rows || []) as any[]) {
+        domainMap.set(row.documentId, {
+            domainName: row.domainName,
+            domainType: row.domainType,
+            domainTags: row.domainTags || [],
+            sourceVersion: row.sourceVersion,
+        });
+    }
+
+    // Enrich each result
+    return results.map(result => {
+        const meta = domainMap.get(result.documentId);
+        return {
+            ...result,
+            domainName: meta?.domainName,
+            domainType: meta?.domainType,
+            domainTags: meta?.domainTags,
+            sourceVersion: meta?.sourceVersion ?? undefined,
+        };
+    });
+}
+
+/**
  * Main retrieval function - 4-stage pipeline
  */
 export async function retrieve(
@@ -344,6 +488,43 @@ export async function retrieveFromDocumentSets(
         ...options,
         documentSetIds,
     });
+}
+
+/**
+ * Retrieve from knowledge domains using domain-aware filtering.
+ * Resolves matching domain document sets, runs the 4-stage retrieval pipeline,
+ * and enriches results with domain metadata (name, type, tags, version).
+ */
+export async function retrieveFromDomains(
+    query: string,
+    options: DomainRetrievalOptions
+): Promise<DomainRetrievalResult[]> {
+    console.log(`[retrieval] Starting domain retrieval for query: "${query.substring(0, 50)}..."`);
+
+    // Step 1: Resolve matching domain document sets
+    const domainSetIds = await resolveDomainDocumentSets(options);
+
+    if (domainSetIds.length === 0) {
+        console.log('[retrieval] No matching domain document sets found');
+        return [];
+    }
+
+    console.log(`[retrieval] Querying ${domainSetIds.length} domain set(s)`);
+
+    // Step 2: Run existing 4-stage pipeline with resolved set IDs
+    const results = await retrieve(query, {
+        documentSetIds: domainSetIds,
+        topK: options.topK,
+        rerankTopK: options.rerankTopK,
+        minRelevanceScore: options.minRelevanceScore,
+        includeParentContext: true,
+    });
+
+    // Step 3: Enrich with domain metadata
+    const enriched = await enrichWithDomainMetadata(results, domainSetIds);
+
+    console.log(`[retrieval] Domain retrieval returned ${enriched.length} enriched results`);
+    return enriched;
 }
 
 /**
