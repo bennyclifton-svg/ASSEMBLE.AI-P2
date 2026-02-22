@@ -20,6 +20,10 @@ import { fetchRagDocuments } from './modules/documents';
 import { fetchProjectInfo } from './modules/project-info';
 import { fetchProcurementDocs } from './modules/procurement-docs';
 import { fetchAttachedDocuments } from './modules/attached-documents';
+import { retrieveFromDomains } from '../rag/retrieval';
+import type { DomainRetrievalResult } from '../rag/retrieval';
+import { SECTION_TO_DOMAIN_TAGS } from '../constants/knowledge-domains';
+import type { ProfileData } from './modules/profile';
 import type {
   ContextRequest,
   AssembledContext,
@@ -71,6 +75,85 @@ function emptyResult(moduleName: ModuleName): ModuleResult {
     error: 'Module fetch failed or timed out',
     estimatedTokens: 0,
   };
+}
+
+/**
+ * Assemble knowledge domain context from the domain-aware retrieval pipeline.
+ * Determines relevant domain tags from the request's sectionKey or explicit domainTags,
+ * extracts project profile metadata (type, state) from fetched modules, and formats
+ * the retrieval results as a prompt-ready section with source attribution.
+ */
+async function assembleDomainContext(
+  request: ContextRequest,
+  fetchedModules: Map<ModuleName, ModuleResult>
+): Promise<string> {
+  // 1. Determine domain tags: explicit domainTags take priority, else resolve from sectionKey
+  const domainTags =
+    request.domainTags && request.domainTags.length > 0
+      ? request.domainTags
+      : request.sectionKey
+        ? SECTION_TO_DOMAIN_TAGS[request.sectionKey] ?? []
+        : [];
+
+  if (domainTags.length === 0) {
+    return '';
+  }
+
+  // 2. Extract project profile for type/state filtering
+  const profileResult = fetchedModules.get('profile');
+  const profileData = profileResult?.success
+    ? (profileResult.data as ProfileData | null)
+    : null;
+
+  const projectType = profileData?.projectType;
+  const state = profileData?.region; // region stores state code (e.g. 'NSW', 'VIC')
+
+  // 3. Call domain retrieval pipeline
+  try {
+    const results = await retrieveFromDomains(request.task, {
+      domainTags,
+      projectType,
+      state,
+      includePrebuilt: true,
+      includeOrganization: true,
+      topK: 15,
+      rerankTopK: 5,
+      minRelevanceScore: 0.2,
+    });
+
+    if (results.length === 0) {
+      return '';
+    }
+
+    // 4. Format as a prompt section with source attribution
+    const lines: string[] = ['## Knowledge Domain Context'];
+
+    // Group results by domain for cleaner attribution
+    const byDomain = new Map<string, DomainRetrievalResult[]>();
+    for (const r of results) {
+      const key = r.domainName || 'Unknown Domain';
+      const group = byDomain.get(key) || [];
+      group.push(r);
+      byDomain.set(key, group);
+    }
+
+    for (const [domainName, domainResults] of byDomain) {
+      const firstResult = domainResults[0];
+      const typeLabel = firstResult.domainType || 'reference';
+      lines.push(`\n### ${domainName} (${typeLabel})`);
+
+      for (const r of domainResults) {
+        const sectionLabel = r.sectionTitle ? ` — ${r.sectionTitle}` : '';
+        lines.push(`\n**[${r.relevanceScore.toFixed(2)}]${sectionLabel}**`);
+        lines.push(r.content);
+      }
+    }
+
+    return lines.join('\n');
+  } catch (error) {
+    console.warn('[orchestrator] Domain context assembly failed:', error);
+    return '';
+  }
 }
 
 /**
@@ -213,7 +296,18 @@ export async function assembleContext(
     if (formatted) formattedParts.push(formatted);
   }
 
-  // 9. Assemble final context
+  // 9. Assemble knowledge domain context (Pillar 1)
+  // Default to enabled for report-section and coaching-qa; disabled for others unless explicit
+  const shouldIncludeDomains =
+    request.includeKnowledgeDomains ??
+    (request.contextType === 'report-section' || request.contextType === 'coaching-qa');
+
+  let knowledgeContext = '';
+  if (shouldIncludeDomains) {
+    knowledgeContext = await assembleDomainContext(request, fetchedModules);
+  }
+
+  // 10. Assemble final context
   const modulesFailed = [...fetchedModules.entries()]
     .filter(([, r]) => !r.success)
     .map(([name]) => name);
@@ -240,7 +334,7 @@ export async function assembleContext(
   const assembledContext: AssembledContext = {
     projectSummary: formatProjectSummary(request.projectId, fetchedModules),
     moduleContext: formattedParts.join('\n\n'),
-    knowledgeContext: '', // Populated when Pillar 1 domain retrieval is integrated
+    knowledgeContext,
     ragContext:
       ragResult?.success
         ? formatModule('ragDocuments', ragResult.data, 'standard')
