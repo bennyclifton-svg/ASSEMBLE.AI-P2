@@ -1701,3 +1701,84 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
         references: [products.id],
     }),
 }));
+
+// ============================================================================
+// COACHING ENGINE SCHEMA
+// ============================================================================
+
+export const coachingChecklists = pgTable('coaching_checklists', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    templateId: text('template_id').notNull(),
+    module: text('module').notNull(),
+    title: text('title').notNull(),
+    coachingCategory: text('coaching_category').notNull(),
+    lifecycleStages: text('lifecycle_stages').array().notNull(),
+    items: text('items').notNull().default('[]'),
+    source: text('source').notNull().default('prebuilt'),
+    domainId: text('domain_id'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    isDismissed: boolean('is_dismissed').notNull().default(false),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow(),
+}, (table) => [
+    index('idx_checklists_project').on(table.projectId),
+    index('idx_checklists_module').on(table.projectId, table.module),
+    unique('idx_checklists_template').on(table.projectId, table.templateId),
+]);
+
+export const coachingConversations = pgTable('coaching_conversations', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    module: text('module').notNull(),
+    title: text('title'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
+    updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow(),
+}, (table) => [
+    index('idx_conversations_project').on(table.projectId),
+    index('idx_conversations_module').on(table.projectId, table.module),
+]);
+
+export const coachingMessages = pgTable('coaching_messages', {
+    id: text('id').primaryKey(),
+    conversationId: text('conversation_id').references(() => coachingConversations.id, { onDelete: 'cascade' }).notNull(),
+    role: text('role').notNull(),
+    content: text('content').notNull(),
+    sources: text('sources'),
+    suggestedFollowups: text('suggested_followups').array(),
+    relatedChecklistItems: text('related_checklist_items'),
+    isSaved: boolean('is_saved').default(false),
+    isPinned: boolean('is_pinned').default(false),
+    tokensUsed: integer('tokens_used'),
+    createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
+}, (table) => [
+    index('idx_messages_conversation').on(table.conversationId),
+    index('idx_messages_saved').on(table.conversationId, table.isSaved),
+    index('idx_messages_pinned').on(table.conversationId, table.isPinned),
+]);
+
+// ============================================================================
+// COACHING ENGINE RELATIONS
+// ============================================================================
+
+export const coachingChecklistsRelations = relations(coachingChecklists, ({ one }) => ({
+    project: one(projects, {
+        fields: [coachingChecklists.projectId],
+        references: [projects.id],
+    }),
+}));
+
+export const coachingConversationsRelations = relations(coachingConversations, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [coachingConversations.projectId],
+        references: [projects.id],
+    }),
+    messages: many(coachingMessages),
+}));
+
+export const coachingMessagesRelations = relations(coachingMessages, ({ one }) => ({
+    conversation: one(coachingConversations, {
+        fields: [coachingMessages.conversationId],
+        references: [coachingConversations.id],
+    }),
+}));
