@@ -2,14 +2,20 @@
  * Report Context Orchestrator Service
  * Spec 025: Intelligent Report Generation with Full Project Context
  *
- * This service orchestrates section-aware data fetching from the FULL project lifecycle.
- * Each section type has a dedicated context fetcher that pulls relevant data and formats
- * it for AI consumption.
+ * @deprecated This legacy monolithic orchestrator (2,600 lines) is superseded by the
+ * unified Context Orchestrator at `src/lib/context/orchestrator.ts`.
+ * New consumers should call `assembleContext()` instead of the section-specific
+ * fetch functions in this file (fetchBriefContext, fetchProcurementContext, etc.).
  *
- * Architecture:
- * - Section-specific orchestrators fetch ALL relevant data in parallel
- * - Data is compressed into structured context strings
- * - Reporting period filtering highlights changes/deltas
+ * The utility types, enums, display maps, and formatting helpers exported here
+ * are still consumed by the UI and remain valid. Only the context-fetching
+ * functions are deprecated.
+ *
+ * Migration path:
+ * - `fetchBriefContext()` → `assembleContext({ contextType: 'report-section', sectionKey: 'brief' })`
+ * - `fetchProcurementContext()` → `assembleContext({ contextType: 'report-section', sectionKey: 'procurement' })`
+ * - `formatBriefContextForPrompt()` → orchestrator handles formatting via `assembled.moduleContext`
+ * - `formatProcurementContextForPrompt()` → orchestrator handles formatting via `assembled.moduleContext`
  */
 
 // ============================================================================
@@ -1170,6 +1176,7 @@ function calculateRiskSeverity(likelihood: string | null, impact: string | null)
  * Fetch the Brief Context for a project
  * This is the main data fetcher for Step 2 of the intelligent report generation pipeline
  *
+ * @deprecated Use `assembleContext({ contextType: 'report-section', sectionKey: 'brief' })` instead.
  * @param projectId - The project ID to fetch context for
  * @param reportingPeriod - Optional reporting period for delta calculations
  * @returns BriefContext with all project summaries
@@ -1777,6 +1784,7 @@ function createEmptyPeriodDeltas(): PeriodDeltas {
 
 /**
  * Format Brief Context as markdown for LLM prompt inclusion
+ * @deprecated Use `assembleContext()` — formatting is handled by the unified orchestrator.
  */
 export function formatBriefContextForPrompt(context: BriefContext): string {
     const sections: string[] = [];
@@ -1996,6 +2004,7 @@ export interface ProcurementContext {
  * Fetch the Procurement Context for a project
  * This is the main data fetcher for Step 3 of the intelligent report generation pipeline
  *
+ * @deprecated Use `assembleContext({ contextType: 'report-section', sectionKey: 'procurement' })` instead.
  * @param projectId - The project ID to fetch context for
  * @param reportingPeriod - Optional reporting period for delta calculations
  * @returns ProcurementContext with all procurement data
@@ -2449,6 +2458,7 @@ function createEmptyProcurementDeltas(): ProcurementDeltas {
 
 /**
  * Format Procurement Context as markdown for LLM prompt inclusion
+ * @deprecated Use `assembleContext()` — formatting is handled by the unified orchestrator.
  */
 export function formatProcurementContextForPrompt(context: ProcurementContext): string {
     const sections: string[] = [];

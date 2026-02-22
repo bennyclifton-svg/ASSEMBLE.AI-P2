@@ -16,6 +16,7 @@ import type {
 } from '../state';
 import { retrieve, type RetrievalResult } from '../../rag/retrieval';
 import { formatPlanningContextForPrompt } from '../../services/planning-context';
+import { assembleContext } from '../../context/orchestrator';
 
 export interface RetrieveContextResult {
     currentRetrievedChunks: RetrievedChunk[];
@@ -149,11 +150,41 @@ export async function retrieveContextNode(
 
 /**
  * Format hybrid context for section prompt
+ *
+ * Assembles three context layers:
+ * 1. Orchestrator Context (Lifecycle Data) — rich module data from profile, cost plan, program, risks, etc.
+ * 2. Planning Context (Exact) — structured Planning Card data
+ * 3. RAG Context (Retrieved) — document embedding chunks
  */
-export function formatHybridContext(state: ReportStateType): string {
+export async function formatHybridContext(state: ReportStateType): Promise<string> {
     const sections: string[] = [];
 
-    // Planning Context (Exact)
+    // Orchestrator Context (Lifecycle Data)
+    try {
+        const currentSection = state.toc?.sections[state.currentSectionIndex];
+        const assembled = await assembleContext({
+            projectId: state.projectId,
+            contextType: 'report-section',
+            sectionKey: currentSection?.id,
+            task: currentSection?.title ?? 'Generate report section',
+            // reportingPeriod is not tracked in LangGraph state; omitted (optional)
+        });
+
+        if (assembled.projectSummary) {
+            sections.push(assembled.projectSummary);
+        }
+        if (assembled.moduleContext) {
+            sections.push('## Lifecycle Context (from Project Data)\n');
+            sections.push(assembled.moduleContext);
+        }
+        if (assembled.crossModuleInsights) {
+            sections.push(assembled.crossModuleInsights);
+        }
+    } catch (error) {
+        console.error('[retrieve-context] Orchestrator context assembly failed:', error);
+    }
+
+    // Planning Context (Exact - from Planning Card)
     if (state.planningContext) {
         sections.push('## Project Context (Exact - from Planning Card)\n');
         sections.push(formatPlanningContextForPrompt(state.planningContext));

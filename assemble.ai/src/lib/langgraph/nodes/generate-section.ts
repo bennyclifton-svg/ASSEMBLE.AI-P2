@@ -170,7 +170,7 @@ export async function generateSectionNode(
         }
 
         // Build hybrid context and prompt
-        const hybridContext = formatHybridContext(state);
+        const hybridContext = await formatHybridContext(state);
         const prompt = buildSectionPrompt(currentSection, state, hybridContext);
 
         // Generate with Claude streaming
