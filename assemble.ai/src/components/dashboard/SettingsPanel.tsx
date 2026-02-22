@@ -3,6 +3,7 @@
 import React from 'react';
 import { UserProfileSection } from './UserProfileSection';
 import { DefaultSettingsSection } from './DefaultSettingsSection';
+import { KnowledgeDomainManager } from '@/components/knowledge/KnowledgeDomainManager';
 
 export function SettingsPanel() {
   return (
@@ -13,8 +14,11 @@ export function SettingsPanel() {
       </div>
 
       {/* Default Settings Section */}
-      <div className="flex-1">
-        <DefaultSettingsSection />
+      <DefaultSettingsSection />
+
+      {/* Knowledge Domains Section */}
+      <div className="px-6 pb-6">
+        <KnowledgeDomainManager />
       </div>
     </div>
   );
