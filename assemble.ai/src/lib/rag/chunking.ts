@@ -20,6 +20,8 @@ const CHUNK_SIZES = {
     drawingSchedules: { min: 500, max: 800 },
     correspondence: { min: 0, max: Infinity }, // Full document
     reports: { min: 800, max: 1200 },
+    regulatory: { min: 400, max: 800 },         // Small for precision
+    knowledgeGuide: { min: 600, max: 1000 },    // Medium for best-practice
     default: { min: 800, max: 1200 },
 };
 
@@ -27,6 +29,15 @@ const CHUNK_SIZES = {
 const CLAUSE_PATTERN = /^(\d+(?:\.\d+)*)\s+(.+)$/gm; // e.g., "3.2.1 Concrete Mix"
 const SECTION_PATTERN = /^#+\s+(.+)$/gm; // Markdown headers
 const SPEC_SECTION_PATTERN = /^(PART\s+\d+|SECTION\s+\d+)/gim;
+
+// NCC (National Construction Code) patterns
+const NCC_CLAUSE_PATTERN = /^([A-Z]\d+(?:\.\d+)*)\s+(.+)$/gm;
+const NCC_PERFORMANCE_PATTERN = /^(P\d+(?:\.\d+)*)\s+(.+)$/gm;
+const NCC_SPEC_PATTERN = /^(Specification\s+[A-Z]\d+(?:\.\d+)*)/gim;
+
+// Australian Standards (AS) patterns
+const AS_SECTION_PATTERN = /^(Section\s+\d+|Appendix\s+[A-Z])/gim;
+const AS_CLAUSE_PATTERN = /^(\d+(?:\.\d+)+)\s+(.+)$/gm;
 
 /**
  * Estimate token count (rough approximation: ~4 chars per token)
@@ -48,6 +59,24 @@ function generateChunkId(): string {
 function detectDocumentType(content: string): keyof typeof CHUNK_SIZES {
     const lowerContent = content.toLowerCase();
 
+    // Regulatory documents: NCC clauses (e.g., "A1.1 General Requirements") or performance requirements (e.g., "P2.1")
+    NCC_CLAUSE_PATTERN.lastIndex = 0;
+    NCC_PERFORMANCE_PATTERN.lastIndex = 0;
+    AS_SECTION_PATTERN.lastIndex = 0;
+    AS_CLAUSE_PATTERN.lastIndex = 0;
+    if (NCC_CLAUSE_PATTERN.test(content) || NCC_PERFORMANCE_PATTERN.test(content)) {
+        return 'regulatory';
+    }
+    if (AS_SECTION_PATTERN.test(content) || AS_CLAUSE_PATTERN.test(content)) {
+        return 'regulatory';
+    }
+
+    // Knowledge guide / seed content: best-practice markdown with specific markers
+    if (lowerContent.includes('common pitfalls:') && lowerContent.includes('reference:')) {
+        return 'knowledgeGuide';
+    }
+
+    SPEC_SECTION_PATTERN.lastIndex = 0;
     if (SPEC_SECTION_PATTERN.test(content) || lowerContent.includes('specification')) {
         return 'specifications';
     }
@@ -242,6 +271,148 @@ export function chunkDocument(
     }
 
     return chunks;
+}
+
+/**
+ * Chunk seed knowledge markdown content (best-practice guides, domain seed files).
+ * Splits on ## headings, with large sections further split on ### sub-headings.
+ */
+export function chunkSeedContent(content: string): Chunk[] {
+    const chunks: Chunk[] = [];
+    const maxTokens = CHUNK_SIZES.knowledgeGuide.max;
+
+    // Strip YAML frontmatter (---...---)
+    const stripped = content.replace(/^---[\s\S]*?---\n*/, '');
+
+    // Split on ## headings (keep the heading with its content)
+    const sections = stripped.split(/(?=^## )/m).filter((s) => s.trim());
+
+    for (let sectionIdx = 0; sectionIdx < sections.length; sectionIdx++) {
+        const section = sections[sectionIdx];
+        const headingMatch = section.match(/^## (.+)$/m);
+        const sectionTitle = headingMatch ? headingMatch[1].trim() : null;
+        const sectionTokens = estimateTokens(section);
+
+        if (sectionTokens <= maxTokens) {
+            // Section fits in one chunk
+            chunks.push({
+                id: generateChunkId(),
+                content: section.trim(),
+                hierarchyLevel: 1,
+                hierarchyPath: `${sectionIdx + 1}`,
+                sectionTitle,
+                clauseNumber: null,
+                parentId: null,
+                tokenCount: sectionTokens,
+            });
+        } else {
+            // Large section — split further on ### sub-headings
+            const parentId = generateChunkId();
+
+            // Add parent chunk with just the section heading
+            chunks.push({
+                id: parentId,
+                content: sectionTitle ? `## ${sectionTitle}` : section.slice(0, 100).trim(),
+                hierarchyLevel: 1,
+                hierarchyPath: `${sectionIdx + 1}`,
+                sectionTitle,
+                clauseNumber: null,
+                parentId: null,
+                tokenCount: estimateTokens(sectionTitle || ''),
+            });
+
+            const subSections = section.split(/(?=^### )/m).filter((s) => s.trim());
+
+            for (let subIdx = 0; subIdx < subSections.length; subIdx++) {
+                const sub = subSections[subIdx];
+                const subHeadingMatch = sub.match(/^### (.+)$/m);
+                const subTitle = subHeadingMatch ? subHeadingMatch[1].trim() : sectionTitle;
+                const subTokens = estimateTokens(sub);
+
+                if (subTokens <= maxTokens) {
+                    chunks.push({
+                        id: generateChunkId(),
+                        content: sub.trim(),
+                        hierarchyLevel: 2,
+                        hierarchyPath: `${sectionIdx + 1}.${subIdx + 1}`,
+                        sectionTitle: subTitle,
+                        clauseNumber: null,
+                        parentId,
+                        tokenCount: subTokens,
+                    });
+                } else {
+                    // Sub-section still too large — fall back to semantic splitting
+                    const semanticParts = splitBySemantic(sub, maxTokens);
+                    for (let partIdx = 0; partIdx < semanticParts.length; partIdx++) {
+                        chunks.push({
+                            id: generateChunkId(),
+                            content: semanticParts[partIdx],
+                            hierarchyLevel: 2,
+                            hierarchyPath: `${sectionIdx + 1}.${subIdx + 1}.${partIdx + 1}`,
+                            sectionTitle: subTitle,
+                            clauseNumber: null,
+                            parentId,
+                            tokenCount: estimateTokens(semanticParts[partIdx]),
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    return chunks;
+}
+
+/**
+ * Detect and preserve table boundaries during semantic chunking.
+ * Prevents splitting within pipe-delimited or tab-aligned tables.
+ * Returns content with tables wrapped as atomic units that won't be split.
+ */
+export function preserveTableBoundaries(text: string): string[] {
+    const lines = text.split('\n');
+    const segments: string[] = [];
+    let currentSegment = '';
+    let inTable = false;
+    let tableContent = '';
+
+    for (const line of lines) {
+        const isPipeLine = /^\|.*\|/.test(line.trim());
+        const isTabAligned = /\t.*\t/.test(line) && !line.startsWith('#');
+        const isSeparatorLine = /^\|[\s\-:|]+\|$/.test(line.trim());
+        const isTableRow = isPipeLine || isTabAligned || isSeparatorLine;
+
+        if (isTableRow && !inTable) {
+            // Entering a table — flush current text segment
+            if (currentSegment.trim()) {
+                segments.push(currentSegment.trim());
+                currentSegment = '';
+            }
+            inTable = true;
+            tableContent = line;
+        } else if (isTableRow && inTable) {
+            // Continue table
+            tableContent += '\n' + line;
+        } else if (!isTableRow && inTable) {
+            // Exiting table — flush table as atomic segment
+            segments.push(tableContent.trim());
+            tableContent = '';
+            inTable = false;
+            currentSegment = line;
+        } else {
+            // Normal text
+            currentSegment += (currentSegment ? '\n' : '') + line;
+        }
+    }
+
+    // Flush remaining content
+    if (inTable && tableContent.trim()) {
+        segments.push(tableContent.trim());
+    }
+    if (currentSegment.trim()) {
+        segments.push(currentSegment.trim());
+    }
+
+    return segments;
 }
 
 export { CHUNK_SIZES, estimateTokens };
