@@ -553,55 +553,71 @@ export function ProfilerMiddlePanel({
               <h3 className="text-sm font-medium text-[var(--color-text-primary)] mb-3">Complexity</h3>
               {/* Responsive grid: 1 col when narrow, up to 4 cols on wider containers */}
               <div className="grid grid-cols-1 @[300px]:grid-cols-2 @[500px]:grid-cols-3 @[700px]:grid-cols-4 gap-4">
-                {Object.entries(complexityOptions).map(([dimension, options]) => (
-                  <div
-                    key={dimension}
-                    className={`border border-[var(--color-card-firm-border)] p-3 shadow-md transition-colors duration-150 aspect-square flex flex-col ${dimension === 'procurement_route' ? '' : 'bg-[var(--color-card-firm)]'
-                      }`}
-                    style={dimension === 'procurement_route' ? { backgroundColor: 'var(--color-card-procurement)' } : undefined}
-                  >
-                    <label className="block text-xs font-semibold text-[var(--color-text-primary)] mb-3 capitalize">
-                      {dimension.replace(/_/g, ' ')}
-                    </label>
-                    <div className="flex flex-col gap-0.5">
-                      {options.map((option) => {
-                        // Check if option is selected (supports both single value and array for site_conditions)
-                        const dimValue = complexity[dimension];
-                        const isSelected = dimension === 'site_conditions'
-                          ? Array.isArray(dimValue)
-                            ? dimValue.includes(option.value)
-                            : dimValue === option.value
-                          : dimValue === option.value;
+                {Object.entries(complexityOptions).map(([dimension, options]) => {
+                  const isProcurementRoute = dimension === 'procurement_route';
+                  const hasSelection = options.some((opt) => {
+                    const dimValue = complexity[dimension];
+                    return dimension === 'site_conditions'
+                      ? Array.isArray(dimValue) ? dimValue.includes(opt.value) : dimValue === opt.value
+                      : dimValue === opt.value;
+                  });
 
-                        const isProcurementRoute = dimension === 'procurement_route';
-                        return (
-                          <button
-                            key={option.value}
-                            onClick={() => handleComplexitySelect(dimension, option.value)}
-                            className={`
-                              px-2 py-1 rounded text-xs font-medium transition-all text-left
-                              ${isProcurementRoute
-                                ? ''
-                                : isSelected
-                                  ? 'bg-[var(--color-card-firm-selected)]'
-                                  : 'bg-[var(--color-card-firm)] hover:bg-[var(--color-card-firm-hover)]'
-                              }
-                            `}
-                            style={{
-                              fontFamily: "'Ink Free', 'Lucida Handwriting', 'Segoe Print', cursive",
-                              color: 'var(--color-card-firm-text)',
-                              ...(isProcurementRoute && {
-                                backgroundColor: isSelected ? 'var(--color-card-procurement-selected)' : 'var(--color-card-procurement)',
-                              }),
-                            }}
-                          >
-                            {option.label}
-                          </button>
-                        );
-                      })}
+                  return (
+                    <div
+                      key={dimension}
+                      className={`
+                        rounded-lg p-3 shadow-sm transition-all duration-200 aspect-square flex flex-col backdrop-blur-md border
+                        ${isProcurementRoute
+                          ? 'border-[var(--color-card-procurement-border)] bg-[var(--color-card-procurement)]'
+                          : 'border-[var(--color-card-firm-border)] bg-[var(--color-card-firm)]'
+                        }
+                      `}
+                      style={{
+                        borderLeftWidth: '2px',
+                        borderLeftColor: isProcurementRoute
+                          ? (hasSelection ? 'var(--color-card-procurement-accent-bright)' : 'var(--color-card-procurement-accent)')
+                          : (hasSelection ? 'var(--color-card-firm-accent-bright)' : 'var(--color-card-firm-accent)'),
+                      }}
+                    >
+                      <label className="block text-xs font-semibold text-[var(--color-text-primary)] mb-3 capitalize">
+                        {dimension.replace(/_/g, ' ')}
+                      </label>
+                      <div className="flex flex-col gap-0.5">
+                        {options.map((option) => {
+                          const dimValue = complexity[dimension];
+                          const isSelected = dimension === 'site_conditions'
+                            ? Array.isArray(dimValue) ? dimValue.includes(option.value) : dimValue === option.value
+                            : dimValue === option.value;
+
+                          return (
+                            <button
+                              key={option.value}
+                              onClick={() => handleComplexitySelect(dimension, option.value)}
+                              className={`
+                                px-2 py-1 rounded text-xs font-medium transition-all text-left
+                                ${isProcurementRoute
+                                  ? isSelected
+                                    ? 'bg-[var(--color-card-procurement-selected)]'
+                                    : 'bg-[var(--color-card-procurement)] hover:bg-[var(--color-card-procurement-hover)]'
+                                  : isSelected
+                                    ? 'bg-[var(--color-card-firm-selected)]'
+                                    : 'bg-[var(--color-card-firm)] hover:bg-[var(--color-card-firm-hover)]'
+                                }
+                              `}
+                              style={{
+                                color: isProcurementRoute
+                                  ? 'var(--color-card-procurement-text)'
+                                  : 'var(--color-card-firm-text)',
+                              }}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -687,8 +703,8 @@ export function ProfilerMiddlePanel({
             )}
           </div>
 
-          {/* Consultant Disciplines */}
-          <div className="w-[175px] flex-shrink-0">
+          {/* Consultant Disciplines + Project Health */}
+          <div className="w-[175px] flex-shrink-0 space-y-4">
             {Object.keys(complexity).length > 0 && (
               <ConsultantPreview
                 buildingClass={buildingClass}

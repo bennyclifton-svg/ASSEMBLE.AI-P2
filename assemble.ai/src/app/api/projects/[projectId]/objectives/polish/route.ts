@@ -10,6 +10,8 @@ import { db } from '@/lib/db';
 import { profilerObjectives, projectProfiles } from '@/lib/db/pg-schema';
 import Anthropic from '@anthropic-ai/sdk';
 import { trackPolishEdit, identifyEditPatterns } from '@/lib/services/pattern-learning';
+import { retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
+import { resolveProfileDomainTags, buildProfileSearchQuery } from '@/lib/constants/knowledge-domains';
 
 const anthropic = new Anthropic();
 
@@ -71,11 +73,14 @@ export async function POST(
       .limit(1);
 
     let profileContext = '';
+    let domainContextSection = '';
     if (profile) {
       const buildingClass = profile.buildingClass;
       const projectType = profile.projectType;
       const subclass = JSON.parse(profile.subclass || '[]');
       const scaleData = JSON.parse(profile.scaleData || '{}');
+      const complexity = JSON.parse(profile.complexity || '{}');
+      const region = profile.region ?? 'AU';
       profileContext = `
 Project Context:
 - Building Class: ${buildingClass}
@@ -83,6 +88,66 @@ Project Context:
 - Subclass: ${subclass.join(', ')}
 - Scale: ${JSON.stringify(scaleData)}
 `;
+
+      // Domain knowledge retrieval
+      try {
+        const domainTags = resolveProfileDomainTags({
+          buildingClass,
+          projectType,
+          subclass,
+          complexity,
+        });
+
+        const searchQuery = buildProfileSearchQuery({
+          buildingClass,
+          projectType,
+          subclass,
+          scaleData,
+          complexity,
+          region,
+        });
+
+        console.log(`[objectives-polish] Domain retrieval: ${domainTags.length} tags, query="${searchQuery.substring(0, 80)}..."`);
+
+        const domainResults = await retrieveFromDomains(searchQuery, {
+          domainTags,
+          projectType,
+          topK: 15,
+          rerankTopK: 5,
+          minRelevanceScore: 0.2,
+        });
+
+        if (domainResults.length > 0) {
+          const lines: string[] = [
+            '## KNOWLEDGE DOMAIN CONTEXT',
+            'Use the following best-practice and regulatory guidance to expand objectives with accurate references:',
+            '',
+          ];
+
+          const byDomain = new Map<string, DomainRetrievalResult[]>();
+          for (const r of domainResults) {
+            const key = r.domainName || 'Unknown Domain';
+            const group = byDomain.get(key) || [];
+            group.push(r);
+            byDomain.set(key, group);
+          }
+
+          for (const [domainName, results] of byDomain) {
+            for (const r of results) {
+              lines.push(`### ${domainName} (relevance: ${r.relevanceScore.toFixed(2)})`);
+              lines.push(r.content);
+              lines.push('');
+            }
+          }
+
+          domainContextSection = lines.join('\n');
+          console.log(`[objectives-polish] Domain context: ${domainResults.length} chunks from ${byDomain.size} domain(s)`);
+        } else {
+          console.log('[objectives-polish] Domain retrieval returned no results');
+        }
+      } catch (error) {
+        console.warn('[objectives-polish] Domain retrieval failed, continuing without:', error);
+      }
     }
 
     // Build prompt based on what sections need polishing
@@ -111,14 +176,13 @@ Project Context:
     const prompt = `You are an expert construction project manager and technical writer in Australia.
 
 ${profileContext}
-
-OBJECTIVES TO EXPAND (may contain HTML formatting):
+${domainContextSection ? `${domainContextSection}\n` : ''}OBJECTIVES TO EXPAND (may contain HTML formatting):
 
 ${contentToPolish}
 
 INSTRUCTIONS - ITERATION 2:
 Expand each bullet point to 10-15 words while preserving HTML structure.
-1. Add specific Australian standards references where relevant (NCC 2022, BCA, AS standards)
+1. Use the KNOWLEDGE DOMAIN CONTEXT above to add accurate Australian standards references (NCC 2022, BCA, AS standards) — cite only references found in the domain context, do not invent standards
 2. Make objectives measurable where possible (quantities, percentages, ratings, timeframes)
 3. PRESERVE the HTML structure - keep <p><strong>Headers</strong></p> and <ul><li> format
 4. PRESERVE any user edits - do NOT change, remove, or reorder user-modified items

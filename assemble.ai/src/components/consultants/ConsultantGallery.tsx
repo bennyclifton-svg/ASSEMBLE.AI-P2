@@ -20,7 +20,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { GuidedChecklist } from '@/components/coaching/GuidedChecklist';
 
 interface ConsultantGalleryProps {
   projectId: string;
@@ -387,7 +386,6 @@ export function ConsultantGallery({
 
   return (
     <div className="space-y-6">
-      <GuidedChecklist projectId={projectId} module="procurement" />
       {/* Firms Section */}
       <div className="relative">
         {/* Extraction Progress Overlay */}

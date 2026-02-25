@@ -17,9 +17,6 @@ import { MeetingsReportsContainer } from '@/components/notes-meetings-reports/Me
 import { NotesPanel } from '@/components/notes-meetings-reports/NotesPanel';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
 import { AlertCircle } from 'lucide-react';
-import { AskAboutThisPanel } from '@/components/coaching/AskAboutThisPanel';
-import { CoachingQATrigger } from '@/components/coaching/CoachingQATrigger';
-import type { CoachingModule } from '@/lib/constants/coaching-checklists';
 import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
 import type { StakeholderWithStatus } from '@/types/stakeholder';
 
@@ -142,15 +139,6 @@ export function ProcurementCard({
         onMainTabChange?.(tab);
     };
     const [activeTab, setActiveTab] = useState<string | null>(null); // "consultant-{id}" or "contractor-{id}"
-
-    // Coaching Q&A panel state
-    const [qaOpen, setQaOpen] = useState(false);
-    const [qaModule, setQaModule] = useState<CoachingModule>('cost_plan');
-
-    const openQA = useCallback((module: CoachingModule) => {
-        setQaModule(module);
-        setQaOpen(true);
-    }, []);
 
     // T065: Profile completion status for tab enabling
     const [profileStatus, setProfileStatus] = useState<ProfileStatus>({
@@ -371,21 +359,6 @@ export function ProcurementCard({
                     <TabsTrigger value="meetings-reports" className={tabClassName}>
                         Meet & Report
                     </TabsTrigger>
-                    <div className="ml-auto flex items-center pb-2">
-                        <CoachingQATrigger
-                            onClick={() => {
-                                const moduleMap: Record<string, CoachingModule> = {
-                                    'cost-planning': 'cost_plan',
-                                    'program': 'program',
-                                    'procurement': 'procurement',
-                                    'notes': 'documents',
-                                    'meetings-reports': 'reports',
-                                    'stakeholders': 'stakeholders',
-                                };
-                                openQA(moduleMap[activeMainTab] || 'cost_plan');
-                            }}
-                        />
-                    </div>
                 </TabsList>
 
                 {/* Profiler Tab Content - 3 column layout for Subclass/Scale/Complexity */}
@@ -562,12 +535,6 @@ export function ProcurementCard({
                 </TabsContent>
             </Tabs>
 
-            {/* Coaching Q&A Panel */}
-            <AskAboutThisPanel
-                isOpen={qaOpen}
-                onClose={() => setQaOpen(false)}
-                context={{ module: qaModule, projectId }}
-            />
         </div>
         </ProcurementUIProvider>
     );

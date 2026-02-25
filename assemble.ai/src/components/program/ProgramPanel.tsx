@@ -4,7 +4,6 @@ import React, { useState, useMemo, createContext, useContext, useEffect } from '
 import { useProgram, buildActivityTree } from '@/lib/hooks/use-program';
 import { ProgramToolbar } from './ProgramToolbar';
 import { ProgramTable } from './ProgramTable';
-import { GuidedChecklist } from '@/components/coaching/GuidedChecklist';
 import type { ZoomLevel } from '@/types/program';
 
 // Context for refetch function
@@ -103,7 +102,6 @@ export function ProgramPanel({ projectId }: ProgramPanelProps) {
             <div className="flex h-full flex-col">
                 {/* Spacer above toolbar */}
                 <div className="h-10 shrink-0" />
-                <GuidedChecklist projectId={projectId} module="program" />
                 <ProgramToolbar
                     projectId={projectId}
                     zoomLevel={zoomLevel}

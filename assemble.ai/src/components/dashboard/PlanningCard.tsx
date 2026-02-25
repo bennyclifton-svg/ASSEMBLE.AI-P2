@@ -7,7 +7,7 @@ import { ObjectivesNav } from './planning/ObjectivesNav';
 import { ProfileSection } from '@/components/profiler/ProfileSection';
 import { StakeholderNav } from '@/components/stakeholders/StakeholderNav';
 import { ProjectSwitcher } from './ProjectSwitcher';
-import { CoachingHealthIndicator } from '@/components/coaching/CoachingHealthIndicator';
+
 
 interface Project {
     id: string;
@@ -112,8 +112,6 @@ export function PlanningCard({
                     onNavigate={onStakeholderNavigate}
                     isActive={activeMainTab === 'stakeholders'}
                 />
-
-                <CoachingHealthIndicator projectId={projectId} />
 
                 {/* Project Switcher */}
                 {onSelectProject && selectedProject && (

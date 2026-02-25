@@ -14,7 +14,7 @@ function CursorTag({ label, className }: { label: string; className?: string }) 
 
 export function CTABannerSection() {
     return (
-        <SectionContainer pattern="green" patternOffset={18} background="bg-[var(--primary-light)]" className="py-24">
+        <SectionContainer pattern="blue" patternOffset={18} background="bg-[var(--primary-light)]" className="py-24">
             <ScrollReveal>
                 <div className="relative text-center">
                     {/* Floating cursor tags */}
@@ -28,7 +28,7 @@ export function CTABannerSection() {
                         {ctaBannerContent.subtitle}
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Button variant="light-green" href="/register">
+                        <Button variant="light-blue" href="/register">
                             {ctaBannerContent.primaryCta}
                         </Button>
                         <Button variant="black" href="/pricing">

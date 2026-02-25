@@ -264,7 +264,7 @@ async function resolveDocumentSetIds(documentSetIds: string[]): Promise<string[]
     const members = await ragDb.execute(sql`
         SELECT DISTINCT document_id as "documentId"
         FROM document_set_members
-        WHERE document_set_id = ANY(${setIdsArray}::uuid[])
+        WHERE document_set_id = ANY(${setIdsArray}::text[])
         AND sync_status = 'synced'
     `);
 
@@ -366,7 +366,7 @@ async function enrichWithDomainMetadata(
         JOIN document_sets ds ON ds.id = dsm.document_set_id
         LEFT JOIN knowledge_domain_sources kds ON kds.document_set_id = ds.id
         WHERE dsm.document_id = ANY(${docIdsArray}::text[])
-        AND dsm.document_set_id = ANY(${setIdsArray}::uuid[])
+        AND dsm.document_set_id = ANY(${setIdsArray}::text[])
     `);
 
     // Build lookup: documentId → domain metadata

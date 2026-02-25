@@ -48,7 +48,6 @@ export interface ContextRequest {
     | 'report-section'
     | 'meeting-section'
     | 'inline-instruction'
-    | 'coaching-qa'
     | 'trr'
     | 'note'
     | 'rft';
@@ -156,9 +155,6 @@ export interface AssembledContext {
 
   /** Document RAG results (if applicable) */
   ragContext: string;
-
-  /** Coaching checklist status hints (for Pillar 4 consumers) */
-  coachingHints?: string;
 
   /** Cross-module insight strings */
   crossModuleInsights?: string;

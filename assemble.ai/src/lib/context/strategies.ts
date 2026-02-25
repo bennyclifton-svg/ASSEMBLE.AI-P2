@@ -157,11 +157,6 @@ export const CONTEXT_STRATEGIES: Record<string, ModuleRequirements> = {
     autoMode: true,
     modules: [{ module: 'profile', level: 'required', priority: 5 }],
   },
-
-  'coaching-qa': {
-    autoMode: true,
-    modules: [{ module: 'profile', level: 'required', priority: 5 }],
-  },
 };
 
 /**

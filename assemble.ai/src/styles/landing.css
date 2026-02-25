@@ -2,11 +2,11 @@
 /* Reference: Landing Page Design/ASSEMBLE-AI-Landing-Page-v2.html */
 
 :root {
-  /* Primary Colors */
-  --primary: #00C27A;
-  --primary-light: #B4F5C8;
-  --primary-lighter: #E8FDF0;
-  --primary-dark: #00A366;
+  /* Primary Colors (blue — consistent with application) */
+  --primary: #1776C1;
+  --primary-light: #C2DDF5;
+  --primary-lighter: #E8F2FB;
+  --primary-dark: #125E9A;
 
   /* Neutrals */
   --black: #000000;

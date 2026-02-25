@@ -11,7 +11,8 @@ import { projectProfiles, profilerObjectives, objectivesTransmittals } from '@/l
 import Anthropic from '@anthropic-ai/sdk';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import { evaluateRules, formatRulesForPrompt, type ProjectData } from '@/lib/services/inference-engine';
-import { retrieve } from '@/lib/rag/retrieval';
+import { retrieve, retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
+import { resolveProfileDomainTags, buildProfileSearchQuery } from '@/lib/constants/knowledge-domains';
 
 const anthropic = new Anthropic({ maxRetries: 4 });
 
@@ -77,6 +78,82 @@ export async function POST(
 
     const hasAttachedDocuments = attachedDocumentIds.length > 0;
 
+    // === DOMAIN KNOWLEDGE RETRIEVAL ===
+    let domainContextSection = '';
+
+    if (profile) {
+      try {
+        const profBuildingClass = profile.buildingClass;
+        const profProjectType = profile.projectType;
+        const profSubclass = JSON.parse(profile.subclass || '[]');
+        const profScaleData = JSON.parse(profile.scaleData || '{}');
+        const profComplexity = JSON.parse(profile.complexity || '{}');
+        const profWorkScope = JSON.parse(profile.workScope || '[]');
+        const profRegion = profile.region ?? 'AU';
+
+        const isWsApplicable = profProjectType === 'refurb' || profProjectType === 'remediation';
+        const wsLabels = isWsApplicable ? resolveWorkScopeLabels(profWorkScope, profProjectType) : [];
+
+        const domainTags = resolveProfileDomainTags({
+          buildingClass: profBuildingClass,
+          projectType: profProjectType,
+          subclass: profSubclass,
+          complexity: profComplexity,
+        });
+
+        const searchQuery = buildProfileSearchQuery({
+          buildingClass: profBuildingClass,
+          projectType: profProjectType,
+          subclass: profSubclass,
+          scaleData: profScaleData,
+          complexity: profComplexity,
+          workScopeLabels: wsLabels,
+          region: profRegion,
+        });
+
+        console.log(`[objectives-generate] Domain retrieval: ${domainTags.length} tags, query="${searchQuery.substring(0, 80)}..."`);
+
+        const domainResults = await retrieveFromDomains(searchQuery, {
+          domainTags,
+          projectType: profProjectType,
+          topK: 15,
+          rerankTopK: 5,
+          minRelevanceScore: 0.2,
+        });
+
+        if (domainResults.length > 0) {
+          const lines: string[] = [
+            '## KNOWLEDGE DOMAIN CONTEXT',
+            'The following best-practice and regulatory guidance is relevant to this project type:',
+            '',
+          ];
+
+          const byDomain = new Map<string, DomainRetrievalResult[]>();
+          for (const r of domainResults) {
+            const key = r.domainName || 'Unknown Domain';
+            const group = byDomain.get(key) || [];
+            group.push(r);
+            byDomain.set(key, group);
+          }
+
+          for (const [domainName, results] of byDomain) {
+            for (const r of results) {
+              lines.push(`### ${domainName} (relevance: ${r.relevanceScore.toFixed(2)})`);
+              lines.push(r.content);
+              lines.push('');
+            }
+          }
+
+          domainContextSection = lines.join('\n');
+          console.log(`[objectives-generate] Domain context: ${domainResults.length} chunks from ${byDomain.size} domain(s)`);
+        } else {
+          console.log('[objectives-generate] Domain retrieval returned no results');
+        }
+      } catch (error) {
+        console.warn('[objectives-generate] Domain retrieval failed, continuing without:', error);
+      }
+    }
+
     let response;
 
     if (hasAttachedDocuments) {
@@ -116,7 +193,7 @@ export async function POST(
 
 You have been given excerpts from project documents (briefs, Statements of Environmental Effects, client design objectives, etc.). Extract project objectives from these documents and sort them into two categories.
 
-## Retrieved Content — Functional & Quality Related
+${domainContextSection ? `${domainContextSection}\n` : ''}## Retrieved Content — Functional & Quality Related
 ${functionalContext || '(No relevant content found)'}
 
 ## Retrieved Content — Planning & Compliance Related
@@ -259,7 +336,7 @@ PROJECT PROFILE:
 - Complexity: ${Object.entries(complexity).map(([k, v]) => `${k}: ${v}`).join(', ') || 'Not specified'}
 ${hasSpecificScope ? `- Work Scope: ${workScopeLabels.join(', ')}` : ''}
 ${workScopeConstraint}
-SECTION DEFINITIONS - CRITICAL:
+${domainContextSection ? `${domainContextSection}\n` : ''}SECTION DEFINITIONS - CRITICAL:
 The two sections have DIFFERENT purposes. DO NOT mix content between them:
 
 FUNCTIONAL & QUALITY - What the building provides and how well:

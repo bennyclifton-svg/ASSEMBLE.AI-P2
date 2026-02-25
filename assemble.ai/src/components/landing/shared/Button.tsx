@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-type ButtonVariant = 'primary-green' | 'light-green' | 'black' | 'ghost';
+type ButtonVariant = 'primary-blue' | 'light-blue' | 'black' | 'ghost';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
     variant?: ButtonVariant;
@@ -14,21 +14,21 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-    'primary-green': 'bg-[var(--primary)] text-black hover:bg-[var(--primary-dark)]',
-    'light-green': 'bg-[var(--primary-light)] text-black hover:bg-[#9EEAB5]',
+    'primary-blue': 'bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]',
+    'light-blue': 'bg-[var(--primary-light)] text-black hover:bg-[#A8D0F0]',
     'black': 'bg-black text-white hover:bg-[var(--gray-800)]',
     'ghost': 'bg-transparent text-white border border-[var(--gray-700)] hover:bg-[var(--gray-900)] hover:border-[var(--gray-500)]',
 };
 
 const arrowBgStyles: Record<ButtonVariant, string> = {
-    'primary-green': 'bg-[var(--primary-dark)]',
-    'light-green': 'bg-black',
+    'primary-blue': 'bg-[var(--primary-dark)]',
+    'light-blue': 'bg-black',
     'black': 'bg-[var(--gray-800)]',
     'ghost': 'bg-[var(--gray-700)]',
 };
 
 export function Button({
-    variant = 'primary-green',
+    variant = 'primary-blue',
     hasArrow = true,
     size = 'default',
     href,

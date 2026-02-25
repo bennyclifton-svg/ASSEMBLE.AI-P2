@@ -110,10 +110,6 @@ export const {
     // Billing tables (Phase 5)
     products,
     transactions,
-    // Coaching Engine
-    coachingChecklists,
-    coachingConversations,
-    coachingMessages,
 } = pgSchema;
 
 // Re-export Better Auth schema tables

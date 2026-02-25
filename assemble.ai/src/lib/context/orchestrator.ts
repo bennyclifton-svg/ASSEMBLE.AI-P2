@@ -297,10 +297,10 @@ export async function assembleContext(
   }
 
   // 9. Assemble knowledge domain context (Pillar 1)
-  // Default to enabled for report-section and coaching-qa; disabled for others unless explicit
+  // Default to enabled for report-section; disabled for others unless explicit
   const shouldIncludeDomains =
     request.includeKnowledgeDomains ??
-    (request.contextType === 'report-section' || request.contextType === 'coaching-qa');
+    (request.contextType === 'report-section');
 
   let knowledgeContext = '';
   if (shouldIncludeDomains) {

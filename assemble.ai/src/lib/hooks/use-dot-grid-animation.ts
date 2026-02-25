@@ -4,7 +4,7 @@ import { useRef, useEffect, useCallback } from 'react';
 
 // ---- Types ----
 
-export type PatternVariant = 'standard' | 'dark' | 'fine' | 'green' | 'hero';
+export type PatternVariant = 'standard' | 'dark' | 'fine' | 'blue' | 'hero';
 
 export interface VariantConfig {
     spacing: number;
@@ -17,7 +17,7 @@ export const VARIANT_CONFIGS: Record<PatternVariant, VariantConfig> = {
     standard: { spacing: 24, radius: 1, color: [163, 163, 163], opacity: 1.0 },   // #A3A3A3
     dark:     { spacing: 24, radius: 1, color: [64, 64, 64],    opacity: 1.0 },   // #404040
     fine:     { spacing: 16, radius: 1, color: [212, 212, 212], opacity: 1.0 },   // #D4D4D4
-    green:    { spacing: 20, radius: 1, color: [0, 194, 122],   opacity: 0.3 },   // #00C27A
+    blue:     { spacing: 20, radius: 1, color: [23, 118, 193],   opacity: 0.3 },   // #1776C1
     hero:     { spacing: 18, radius: 1, color: [38, 38, 38],    opacity: 0.5 },   // #262626
 };
 

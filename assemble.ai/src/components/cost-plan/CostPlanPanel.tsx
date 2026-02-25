@@ -32,7 +32,6 @@ import { DisciplineDropdown } from './cells/DisciplineDropdown';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { ProgramActivitySelector } from './ProgramActivitySelector';
 import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
-import { GuidedChecklist } from '@/components/coaching/GuidedChecklist';
 import type { CostLineSection, CostLineWithCalculations, GroupedLine, GroupedLineTotals } from '@/types/cost-plan';
 import type { ProgramActivity } from '@/types/program';
 
@@ -118,7 +117,6 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
                 </TabsList>
 
                 <TabsContent value="cost-plan" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
-                    <GuidedChecklist projectId={projectId} module="cost_plan" />
                     <CostPlanSpreadsheet projectId={projectId} />
                 </TabsContent>
 

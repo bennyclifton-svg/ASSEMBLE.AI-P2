@@ -1,9 +1,38 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { SectionContainer } from './shared/SectionContainer';
 import { Button } from './shared/Button';
 import { heroContent } from './data/landing-data';
+
+function AnimatedSubtitle({ text }: { text: string }) {
+    const [isVisible, setIsVisible] = useState(false);
+    const words = useMemo(() => text.split(' '), [text]);
+
+    useEffect(() => {
+        // Slight delay so the headline renders first
+        const timer = setTimeout(() => setIsVisible(true), 400);
+        return () => clearTimeout(timer);
+    }, []);
+
+    return (
+        <p className="text-[20px] sm:text-[22px] text-[var(--gray-400)] max-w-[480px] mb-8 leading-relaxed">
+            {words.map((word, i) => (
+                <span
+                    key={i}
+                    className="inline-block transition-all duration-500 ease-out"
+                    style={{
+                        opacity: isVisible ? 1 : 0,
+                        transform: isVisible ? 'translateY(0)' : 'translateY(8px)',
+                        transitionDelay: `${i * 100}ms`,
+                    }}
+                >
+                    {word}{i < words.length - 1 ? '\u00A0' : ''}
+                </span>
+            ))}
+        </p>
+    );
+}
 
 function HeroMockup() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -24,7 +53,7 @@ function HeroMockup() {
     };
 
     return (
-        <div className="relative w-full rounded-2xl shadow-2xl overflow-hidden group">
+        <div className="relative w-full rounded-2xl shadow-2xl overflow-hidden group border border-[var(--gray-700)] ring-1 ring-white/10">
             <video
                 ref={videoRef}
                 className="w-full h-auto block"
@@ -76,9 +105,7 @@ export function HeroSection() {
                         ))}
                     </h1>
 
-                    <p className="text-[17px] text-[var(--gray-400)] max-w-[480px] mb-8 leading-relaxed">
-                        {heroContent.subtitle}
-                    </p>
+                    <AnimatedSubtitle text={heroContent.subtitle} />
 
                 </div>
 

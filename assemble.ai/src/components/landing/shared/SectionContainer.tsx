@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import { AnimatedDotGrid } from './AnimatedDotGrid';
 
-type PatternVariant = 'none' | 'standard' | 'dark' | 'fine' | 'green' | 'hero';
+type PatternVariant = 'none' | 'standard' | 'dark' | 'fine' | 'blue' | 'hero';
 
 interface SectionContainerProps {
     children: React.ReactNode;

@@ -157,7 +157,7 @@ export function WorkScopeSelector({
         )}
       </div>
 
-      {/* Sticky-note grid layout matching complexity tiles */}
+      {/* Frosted glass grid layout matching complexity tiles */}
       <div className="grid grid-cols-1 @[300px]:grid-cols-2 @[500px]:grid-cols-3 @[700px]:grid-cols-4 gap-4">
         {categories.map((category) => {
           const selectionCount = getCategorySelectionCount(category);
@@ -165,10 +165,15 @@ export function WorkScopeSelector({
           return (
             <div
               key={category.key}
-              className="p-3 shadow-md transition-colors duration-150 aspect-square flex flex-col"
-              style={{ backgroundColor: 'var(--color-card-scope)' }}
+              className="rounded-lg p-3 shadow-sm transition-all duration-200 aspect-square flex flex-col backdrop-blur-md border border-[var(--color-card-scope-border)] bg-[var(--color-card-scope)]"
+              style={{
+                borderLeftWidth: '2px',
+                borderLeftColor: selectionCount > 0
+                  ? 'var(--color-card-scope-accent-bright)'
+                  : 'var(--color-card-scope-accent)',
+              }}
             >
-              <label className="block text-xs font-semibold mb-3 capitalize" style={{ color: 'var(--color-card-scope-text)' }}>
+              <label className="block text-xs font-semibold mb-3 capitalize text-[var(--color-card-scope-text)]">
                 {category.label}
               </label>
               <div className="flex flex-col gap-0.5">
@@ -180,12 +185,14 @@ export function WorkScopeSelector({
                     <button
                       key={item.value}
                       onClick={() => toggleScope(item.value)}
-                      className="px-2 py-1 rounded text-xs font-medium transition-all text-left flex items-center justify-between"
-                      style={{
-                        fontFamily: "'Ink Free', 'Lucida Handwriting', 'Segoe Print', cursive",
-                        backgroundColor: isSelected ? 'var(--color-card-scope-selected)' : 'var(--color-card-scope)',
-                        color: 'var(--color-card-scope-text)'
-                      }}
+                      className={`
+                        px-2 py-1 rounded text-xs font-medium transition-all text-left flex items-center justify-between
+                        text-[var(--color-card-scope-text)]
+                        ${isSelected
+                          ? 'bg-[var(--color-card-scope-selected)]'
+                          : 'bg-[var(--color-card-scope)] hover:bg-[var(--color-card-scope-hover)]'
+                        }
+                      `}
                       title={item.consultants?.length ? `Consultants: ${item.consultants.join(', ')}` : undefined}
                     >
                       <span className="truncate">{item.label}</span>

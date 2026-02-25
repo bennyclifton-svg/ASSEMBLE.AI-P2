@@ -9,17 +9,13 @@
  * Run with: npx tsx scripts/ingest-seed-knowledge.ts
  */
 
+// Load env vars BEFORE any module that reads process.env at import time
 import { config } from 'dotenv';
-config({ path: '.env.local' });
-
 import { readFileSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';
-import { eq, and } from 'drizzle-orm';
-import { ragDb, pool } from '../src/lib/db/rag-client';
-import { documentSets, documentChunks, documentSetMembers } from '../src/lib/db/rag-schema';
-import { knowledgeDomainSources } from '../src/lib/db/knowledge-domain-sources-schema';
-import { chunkSeedContent } from '../src/lib/rag/chunking';
-import { generateEmbeddings } from '../src/lib/rag/embeddings';
+
+config({ path: '.env.local' });
+config({ path: '.env' });
 
 // ============================================
 // Types
@@ -46,7 +42,7 @@ function parseFrontmatter(raw: string): { frontmatter: SeedFrontmatter; body: st
         throw new Error('Missing or malformed YAML frontmatter');
     }
 
-    const lines = match[1].split('\n');
+    const lines = match[1].split('\n').map((l) => l.replace(/\r$/, ''));
     const body = match[2];
     const fm: Record<string, string | string[]> = {};
 
@@ -83,6 +79,14 @@ function generateId(): string {
 // ============================================
 
 async function main() {
+    // Dynamic imports so rag-client sees the env vars loaded above
+    const { eq, and } = await import('drizzle-orm');
+    const { ragDb, pool } = await import('../src/lib/db/rag-client');
+    const { documentSets, documentChunks, documentSetMembers } = await import('../src/lib/db/rag-schema');
+    const { knowledgeDomainSources } = await import('../src/lib/db/knowledge-domain-sources-schema');
+    const { chunkSeedContent } = await import('../src/lib/rag/chunking');
+    const { generateEmbeddings } = await import('../src/lib/rag/embeddings');
+
     const seedDir = resolve(process.cwd(), 'src/lib/constants/knowledge-seed');
 
     let files: string[];

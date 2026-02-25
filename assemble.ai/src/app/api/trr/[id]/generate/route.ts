@@ -27,6 +27,7 @@ import {
     buildTrrClarificationsPrompt,
     buildTrrRecommendationPrompt,
 } from '@/lib/prompts/system-prompts';
+import { assembleContext } from '@/lib/context/orchestrator';
 
 type TrrField = 'executiveSummary' | 'clarifications' | 'recommendation';
 
@@ -274,6 +275,32 @@ export async function POST(
 
         const { trrRecord, projectName, contextName, firms, nonPriceScores, addendaCount, rftDate } = context;
 
+        // Assemble orchestrator context for lifecycle data + knowledge domains
+        let orchestratorContext = '';
+        try {
+            const assembled = await assembleContext({
+                projectId: trrRecord.projectId,
+                contextType: 'trr',
+                task: `Generate TRR ${field} for ${contextName}`,
+                stakeholderId: trrRecord.stakeholderId ?? undefined,
+                includeKnowledgeDomains: true,
+                domainTags: ['procurement', 'tendering', 'contract-administration'],
+            });
+
+            const parts = [
+                assembled.moduleContext,
+                assembled.knowledgeContext,
+                assembled.ragContext,
+                assembled.crossModuleInsights,
+            ].filter(Boolean);
+
+            if (parts.length > 0) {
+                orchestratorContext = '\n\n## Additional Project & Domain Context\n\n' + parts.join('\n\n');
+            }
+        } catch (error) {
+            console.warn('[trr-generate] Orchestrator context assembly failed, proceeding without:', error);
+        }
+
         // Detect recommended firm (lowest price as default, or user could set it)
         const recommendedFirm = firms.find(f => f.isRecommended)?.companyName
             || firms.find(f => f.isLowest)?.companyName
@@ -330,6 +357,11 @@ export async function POST(
                     existingExecutiveSummary: trrRecord.executiveSummary || undefined,
                 });
                 break;
+        }
+
+        // Append orchestrator context (lifecycle data + knowledge domains)
+        if (orchestratorContext) {
+            userMessage += orchestratorContext;
         }
 
         // Call Claude with TRR system prompt

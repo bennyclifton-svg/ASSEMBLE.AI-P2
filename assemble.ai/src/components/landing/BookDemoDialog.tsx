@@ -135,7 +135,7 @@ export function BookDemoDialog({ open, onOpenChange }: BookDemoDialogProps) {
                         <button
                             type="submit"
                             disabled={isSubmitting || !formData.email}
-                            className="px-5 py-2.5 text-sm font-semibold bg-[var(--primary)] text-black rounded-full hover:bg-[var(--primary-dark)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-5 py-2.5 text-sm font-semibold bg-[var(--primary)] text-white rounded-full hover:bg-[var(--primary-dark)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isSubmitting ? 'Submitting...' : 'Request Demo'}
                         </button>

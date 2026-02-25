@@ -81,6 +81,8 @@ export async function generateSectionContent(
     const contextParts = [
         assembled.projectSummary,
         assembled.moduleContext,
+        assembled.knowledgeContext,
+        assembled.ragContext,
         assembled.crossModuleInsights,
     ].filter(Boolean);
 

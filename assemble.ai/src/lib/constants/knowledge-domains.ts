@@ -238,7 +238,7 @@ export const DOMAIN_TYPE_LABELS: Record<DomainType, string> = {
 
 /**
  * Maps report sections and module contexts to relevant knowledge domain tags.
- * Used by the Context Orchestrator and Coaching Q&A to automatically determine
+ * Used by the Context Orchestrator to automatically determine
  * which domains to query.
  */
 export const SECTION_TO_DOMAIN_TAGS: Record<string, DomainTag[]> = {
@@ -251,7 +251,7 @@ export const SECTION_TO_DOMAIN_TAGS: Record<string, DomainTag[]> = {
     'design': ['architectural', 'ncc'],
     'construction': ['construction', 'contracts', 'defects'],
 
-    // Module contexts (for Coaching Q&A)
+    // Module contexts
     'cost_plan': ['cost-management', 'budgeting', 'variations', 'progress-claims'],
     'variations': ['variations', 'contracts', 'eot'],
     'invoices': ['progress-claims', 'cost-management'],
@@ -286,4 +286,128 @@ export function normalizeTag(tag: string): string {
  */
 export function isKnownTag(tag: string): boolean {
     return (ALL_DOMAIN_TAGS as readonly string[]).includes(normalizeTag(tag));
+}
+
+// ============================================
+// Profile-Based Domain Tag Resolution
+// ============================================
+
+export interface ProfileTagInput {
+    buildingClass?: string;
+    projectType?: string;
+    subclass?: string[];
+    complexity?: Record<string, string | string[]>;
+}
+
+const BUILDING_CLASS_TAG_MAP: Record<string, DomainTag[]> = {
+    residential: ['residential', 'construction'],
+    commercial: ['commercial', 'construction'],
+    industrial: ['industrial', 'construction'],
+    institution: ['commercial', 'construction'],
+    mixed: ['mixed-use', 'commercial', 'residential'],
+    infrastructure: ['construction'],
+    agricultural: ['construction'],
+    defense_secure: ['commercial', 'construction'],
+};
+
+/**
+ * Resolve profile attributes to domain tags for knowledge retrieval.
+ * Used by objectives generation to determine which knowledge bases to search.
+ *
+ * Three-layer architecture:
+ *   Layer 1 (this function): Coarse tag selection → which domains to search
+ *   Layer 2 (retrieveFromDomains): applicableProjectTypes/States filtering
+ *   Layer 3 (buildProfileSearchQuery): Semantic query for vector similarity
+ */
+export function resolveProfileDomainTags(profile: ProfileTagInput): DomainTag[] {
+    const tags: DomainTag[] = ['ncc', 'regulatory', 'as-standards'];
+
+    if (profile.buildingClass && BUILDING_CLASS_TAG_MAP[profile.buildingClass]) {
+        tags.push(...BUILDING_CLASS_TAG_MAP[profile.buildingClass]);
+    }
+
+    if (profile.subclass?.some(s => s.includes('apartments'))) {
+        tags.push('apartments');
+    }
+
+    if (profile.projectType === 'remediation') {
+        tags.push('remediation', 'due-diligence', 'environmental');
+    }
+
+    const complexity = profile.complexity || {};
+    const contamination = (complexity.contamination_level ?? complexity.contaminationLevel) as string | undefined;
+    if (contamination === 'significant' || contamination === 'heavily_contaminated') {
+        tags.push('remediation', 'environmental');
+    }
+
+    const procurementRoute = complexity.procurement_route ?? complexity.procurementRoute;
+    if (procurementRoute) {
+        tags.push('procurement', 'contracts');
+    }
+
+    return [...new Set(tags)];
+}
+
+// ============================================
+// Profile Search Query Builder
+// ============================================
+
+export interface ProfileSearchInput {
+    buildingClass?: string;
+    projectType?: string;
+    subclass?: string[];
+    scaleData?: Record<string, number | string>;
+    complexity?: Record<string, string | string[]>;
+    workScopeLabels?: string[];
+    region?: string;
+}
+
+/**
+ * Build a semantic search query from profile attributes for vector similarity
+ * search within selected knowledge domains.
+ */
+export function buildProfileSearchQuery(profile: ProfileSearchInput): string {
+    const parts: string[] = [];
+
+    if (profile.buildingClass) {
+        parts.push(`${profile.buildingClass} building`);
+    }
+    if (profile.projectType) {
+        parts.push(`${profile.projectType} project`);
+    }
+    if (profile.subclass && profile.subclass.length > 0) {
+        parts.push(profile.subclass.join(', '));
+    }
+
+    if (profile.scaleData) {
+        const scaleEntries = Object.entries(profile.scaleData)
+            .filter(([, v]) => v && v !== 0 && v !== '0')
+            .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`);
+        if (scaleEntries.length > 0) {
+            parts.push(scaleEntries.join(', '));
+        }
+    }
+
+    if (profile.complexity) {
+        const complexityEntries = Object.entries(profile.complexity)
+            .filter(([, v]) => v && (!Array.isArray(v) || v.length > 0))
+            .map(([k, v]) => {
+                const key = k.replace(/_/g, ' ');
+                const val = Array.isArray(v) ? v.join(', ') : v;
+                return `${key}: ${val}`;
+            });
+        if (complexityEntries.length > 0) {
+            parts.push(complexityEntries.join(', '));
+        }
+    }
+
+    if (profile.workScopeLabels && profile.workScopeLabels.length > 0) {
+        parts.push(`work scope: ${profile.workScopeLabels.join(', ')}`);
+    }
+
+    if (profile.region) {
+        parts.push(`region: ${profile.region}`);
+    }
+
+    return parts.join(' | ');
 }

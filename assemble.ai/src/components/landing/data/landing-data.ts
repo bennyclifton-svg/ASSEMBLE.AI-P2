@@ -13,7 +13,7 @@ export const heroContent = {
         { gray: 'Tender,', white: 'at speed.' },
         { gray: 'Award,', white: 'with clarity.' },
     ],
-    subtitle: 'AI-powered construction management',
+    subtitle: 'AI-powered construction intelligence',
     cta: 'Get started free',
     terms: 'By signing up, you agree to our Terms and Privacy Policy',
 };
@@ -33,15 +33,15 @@ export const statsContent = {
 };
 
 export const aiSectionContent = {
-    label: 'Built-in intelligence',
-    headline: "Your expertise. AI's speed.",
-    description: 'What took hours now takes clicks.',
+    label: 'Built-in construction intelligence',
+    headline: 'Your expertise. AI that speaks construction.',
+    description: 'Australian standards, regulations and best practices — built in from day one. What took hours now takes clicks.',
     cta: 'Learn more about ASSEMBLE AI',
 };
 
 export const problemContent = {
     headline: 'Construction management is hard.',
-    description: 'Constant pushing to deadlines, dealing with scope creep, variations and EOT. Foundry forges forward, information flows, empowers iteration.',
+    description: 'Constant pushing to deadlines, dealing with scope creep, variations and EOT. Knowledge scattered across spreadsheets, inboxes and shared drives. Foundry forges forward — information flows, knowledge compounds, teams iterate faster.',
     problems: [
         'Document intelligence',
         'Tender automation',
@@ -53,7 +53,7 @@ export const problemContent = {
 export const solutionContent = {
     label: 'The Solution',
     headline: '',
-    description: 'One dashboard integrates briefs, scopes, documents, tenders, cost plans, program, notes, meetings, reports and stakeholders, forged by AI, orchestrated by humans, in the loop when it matters. Make better decisions, faster. Deliver on time.',
+    description: 'One platform integrates briefs, scopes, documents, tenders, cost plans, programmes, notes, meetings, reports and stakeholders — forged by AI that understands Australian construction, orchestrated by humans, in the loop when it matters. Make informed decisions, faster. Deliver on time.',
 };
 
 export const featuresContent = {
@@ -77,24 +77,25 @@ export const featuresContent = {
         },
         {
             title: 'Reporting',
-            description: 'AI writes. You review. Capture notes and meetings as you go. Project context is live — AI summarises progress and generates monthly reports that reflect reality.',
+            description: 'AI writes. You review. Capture notes and meetings as you go. Project context is live — AI draws on your documents, standards and project history to generate reports that reflect reality, not templates.',
             benefit: 'Human in the loop. Custom, flexible, automated.',
         },
         {
             title: 'Documents',
-            description: 'Drag. Drop. Organise. Bulk upload, AI structured IDs, names, revisions extracted and categorised. AI ingest, integrated!',
-            benefit: 'Project knowledge integrated with AI RAG.',
+            description: 'Drag. Drop. Organise. Bulk upload and AI extracts IDs, names and revisions — automatically classified into knowledge domains. Your documents become searchable project intelligence, not just files in folders.',
+            benefit: 'Documents become knowledge. Instantly searchable, always in context.',
         },
     ],
 };
 
 export const benefitsContent = {
-    headline: 'Why teams switch to ASSEMBLE.AI',
+    headline: 'Why teams switch to Foundry',
     benefits: [
         'Save 10+ hours per week on document handling and bid reviews',
         'Fewer costly mistakes with AI-powered data extraction',
+        'Regulatory and standards knowledge built in — no manual setup, no third-party bolt-ons',
         'Happier clients with projects that finish on time and on budget',
-        'One source of truth for your entire team, anywhere in the world',
+        'One source of truth — documents, standards and project knowledge unified, not siloed',
         'Enterprise security to keep your sensitive project data safe',
     ],
 };
@@ -139,7 +140,7 @@ export const howItWorksContent = {
         {
             number: 2,
             title: 'Upload your documents',
-            description: 'Drag and drop your project files. Our AI automatically organizes and indexes everything for instant search.',
+            description: 'Drag and drop your project files. AI automatically classifies, indexes and connects them to relevant standards and project context — ready for intelligent search from the moment they land.',
         },
         {
             number: 3,
@@ -181,9 +182,9 @@ export const faqContent = {
 export const finalCtaContent = {
     headline: {
         gray: 'Ready to',
-        green: 'evolve your workflow?',
+        accent: 'evolve your workflow?',
     },
-    subtitle: 'Join AEC firms who let AI handle the busywork.',
+    subtitle: 'Join AEC firms using AI that actually understands construction.',
     cta: 'Start my free trial',
     note: 'No credit card required. Set up in minutes.',
 };

@@ -78,16 +78,6 @@ describe('resolveStrategy', () => {
     expect(requirements.autoMode).toBe(true);
   });
 
-  it('sets autoMode for coaching-qa', () => {
-    const { requirements } = resolveStrategy({
-      projectId: 'p1',
-      task: 'Is my budget on track?',
-      contextType: 'coaching-qa',
-    });
-
-    expect(requirements.autoMode).toBe(true);
-  });
-
   it('covers all defined strategies', () => {
     // Verify the strategy map has expected keys
     const keys = Object.keys(CONTEXT_STRATEGIES);
@@ -99,7 +89,6 @@ describe('resolveStrategy', () => {
     expect(keys).toContain('rft');
     expect(keys).toContain('note');
     expect(keys).toContain('inline-instruction');
-    expect(keys).toContain('coaching-qa');
   });
 });
 

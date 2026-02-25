@@ -24,8 +24,8 @@ const STATIC_STYLES: Record<PatternVariant, React.CSSProperties> = {
         backgroundImage: 'radial-gradient(circle, var(--gray-300) 1px, transparent 1px)',
         backgroundSize: '16px 16px',
     },
-    green: {
-        backgroundImage: 'radial-gradient(circle, rgba(0, 194, 122, 0.3) 1px, transparent 1px)',
+    blue: {
+        backgroundImage: 'radial-gradient(circle, rgba(23, 118, 193, 0.3) 1px, transparent 1px)',
         backgroundSize: '20px 20px',
     },
     hero: {

@@ -229,17 +229,27 @@
   --color-card-firm-hover: rgba(255, 255, 255, 0.09);
   --color-card-firm-selected: rgba(232, 185, 49, 0.2);
   --color-card-firm-border: rgba(255, 255, 255, 0.14);
-  --color-card-firm-field: rgba(255, 255, 255, 0.1);
   --color-card-firm-text: #E8E6E3;
+  --color-card-firm-accent: transparent;
+  --color-card-firm-accent-bright: transparent;
 
   /* Procurement Route Card Colors - purple tint for dark mode */
   --color-card-procurement: rgba(45, 37, 65, 0.65);
+  --color-card-procurement-hover: rgba(107, 92, 231, 0.10);
   --color-card-procurement-selected: rgba(107, 92, 231, 0.65);
+  --color-card-procurement-border: rgba(255, 255, 255, 0.14);
+  --color-card-procurement-text: #E8E6E3;
+  --color-card-procurement-accent: transparent;
+  --color-card-procurement-accent-bright: transparent;
 
   /* Work Scope Card Colors - green tint for dark mode */
   --color-card-scope: rgba(74, 222, 128, 0.15);
+  --color-card-scope-hover: rgba(74, 222, 128, 0.09);
   --color-card-scope-selected: rgba(74, 222, 128, 0.08);
+  --color-card-scope-border: rgba(255, 255, 255, 0.14);
   --color-card-scope-text: #86efac;
+  --color-card-scope-accent: transparent;
+  --color-card-scope-accent-bright: transparent;
 
   /* Tailwind CSS Theme Integration */
   --background: var(--color-bg-primary);
@@ -359,22 +369,32 @@
   --scrollbar-thumb: var(--primitive-cool-gray-300);
   --scrollbar-thumb-hover: var(--primitive-cool-gray-400);
 
-  /* Firm Card Colors - warm yellow for light mode */
-  --color-card-firm: rgba(254, 249, 195, 0.65);
-  --color-card-firm-hover: rgba(254, 240, 138, 0.65);
-  --color-card-firm-selected: rgba(253, 230, 138, 0.65);
-  --color-card-firm-border: transparent;
-  --color-card-firm-field: rgba(254, 243, 199, 0.65);
-  --color-card-firm-text: #000000;
+  /* Firm tile - frosted glass */
+  --color-card-firm: rgba(255, 255, 255, 0.45);
+  --color-card-firm-hover: rgba(255, 255, 255, 0.55);
+  --color-card-firm-selected: rgba(253, 230, 138, 0.30);
+  --color-card-firm-border: rgba(0, 0, 0, 0.08);
+  --color-card-firm-text: #1a1a1a;
+  --color-card-firm-accent: rgba(202, 160, 30, 0.55);
+  --color-card-firm-accent-bright: rgba(202, 160, 30, 0.85);
 
-  /* Procurement Route Card Colors - purple for light mode */
-  --color-card-procurement: rgba(227, 220, 238, 0.65);
-  --color-card-procurement-selected: rgba(182, 170, 248, 0.65);
+  /* Procurement route tile - frosted glass */
+  --color-card-procurement: rgba(255, 255, 255, 0.45);
+  --color-card-procurement-hover: rgba(255, 255, 255, 0.55);
+  --color-card-procurement-selected: rgba(182, 170, 248, 0.25);
+  --color-card-procurement-border: rgba(0, 0, 0, 0.08);
+  --color-card-procurement-text: #1a1a1a;
+  --color-card-procurement-accent: rgba(107, 70, 220, 0.50);
+  --color-card-procurement-accent-bright: rgba(107, 70, 220, 0.80);
 
-  /* Work Scope Card Colors - green for light mode */
-  --color-card-scope: rgba(200, 255, 216, 0.65);
-  --color-card-scope-selected: rgba(152, 245, 184, 0.65);
-  --color-card-scope-text: #000000;
+  /* Work scope tile - frosted glass */
+  --color-card-scope: rgba(255, 255, 255, 0.45);
+  --color-card-scope-hover: rgba(255, 255, 255, 0.55);
+  --color-card-scope-selected: rgba(152, 245, 184, 0.25);
+  --color-card-scope-border: rgba(0, 0, 0, 0.08);
+  --color-card-scope-text: #1a1a1a;
+  --color-card-scope-accent: rgba(34, 170, 80, 0.50);
+  --color-card-scope-accent-bright: rgba(34, 170, 80, 0.80);
 
   /* Tailwind CSS Theme Integration */
   --background: var(--color-bg-primary);
