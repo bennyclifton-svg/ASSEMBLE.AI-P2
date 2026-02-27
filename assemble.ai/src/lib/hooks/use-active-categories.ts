@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ActiveCategory } from '@/lib/constants/categories';
 import { useStakeholderRefresh } from '@/lib/contexts/stakeholder-refresh-context';
+import { useKnowledgeSubcategoryRefresh } from '@/lib/contexts/knowledge-subcategory-refresh-context';
 
 /**
  * Hook to fetch active categories for a specific project.
@@ -18,6 +19,9 @@ export function useActiveCategories(projectId: string) {
 
     // Subscribe to stakeholder refresh signals
     const { version } = useStakeholderRefresh();
+
+    // Subscribe to knowledge subcategory refresh signals
+    const { version: knowledgeVersion } = useKnowledgeSubcategoryRefresh();
 
     const fetchCategories = useCallback(async () => {
         if (!projectId) return;
@@ -39,7 +43,7 @@ export function useActiveCategories(projectId: string) {
     // Fetch on mount and when projectId or stakeholder version changes
     useEffect(() => {
         fetchCategories();
-    }, [fetchCategories, version]);
+    }, [fetchCategories, version, knowledgeVersion]);
 
     return { categories, isLoading, error, refetch: fetchCategories };
 }

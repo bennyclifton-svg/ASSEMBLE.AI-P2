@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         // Get all categories
         const categories = getAllCategories();
 
-        // Fetch active consultant stakeholders (for Scheme Design, Detail Design, Consultants)
+        // Fetch active consultant stakeholders (for Consultants category)
         const consultantStakeholders = await db
             .select()
             .from(projectStakeholders)

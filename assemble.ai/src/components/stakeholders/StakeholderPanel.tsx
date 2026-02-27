@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, Trash, Eye, EyeOff } from 'lucide-react';
 import { useStakeholders } from '@/lib/hooks/use-stakeholders';
+import { useStakeholderRefresh } from '@/lib/contexts/stakeholder-refresh-context';
 import { StakeholderRow } from './StakeholderRow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Modal } from '@/components/ui/modal';
@@ -37,6 +38,8 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
     deleteStakeholder,
     generateStakeholders,
   } = useStakeholders({ projectId });
+
+  const { triggerRefresh } = useStakeholderRefresh();
 
   // Loading state for generation
   const [isGenerating, setIsGenerating] = useState<StakeholderGroup | null>(null);
@@ -75,6 +78,7 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryId, isVisible: newValue }),
       });
+      triggerRefresh(); // Signal doc repo to re-fetch active categories
     } catch {
       setVisibility(prev => ({ ...prev, [categoryId]: current }));
     }

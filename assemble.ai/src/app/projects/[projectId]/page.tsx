@@ -7,6 +7,7 @@ import { PlanningCard } from '@/components/dashboard/PlanningCard';
 import { ProcurementCard } from '@/components/dashboard/ProcurementCard';
 import { DocumentCard } from '@/components/dashboard/DocumentCard';
 import { StakeholderRefreshProvider } from '@/lib/contexts/stakeholder-refresh-context';
+import { KnowledgeSubcategoryRefreshProvider } from '@/lib/contexts/knowledge-subcategory-refresh-context';
 import { Loader2 } from 'lucide-react';
 import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
 
@@ -184,6 +185,7 @@ export default function ProjectWorkspace() {
 
   return (
     <StakeholderRefreshProvider>
+      <KnowledgeSubcategoryRefreshProvider>
       <div className="h-screen w-full bg-background">
         {/* Full-height resizable layout - columns extend to top */}
         <ResizableLayout
@@ -233,6 +235,7 @@ export default function ProjectWorkspace() {
           }
         />
       </div>
+      </KnowledgeSubcategoryRefreshProvider>
     </StakeholderRefreshProvider>
   );
 }
