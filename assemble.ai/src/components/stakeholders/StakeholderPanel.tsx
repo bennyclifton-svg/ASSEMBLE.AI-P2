@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, X, Trash } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, X, Trash, Eye, EyeOff } from 'lucide-react';
 import { useStakeholders } from '@/lib/hooks/use-stakeholders';
 import { StakeholderRow } from './StakeholderRow';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,6 +51,34 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
 
   // Group delete state
   const [groupToDelete, setGroupToDelete] = useState<StakeholderGroup | null>(null);
+
+  // Category visibility state (for Document Repository)
+  const [visibility, setVisibility] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    async function fetchVisibility() {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/category-visibility`);
+        if (res.ok) setVisibility(await res.json());
+      } catch { /* ignore */ }
+    }
+    fetchVisibility();
+  }, [projectId]);
+
+  const toggleVisibility = async (categoryId: string) => {
+    const current = visibility[categoryId] !== false;
+    const newValue = !current;
+    setVisibility(prev => ({ ...prev, [categoryId]: newValue }));
+    try {
+      await fetch(`/api/projects/${projectId}/category-visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categoryId, isVisible: newValue }),
+      });
+    } catch {
+      setVisibility(prev => ({ ...prev, [categoryId]: current }));
+    }
+  };
 
   // Group stakeholders
   const stakeholdersByGroup = GROUP_ORDER.reduce((acc, group) => {
@@ -181,6 +209,8 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
                 onQuickAddCancel={() => setQuickAddGroup(null)}
                 selectedIds={selectedIds}
                 onSelect={handleSelect}
+                visibility={visibility}
+                onToggleVisibility={toggleVisibility}
               />
             );
           })}
@@ -256,6 +286,8 @@ interface GroupCardProps {
   onQuickAddCancel: () => void;
   selectedIds: Set<string>;
   onSelect: (id: string, event: React.MouseEvent) => void;
+  visibility: Record<string, boolean>;
+  onToggleVisibility: (categoryId: string) => Promise<void>;
 }
 
 function GroupCard({
@@ -275,6 +307,8 @@ function GroupCard({
   onQuickAddCancel,
   selectedIds,
   onSelect,
+  visibility,
+  onToggleVisibility,
 }: GroupCardProps) {
   // Count how many selected items are in this group
   const selectedInGroup = stakeholders.filter(s => selectedIds.has(s.id)).length;
@@ -288,6 +322,11 @@ function GroupCard({
       onDeleteGroup(group);
     }
   };
+
+  // Map group to category ID for visibility toggle (only consultant/contractor have visibility)
+  const categoryId = group === 'consultant' ? 'consultants' : group === 'contractor' ? 'contractors' : null;
+  const hasVisibilityToggle = categoryId !== null;
+  const isVisible = categoryId ? visibility[categoryId] !== false : true;
 
   // Dynamic title based on whether items are selected
   const trashTitle = hasSelectedInGroup
@@ -315,6 +354,22 @@ function GroupCard({
           <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
             {GROUP_LABELS[group]} ({stakeholders.length})
           </span>
+          {hasVisibilityToggle && categoryId && (
+            <button
+              onClick={() => onToggleVisibility(categoryId)}
+              className={cn(
+                'p-1 rounded transition-colors',
+                isVisible
+                  ? 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                  : 'text-[var(--color-text-muted)]/30 hover:text-[var(--color-text-muted)]'
+              )}
+              title={isVisible
+                ? 'Visible in Document Repository (click to hide)'
+                : 'Hidden from Document Repository (click to show)'}
+            >
+              {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <button
