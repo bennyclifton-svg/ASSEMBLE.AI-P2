@@ -22,7 +22,8 @@ import { fetchProcurementDocs } from './modules/procurement-docs';
 import { fetchAttachedDocuments } from './modules/attached-documents';
 import { retrieveFromDomains } from '../rag/retrieval';
 import type { DomainRetrievalResult } from '../rag/retrieval';
-import { SECTION_TO_DOMAIN_TAGS } from '../constants/knowledge-domains';
+import { SECTION_TO_DOMAIN_TAGS, isKnownTag } from '../constants/knowledge-domains';
+import type { DomainTag } from '../constants/knowledge-domains';
 import type { ProfileData } from './modules/profile';
 import type {
   ContextRequest,
@@ -88,12 +89,19 @@ async function assembleDomainContext(
   fetchedModules: Map<ModuleName, ModuleResult>
 ): Promise<string> {
   // 1. Determine domain tags: explicit domainTags take priority, else resolve from sectionKey
-  const domainTags =
+  const domainTags: string[] =
     request.domainTags && request.domainTags.length > 0
-      ? request.domainTags
+      ? [...request.domainTags]
       : request.sectionKey
-        ? SECTION_TO_DOMAIN_TAGS[request.sectionKey] ?? []
+        ? [...(SECTION_TO_DOMAIN_TAGS[request.sectionKey] ?? [])]
         : [];
+
+  // Merge discipline tag if provided and valid
+  if (request.discipline && isKnownTag(request.discipline)) {
+    if (!domainTags.includes(request.discipline as DomainTag)) {
+      domainTags.push(request.discipline as DomainTag);
+    }
+  }
 
   if (domainTags.length === 0) {
     return '';

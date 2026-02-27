@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Trash2, Loader2, FileIcon, Folder, ChevronUp, ChevronDown, Trash } from 'lucide-react';
+import { Trash2, Loader2, FileIcon, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { useSyncStatus, SyncStatus } from '@/lib/hooks/use-sync-status';
 import { useRenderLoopGuard, useStableArray } from '@/lib/hooks/use-render-loop-guard';
@@ -90,9 +90,11 @@ interface CategorizedListProps {
     isProcessing?: boolean;
     /** Number of files being processed. */
     processingCount?: number;
+    /** Callback when files are dropped onto the table (uploaded as uncategorized). */
+    onFilesDropped?: (files: File[]) => void;
 }
 
-export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef, filterCategoryId, filterSubcategoryId, filterBySyncedOnly, isProcessing, processingCount }: CategorizedListProps) {
+export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef, filterCategoryId, filterSubcategoryId, filterBySyncedOnly, isProcessing, processingCount, onFilesDropped }: CategorizedListProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(externalSelectedIds || new Set());
@@ -103,6 +105,10 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [sortColumn, setSortColumn] = useState<'drawingNumber' | 'name' | 'drawingRevision' | 'category' | 'subcategory' | 'fileName' | 'version' | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    const [showFileName, setShowFileName] = useState(false);
+    const [showCategory, setShowCategory] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const dragCounterRef = useRef(0);
 
     // Track if this is the initial load to avoid flickering during background refreshes
     const hasLoadedOnce = useRef(false);
@@ -496,6 +502,42 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         }
     };
 
+    // Drag-and-drop handlers for file upload
+    const handleDragEnter = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current++;
+        if (e.dataTransfer.types.includes('Files')) {
+            setIsDragOver(true);
+        }
+    }, []);
+
+    const handleDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current--;
+        if (dragCounterRef.current === 0) {
+            setIsDragOver(false);
+        }
+    }, []);
+
+    const handleDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
+
+    const handleDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current = 0;
+        setIsDragOver(false);
+
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length > 0 && onFilesDropped) {
+            onFilesDropped(files);
+        }
+    }, [onFilesDropped]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12">
@@ -505,7 +547,25 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     }
 
     return (
-        <div className="space-y-4">
+        <div
+            className="space-y-4 relative"
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+        >
+            {/* Drag-and-drop overlay */}
+            {isDragOver && (
+                <div className="absolute inset-0 z-20 rounded-md border-2 border-dashed border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] flex items-center justify-center pointer-events-none">
+                    <div className="flex flex-col items-center gap-2">
+                        <Upload className="w-8 h-8 text-[var(--color-accent-copper)]" />
+                        <span className="text-sm font-medium text-[var(--color-accent-copper)]">
+                            Drop files to upload
+                        </span>
+                    </div>
+                </div>
+            )}
+
             {/* Processing Banner */}
             {isProcessing && processingCount && processingCount > 0 && (
                 <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-md">
@@ -560,10 +620,19 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
 
             {/* Empty State */}
             {filteredDocuments.length === 0 ? (
-                <div className="border border-dashed border-[var(--color-border)] rounded-md flex items-center justify-center h-24" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
-                    <p className="text-sm text-[var(--color-text-muted)]">
-                        {filterBySyncedOnly ? 'No documents synced to Knowledge.' : filterCategoryId ? 'No documents in this category.' : 'No documents found.'}
-                    </p>
+                <div className="border border-dashed border-[var(--color-border)] rounded-md flex flex-col items-center justify-center h-32 gap-2" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
+                    {filterBySyncedOnly || filterCategoryId ? (
+                        <p className="text-sm text-[var(--color-text-muted)]">
+                            {filterBySyncedOnly ? 'No documents synced to Ingest.' : 'No documents in this category.'}
+                        </p>
+                    ) : (
+                        <>
+                            <Upload className="w-6 h-6 text-[var(--color-text-muted)]" />
+                            <p className="text-sm text-[var(--color-text-muted)]">
+                                Drop files here to upload
+                            </p>
+                        </>
+                    )}
                 </div>
             ) : (
 
@@ -600,14 +669,39 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                 >
                                     Rev<SortIndicator column="drawingRevision" />
                                 </TableHead>
-                                <TableHead
-                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-16 @2xl:w-20 @3xl:w-24 !px-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
-                                    onClick={() => handleSort('category')}
-                                >
-                                    <span className="@3xl:hidden">Cat</span>
-                                    <span className="hidden @3xl:inline">Category</span>
-                                    <SortIndicator column="category" />
+                                {/* Category column toggle */}
+                                <TableHead className="w-6 !px-0 @lg:table-cell hidden">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowCategory(prev => {
+                                                if (prev && sortColumn === 'category') {
+                                                    setSortColumn(null);
+                                                }
+                                                return !prev;
+                                            });
+                                        }}
+                                        className={cn(
+                                            "p-1 rounded transition-colors",
+                                            showCategory
+                                                ? "text-[var(--color-text-primary)] bg-[var(--color-bg-hover)]"
+                                                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
+                                        )}
+                                        title={showCategory ? "Hide category column" : "Show category column"}
+                                    >
+                                        <Folder className="w-3.5 h-3.5" />
+                                    </button>
                                 </TableHead>
+                                {showCategory && (
+                                    <TableHead
+                                        className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-16 @2xl:w-20 @3xl:w-24 !pl-1 !pr-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                        onClick={() => handleSort('category')}
+                                    >
+                                        <span className="@3xl:hidden">Cat</span>
+                                        <span className="hidden @3xl:inline">Category</span>
+                                        <SortIndicator column="category" />
+                                    </TableHead>
+                                )}
                                 <TableHead
                                     className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-28 @2xl:w-32 @3xl:w-36 !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('subcategory')}
@@ -616,12 +710,37 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     <span className="hidden @3xl:inline">Subcategory</span>
                                     <SortIndicator column="subcategory" />
                                 </TableHead>
-                                <TableHead
-                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
-                                    onClick={() => handleSort('fileName')}
-                                >
-                                    File Name<SortIndicator column="fileName" />
+                                {/* File Name column toggle */}
+                                <TableHead className="w-6 !px-0 @md:table-cell hidden">
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowFileName(prev => {
+                                                if (prev && sortColumn === 'fileName') {
+                                                    setSortColumn(null);
+                                                }
+                                                return !prev;
+                                            });
+                                        }}
+                                        className={cn(
+                                            "p-1 rounded transition-colors",
+                                            showFileName
+                                                ? "text-[var(--color-text-primary)] bg-[var(--color-bg-hover)]"
+                                                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
+                                        )}
+                                        title={showFileName ? "Hide file name column" : "Show file name column"}
+                                    >
+                                        <FileText className="w-3.5 h-3.5" />
+                                    </button>
                                 </TableHead>
+                                {showFileName && (
+                                    <TableHead
+                                        className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                        onClick={() => handleSort('fileName')}
+                                    >
+                                        File Name<SortIndicator column="fileName" />
+                                    </TableHead>
+                                )}
                                 <TableHead
                                     className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-8 !px-1 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
                                     onClick={() => handleSort('version')}
@@ -707,25 +826,29 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 <span className="text-[var(--color-text-muted)]">—</span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="w-16 @2xl:w-20 @3xl:w-24 @lg:table-cell hidden !px-2 !py-1.5">
-                                            <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
-                                                {doc.categoryName ? (
-                                                    <>
-                                                        <Folder
-                                                            className="w-3 h-3 flex-shrink-0 fill-current text-[var(--color-text-muted)]"
-                                                        />
-                                                        <span
-                                                            className="truncate @3xl:overflow-visible text-[var(--color-text-muted)] text-xs"
-                                                            title={doc.categoryName}
-                                                        >
-                                                            {doc.categoryName}
-                                                        </span>
-                                                    </>
-                                                ) : (
-                                                    <span className="text-[var(--color-text-muted)]">—</span>
-                                                )}
-                                            </div>
-                                        </TableCell>
+                                        {/* Spacer cell for category toggle column */}
+                                        <TableCell className="w-6 !px-0 @lg:table-cell hidden !py-1.5" />
+                                        {showCategory && (
+                                            <TableCell className="w-16 @2xl:w-20 @3xl:w-24 @lg:table-cell hidden !pl-1 !pr-2 !py-1.5">
+                                                <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
+                                                    {doc.categoryName ? (
+                                                        <>
+                                                            <Folder
+                                                                className="w-3 h-3 flex-shrink-0 fill-current text-[var(--color-text-muted)]"
+                                                            />
+                                                            <span
+                                                                className="truncate @3xl:overflow-visible text-[var(--color-text-muted)] text-xs"
+                                                                title={doc.categoryName}
+                                                            >
+                                                                {doc.categoryName}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-[var(--color-text-muted)]">—</span>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        )}
                                         <TableCell className="w-28 @2xl:w-32 @3xl:w-36 @md:table-cell hidden !pl-2 !pr-1 !py-1.5">
                                             {doc.subcategoryName ? (
                                                 <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
@@ -743,14 +866,18 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                                 <span className="text-[var(--color-text-muted)]">—</span>
                                             )}
                                         </TableCell>
-                                        <TableCell className="text-[var(--color-text-muted)] w-28 @4xl:w-auto @3xl:table-cell hidden !pl-1 !pr-2 !py-1.5">
-                                            <span
-                                                className="truncate @4xl:overflow-visible block text-xs"
-                                                title={doc.originalName || 'Unknown'}
-                                            >
-                                                {doc.originalName || <span className="italic">Unknown</span>}
-                                            </span>
-                                        </TableCell>
+                                        {/* Spacer cell for file name toggle column */}
+                                        <TableCell className="w-6 !px-0 @md:table-cell hidden !py-1.5" />
+                                        {showFileName && (
+                                            <TableCell className="text-[var(--color-text-muted)] w-28 @4xl:w-auto @3xl:table-cell hidden !pl-1 !pr-2 !py-1.5">
+                                                <span
+                                                    className="truncate @4xl:overflow-visible block text-xs"
+                                                    title={doc.originalName || 'Unknown'}
+                                                >
+                                                    {doc.originalName || <span className="italic">Unknown</span>}
+                                                </span>
+                                            </TableCell>
+                                        )}
                                         <TableCell className="text-[var(--color-text-muted)] w-8 @lg:table-cell hidden !px-1 !py-1.5 text-xs">v{doc.versionNumber}</TableCell>
                                         <TableCell className="w-8 @sm:table-cell hidden !px-1 !py-1.5">
                                             <button

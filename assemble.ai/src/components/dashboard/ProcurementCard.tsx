@@ -13,6 +13,7 @@ import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
 import { ObjectivesProfilerSection } from '@/components/profiler/ObjectivesProfilerSection';
 import { useObjectivesTransmittal } from '@/lib/hooks/use-objectives-transmittal';
 import { StakeholderPanel } from '@/components/stakeholders/StakeholderPanel';
+import { KnowledgePanel } from '@/components/knowledge/KnowledgePanel';
 import { MeetingsReportsContainer } from '@/components/notes-meetings-reports/MeetingsReportsContainer';
 import { NotesPanel } from '@/components/notes-meetings-reports/NotesPanel';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
@@ -404,8 +405,8 @@ export function ProcurementCard({
                     </div>
                 </TabsContent>
 
-                {/* Project Details Tab Content */}
-                <TabsContent value="project-details" className="flex-1 mt-0 min-h-0 overflow-hidden">
+                {/* Project Details Tab Content - forceMount keeps LEPDataCard mounted so it doesn't re-fetch on tab revisit */}
+                <TabsContent value="project-details" forceMount className="flex-1 mt-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
                     <ProjectDetailsPanel
                         projectId={projectId}
                         data={detailsData}
@@ -514,6 +515,10 @@ export function ProcurementCard({
 
                 <TabsContent value="stakeholders" className="flex-1 mt-0 min-h-0 overflow-hidden">
                     <StakeholderPanel projectId={projectId} />
+                </TabsContent>
+
+                <TabsContent value="knowledge" className="flex-1 mt-0 min-h-0 overflow-hidden">
+                    <KnowledgePanel projectId={projectId} />
                 </TabsContent>
 
                 {/* Notes Tab Content */}

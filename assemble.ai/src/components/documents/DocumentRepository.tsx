@@ -30,11 +30,18 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     const { documentSets, isLoading: setsLoading } = useDocumentSets(projectId);
     const { createDocumentSet, addDocuments, isLoading: mutationLoading } = useDocumentSetMutations();
 
+    // Listen for external document changes (e.g., file dropped onto a note)
+    useEffect(() => {
+        const handleDocumentsChanged = () => setRefreshTrigger(prev => prev + 1);
+        window.addEventListener('documents-changed', handleDocumentsChanged);
+        return () => window.removeEventListener('documents-changed', handleDocumentsChanged);
+    }, []);
+
     // Find or create the project's Knowledge document set
     useEffect(() => {
         if (RAG_DISABLED || setsLoading) return;
 
-        const existingSet = documentSets.find(ds => ds.projectId === projectId && ds.name === 'Knowledge');
+        const existingSet = documentSets.find(ds => ds.projectId === projectId && (ds.name === 'Ingest' || ds.name === 'Knowledge'));
         if (existingSet) {
             setKnowledgeSetId(existingSet.id);
         }
@@ -49,7 +56,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
         if (RAG_DISABLED) {
             toast({
                 title: 'RAG Disabled',
-                description: 'Knowledge Source feature is currently disabled.',
+                description: 'Ingest Source feature is currently disabled.',
             });
             return;
         }
@@ -71,14 +78,14 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
         if (!setId) {
             const newSet = await createDocumentSet({
                 projectId,
-                name: 'Knowledge',
+                name: 'Ingest',
                 description: 'Project knowledge source for AI-assisted content generation',
             });
 
             if (!newSet) {
                 toast({
                     title: 'Error',
-                    description: 'Failed to create Knowledge Source',
+                    description: 'Failed to create Ingest Source',
                     variant: 'destructive',
                 });
                 return;
@@ -94,7 +101,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
 
         if (result) {
             toast({
-                title: 'Adding to Knowledge Source',
+                title: 'Adding to Ingest Source',
                 description: `${result.added.length} document(s) queued for AI processing`,
                 variant: 'success',
             });
@@ -396,7 +403,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     if (!setId && !RAG_DISABLED) {
                         const newSet = await createDocumentSet({
                             projectId,
-                            name: 'Knowledge',
+                            name: 'Ingest',
                             description: 'Project knowledge source for AI-assisted content generation',
                         });
 
@@ -410,7 +417,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                         const result = await addDocuments(setId, uploadedDocumentIds);
                         if (result) {
                             toast({
-                                title: 'Knowledge Source',
+                                title: 'Ingest Source',
                                 description: `${result.added.length} document(s) queued for AI processing`,
                                 variant: 'success',
                             });
@@ -485,6 +492,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     filterBySyncedOnly={filterBySyncedOnly}
                     isProcessing={uploading}
                     processingCount={uploadFiles.length}
+                    onFilesDropped={(files) => handleFilesSelected(files)}
                 />
             </div>
         </div>

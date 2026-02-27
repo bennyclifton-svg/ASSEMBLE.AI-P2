@@ -109,14 +109,25 @@ export function CategoryUploadTiles({
                 )}
                 style={getFadeMaskStyle(categoryScroll.canScrollLeft, categoryScroll.canScrollRight)}
             >
-                {/* All category tiles */}
-                {categories.map(category => {
+                {/* All category tiles — Ingest first, Consultants/Contractors last */}
+                {[...categories].sort((a, b) => {
+                    // Ingest (knowledge source) goes first
+                    if (a.isKnowledgeSource) return -1;
+                    if (b.isKnowledgeSource) return 1;
+                    // Consultants/Contractors go last
+                    const isStakeholderA = a.subcategorySource === 'consultants' || a.subcategorySource === 'contractors';
+                    const isStakeholderB = b.subcategorySource === 'consultants' || b.subcategorySource === 'contractors';
+                    if (isStakeholderA && !isStakeholderB) return 1;
+                    if (!isStakeholderA && isStakeholderB) return -1;
+                    return 0; // preserve original order for the rest
+                }).map(category => {
                     const isKnowledgeCategory = category.isKnowledgeSource === true;
                     const hasActiveSubcategoryFilter = !!(
                         filterCategoryId === category.id &&
                         filterSubcategoryId &&
                         !expandedCategories.has(category.id)
                     );
+                    const isStakeholderCategory = category.subcategorySource === 'consultants' || category.subcategorySource === 'contractors';
                     return (
                         <div key={category.id} className="flex-shrink-0 snap-start">
                             <CategoryTile
@@ -124,6 +135,7 @@ export function CategoryUploadTiles({
                                 onFilesDropped={onFilesDropped}
                                 onClick={category.hasSubcategories ? () => toggleCategory(category.id) : undefined}
                                 hasActiveSubcategoryFilter={hasActiveSubcategoryFilter}
+                                isStakeholderCategory={isStakeholderCategory}
                                 onCategoryClick={() => {
                                     // Knowledge tile: toggle filter by synced documents
                                     if (isKnowledgeCategory) {

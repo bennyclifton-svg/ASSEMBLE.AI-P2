@@ -8,7 +8,9 @@
 'use client';
 
 import useSWR, { mutate as globalMutate } from 'swr';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import { toast } from 'sonner';
 import type {
     Note,
     NoteWithTransmittals,
@@ -304,5 +306,137 @@ export function useNoteTransmittal(noteId: string | null): UseNoteTransmittalRet
         error: error ?? null,
         saveTransmittal,
         refetch,
+    };
+}
+
+// ============================================================================
+// DROP UPLOAD HOOK
+// ============================================================================
+
+interface UploadProgress {
+    current: number;
+    total: number;
+}
+
+interface UseNoteDropUploadOptions {
+    currentTitle?: string;
+    onUpdateTitle?: (title: string) => Promise<void>;
+    onSuccess?: () => void;
+}
+
+/**
+ * Derive a human-readable title from a filename.
+ * e.g. "mechanical_specification_summary_v2.pdf" → "Mechanical Specification Summary"
+ */
+function titleFromFilename(filename: string): string {
+    // Strip extension
+    let name = filename.replace(/\.[^.]+$/, '');
+    // Strip version/revision suffixes (v1, V2, rev-A, _final, _draft, -1)
+    name = name.replace(/[-_ ]*(v\d+|rev[-_ ]?[a-z0-9]+|final|draft|copy)$/i, '');
+    // Strip leading date patterns (2024-01-15-, 20240115_)
+    name = name.replace(/^\d{4}[-_]?\d{2}[-_]?\d{2}[-_ ]*/, '');
+    // Replace separators with spaces
+    name = name.replace(/[-_]+/g, ' ');
+    // Title case each word
+    name = name.replace(/\b\w/g, c => c.toUpperCase()).trim();
+    return name || filename;
+}
+
+interface UseNoteDropUploadReturn {
+    isUploading: boolean;
+    uploadProgress: UploadProgress | null;
+    isDragOver: boolean;
+    getRootProps: ReturnType<typeof useDropzone>['getRootProps'];
+    getInputProps: ReturnType<typeof useDropzone>['getInputProps'];
+}
+
+/**
+ * Hook for drag-and-drop file upload onto a note.
+ * Uploads the file, triggers RAG ingestion, and attaches it to the note.
+ */
+export function useNoteDropUpload(
+    noteId: string,
+    projectId: string,
+    options?: UseNoteDropUploadOptions
+): UseNoteDropUploadReturn {
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+
+    const onDrop = useCallback(async (acceptedFiles: File[]) => {
+        if (acceptedFiles.length === 0) return;
+
+        setIsUploading(true);
+        setUploadProgress({ current: 0, total: acceptedFiles.length });
+
+        let successCount = 0;
+
+        for (let i = 0; i < acceptedFiles.length; i++) {
+            const file = acceptedFiles[i];
+            setUploadProgress({ current: i + 1, total: acceptedFiles.length });
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('projectId', projectId);
+
+                const response = await fetch(`/api/notes/${noteId}/upload-attachment`, {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({ error: 'Upload failed' }));
+                    throw new Error(err.error || 'Upload failed');
+                }
+
+                successCount++;
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Upload failed';
+                toast.error(`Failed to upload ${file.name}: ${message}`);
+            }
+        }
+
+        // Revalidate note data
+        globalMutate(`/api/notes?projectId=${projectId}`);
+        globalMutate(`/api/notes/${noteId}/transmittal`);
+
+        if (successCount > 0) {
+            if (successCount === 1) {
+                toast.success(`${acceptedFiles[0].name} attached to note`);
+            } else {
+                toast.success(`${successCount} files attached to note`);
+            }
+
+            // Auto-name the note from the first file if title is still default
+            if (options?.onUpdateTitle && (!options.currentTitle || options.currentTitle === 'New Note')) {
+                const autoTitle = titleFromFilename(acceptedFiles[0].name);
+                if (autoTitle) {
+                    options.onUpdateTitle(autoTitle);
+                }
+            }
+
+            options?.onSuccess?.();
+
+            // Notify document repository to refresh its list
+            window.dispatchEvent(new CustomEvent('documents-changed'));
+        }
+
+        setIsUploading(false);
+        setUploadProgress(null);
+    }, [noteId, projectId, options]);
+
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop,
+        noClick: true,
+        noKeyboard: true,
+        disabled: isUploading,
+    });
+
+    return {
+        isUploading,
+        uploadProgress,
+        isDragOver: isDragActive,
+        getRootProps,
+        getInputProps,
     };
 }

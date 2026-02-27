@@ -17,10 +17,8 @@ export function useActiveCategories(projectId: string) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Subscribe to stakeholder refresh signals
+    // Subscribe to stakeholder and knowledge subcategory refresh signals
     const { version } = useStakeholderRefresh();
-
-    // Subscribe to knowledge subcategory refresh signals
     const { version: knowledgeVersion } = useKnowledgeSubcategoryRefresh();
 
     const fetchCategories = useCallback(async () => {

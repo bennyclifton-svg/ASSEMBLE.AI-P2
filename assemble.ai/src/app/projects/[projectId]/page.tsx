@@ -83,6 +83,11 @@ export default function ProjectWorkspace() {
     setCenterActiveTab('stakeholders');
   }, []);
 
+  // Handler for knowledge navigation - switches center panel to Knowledge tab
+  const handleKnowledgeNavigate = useCallback(() => {
+    setCenterActiveTab('knowledge');
+  }, []);
+
   // Handler for profiler navigation - switches center panel to Profiler tab
   const handleShowProfiler = useCallback(() => {
     setCenterActiveTab('profiler');
@@ -185,7 +190,7 @@ export default function ProjectWorkspace() {
 
   return (
     <StakeholderRefreshProvider>
-      <KnowledgeSubcategoryRefreshProvider>
+    <KnowledgeSubcategoryRefreshProvider>
       <div className="h-screen w-full bg-background">
         {/* Full-height resizable layout - columns extend to top */}
         <ResizableLayout
@@ -197,6 +202,7 @@ export default function ProjectWorkspace() {
               onProjectNameChange={handleProjectNameChange}
               onProfileChange={handleProfileChange}
               onStakeholderNavigate={handleStakeholderNavigate}
+              onKnowledgeNavigate={handleKnowledgeNavigate}
               onShowProfiler={handleShowProfiler}
               onShowObjectives={handleShowObjectives}
               onShowProjectDetails={handleShowProjectDetails}
@@ -235,7 +241,7 @@ export default function ProjectWorkspace() {
           }
         />
       </div>
-      </KnowledgeSubcategoryRefreshProvider>
+    </KnowledgeSubcategoryRefreshProvider>
     </StakeholderRefreshProvider>
   );
 }

@@ -7,7 +7,8 @@ export const DOCUMENT_CATEGORIES = {
         id: 'planning',
         name: 'Planning',
         color: '#8B7355', // Warm Brown
-        hasSubcategories: false,
+        hasSubcategories: true,
+        subcategorySource: 'knowledge' as const,
         row: 1,
     },
     SCHEME_DESIGN: {
@@ -38,14 +39,16 @@ export const DOCUMENT_CATEGORIES = {
         id: 'procurement',
         name: 'Procurement',
         color: '#A67373', // Muted red
-        hasSubcategories: false,
+        hasSubcategories: true,
+        subcategorySource: 'knowledge' as const,
         row: 1,
     },
     DELIVERY: {
         id: 'delivery',
         name: 'Delivery',
         color: '#7A9B7E', // Sage Green
-        hasSubcategories: false,
+        hasSubcategories: true,
+        subcategorySource: 'knowledge' as const,
         row: 1,
     },
     // Row 2 Categories
@@ -65,16 +68,17 @@ export const DOCUMENT_CATEGORIES = {
         subcategorySource: 'contractors' as const,
         row: 2,
     },
-    ADMINISTRATION: {
-        id: 'administration',
-        name: 'Administration',
+    AUTHORITIES: {
+        id: 'authorities',
+        name: 'Authorities',
         color: '#6B7B8C', // Slate Gray
-        hasSubcategories: false,
+        hasSubcategories: true,
+        subcategorySource: 'knowledge' as const,
         row: 2,
     },
-    KNOWLEDGE: {
+    INGEST: {
         id: 'knowledge',
-        name: 'Knowledge',
+        name: 'Ingest',
         color: '#6B9BD1', // Sky Blue (AI/knowledge indicator)
         hasSubcategories: false,
         row: 2,

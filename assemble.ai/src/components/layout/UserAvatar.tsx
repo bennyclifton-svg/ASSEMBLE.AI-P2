@@ -57,6 +57,7 @@ export function UserAvatar({ name, email, size = 'md', className }: UserAvatarPr
         sizeClasses[size],
         className
       )}
+      style={{ clipPath: 'polygon(30% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 30%)' }}
       aria-label={name || email || 'User avatar'}
       role="img"
     >

@@ -217,7 +217,73 @@ export const PREBUILT_DOMAINS: KnowledgeDomainDefinition[] = [
         applicableProjectTypes: ['remediation', 'advisory'],
         applicableStates: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
     },
+    {
+        id: 'domain-civil-earthworks',
+        name: 'Civil Engineering & Earthworks Guide',
+        domainType: 'best_practices',
+        tags: ['civil', 'construction', 'remediation'],
+        description: 'Site preparation, excavation, ground retention, piling, stormwater, and civil authority processes',
+        applicableProjectTypes: ['new', 'refurb', 'extend', 'remediation'],
+        applicableStates: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
+    },
+    {
+        id: 'domain-structural-engineering',
+        name: 'Structural Engineering Guide',
+        domainType: 'best_practices',
+        tags: ['structural', 'construction'],
+        description: 'Concrete frame, structural steel, post-tensioning, precast, temporary works, and structural tolerances',
+        applicableProjectTypes: ['new', 'refurb', 'extend'],
+        applicableStates: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
+    },
+    {
+        id: 'domain-architectural-trades',
+        name: 'Architectural Trades Guide',
+        domainType: 'best_practices',
+        tags: ['architectural', 'construction'],
+        description: 'Facades, glazing, waterproofing, partitions, ceilings, finishes, joinery, and fire-rated elements',
+        applicableProjectTypes: ['new', 'refurb', 'extend'],
+        applicableStates: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
+    },
+    {
+        id: 'domain-mep-services',
+        name: 'MEP Services Guide',
+        domainType: 'best_practices',
+        tags: ['mechanical', 'electrical', 'hydraulic', 'fire', 'construction'],
+        description: 'HVAC, electrical reticulation, hydraulic supply/drainage, fire detection/suppression, commissioning, and authority connections',
+        applicableProjectTypes: ['new', 'refurb', 'extend'],
+        applicableStates: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
+    },
+    {
+        id: 'domain-trade-interfaces',
+        name: 'Trade Interfaces & Coordination Guide',
+        domainType: 'best_practices',
+        tags: ['construction', 'architectural', 'structural', 'mechanical', 'electrical', 'hydraulic'],
+        description: 'Cross-trade coordination, interface risk management, BIM/clash workflows, design responsibility matrices, and sequencing dependencies',
+        applicableProjectTypes: ['new', 'refurb', 'extend'],
+        applicableStates: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
+    },
 ];
+
+// ============================================
+// Project Type to Discipline Mapping
+// ============================================
+
+/**
+ * Maps project types (from profile.projectType) to their typical discipline tags.
+ * Used by resolveProfileDomainTags() to surface discipline-specific knowledge.
+ */
+export const PROJECT_TYPE_TO_DISCIPLINES: Record<string, DomainTag[]> = {
+    house:         ['structural', 'civil', 'architectural'],
+    apartments:    ['structural', 'civil', 'architectural', 'mechanical', 'electrical', 'hydraulic', 'fire'],
+    townhouses:    ['structural', 'civil', 'architectural', 'mechanical', 'electrical', 'hydraulic'],
+    commercial:    ['structural', 'civil', 'architectural', 'mechanical', 'electrical', 'hydraulic', 'fire', 'landscape'],
+    office:        ['structural', 'civil', 'architectural', 'mechanical', 'electrical', 'hydraulic', 'fire'],
+    retail:        ['structural', 'architectural', 'mechanical', 'electrical', 'hydraulic', 'fire'],
+    industrial:    ['structural', 'civil', 'mechanical', 'electrical', 'fire'],
+    refurbishment: ['structural', 'architectural', 'mechanical', 'electrical', 'hydraulic'],
+    remediation:   ['civil', 'structural', 'environmental'],
+    fitout:        ['architectural', 'mechanical', 'electrical', 'interior'],
+};
 
 // ============================================
 // Domain Display Labels
@@ -243,7 +309,7 @@ export const DOMAIN_TYPE_LABELS: Record<DomainType, string> = {
  */
 export const SECTION_TO_DOMAIN_TAGS: Record<string, DomainTag[]> = {
     // Report sections
-    'brief': ['cost-management', 'programming'],
+    'brief': ['cost-management', 'programming', 'procurement', 'contracts'],
     'procurement': ['procurement', 'contracts', 'tendering'],
     'cost_planning': ['cost-management', 'variations', 'progress-claims'],
     'programme': ['programming', 'milestones', 'critical-path'],
@@ -260,6 +326,15 @@ export const SECTION_TO_DOMAIN_TAGS: Record<string, DomainTag[]> = {
     'stakeholders': ['procurement', 'contracts'],
     'documents': ['procurement', 'tendering'],
     'reports': ['cost-management', 'programming', 'procurement'],
+
+    // Discipline-scoped TRR entries
+    'trr:structural':    ['structural', 'procurement', 'tendering', 'contracts'],
+    'trr:mechanical':    ['mechanical', 'procurement', 'tendering', 'contracts'],
+    'trr:electrical':    ['electrical', 'procurement', 'tendering', 'contracts'],
+    'trr:hydraulic':     ['hydraulic', 'procurement', 'tendering', 'contracts'],
+    'trr:fire':          ['fire', 'procurement', 'tendering', 'contracts'],
+    'trr:civil':         ['civil', 'procurement', 'tendering', 'contracts'],
+    'trr:architectural': ['architectural', 'procurement', 'tendering', 'contracts'],
 };
 
 // ============================================
@@ -267,17 +342,50 @@ export const SECTION_TO_DOMAIN_TAGS: Record<string, DomainTag[]> = {
 // ============================================
 
 /**
+ * Alias map for common discipline/trade display names that don't directly
+ * match a canonical domain tag. Maps normalized form → canonical tag.
+ * e.g. "Architecture" → normalizes to "architecture" → alias resolves to "architectural"
+ */
+const DISCIPLINE_TAG_ALIASES: Record<string, DomainTag> = {
+    'architecture': 'architectural',
+    'architect': 'architectural',
+    'structure': 'structural',
+    'structures': 'structural',
+    'mechanical-services': 'mechanical',
+    'hvac': 'mechanical',
+    'electrical-services': 'electrical',
+    'hydraulic-services': 'hydraulic',
+    'hydraulics': 'hydraulic',
+    'plumbing': 'hydraulic',
+    'fire-services': 'fire',
+    'fire-engineering': 'fire',
+    'fire-engineer': 'fire',
+    'civil-engineering': 'civil',
+    'civil-engineer': 'civil',
+    'landscape-architecture': 'landscape',
+    'landscape-architect': 'landscape',
+    'interior-design': 'interior',
+    'interior-designer': 'interior',
+    'fitout': 'interior',
+    'esd': 'sustainability',
+    'sustainability-consultant': 'sustainability',
+};
+
+/**
  * Normalize a tag string to the canonical format: lowercase, hyphenated, trimmed.
  * Ensures consistent tag storage regardless of user input format.
  */
 export function normalizeTag(tag: string): string {
-    return tag
+    const normalized = tag
         .trim()
         .toLowerCase()
         .replace(/[_\s]+/g, '-')     // Underscores and spaces to hyphens
         .replace(/[^a-z0-9-]/g, '')  // Remove non-alphanumeric except hyphens
         .replace(/-+/g, '-')         // Collapse multiple hyphens
         .replace(/^-|-$/g, '');      // Trim leading/trailing hyphens
+
+    // Check aliases for discipline display names that differ from canonical tags
+    return DISCIPLINE_TAG_ALIASES[normalized] ?? normalized;
 }
 
 /**
@@ -343,6 +451,11 @@ export function resolveProfileDomainTags(profile: ProfileTagInput): DomainTag[] 
     const procurementRoute = complexity.procurement_route ?? complexity.procurementRoute;
     if (procurementRoute) {
         tags.push('procurement', 'contracts');
+    }
+
+    // Surface discipline tags when project type is known
+    if (profile.projectType && PROJECT_TYPE_TO_DISCIPLINES[profile.projectType]) {
+        tags.push(...PROJECT_TYPE_TO_DISCIPLINES[profile.projectType]);
     }
 
     return [...new Set(tags)];

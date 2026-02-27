@@ -82,7 +82,6 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryId, isVisible: newValue }),
       });
-      triggerRefresh();
     } catch {
       setVisibility(prev => ({ ...prev, [categoryId]: current }));
     }
@@ -184,38 +183,40 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarGutter: 'stable both-edges' }}>
-        <div className="space-y-4">
-          {/* Row 1: Operational categories */}
-          {GROUP_ORDER.map(group => {
-            const items = subcategories[group] || [];
-            const selectedInGroup = items.filter(s => selectedIds.has(s.id)).length;
-            const hasSelectedInGroup = selectedInGroup > 0;
+        <div className="grid grid-cols-2 gap-4 items-start">
+          {/* Column 1: Operational categories */}
+          <div className="space-y-4">
+            {GROUP_ORDER.map(group => {
+              const items = subcategories[group] || [];
+              const selectedInGroup = items.filter(s => selectedIds.has(s.id)).length;
+              const hasSelectedInGroup = selectedInGroup > 0;
 
-            return (
-              <GroupCard
-                key={group}
-                group={group}
-                items={items}
-                onUpdate={updateSubcategory}
-                onDelete={deleteSubcategory}
-                onDeleteGroup={() => setGroupToDelete(group)}
-                onDeleteSelected={() => setShowDeleteConfirm(true)}
-                hasSelectedInGroup={hasSelectedInGroup}
-                selectedInGroup={selectedInGroup}
-                quickAddGroup={quickAddGroup}
-                onQuickAdd={() => setQuickAddGroup(group)}
-                onQuickAddSubmit={handleQuickAddSubmit}
-                onQuickAddCancel={() => setQuickAddGroup(null)}
-                selectedIds={selectedIds}
-                onSelect={handleSelect}
-                isVisible={visibility[group] !== false}
-                onToggleVisibility={() => toggleVisibility(group)}
-              />
-            );
-          })}
+              return (
+                <GroupCard
+                  key={group}
+                  group={group}
+                  items={items}
+                  onUpdate={updateSubcategory}
+                  onDelete={deleteSubcategory}
+                  onDeleteGroup={() => setGroupToDelete(group)}
+                  onDeleteSelected={() => setShowDeleteConfirm(true)}
+                  hasSelectedInGroup={hasSelectedInGroup}
+                  selectedInGroup={selectedInGroup}
+                  quickAddGroup={quickAddGroup}
+                  onQuickAdd={() => setQuickAddGroup(group)}
+                  onQuickAddSubmit={handleQuickAddSubmit}
+                  onQuickAddCancel={() => setQuickAddGroup(null)}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
+                  isVisible={visibility[group] !== false}
+                  onToggleVisibility={() => toggleVisibility(group)}
+                />
+              );
+            })}
+          </div>
 
-          {/* Row 2: Design categories */}
-          <div className="border-t border-[var(--color-border)]/30 pt-4 space-y-4">
+          {/* Column 2: Design categories */}
+          <div className="space-y-4">
             {DESIGN_GROUP_ORDER.map(group => {
               const items = subcategories[group] || [];
               const selectedInGroup = items.filter(s => selectedIds.has(s.id)).length;

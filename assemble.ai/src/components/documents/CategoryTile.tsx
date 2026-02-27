@@ -40,6 +40,8 @@ interface CategoryTileProps {
     isFiltered?: boolean;
     /** Whether a subcategory filter is active while the tile is collapsed. */
     hasActiveSubcategoryFilter?: boolean;
+    /** Whether this is a stakeholder category (Consultants/Contractors) — uses grey styling. */
+    isStakeholderCategory?: boolean;
 }
 
 /**
@@ -62,6 +64,7 @@ export function CategoryTile({
     isSelected = false,
     isFiltered = false,
     hasActiveSubcategoryFilter = false,
+    isStakeholderCategory = false,
 }: CategoryTileProps) {
     // Check if this is the Knowledge category (triggers auto-RAG)
     const isKnowledgeCategory = category.isKnowledgeSource === true;
@@ -133,6 +136,15 @@ export function CategoryTile({
 
     const displayName = subcategory ? subcategory.name : category.name;
 
+    // Compute hover tooltip based on selection state and tile type
+    const tooltipText = isUploadTile
+        ? undefined
+        : hasSelection
+            ? (category.hasSubcategories && !subcategory)
+                ? 'Click to expand subcategories'
+                : `Ctrl+Click to assign documents to ${displayName}`
+            : `Ctrl+Click to select all ${displayName} documents`;
+
     // Determine text color class based on filtered/selected state
     // Filtered state uses inverse text (white on solid fill)
     // Knowledge tile uses teal when selected, others use copper
@@ -141,16 +153,24 @@ export function CategoryTile({
         if (isFiltered) {
             return 'text-[var(--color-text-inverse)]';
         }
+        // Stakeholder categories (Consultants/Contractors) use grey tones
+        if (isStakeholderCategory) {
+            if (isSelected) {
+                return 'text-[var(--color-text-secondary)]';
+            }
+            return 'text-[var(--color-text-tertiary)] group-hover:text-[var(--color-text-secondary)]';
+        }
         if (isSelected) {
             if (isKnowledgeCategory) {
                 return 'text-[var(--color-accent-teal)]';
             }
             return 'text-[var(--color-accent-copper)]';
         }
-        // Default: secondary text that turns copper on hover (or teal for Knowledge)
+        // Ingest tile: always colored (teal) even when not selected/hovered
         if (isKnowledgeCategory) {
-            return 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-teal)]';
+            return 'text-[var(--color-accent-teal)]';
         }
+        // Default: secondary text that turns copper on hover
         return 'text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-copper)]';
     };
     const textColorClass = getTextColorClass();
@@ -158,6 +178,9 @@ export function CategoryTile({
     // Get selected state styling based on whether this is Knowledge tile or not
     const getSelectedStyles = () => {
         if (!isSelected) return '';
+        if (isStakeholderCategory) {
+            return 'border-[var(--color-border-strong)] bg-[var(--color-bg-secondary)]';
+        }
         if (isKnowledgeCategory) {
             // Knowledge tile uses teal when selected
             return 'border-[var(--color-accent-teal)] bg-[var(--color-accent-teal-tint)]';
@@ -169,6 +192,9 @@ export function CategoryTile({
     // Get hover state styling
     const getHoverStyles = () => {
         if (isSelected || isFiltered) return ''; // No hover change when selected or filtered
+        if (isStakeholderCategory) {
+            return 'hover:border-[var(--color-border-strong)] hover:bg-[var(--color-bg-secondary)]';
+        }
         if (isKnowledgeCategory) {
             return 'hover:border-[var(--color-accent-teal)]/50 hover:bg-[var(--color-accent-teal-tint)]';
         }
@@ -178,6 +204,9 @@ export function CategoryTile({
     // Get filtered state styling (solid fill, like project type buttons)
     const getFilteredStyles = () => {
         if (!isFiltered) return '';
+        if (isStakeholderCategory) {
+            return 'bg-[var(--color-text-tertiary)] border-[var(--color-text-tertiary)]';
+        }
         if (isKnowledgeCategory) {
             return 'bg-[var(--color-accent-teal)] border-[var(--color-accent-teal)]';
         }
@@ -188,11 +217,12 @@ export function CategoryTile({
         <div
             {...getRootProps()}
             onClick={handleClick}
+            title={tooltipText}
             className={cn(
                 'relative rounded-lg transition-all duration-200 ease-in-out cursor-pointer group',
-                'flex items-center justify-center text-center overflow-hidden',
+                'flex items-center justify-center text-center overflow-hidden whitespace-nowrap',
                 // Compact size
-                isSubcategory ? 'h-10 px-3 py-1' : 'h-11 px-3 py-1',
+                isSubcategory ? 'h-8 px-2.5 py-1' : 'h-9 px-3 py-1',
                 // Upload tile special styling - dashed border
                 isUploadTile && 'border-2 border-dashed border-[var(--color-border-strong)] hover:border-[var(--color-accent-copper)]/50 hover:bg-[var(--color-accent-copper-tint)]',
                 // All category tiles - base styling
@@ -206,11 +236,18 @@ export function CategoryTile({
                 // Drag active state - ring
                 isDragActive && !isUploadTile && (isKnowledgeCategory
                     ? 'ring-2 ring-[var(--color-accent-teal)]'
-                    : 'ring-2 ring-[var(--color-accent-copper)]')
+                    : isStakeholderCategory
+                        ? 'ring-2 ring-[var(--color-border-strong)]'
+                        : 'ring-2 ring-[var(--color-accent-copper)]')
             )}
             style={{
-                ...(!isSelected && !isFiltered && !isDragActive && {
+                ...(!isSelected && !isFiltered && !isDragActive && !isKnowledgeCategory && {
                     backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)',
+                }),
+                // Ingest tile: always show teal tint background
+                ...(!isSelected && !isFiltered && !isDragActive && isKnowledgeCategory && {
+                    backgroundColor: 'var(--color-accent-teal-tint)',
+                    borderColor: 'color-mix(in srgb, var(--color-accent-teal) 40%, transparent)',
                 }),
                 ...(isDragActive && isUploadTile && {
                     borderColor: 'var(--color-accent-copper)',
@@ -224,15 +261,15 @@ export function CategoryTile({
             {isUploadTile ? (
                 <div className="flex flex-col items-center justify-center gap-1">
                     <Upload
-                        className="w-6 h-6 text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-copper)] transition-colors"
+                        className="w-5 h-5 text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-copper)] transition-colors"
                     />
                 </div>
             ) : isKnowledgeCategory ? (
                 /* Knowledge tile content - diamond icon */
                 <div className="flex items-center justify-center w-full relative z-10 gap-2">
                     <svg
-                        width={24}
-                        height={24}
+                        width={20}
+                        height={20}
                         viewBox="0 0 16 16"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
@@ -256,38 +293,17 @@ export function CategoryTile({
                     </span>
                 </div>
             ) : (
-                /* Regular tile content */
-                <div className="flex items-center justify-between w-full relative z-10">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Upload
-                            className={cn(
-                                'w-4 h-4 flex-shrink-0 transition-colors',
-                                textColorClass
-                            )}
-                        />
-                        <span
-                            className={cn(
-                                'font-medium truncate transition-colors',
-                                isSubcategory ? 'text-sm' : 'text-base',
-                                textColorClass
-                            )}
-                        >
-                            {displayName}
-                        </span>
-                    </div>
-                    {category.hasSubcategories && !isSubcategory && (
-                        <svg
-                            className={cn(
-                                'w-4 h-4 flex-shrink-0 ml-2 transition-transform',
-                                isExpanded && 'rotate-90',
-                                textColorClass
-                            )}
-                            viewBox="0 0 12 12"
-                            fill="currentColor"
-                        >
-                            <polygon points="2,0 12,6 2,12" />
-                        </svg>
-                    )}
+                /* Regular tile content — text only, no icons */
+                <div className="flex items-center justify-center w-full relative z-10">
+                    <span
+                        className={cn(
+                            'font-medium transition-colors',
+                            isSubcategory ? 'text-sm' : 'text-base',
+                            textColorClass
+                        )}
+                    >
+                        {displayName}
+                    </span>
                 </div>
             )}
 

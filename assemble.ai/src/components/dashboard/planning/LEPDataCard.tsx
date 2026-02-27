@@ -184,15 +184,6 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
                         </span>
                     )}
                 </div>
-                {hasCoordinates && status !== 'loading' && (
-                    <button
-                        onClick={() => fetchLEP(true)}
-                        className="p-1 rounded hover:bg-[var(--color-accent-copper)]/10 transition-colors"
-                        title="Refresh LEP data"
-                    >
-                        <DiamondIcon variant="empty" className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
-                    </button>
-                )}
                 {status === 'loading' && (
                     <DiamondIcon variant="empty" className="w-3.5 h-3.5 text-[var(--color-accent-copper)] animate-diamond-spin" />
                 )}

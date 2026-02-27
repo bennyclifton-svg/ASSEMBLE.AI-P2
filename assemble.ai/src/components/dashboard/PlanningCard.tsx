@@ -6,6 +6,7 @@ import { DetailsSection } from './planning/DetailsSection';
 import { ObjectivesNav } from './planning/ObjectivesNav';
 import { ProfileSection } from '@/components/profiler/ProfileSection';
 import { StakeholderNav } from '@/components/stakeholders/StakeholderNav';
+import { KnowledgeNav } from '@/components/knowledge/KnowledgeNav';
 import { ProjectSwitcher } from './ProjectSwitcher';
 
 
@@ -23,6 +24,7 @@ interface PlanningCardProps {
     onProjectNameChange?: () => void;
     onProfileChange?: (buildingClass: string | null, projectType: string | null) => void;
     onStakeholderNavigate?: () => void;
+    onKnowledgeNavigate?: () => void;
     onShowProfiler?: () => void;
     onShowObjectives?: () => void;
     onShowProjectDetails?: () => void;
@@ -39,6 +41,7 @@ export function PlanningCard({
     onProjectNameChange,
     onProfileChange,
     onStakeholderNavigate,
+    onKnowledgeNavigate,
     onShowProfiler,
     onShowObjectives,
     onShowProjectDetails,
@@ -111,6 +114,12 @@ export function PlanningCard({
                     projectId={projectId}
                     onNavigate={onStakeholderNavigate}
                     isActive={activeMainTab === 'stakeholders'}
+                />
+
+                <KnowledgeNav
+                    projectId={projectId}
+                    onNavigate={onKnowledgeNavigate}
+                    isActive={activeMainTab === 'knowledge'}
                 />
 
                 {/* Project Switcher */}

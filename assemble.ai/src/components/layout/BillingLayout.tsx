@@ -46,9 +46,17 @@ export function BillingLayout({ children }: BillingLayoutProps) {
                 <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize h-full" />
 
                 {/* Center Panel - Main content */}
-                <Panel defaultSize={58} minSize={20}>
-                    <div className="h-full flex flex-col animate-slide-in-up animate-delay-100">
-                        <div className="flex-1 min-h-0 overflow-auto">
+                <Panel defaultSize={58} minSize={20} className="bg-[var(--color-bg-tertiary)]">
+                    <div className="h-full flex flex-col animate-slide-in-up animate-delay-100 relative">
+                        {/* Watermark background */}
+                        <img
+                            src="/images/logo-mask.svg"
+                            alt=""
+                            aria-hidden="true"
+                            draggable={false}
+                            className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none panel-watermark"
+                        />
+                        <div className="flex-1 min-h-0 overflow-auto relative z-10">
                             {children}
                         </div>
                     </div>

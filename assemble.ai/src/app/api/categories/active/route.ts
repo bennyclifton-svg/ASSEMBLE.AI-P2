@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, projectStakeholders, categoryVisibility, subcategories as subcategoriesTable } from '@/lib/db';
 import { eq, and, asc, isNull, inArray } from 'drizzle-orm';
 import { getAllCategories, type ActiveCategory, type Subcategory } from '@/lib/constants/categories';
-import { KNOWLEDGE_CATEGORY_IDS } from '@/lib/services/knowledge-subcategory-defaults';
+import { seedKnowledgeDefaults, KNOWLEDGE_CATEGORY_IDS } from '@/lib/services/knowledge-subcategory-defaults';
 
 /**
  * Helper function to extract unique subcategories from stakeholders
@@ -87,6 +87,9 @@ export async function GET(request: NextRequest) {
             visibilityMap.set(row.categoryId, row.isVisible);
         }
 
+        // Seed knowledge subcategory defaults if none exist yet for this project
+        await seedKnowledgeDefaults(projectId);
+
         // Fetch knowledge subcategories (for categories with subcategorySource === 'knowledge')
         const knowledgeSubcats = await db
             .select()
@@ -110,27 +113,25 @@ export async function GET(request: NextRequest) {
                 return category;
             }
 
-            let subcategories: Subcategory[] = [];
+            let subs: Subcategory[] = [];
 
             if (category.subcategorySource === 'knowledge') {
-                // Get subcategories from the knowledge subcategories table
-                const subs = knowledgeSubcats.filter(s => s.categoryId === category.id);
-                subcategories = subs.map(s => ({
-                    id: s.id,
-                    name: s.name,
-                    parentCategoryId: category.id,
-                }));
+                subs = knowledgeSubcats
+                    .filter(s => s.categoryId === category.id)
+                    .map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        parentCategoryId: category.id,
+                    }));
             } else if (category.subcategorySource === 'consultants') {
-                // Get unique disciplines from consultant stakeholders
-                subcategories = getUniqueSubcategories(consultantStakeholders, category.id);
+                subs = getUniqueSubcategories(consultantStakeholders, category.id);
             } else if (category.subcategorySource === 'contractors') {
-                // Get unique trades from contractor stakeholders
-                subcategories = getUniqueSubcategories(contractorStakeholders, category.id);
+                subs = getUniqueSubcategories(contractorStakeholders, category.id);
             }
 
             return {
                 ...category,
-                subcategories,
+                subcategories: subs,
             };
         });
 

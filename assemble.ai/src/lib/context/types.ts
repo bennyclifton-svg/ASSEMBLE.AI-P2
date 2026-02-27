@@ -70,6 +70,10 @@ export interface ContextRequest {
   /** For procurement context: specific stakeholder ID */
   stakeholderId?: string;
 
+  /** Discipline being analysed (e.g., 'structural', 'mechanical').
+   *  Merges discipline-specific domain tags into retrieval query. */
+  discipline?: string;
+
   /** For note context: specific note ID for fetching attached documents */
   noteId?: string;
 

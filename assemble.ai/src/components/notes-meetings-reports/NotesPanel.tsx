@@ -222,6 +222,7 @@ export function NotesPanel({
                                     key={note.id}
                                     note={note}
                                     noteNumber={index + 1}
+                                    projectId={projectId}
                                     isExpanded={false}
                                     onToggleExpand={() => toggleNoteExpanded(note.id)}
                                     onUpdate={(data) => handleUpdateNote(note.id, data)}
@@ -241,6 +242,7 @@ export function NotesPanel({
                                 <SingleNotePanel
                                     note={note}
                                     noteNumber={index + 1}
+                                    projectId={projectId}
                                     isExpanded={true}
                                     onToggleExpand={() => toggleNoteExpanded(note.id)}
                                     onUpdate={(data) => handleUpdateNote(note.id, data)}

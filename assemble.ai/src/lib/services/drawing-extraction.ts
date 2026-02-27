@@ -172,11 +172,22 @@ const ATTACHED_REVISION_PATTERN = /^(.+?)(\[([A-Z])\]|\(([A-Z])\))$/i;
  */
 export function extractFromFilename(filename: string): DrawingExtractionResult | null {
     // Remove extension
-    const baseName = filename.replace(/\.[^/.]+$/, '');
+    let baseName = filename.replace(/\.[^/.]+$/, '');
 
     let drawingNumber: string | null = null;
     let revision: string | null = null;
     let drawingName: string | null = null;
+
+    // Extract explicit -(NN) revision suffix from end of filename FIRST
+    // Pattern: "15123_S0012_Shoring_Details Sht 1-(04)" → revision "04"
+    // This is a very common and highly reliable construction document naming convention
+    const explicitRevMatch = baseName.match(/-\((\d{1,2})\)$/);
+    if (explicitRevMatch) {
+        revision = explicitRevMatch[1];
+        // Strip from baseName so it doesn't interfere with other parsing
+        baseName = baseName.replace(/-\((\d{1,2})\)$/, '');
+        console.log(`[drawing-extraction] Extracted explicit filename revision: ${revision}`);
+    }
 
     // First pass: Find hyphenated drawing numbers directly in the filename
     // Patterns like CC-01, CC-11, AR-101, SK-001, etc.
@@ -216,26 +227,29 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
         }
     }
 
-    // Check for single letter revision at end FIRST (most common convention)
-    // e.g., "1115 CC-11 LEVEL 08 E.pdf" -> revision "E"
-    if (parts.length > 0) {
-        const lastPart = parts[parts.length - 1];
-        if (/^[A-Z]$/i.test(lastPart)) {
-            revision = lastPart.toUpperCase();
-        }
-    }
-
-    // If no single letter at end, look for revision patterns in parts
+    // Only look for revision in parts if we didn't find an explicit -(NN) revision
     if (!revision) {
-        for (const part of parts) {
-            for (const revPattern of REVISION_PATTERNS) {
-                const match = part.match(revPattern);
-                if (match) {
-                    revision = match[1] || match[0];
-                    break;
-                }
+        // Check for single letter revision at end FIRST (most common convention)
+        // e.g., "1115 CC-11 LEVEL 08 E.pdf" -> revision "E"
+        if (parts.length > 0) {
+            const lastPart = parts[parts.length - 1];
+            if (/^[A-Z]$/i.test(lastPart)) {
+                revision = lastPart.toUpperCase();
             }
-            if (revision) break;
+        }
+
+        // If no single letter at end, look for revision patterns in parts
+        if (!revision) {
+            for (const part of parts) {
+                for (const revPattern of REVISION_PATTERNS) {
+                    const match = part.match(revPattern);
+                    if (match) {
+                        revision = match[1] || match[0];
+                        break;
+                    }
+                }
+                if (revision) break;
+            }
         }
     }
 
@@ -267,8 +281,10 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
 
     // Higher confidence when we have both a recognized drawing number pattern and a clean revision
     const hasStrongPattern = isKnownDrawingNumberPattern(drawingNumber);
+    const hasNumericRevision = revision !== null && /^\d+$/.test(revision);
     const hasCleanRevision = revision !== null && /^[A-Z]$/i.test(revision);
-    const confidence = hasStrongPattern && hasCleanRevision ? 85
+    const confidence = hasStrongPattern && hasNumericRevision ? 90
+        : hasStrongPattern && hasCleanRevision ? 85
         : hasStrongPattern ? 80
         : 70;
 
@@ -436,14 +452,18 @@ STEP 2 - IF THIS IS A DRAWING, extract:
 
 2. DRAWING NAME/TITLE: The descriptive name of the drawing (e.g., "Floor Plan - Level 1", "Structural Foundation Details")
 
-3. REVISION: The revision indicator (A, B, 01, P01, Rev. 1, etc.)
+3. REVISION: Extract the revision from the document content, specifically from the title block area.
+   - Revisions are typically NUMERIC INTEGERS: 01, 02, 03, 04, 05 (sometimes without leading zero: 1, 2, 3).
+   - They can also be letters (A, B, C) or prefixed (P01, R1, Rev 2) - extract whatever is shown.
+   - If a revision table/history exists, extract the LATEST (highest/most recent) revision number.
+   - Do NOT use issue statuses (RG, IFC, FC) as revisions.
 
 Respond in this exact JSON format:
 {
   "isDrawing": true or false,
   "drawingNumber": "A-101" or null,
   "drawingName": "Floor Plan Level 1" or null,
-  "drawingRevision": "A" or null,
+  "drawingRevision": "05" or null,
   "confidence": 85
 }
 
@@ -526,10 +546,9 @@ For example: "1115 CC-46 WET AREAS A.pdf"
   - 1115 = project number (ignore this)
   - CC-46 = drawing number (this is what goes in drawingNumber)
   - WET AREAS = abbreviated description
-  - A = revision letter
+  - A = revision letter (but the title block revision is more authoritative)
 
 The drawing number in the filename (e.g., CC-46, CC-08, H-101) is almost always correct.
-The single letter at the end before the extension is almost always the revision.
 Do NOT confuse these with:
   - Paper sizes (A1, A3) - these are NOT drawing numbers
   - Project numbers (1115, 1150) - these are NOT drawing numbers
@@ -553,14 +572,21 @@ STEP 2 - IF THIS IS A DRAWING, extract:
 
 1. DRAWING NUMBER: The unique identifier. Use the drawing number from the filename if it matches a pattern like XX-NN (e.g., CC-46, H-101). Verify against the title block if possible.
 2. DRAWING NAME/TITLE: The full descriptive name from the title block (e.g., "Floor Plan - Level 1", not the abbreviated filename version)
-3. REVISION: The revision letter/number. Use the single letter at the end of the filename (before .pdf) as the revision. Do NOT use issue statuses like RG (Regulatory), IFC (Issued for Construction), FC (For Construction) as revisions.
+3. REVISION: Extract the revision from the TITLE BLOCK of the drawing, NOT from the filename.
+   - Look for the revision in the title block area (usually bottom-right corner).
+   - Common locations: revision triangle, revision box, revision table, or "REV" field in the title block.
+   - Revisions are typically NUMERIC INTEGERS: 01, 02, 03, 04, 05, etc. (sometimes without leading zero: 1, 2, 3).
+   - They can also be letters (A, B, C) or prefixed (P01, R1, Rev 2) - extract whatever is shown.
+   - If a revision table/history exists, extract the LATEST (highest/most recent) revision number.
+   - Do NOT use issue statuses like RG (Regulatory), IFC (Issued for Construction), FC (For Construction) as revisions.
+   - Do NOT use the filename letter as the revision - always read it from the title block.
 
 Respond in this exact JSON format:
 {
   "isDrawing": true or false,
   "drawingNumber": "CC-46" or null,
   "drawingName": "Wet Areas - Sheet 1" or null,
-  "drawingRevision": "A" or null,
+  "drawingRevision": "05" or null,
   "confidence": 85
 }
 
@@ -672,8 +698,10 @@ function parseVisionResponse(text: string): DrawingExtractionResult {
  * - Drawing number: FILENAME takes priority when it matches a known pattern
  *   (AI/vision often confuses sheet sizes, project numbers, and reference codes with drawing numbers)
  * - Drawing name: AI/VISION takes priority (reads full descriptive title from title block)
- * - Revision: FILENAME takes priority when it has a clear single-letter revision
- *   (AI/vision often confuses issue statuses like RG/IFC with revision letters)
+ * - Revision priority:
+ *   1. Filename NUMERIC revision (from -(NN) pattern) - highest reliability, always wins
+ *   2. AI/Vision revision - reads from title block, generally reliable
+ *   3. Filename letter revision - fallback only (single letter at end of filename)
  */
 function mergeExtractionResults(
     primaryResult: DrawingExtractionResult,
@@ -687,11 +715,21 @@ function mergeExtractionResults(
     const filenameHasStrongDrawingNumber = filenameResult.drawingNumber &&
         isKnownDrawingNumberPattern(filenameResult.drawingNumber);
 
-    // Filename revision is very reliable when it's a clean single letter at end
-    // AI/vision often picks up issue statuses (RG=Regulatory, IFC=Issued for Construction)
-    // instead of the actual revision letter
-    const filenameHasStrongRevision = filenameResult.drawingRevision &&
-        /^[A-Z]$/i.test(filenameResult.drawingRevision);
+    // Filename numeric revision (from -(NN) suffix) is the most reliable source
+    // These are explicitly encoded in the filename by document control systems
+    const filenameHasNumericRevision = filenameResult.drawingRevision &&
+        /^\d+$/.test(filenameResult.drawingRevision);
+
+    // Determine best revision:
+    // 1. Filename numeric (-(NN) pattern) always wins - most reliable
+    // 2. AI/Vision result - reads from title block
+    // 3. Filename letter/other - fallback
+    let bestRevision: string | null;
+    if (filenameHasNumericRevision) {
+        bestRevision = filenameResult.drawingRevision;
+    } else {
+        bestRevision = primaryResult.drawingRevision || filenameResult.drawingRevision;
+    }
 
     const merged: DrawingExtractionResult = {
         // Drawing number: prefer filename when it has a recognized pattern
@@ -700,10 +738,8 @@ function mergeExtractionResults(
             : (primaryResult.drawingNumber || filenameResult.drawingNumber),
         // Drawing name: prefer AI (reads full descriptive title from title block)
         drawingName: primaryResult.drawingName || filenameResult.drawingName,
-        // Revision: prefer filename when it has a clear single-letter revision
-        drawingRevision: filenameHasStrongRevision
-            ? filenameResult.drawingRevision
-            : (primaryResult.drawingRevision || filenameResult.drawingRevision),
+        // Revision: use priority logic above
+        drawingRevision: bestRevision,
         confidence: primaryResult.confidence,
         source: primaryResult.source,
     };
@@ -713,13 +749,13 @@ function mergeExtractionResults(
         primaryResult.drawingNumber !== filenameResult.drawingNumber) {
         console.log(`[drawing-extraction] Filename drawing number override: AI="${primaryResult.drawingNumber}" -> Filename="${filenameResult.drawingNumber}"`);
     }
-    if (filenameHasStrongRevision && primaryResult.drawingRevision &&
+    if (filenameHasNumericRevision && primaryResult.drawingRevision &&
         primaryResult.drawingRevision !== filenameResult.drawingRevision) {
-        console.log(`[drawing-extraction] Filename revision override: AI="${primaryResult.drawingRevision}" -> Filename="${filenameResult.drawingRevision}"`);
+        console.log(`[drawing-extraction] Filename numeric revision override: AI="${primaryResult.drawingRevision}" -> Filename="${filenameResult.drawingRevision}"`);
     }
 
     // Boost confidence when filename corroborates AI results
-    if (filenameHasStrongDrawingNumber || filenameHasStrongRevision) {
+    if (filenameHasStrongDrawingNumber || filenameHasNumericRevision) {
         merged.confidence = Math.max(merged.confidence, filenameResult.confidence);
     }
 

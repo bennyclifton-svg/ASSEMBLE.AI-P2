@@ -13,12 +13,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { retrieve } from '@/lib/rag/retrieval';
+import { retrieve, retrieveFromDomains } from '@/lib/rag/retrieval';
 import { ragDb } from '@/lib/db/rag-client';
 import { db } from '@/lib/db';
 import { sql, eq } from 'drizzle-orm';
 import Anthropic from '@anthropic-ai/sdk';
 import { getCurrentUser } from '@/lib/auth/get-user';
+import { normalizeTag, isKnownTag } from '@/lib/constants/knowledge-domains';
 import {
     type FieldType,
     type InputInterpretation,
@@ -77,6 +78,7 @@ interface GenerateFieldResponse {
     inputInterpretation: InputInterpretation;
     metadata: {
         usedRAG: boolean;
+        usedDomainKnowledge: boolean;
         usedProjectContext: boolean;
         usedProfiler: boolean;
         usedObjectives: boolean;
@@ -216,8 +218,40 @@ export async function POST(req: NextRequest) {
             console.log('[generate-field] RAG retrieval unavailable:', ragError);
         }
 
+        // Domain knowledge retrieval for discipline-specific fields
+        let domainContext = '';
+        let domainAvailable = false;
+        if (metadata.requiresDiscipline || metadata.requiresTrade) {
+            try {
+                const normalizedDiscipline = normalizeTag(contextName);
+                const discipline = isKnownTag(normalizedDiscipline) ? normalizedDiscipline : undefined;
+
+                if (discipline) {
+                    const ragQuery = buildRagQuery(body.userInput, inputMode, body.fieldType, contextName);
+                    const domainResults = await retrieveFromDomains(ragQuery, {
+                        domainTags: [discipline],
+                        domainTypes: ['best_practices'],
+                        includePrebuilt: true,
+                        includeOrganization: true,
+                        topK: 10,
+                        rerankTopK: 3,
+                        minRelevanceScore: 0.3,
+                    });
+
+                    if (domainResults.length > 0) {
+                        domainAvailable = true;
+                        domainContext = domainResults
+                            .map((r, i) => `[Domain ${i + 1} — ${r.domainName}${r.sectionTitle ? `: ${r.sectionTitle}` : ''}]\n${r.content}`)
+                            .join('\n\n---\n\n');
+                    }
+                }
+            } catch (domainError) {
+                console.log('[generate-field] Domain knowledge retrieval unavailable:', domainError);
+            }
+        }
+
         // Log which sources are available
-        console.log(`[generate-field] Sources: RAG=${ragAvailable}, ProjectContext=${!!projectContext}, StakeholderContext=${!!stakeholderContext}`);
+        console.log(`[generate-field] Sources: RAG=${ragAvailable}, Domain=${domainAvailable}, ProjectContext=${!!projectContext}, StakeholderContext=${!!stakeholderContext}`);
 
         // Build the full prompt
         const promptTemplate = getPromptTemplate(body.fieldType, inputMode, ragAvailable);
@@ -228,7 +262,8 @@ export async function POST(req: NextRequest) {
             contextName,
             ragChunksContext,
             body.additionalContext,
-            stakeholderContext
+            stakeholderContext,
+            domainContext
         );
 
         // Generate content using Claude
@@ -265,6 +300,7 @@ export async function POST(req: NextRequest) {
             inputInterpretation: inputMode,
             metadata: {
                 usedRAG: ragAvailable,
+                usedDomainKnowledge: domainAvailable,
                 usedProjectContext: !!projectContext && projectContext !== 'No project context available.',
                 usedProfiler: projectContext.includes('## Project Profile'),
                 usedObjectives: projectContext.includes('## Project Objectives'),
@@ -519,15 +555,19 @@ async function getDocumentNames(documentIds: string[]): Promise<Map<string, stri
     if (documentIds.length === 0) return names;
 
     try {
-        // Query documents table in app database
+        // Join through versions → file_assets to get original_name
         const results = await db.execute(sql`
-            SELECT id, name
-            FROM documents
-            WHERE id IN (${sql.join(documentIds.map(id => sql`${id}`), sql`, `)})
+            SELECT d.id, fa.original_name
+            FROM documents d
+            LEFT JOIN versions v ON d.latest_version_id = v.id
+            LEFT JOIN file_assets fa ON v.file_asset_id = fa.id
+            WHERE d.id IN (${sql.join(documentIds.map(id => sql`${id}`), sql`, `)})
         `);
 
         for (const row of (results.rows || []) as any[]) {
-            names.set(row.id, row.name);
+            if (row.original_name) {
+                names.set(row.id, row.original_name);
+            }
         }
     } catch (error) {
         console.error('[generate-field] Error fetching document names:', error);
@@ -582,7 +622,8 @@ function buildFullPrompt(
         evaluationData?: object;
         sectionTitle?: string;
     },
-    stakeholderContext?: string
+    stakeholderContext?: string,
+    domainContext?: string
 ): string {
     let prompt = template
         .replace('{userInput}', userInput || '(no user input provided)')
@@ -597,6 +638,11 @@ function buildFullPrompt(
     // Add stakeholder context if provided (discipline-specific information)
     if (stakeholderContext) {
         prompt += `\n\n## Stakeholder Context\n${stakeholderContext}`;
+    }
+
+    // Add domain knowledge if available (discipline-specific standards, lead times, risks)
+    if (domainContext) {
+        prompt += `\n\n## Domain Knowledge\nThe following discipline-specific knowledge covers Australian Standards, lead times, common defects, and procurement guidance. Use it to enrich the generated content with specific references and industry context:\n\n${domainContext}`;
     }
 
     // Add additional context if provided

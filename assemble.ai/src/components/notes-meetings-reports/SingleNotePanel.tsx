@@ -9,12 +9,13 @@
 'use client';
 
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { Trash, Star, Copy, Loader2 } from 'lucide-react';
+import { Trash, Star, Copy, Loader2, Upload } from 'lucide-react';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { NoteColorPicker } from './NoteColorPicker';
 import { NoteContent } from './NoteContent';
 import { cn } from '@/lib/utils';
 import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
+import { useNoteDropUpload } from '@/lib/hooks/use-notes';
 import type { Note, NoteColor } from '@/types/notes-meetings-reports';
 import { NOTE_COLOR_MAP } from '@/types/notes-meetings-reports';
 
@@ -25,6 +26,7 @@ interface NoteWithCount extends Note {
 interface SingleNotePanelProps {
     note: NoteWithCount;
     noteNumber: number;
+    projectId: string;
     isExpanded: boolean;
     onToggleExpand: () => void;
     onUpdate: (data: { title?: string; content?: string; isStarred?: boolean; color?: NoteColor }) => Promise<void>;
@@ -38,6 +40,7 @@ interface SingleNotePanelProps {
 export function SingleNotePanel({
     note,
     noteNumber,
+    projectId,
     isExpanded,
     onToggleExpand,
     onUpdate,
@@ -127,6 +130,17 @@ export function SingleNotePanel({
         }
     }, [onCopy]);
 
+    // Drop upload - auto-names note from filename when title is still default
+    const handleAutoTitle = useCallback(async (title: string) => {
+        setLocalTitle(title);
+        await onUpdate({ title });
+    }, [onUpdate]);
+
+    const { isUploading, uploadProgress, isDragOver, getRootProps, getInputProps } = useNoteDropUpload(note.id, projectId, {
+        currentTitle: note.title,
+        onUpdateTitle: handleAutoTitle,
+    });
+
     // Get note color for header styling
     const noteColor = note.color || 'yellow';
     const colorStyles = NOTE_COLOR_MAP[noteColor];
@@ -135,13 +149,36 @@ export function SingleNotePanel({
     if (!isExpanded) {
         return (
             <>
-                <div className={cn('', className)}>
+                <div {...getRootProps()} className={cn('', className)}>
+                    <input {...getInputProps()} />
                     <div
-                        className="relative w-[140px] h-[140px] pt-1 pr-1.5 pb-2 pl-1.5 shadow-md flex flex-col"
+                        className={cn(
+                            'relative w-[140px] h-[140px] pt-1 pr-1.5 pb-2 pl-1.5 shadow-md flex flex-col transition-all duration-150',
+                            isDragOver && 'border-2 border-dashed border-[var(--color-accent-copper)] scale-105 opacity-80',
+                        )}
                         style={{ backgroundColor: colorStyles.bg, color: colorStyles.text }}
                     >
+                        {/* Drag-over overlay */}
+                        {isDragOver && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-10 pointer-events-none">
+                                <Upload className="w-6 h-6 opacity-60" />
+                            </div>
+                        )}
+
+                        {/* Upload progress overlay */}
+                        {isUploading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-10 pointer-events-none">
+                                <div className="flex flex-col items-center gap-1">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    {uploadProgress && uploadProgress.total > 1 && (
+                                        <span className="text-[10px] font-medium">{uploadProgress.current}/{uploadProgress.total}</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Top toolbar: Color dot, copy, delete, expand */}
-                        <div className="flex items-center justify-end gap-2 mb-1">
+                        <div className="flex items-center justify-between mb-1">
                             {/* Color picker - compact mode */}
                             <NoteColorPicker
                                 selectedColor={noteColor}
@@ -156,7 +193,7 @@ export function SingleNotePanel({
                                 className="p-0.5 opacity-60 hover:opacity-100 transition-colors disabled:opacity-50"
                                 title="Copy note"
                             >
-                                {isCopying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Copy className="w-3 h-3" />}
+                                {isCopying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
 
                             {/* Delete button */}
@@ -166,22 +203,22 @@ export function SingleNotePanel({
                                 className="p-0.5 opacity-60 hover:text-red-500 hover:opacity-100 transition-colors disabled:opacity-50"
                                 title="Delete note"
                             >
-                                <Trash className="w-3 h-3" />
+                                <Trash className="w-3.5 h-3.5" />
                             </button>
 
                             {/* Expand button */}
                             <button
                                 onClick={onToggleExpand}
-                                className="p-0.5 -mt-0.5 opacity-60 hover:opacity-100 transition-colors"
+                                className="p-0.5 opacity-60 hover:opacity-100 transition-colors"
                                 title="Expand"
                             >
-                                <CornerBracketIcon direction="left" className="w-3 h-3" />
+                                <CornerBracketIcon direction="left" className="w-3.5 h-3.5" />
                             </button>
                         </div>
 
-                        {/* Editable Title - fills remaining space, entire area clickable */}
+                        {/* Editable Title - fills remaining space, centered and lowered */}
                         <div
-                            className="flex-1 overflow-hidden cursor-pointer"
+                            className="flex-1 overflow-hidden cursor-pointer pt-2 text-center"
                             onClick={!isEditingTitle ? handleTitleClick : undefined}
                             title={!isEditingTitle ? "Click to edit title" : undefined}
                         >
@@ -193,7 +230,7 @@ export function SingleNotePanel({
                                     onBlur={handleTitleBlur}
                                     onKeyDown={handleTitleKeyDown}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="w-full h-full text-xs font-medium bg-transparent border-none outline-none focus:outline-none focus:ring-0 resize-none text-inherit selection:bg-[var(--color-accent-copper)]/20 selection:text-inherit"
+                                    className="w-full h-full text-xs font-medium bg-transparent border-none outline-none focus:outline-none focus:ring-0 resize-none text-inherit text-center selection:bg-[var(--color-accent-copper)]/20 selection:text-inherit"
                                     style={{ boxShadow: 'none' }}
                                     placeholder="New Note"
                                 />
@@ -220,7 +257,12 @@ export function SingleNotePanel({
 
     // Expanded state: Full note with header and content (spans full grid width)
     return (
-        <div className={cn('w-full col-span-2 flex flex-col', className)}>
+        <div {...getRootProps()} className={cn(
+            'w-full col-span-2 flex flex-col transition-all duration-150',
+            isDragOver && 'border-2 border-dashed border-[var(--color-accent-copper)]',
+            className,
+        )}>
+            <input {...getInputProps()} />
             {/* Custom Header with Editable Title */}
             <div className="flex items-stretch gap-0.5 p-2">
                 {/* Title segment with editable note name */}
@@ -313,6 +355,19 @@ export function SingleNotePanel({
                     >
                         <Trash className="w-3.5 h-3.5" />
                     </button>
+
+                    {/* Upload progress indicator */}
+                    {isUploading && (
+                        <>
+                            <div className="mx-0.5 h-4 w-px bg-[var(--color-border)]" />
+                            <div className="flex items-center gap-1 p-1.5 opacity-80">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                {uploadProgress && uploadProgress.total > 1 && (
+                                    <span className="text-[10px] font-medium">{uploadProgress.current}/{uploadProgress.total}</span>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 

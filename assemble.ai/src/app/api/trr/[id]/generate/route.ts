@@ -28,6 +28,7 @@ import {
     buildTrrRecommendationPrompt,
 } from '@/lib/prompts/system-prompts';
 import { assembleContext } from '@/lib/context/orchestrator';
+import { normalizeTag, isKnownTag } from '@/lib/constants/knowledge-domains';
 
 type TrrField = 'executiveSummary' | 'clarifications' | 'recommendation';
 
@@ -275,6 +276,10 @@ export async function POST(
 
         const { trrRecord, projectName, contextName, firms, nonPriceScores, addendaCount, rftDate } = context;
 
+        // Derive discipline tag from stakeholder's disciplineOrTrade (e.g. "Structural" → "structural")
+        const normalizedDiscipline = normalizeTag(contextName);
+        const discipline = isKnownTag(normalizedDiscipline) ? normalizedDiscipline : undefined;
+
         // Assemble orchestrator context for lifecycle data + knowledge domains
         let orchestratorContext = '';
         try {
@@ -283,8 +288,10 @@ export async function POST(
                 contextType: 'trr',
                 task: `Generate TRR ${field} for ${contextName}`,
                 stakeholderId: trrRecord.stakeholderId ?? undefined,
+                discipline,
                 includeKnowledgeDomains: true,
-                domainTags: ['procurement', 'tendering', 'contract-administration'],
+                domainTags: ['procurement', 'tendering', 'contracts',
+                    ...(discipline ? [discipline] : [])],
             });
 
             const parts = [

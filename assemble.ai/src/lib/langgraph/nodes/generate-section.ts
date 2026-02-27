@@ -21,6 +21,8 @@ import { ragDb } from '@/lib/db/rag-client';
 import { reportSections } from '@/lib/db/rag-schema';
 import { eq, and } from 'drizzle-orm';
 import { buildSystemPrompt } from '@/lib/prompts/system-prompts';
+import { retrieveFromDomains } from '@/lib/rag/retrieval';
+import { normalizeTag, isKnownTag } from '@/lib/constants/knowledge-domains';
 
 // Initialize Anthropic client
 const anthropic = new Anthropic();
@@ -389,8 +391,8 @@ export async function generateDataOnlySection(
         } else if (sectionTitle.includes('risks')) {
             content = formatProjectRisks(state.planningContext);
         } else if (sectionTitle.includes('brief')) {
-            // Brief section gets light polish via generatePolishedSection
-            return generatePolishedSection(state);
+            // Brief section gets domain-enriched enhancement
+            return generateEnrichedBriefSection(state);
         } else if (sectionTitle.includes('fee')) {
             content = await formatFeeStructure(state);
         } else if (sectionTitle.includes('price')) {
@@ -453,6 +455,158 @@ export async function generateDataOnlySection(
         sections[state.currentSectionIndex] = failedSection;
 
         return { sections };
+    }
+}
+
+/**
+ * Generate domain-enriched brief section.
+ * Retrieves discipline-specific domain knowledge (standards, lead times, risks)
+ * and uses it to enhance the raw brief content from planning context.
+ * Falls back to grammar-only polish if domain retrieval fails or no discipline match.
+ */
+async function generateEnrichedBriefSection(
+    state: ReportStateType
+): Promise<GenerateSectionResult> {
+    console.log('[generate-section] Generating enriched brief section:', state.currentSectionIndex);
+
+    if (!state.toc || !state.planningContext) {
+        throw new Error('No TOC or planning context available');
+    }
+
+    const currentSection = state.toc.sections[state.currentSectionIndex];
+    if (!currentSection) {
+        throw new Error(`Section not found at index ${state.currentSectionIndex}`);
+    }
+
+    try {
+        // 1. Get raw brief content from planning context
+        const discipline = state.planningContext.disciplines.find(
+            d => d.name.toLowerCase() === state.discipline?.toLowerCase()
+        );
+
+        if (!discipline) {
+            throw new Error(`Discipline not found: ${state.discipline}`);
+        }
+
+        const rawContent = buildBriefContent(discipline);
+
+        // 2. Retrieve domain knowledge for this discipline
+        let domainContext = '';
+        const normalizedDiscipline = normalizeTag(state.discipline || '');
+        const disciplineTag = isKnownTag(normalizedDiscipline) ? normalizedDiscipline : undefined;
+
+        if (disciplineTag) {
+            try {
+                const domainResults = await retrieveFromDomains(
+                    `${state.discipline} tender brief scope services deliverables procurement`, {
+                    domainTags: [disciplineTag, 'procurement', 'tendering'],
+                    domainTypes: ['best_practices'],
+                    includePrebuilt: true,
+                    includeOrganization: true,
+                    topK: 10,
+                    rerankTopK: 3,
+                    minRelevanceScore: 0.3,
+                });
+
+                if (domainResults.length > 0) {
+                    domainContext = domainResults
+                        .map(r => `### ${r.domainName}${r.sectionTitle ? ` — ${r.sectionTitle}` : ''}\n${r.content}`)
+                        .join('\n\n');
+                }
+            } catch (domainError) {
+                console.log('[generate-section] Domain retrieval failed, proceeding without:', domainError);
+            }
+        }
+
+        // 3. Build enhanced prompt
+        const enhancePrompt = domainContext
+            ? `You are enhancing a tender request brief for ${state.discipline}.
+
+## Raw Brief Content (preserve all scope items and deliverables):
+${rawContent}
+
+## Domain Knowledge (use to enrich with standards references and industry context):
+${domainContext}
+
+Enhance this brief by:
+- Preserving every original scope item and deliverable
+- Adding relevant Australian Standard references where applicable
+- Clarifying scope boundaries where the domain knowledge suggests common ambiguities
+- Improving professional language and formatting
+- Do NOT add entirely new scope items not implied by the original content
+
+Return the enhanced brief content:`
+            : `Polish the following tender request brief for grammar and formatting only. Do not add content, do not change meaning, do not expand. Only fix grammar errors and improve formatting for professional presentation.
+
+Brief content:
+${rawContent}
+
+Return the polished version:`;
+
+        // 4. Stream to Claude
+        let content = '';
+        const rftSystemPrompt = buildSystemPrompt('rft');
+        const stream = anthropic.messages.stream({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 2000,
+            system: rftSystemPrompt,
+            messages: [{ role: 'user', content: enhancePrompt }],
+        });
+
+        for await (const event of stream) {
+            if (event.type === 'content_block_delta' &&
+                event.delta.type === 'text_delta') {
+                const chunk = event.delta.text;
+                content += chunk;
+
+                if (progressEmitter && state.reportId) {
+                    progressEmitter({
+                        reportId: state.reportId,
+                        sectionIndex: state.currentSectionIndex,
+                        event: 'section_chunk',
+                        data: { content: chunk },
+                    });
+                }
+            }
+        }
+
+        console.log('[generate-section] Enriched brief:', content.length, 'characters',
+            domainContext ? '(with domain knowledge)' : '(grammar polish only)');
+
+        const generatedSection: GeneratedSection = {
+            id: uuidv4(),
+            title: currentSection.title,
+            content,
+            sourceChunkIds: [],
+            sourceRelevance: {},
+            sources: [],
+            status: 'complete',
+            generatedAt: new Date().toISOString(),
+            regenerationCount: 0,
+        };
+
+        if (state.reportId) {
+            await ragDb.update(reportSections)
+                .set({
+                    content: content,
+                    status: 'complete',
+                    sourceChunkIds: [],
+                    sourceRelevance: {},
+                })
+                .where(and(
+                    eq(reportSections.reportId, state.reportId),
+                    eq(reportSections.sectionIndex, state.currentSectionIndex)
+                ));
+        }
+
+        const sections = [...state.sections];
+        sections[state.currentSectionIndex] = generatedSection;
+
+        return { sections };
+    } catch (error) {
+        console.error('[generate-section] Error enriching brief, falling back to polish:', error);
+        // Fallback to the existing polish-only path
+        return generatePolishedSection(state);
     }
 }
 

@@ -48,7 +48,7 @@ export function UserProfileDropdown() {
   // Loading state - show skeleton avatar
   if (isPending) {
     return (
-      <div className="w-9 h-9 rounded-full bg-[var(--color-bg-tertiary)] animate-pulse" />
+      <div className="w-9 h-9 rounded-full bg-[var(--color-bg-tertiary)] animate-pulse" style={{ clipPath: 'polygon(30% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 30%)' }} />
     );
   }
 
