@@ -3,6 +3,10 @@ INSERT INTO "categories" ("id", "name", "is_system") VALUES ('scheme-design', 'S
 INSERT INTO "categories" ("id", "name", "is_system") VALUES ('detail-design', 'Detail Design', true) ON CONFLICT ("id") DO NOTHING;
 INSERT INTO "categories" ("id", "name", "is_system") VALUES ('ifc-design', 'IFC Design', true) ON CONFLICT ("id") DO NOTHING;
 
+-- Add project_id and sort_order to subcategories for per-project knowledge subcategories
+ALTER TABLE "subcategories" ADD COLUMN IF NOT EXISTS "project_id" text REFERENCES "projects"("id");
+ALTER TABLE "subcategories" ADD COLUMN IF NOT EXISTS "sort_order" integer DEFAULT 0;
+
 -- Category visibility table (per-project toggle)
 CREATE TABLE IF NOT EXISTS "category_visibility" (
     "project_id" text NOT NULL REFERENCES "projects"("id"),

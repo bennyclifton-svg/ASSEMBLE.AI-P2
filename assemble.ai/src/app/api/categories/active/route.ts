@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { projectStakeholders } from '@/lib/db';
-import { eq, and, asc, isNull } from 'drizzle-orm';
+import { db, projectStakeholders, categoryVisibility, subcategories as subcategoriesTable } from '@/lib/db';
+import { eq, and, asc, isNull, inArray } from 'drizzle-orm';
 import { getAllCategories, type ActiveCategory, type Subcategory } from '@/lib/constants/categories';
+import { KNOWLEDGE_CATEGORY_IDS } from '@/lib/services/knowledge-subcategory-defaults';
 
 /**
  * Helper function to extract unique subcategories from stakeholders
@@ -76,15 +76,51 @@ export async function GET(request: NextRequest) {
             )
             .orderBy(asc(projectStakeholders.disciplineOrTrade));
 
+        // Fetch visibility settings for this project
+        const visibilityRows = await db
+            .select()
+            .from(categoryVisibility)
+            .where(eq(categoryVisibility.projectId, projectId));
+
+        const visibilityMap = new Map<string, boolean>();
+        for (const row of visibilityRows) {
+            visibilityMap.set(row.categoryId, row.isVisible);
+        }
+
+        // Fetch knowledge subcategories (for categories with subcategorySource === 'knowledge')
+        const knowledgeSubcats = await db
+            .select()
+            .from(subcategoriesTable)
+            .where(
+                and(
+                    eq(subcategoriesTable.projectId, projectId),
+                    inArray(subcategoriesTable.categoryId, [...KNOWLEDGE_CATEGORY_IDS])
+                )
+            )
+            .orderBy(asc(subcategoriesTable.sortOrder));
+
         // Build active categories with their subcategories
-        const activeCategories: ActiveCategory[] = categories.map(category => {
+        const activeCategories: ActiveCategory[] = categories
+            .filter(category => {
+                const visible = visibilityMap.get(category.id);
+                return visible !== false; // undefined (no row) = visible
+            })
+            .map(category => {
             if (!category.hasSubcategories) {
                 return category;
             }
 
             let subcategories: Subcategory[] = [];
 
-            if (category.subcategorySource === 'consultants') {
+            if (category.subcategorySource === 'knowledge') {
+                // Get subcategories from the knowledge subcategories table
+                const subs = knowledgeSubcats.filter(s => s.categoryId === category.id);
+                subcategories = subs.map(s => ({
+                    id: s.id,
+                    name: s.name,
+                    parentCategoryId: category.id,
+                }));
+            } else if (category.subcategorySource === 'consultants') {
                 // Get unique disciplines from consultant stakeholders
                 subcategories = getUniqueSubcategories(consultantStakeholders, category.id);
             } else if (category.subcategorySource === 'contractors') {

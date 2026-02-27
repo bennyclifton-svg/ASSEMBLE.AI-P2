@@ -19,8 +19,10 @@ export const categories = pgTable('categories', {
 export const subcategories = pgTable('subcategories', {
     id: text('id').primaryKey(),
     categoryId: text('category_id').references(() => categories.id).notNull(),
+    projectId: text('project_id').references(() => projects.id),
     name: text('name').notNull(),
     isSystem: boolean('is_system').default(false),
+    sortOrder: integer('sort_order').default(0),
 });
 
 export const categoryVisibility = pgTable('category_visibility', {
