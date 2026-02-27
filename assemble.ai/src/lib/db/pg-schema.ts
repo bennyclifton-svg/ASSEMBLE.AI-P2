@@ -3,7 +3,7 @@
  * Converted from SQLite schema with subscription support
  */
 
-import { pgTable, text, integer, bigint, boolean, timestamp, serial, varchar, unique, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, bigint, boolean, timestamp, serial, varchar, unique, index, primaryKey } from 'drizzle-orm/pg-core';
 import { sql, relations } from 'drizzle-orm';
 
 // ============================================================================
@@ -22,6 +22,14 @@ export const subcategories = pgTable('subcategories', {
     name: text('name').notNull(),
     isSystem: boolean('is_system').default(false),
 });
+
+export const categoryVisibility = pgTable('category_visibility', {
+    projectId: text('project_id').references(() => projects.id).notNull(),
+    categoryId: text('category_id').references(() => categories.id).notNull(),
+    isVisible: boolean('is_visible').notNull().default(true),
+}, (table) => [
+    primaryKey({ columns: [table.projectId, table.categoryId] }),
+]);
 
 export const documents = pgTable('documents', {
     id: text('id').primaryKey(),

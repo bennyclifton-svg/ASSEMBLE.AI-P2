@@ -15,7 +15,7 @@ export const DOCUMENT_CATEGORIES = {
         name: 'Scheme Design',
         color: '#5B9E9E', // Teal
         hasSubcategories: true,
-        subcategorySource: 'consultants' as const,
+        subcategorySource: 'knowledge' as const,
         row: 1,
     },
     DETAIL_DESIGN: {
@@ -23,7 +23,15 @@ export const DOCUMENT_CATEGORIES = {
         name: 'Detail Design',
         color: '#7B68A6', // Soft Purple
         hasSubcategories: true,
-        subcategorySource: 'consultants' as const,
+        subcategorySource: 'knowledge' as const,
+        row: 1,
+    },
+    IFC_DESIGN: {
+        id: 'ifc-design',
+        name: 'IFC Design',
+        color: '#8B7BA6',
+        hasSubcategories: true,
+        subcategorySource: 'knowledge' as const,
         row: 1,
     },
     PROCUREMENT: {
@@ -44,7 +52,7 @@ export const DOCUMENT_CATEGORIES = {
     CONSULTANTS: {
         id: 'consultants',
         name: 'Consultants',
-        color: '#555555', // Gray (same as upload tile border)
+        color: '#6B7FA6', // Muted Blue-Gray
         hasSubcategories: true,
         subcategorySource: 'consultants' as const,
         row: 2,
@@ -52,7 +60,7 @@ export const DOCUMENT_CATEGORIES = {
     CONTRACTORS: {
         id: 'contractors',
         name: 'Contractors',
-        color: '#555555', // Gray (same as upload tile border)
+        color: '#7B8A6B', // Olive Green
         hasSubcategories: true,
         subcategorySource: 'contractors' as const,
         row: 2,
@@ -81,7 +89,7 @@ export interface Category {
     name: string;
     color: string;
     hasSubcategories: boolean;
-    subcategorySource?: 'consultants' | 'contractors';
+    subcategorySource?: 'consultants' | 'contractors' | 'knowledge';
     row: number;
     isKnowledgeSource?: boolean; // When true, triggers auto-RAG on file drop/assign
 }

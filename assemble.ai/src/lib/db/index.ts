@@ -34,6 +34,7 @@ export const schema = pgSchema;
 export const {
     categories,
     subcategories,
+    categoryVisibility,
     documents,
     fileAssets,
     versions,
