@@ -17,6 +17,9 @@ if (process.env.NODE_ENV !== 'production') {
     config({ path: '.env' });
 }
 
+// Init Sentry after env load, before any other imports that might throw
+import '../sentry-init';
+
 // Verify required env vars
 console.log('[drawing-worker] Checking environment variables...');
 console.log('[drawing-worker] REDIS_URL:', process.env.REDIS_URL ? 'set' : 'NOT SET');

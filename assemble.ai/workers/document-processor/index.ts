@@ -17,6 +17,9 @@ if (process.env.NODE_ENV !== 'production') {
     config({ path: '.env' });
 }
 
+// Init Sentry after env load, before any other imports that might throw
+import '../sentry-init';
+
 // Verify required env vars
 console.log('[worker] Checking environment variables...');
 console.log('[worker] DATABASE_URL:', process.env.DATABASE_URL ? 'set (PostgreSQL)' : 'NOT SET');

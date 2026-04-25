@@ -35,8 +35,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Pass via: docker build --build-arg DATABASE_URL=... --build-arg NEXT_PUBLIC_APP_URL=... .
 ARG DATABASE_URL
 ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_SENTRY_DSN
 ENV DATABASE_URL=${DATABASE_URL}
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
 # Build the Next.js application
 RUN npm run build
@@ -87,6 +89,12 @@ EXPOSE 3000
 # Set hostname to listen on all interfaces
 ENV HOSTNAME="0.0.0.0"
 ENV PORT=3000
+
+# Sentry DSN must be available at runtime for the background workers
+# (Next.js inlines NEXT_PUBLIC_* into its bundle at build time, but the
+# esbuild-bundled workers in dist/workers read it from process.env.)
+ARG NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
 # Health check (temporarily disabled for debugging)
 # HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

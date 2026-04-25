@@ -45,12 +45,14 @@ cd /tmp/ASSEMBLE.AI-P2 && git pull origin master
 cd assemble.ai && docker build -t assembleai-new \
   --build-arg DATABASE_URL='postgresql://postgres.bhiuvwofowmfrzjfkqlt:Minpin2026!@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres' \
   --build-arg NEXT_PUBLIC_APP_URL='http://foundry-45-151-153-218.traefik.me' \
+  --build-arg NEXT_PUBLIC_SENTRY_DSN='https://YOUR_KEY@oXXXX.ingest.sentry.io/YYYY' \
   .
 ```
 
 The build takes ~3 minutes. Build args are needed because:
 - **DATABASE_URL** - Next.js connects to the database during static page generation
 - **NEXT_PUBLIC_APP_URL** - `NEXT_PUBLIC_*` vars are inlined into the client JS bundle at build time; without this, auth session calls default to `localhost:3000` and fail in production
+- **NEXT_PUBLIC_SENTRY_DSN** - inlined into the client JS bundle so the browser SDK reports errors. Same value is also baked into the runner stage so the background workers can read it at runtime. Get the DSN from https://sentry.io → your project → Settings → Client Keys (DSN). Leave the build-arg out entirely to disable Sentry.
 
 ### 4. Update the running service
 
