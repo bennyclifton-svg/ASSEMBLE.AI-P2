@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Trash2, Loader2, FileIcon, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload } from 'lucide-react';
+import { Trash2, Loader2, FileIcon, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload, Download } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { useSyncStatus, SyncStatus } from '@/lib/hooks/use-sync-status';
 import { useRenderLoopGuard, useStableArray } from '@/lib/hooks/use-render-loop-guard';
@@ -108,6 +108,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     const [showFileName, setShowFileName] = useState(false);
     const [showCategory, setShowCategory] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const dragCounterRef = useRef(0);
 
     // Track if this is the initial load to avoid flickering during background refreshes
@@ -310,6 +311,42 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [selectedIds, documents, deletingId, onSelectionChange]);
+
+    const handleDownload = useCallback(async () => {
+        if (selectedIds.size === 0) return;
+
+        setIsDownloading(true);
+        try {
+            const response = await fetch(`/api/projects/${projectId}/documents/download`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documentIds: Array.from(selectedIds) }),
+            });
+
+            if (!response.ok) throw new Error('Download failed');
+
+            const blob = await response.blob();
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `Documents_${new Date().toISOString().split('T')[0]}.zip`;
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="(.+)"/);
+                if (match) filename = match[1];
+            }
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Download error:', error);
+        } finally {
+            setIsDownloading(false);
+        }
+    }, [selectedIds, projectId]);
 
     // Check if any documents have pending/processing drawing extraction
     const hasProcessingDrawings = useMemo(() =>
@@ -637,6 +674,25 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             ) : (
 
             /* Table View */
+            <>
+            {/* Table Toolbar */}
+            <div className="flex items-center justify-end mb-2">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDownload}
+                    disabled={selectedIds.size === 0 || isDownloading}
+                    className="gap-1.5 text-xs text-[var(--color-text-muted)] disabled:opacity-30"
+                    title={selectedIds.size === 0 ? 'Select documents to download' : `Download ${selectedIds.size} document${selectedIds.size !== 1 ? 's' : ''}`}
+                >
+                    {isDownloading ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                        <Download className="w-3.5 h-3.5" />
+                    )}
+                    {isDownloading ? 'Downloading...' : 'Download'}
+                </Button>
+            </div>
             <div className="border border-[var(--color-border)] rounded-md overflow-hidden @container" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
                 <div className="relative w-full">
                     <table className="w-full caption-bottom text-sm table-fixed">
@@ -905,6 +961,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                     </table>
                 </div>
             </div>
+            </>
             )}
 
             {/* Delete Selected Confirmation Modal */}
