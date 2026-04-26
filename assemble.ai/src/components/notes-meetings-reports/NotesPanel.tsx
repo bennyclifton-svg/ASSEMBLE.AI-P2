@@ -77,7 +77,7 @@ export function NotesPanel({
 
     const handleUpdateNote = useCallback(async (
         noteId: string,
-        data: { title?: string; content?: string; isStarred?: boolean; color?: NoteColor }
+        data: { title?: string; content?: string; isStarred?: boolean; color?: NoteColor; noteDate?: string | null }
     ) => {
         await updateNote(noteId, data);
     }, [updateNote]);

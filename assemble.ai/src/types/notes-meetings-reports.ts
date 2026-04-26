@@ -46,6 +46,7 @@ export interface Note {
   content: string | null;
   isStarred: boolean;
   color: NoteColor;
+  noteDate: string | null;
   reportingPeriodStart: string | null;
   reportingPeriodEnd: string | null;
   createdAt: string;
@@ -77,6 +78,7 @@ export interface UpdateNoteRequest {
   content?: string;
   isStarred?: boolean;
   color?: NoteColor;
+  noteDate?: string | null;
   reportingPeriodStart?: string | null;
   reportingPeriodEnd?: string | null;
 }

@@ -10,12 +10,14 @@
 
 import { useCallback, useState, useEffect, useRef } from 'react';
 import { Trash, Star, Copy, Loader2, Upload } from 'lucide-react';
+import { toast } from 'sonner';
+import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { NoteColorPicker } from './NoteColorPicker';
 import { NoteContent } from './NoteContent';
 import { cn } from '@/lib/utils';
 import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
-import { useNoteDropUpload } from '@/lib/hooks/use-notes';
+import { useNoteDropUpload, useNoteExport, type ExportFormat } from '@/lib/hooks/use-notes';
 import type { Note, NoteColor } from '@/types/notes-meetings-reports';
 import { NOTE_COLOR_MAP } from '@/types/notes-meetings-reports';
 
@@ -29,7 +31,7 @@ interface SingleNotePanelProps {
     projectId: string;
     isExpanded: boolean;
     onToggleExpand: () => void;
-    onUpdate: (data: { title?: string; content?: string; isStarred?: boolean; color?: NoteColor }) => Promise<void>;
+    onUpdate: (data: { title?: string; content?: string; isStarred?: boolean; color?: NoteColor; noteDate?: string | null }) => Promise<void>;
     onCopy: () => Promise<void>;
     onDelete: () => Promise<void>;
     onSaveTransmittal?: () => void;
@@ -57,11 +59,18 @@ export function SingleNotePanel({
     const [isCopying, setIsCopying] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const dateInputRef = useRef<HTMLInputElement>(null);
+    const [localDate, setLocalDate] = useState<string>(note.noteDate || '');
 
     // Sync local title when note changes
     useEffect(() => {
         setLocalTitle(note.title || 'New Note');
     }, [note.id, note.title]);
+
+    // Sync local date when note changes
+    useEffect(() => {
+        setLocalDate(note.noteDate || '');
+    }, [note.id, note.noteDate]);
 
     // Focus input/textarea when editing starts - place cursor at end, don't select all
     useEffect(() => {
@@ -117,6 +126,25 @@ export function SingleNotePanel({
         await onUpdate({ color });
     }, [onUpdate]);
 
+    const formatNoteDate = (iso: string) => {
+        const d = new Date(iso + 'T00:00:00');
+        return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+    };
+
+    const handleDateClick = () => {
+        if (!dateInputRef.current) return;
+        if (!localDate) {
+            dateInputRef.current.value = new Date().toISOString().split('T')[0];
+        }
+        dateInputRef.current.showPicker?.();
+    };
+
+    const handleDateChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setLocalDate(val);
+        await onUpdate({ noteDate: val || null });
+    }, [onUpdate]);
+
     const handleStarToggle = useCallback(async () => {
         await onUpdate({ isStarred: !note.isStarred });
     }, [onUpdate, note.isStarred]);
@@ -140,6 +168,22 @@ export function SingleNotePanel({
         currentTitle: note.title,
         onUpdateTitle: handleAutoTitle,
     });
+
+    // Export note to PDF / DOCX
+    const { exportNote } = useNoteExport(note.id);
+    const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
+
+    const handleExport = useCallback(async (format: ExportFormat) => {
+        setExportingFormat(format);
+        try {
+            await exportNote(format);
+        } catch (error) {
+            console.error('[SingleNotePanel] Failed to export note:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to export note');
+        } finally {
+            setExportingFormat(null);
+        }
+    }, [exportNote]);
 
     // Get note color for header styling
     const noteColor = note.color || 'yellow';
@@ -293,6 +337,33 @@ export function SingleNotePanel({
                             {localTitle || 'New Note'}
                         </span>
                     )}
+
+                    {/* Date — hidden native picker triggered by click */}
+                    <input
+                        ref={dateInputRef}
+                        type="date"
+                        value={localDate}
+                        onChange={handleDateChange}
+                        className="absolute opacity-0 pointer-events-none w-0 h-0"
+                        tabIndex={-1}
+                    />
+                    {localDate ? (
+                        <span
+                            onClick={handleDateClick}
+                            className="ml-3 shrink-0 text-xs font-medium opacity-70 hover:opacity-100 cursor-pointer transition-opacity whitespace-nowrap"
+                            title="Click to change date"
+                        >
+                            {formatNoteDate(localDate)}
+                        </span>
+                    ) : (
+                        <span
+                            onClick={handleDateClick}
+                            className="ml-3 shrink-0 text-xs opacity-40 hover:opacity-70 cursor-pointer transition-opacity whitespace-nowrap"
+                            title="Set date"
+                        >
+                            + date
+                        </span>
+                    )}
                 </div>
 
                 {/* Corner bracket segment - expand/collapse toggle */}
@@ -345,6 +416,34 @@ export function SingleNotePanel({
                     />
 
                     <div className="mx-0.5 h-4 w-px bg-[var(--color-border)]" />
+
+                    {/* Export to PDF */}
+                    <button
+                        onClick={() => handleExport('pdf')}
+                        disabled={exportingFormat !== null}
+                        className="p-1.5 opacity-60 hover:opacity-100 transition-colors disabled:opacity-50"
+                        title="Export PDF"
+                    >
+                        {exportingFormat === 'pdf' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <PdfIcon size={20} />
+                        )}
+                    </button>
+
+                    {/* Export to Word (DOCX) */}
+                    <button
+                        onClick={() => handleExport('docx')}
+                        disabled={exportingFormat !== null}
+                        className="p-1.5 opacity-60 hover:opacity-100 transition-colors disabled:opacity-50"
+                        title="Export Word"
+                    >
+                        {exportingFormat === 'docx' ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                            <DocxIcon size={20} />
+                        )}
+                    </button>
 
                     {/* Delete button */}
                     <button

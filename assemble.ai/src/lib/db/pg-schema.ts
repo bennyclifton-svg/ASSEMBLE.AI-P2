@@ -1332,6 +1332,7 @@ export const notes = pgTable('notes', {
     content: text('content'),
     isStarred: boolean('is_starred').default(false),
     color: text('color').default('yellow'), // 'yellow' | 'blue' | 'green' | 'pink'
+    noteDate: text('note_date'),
     reportingPeriodStart: text('reporting_period_start'),
     reportingPeriodEnd: text('reporting_period_end'),
     createdAt: text('created_at'),

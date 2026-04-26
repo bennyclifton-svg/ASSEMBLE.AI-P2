@@ -26,6 +26,7 @@ export const updateNoteSchema = z.object({
   content: z.string().optional(),
   isStarred: z.boolean().optional(),
   color: noteColorSchema.optional(),
+  noteDate: z.string().nullable().optional(),
   reportingPeriodStart: z.string().nullable().optional(),
   reportingPeriodEnd: z.string().nullable().optional(),
 });
