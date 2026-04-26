@@ -343,6 +343,11 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             document.body.removeChild(a);
         } catch (error) {
             console.error('Download error:', error);
+            toast({
+                title: "Download failed",
+                description: "Could not download the selected documents. Please try again.",
+                variant: "destructive",
+            });
         } finally {
             setIsDownloading(false);
         }

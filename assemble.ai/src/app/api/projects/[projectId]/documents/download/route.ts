@@ -19,9 +19,10 @@ interface RouteContext {
 export async function POST(request: NextRequest, context: RouteContext) {
     return handleApiError(async () => {
         const { projectId } = await context.params;
-        const { documentIds } = await request.json() as { documentIds: string[] };
+        const body = await request.json();
+        const { documentIds } = body as { documentIds: unknown };
 
-        if (!documentIds || documentIds.length === 0) {
+        if (!Array.isArray(documentIds) || documentIds.length === 0) {
             return NextResponse.json({ error: 'No document IDs provided' }, { status: 400 });
         }
 
@@ -47,18 +48,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const zip = new JSZip();
         let addedCount = 0;
 
-        for (const item of items) {
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
             try {
                 if (item.storagePath) {
                     const fileData = await getFileFromStorage(item.storagePath);
                     if (fileData) {
-                        zip.file(item.originalName || 'unknown_file', fileData);
+                        zip.file(`${i + 1}_${item.originalName || 'unknown_file'}`, fileData);
                         addedCount++;
                     } else {
-                        zip.file(`${item.originalName || 'unknown'}.txt`, `Error: File not found on server.`);
+                        zip.file(`${i + 1}_${item.originalName || 'unknown'}.txt`, `Error: File not found on server.`);
                     }
                 } else {
-                    zip.file(`${item.originalName || 'unknown'}.txt`, `Error: No storage path.`);
+                    zip.file(`${i + 1}_${item.originalName || 'unknown'}.txt`, `Error: No storage path.`);
                 }
             } catch (e) {
                 console.error(`Failed to add file ${item.originalName} to zip`, e);
