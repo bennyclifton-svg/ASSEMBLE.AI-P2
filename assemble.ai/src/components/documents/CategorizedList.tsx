@@ -339,8 +339,10 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             a.download = filename;
             document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            }, 100);
         } catch (error) {
             console.error('Download error:', error);
             toast({

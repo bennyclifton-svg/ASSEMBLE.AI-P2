@@ -26,6 +26,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: 'No document IDs provided' }, { status: 400 });
         }
 
+        if (documentIds.length > 100) {
+            return NextResponse.json({ error: 'Cannot download more than 100 documents at once.' }, { status: 400 });
+        }
+
         // Fetch document file assets via: documents → versions → fileAssets
         const items = await db
             .select({
