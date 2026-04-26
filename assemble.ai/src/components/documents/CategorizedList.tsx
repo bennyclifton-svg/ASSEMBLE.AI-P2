@@ -683,22 +683,20 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             /* Table View */
             <>
             {/* Table Toolbar */}
-            <div className="flex items-center justify-end mb-2">
-                <Button
-                    variant="ghost"
-                    size="sm"
+            <div className="flex items-center justify-end mb-1">
+                <button
                     onClick={handleDownload}
                     disabled={selectedIds.size === 0 || isDownloading}
-                    className="gap-1.5 text-xs text-[var(--color-text-muted)] disabled:opacity-30"
+                    className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
                     title={selectedIds.size === 0 ? 'Select documents to download' : `Download ${selectedIds.size} document${selectedIds.size !== 1 ? 's' : ''}`}
                 >
                     {isDownloading ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     ) : (
-                        <Download className="w-3.5 h-3.5" />
+                        <Download className="h-3.5 w-3.5" />
                     )}
                     {isDownloading ? 'Downloading...' : 'Download'}
-                </Button>
+                </button>
             </div>
             <div className="border border-[var(--color-border)] rounded-md overflow-hidden @container" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
                 <div className="relative w-full">

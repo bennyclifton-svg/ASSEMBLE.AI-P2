@@ -51,20 +51,33 @@ export async function POST(request: NextRequest, context: RouteContext) {
         // Build ZIP
         const zip = new JSZip();
         let addedCount = 0;
+        const usedNames = new Set<string>();
 
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
+        const uniqueName = (base: string) => {
+            if (!usedNames.has(base)) { usedNames.add(base); return base; }
+            const dot = base.lastIndexOf('.');
+            const stem = dot > -1 ? base.slice(0, dot) : base;
+            const ext = dot > -1 ? base.slice(dot) : '';
+            let n = 2;
+            let candidate = `${stem} (${n})${ext}`;
+            while (usedNames.has(candidate)) candidate = `${stem} (${++n})${ext}`;
+            usedNames.add(candidate);
+            return candidate;
+        };
+
+        for (const item of items) {
             try {
                 if (item.storagePath) {
                     const fileData = await getFileFromStorage(item.storagePath);
                     if (fileData) {
-                        zip.file(`${i + 1}_${item.originalName || 'unknown_file'}`, fileData);
+                        zip.file(uniqueName(item.originalName || 'unknown_file'), fileData);
                         addedCount++;
                     } else {
-                        zip.file(`${i + 1}_${item.originalName || 'unknown'}.txt`, `Error: File not found on server.`);
+                        console.warn(`File not found: ${item.storagePath}`);
+                        zip.file(uniqueName(`${item.originalName || 'unknown'}.txt`), `Error: File not found on server.`);
                     }
                 } else {
-                    zip.file(`${i + 1}_${item.originalName || 'unknown'}.txt`, `Error: No storage path.`);
+                    zip.file(uniqueName(`${item.originalName || 'unknown'}.txt`), `Error: No storage path.`);
                 }
             } catch (e) {
                 console.error(`Failed to add file ${item.originalName} to zip`, e);
