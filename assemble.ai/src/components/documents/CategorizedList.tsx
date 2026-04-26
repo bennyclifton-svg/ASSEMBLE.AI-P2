@@ -351,7 +351,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         } finally {
             setIsDownloading(false);
         }
-    }, [selectedIds, projectId]);
+    }, [selectedIds, projectId, toast]);
 
     // Check if any documents have pending/processing drawing extraction
     const hasProcessingDrawings = useMemo(() =>

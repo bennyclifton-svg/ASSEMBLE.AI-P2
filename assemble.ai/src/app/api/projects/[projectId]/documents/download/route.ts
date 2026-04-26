@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const body = await request.json();
         const { documentIds } = body as { documentIds: unknown };
 
-        if (!Array.isArray(documentIds) || documentIds.length === 0) {
+        if (!Array.isArray(documentIds) || documentIds.length === 0 || !documentIds.every(id => typeof id === 'string')) {
             return NextResponse.json({ error: 'No document IDs provided' }, { status: 400 });
         }
 
