@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
 import { documents, versions, fileAssets } from '@/lib/db';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and } from 'drizzle-orm';
 import JSZip from 'jszip';
 import { getFileFromStorage } from '@/lib/storage';
 
@@ -34,7 +34,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
             .from(documents)
             .leftJoin(versions, eq(documents.latestVersionId, versions.id))
             .leftJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
-            .where(inArray(documents.id, documentIds));
+            .where(and(
+                inArray(documents.id, documentIds),
+                eq(documents.projectId, projectId)
+            ));
 
         if (items.length === 0) {
             return NextResponse.json({ error: 'No documents found' }, { status: 404 });
@@ -42,6 +45,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
         // Build ZIP
         const zip = new JSZip();
+        let addedCount = 0;
 
         for (const item of items) {
             try {
@@ -49,6 +53,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                     const fileData = await getFileFromStorage(item.storagePath);
                     if (fileData) {
                         zip.file(item.originalName || 'unknown_file', fileData);
+                        addedCount++;
                     } else {
                         zip.file(`${item.originalName || 'unknown'}.txt`, `Error: File not found on server.`);
                     }
@@ -58,6 +63,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
             } catch (e) {
                 console.error(`Failed to add file ${item.originalName} to zip`, e);
             }
+        }
+
+        if (addedCount === 0) {
+            return NextResponse.json({ error: 'None of the selected files could be retrieved.' }, { status: 422 });
         }
 
         const zipContent = await zip.generateAsync({ type: 'nodebuffer' });
