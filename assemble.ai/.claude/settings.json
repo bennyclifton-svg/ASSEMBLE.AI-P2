@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsx *)",
+      "Bash(grep -E \"documents[\\\\\\\\\\\\\\\\/]bulk[\\\\\\\\\\\\\\\\/]route|error TS\")",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(npx drizzle-kit *)",
+      "Bash(node -e ' *)",
+      "Bash(git commit -m ' *)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(node -e \"const o=JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude/settings.json','utf8'\\)\\); console.log\\('VALID JSON'\\); console.log\\('defaultMode =', JSON.stringify\\(o.permissions.defaultMode\\)\\); console.log\\('allow entries:', o.permissions.allow.length\\);\")"
+    ],
+    "defaultMode": "bypassPermissions"
+  }
+}
