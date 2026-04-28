@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useToast } from '@/lib/hooks/use-toast';
-import type { ObjectiveType } from '@/lib/db/objectives-schema';
+import type { ObjectiveType, ObjectiveSource } from '@/lib/db/objectives-schema';
 import { SectionGroup } from './SectionGroup';
 import { ObjectivesChatPanel } from './ObjectivesChatPanel';
 
@@ -10,14 +10,14 @@ export interface ObjectiveRow {
   id: string;
   projectId: string;
   objectiveType: ObjectiveType;
-  source: string;
+  source: ObjectiveSource;
   text: string;
   textPolished?: string | null;
   status: string;
   sortOrder: number;
   isDeleted: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 type GroupedRows = Record<ObjectiveType, ObjectiveRow[]>;
@@ -98,7 +98,7 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
   useEffect(() => {
     let cancelled = false;
 
-    async function fetch_rows() {
+    async function fetchRows() {
       setIsLoading(true);
       try {
         const res = await fetch(`/api/projects/${projectId}/objectives`);
@@ -120,32 +120,32 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
       }
     }
 
-    fetch_rows();
+    fetchRows();
     return () => { cancelled = true; };
   }, [projectId, toast]);
 
   // Create a new objective
   const createObjective = useCallback(async (type: ObjectiveType, text: string) => {
     const tempId = `temp-${Date.now()}`;
-    const tempRow: ObjectiveRow = {
-      id: tempId,
-      projectId,
-      objectiveType: type,
-      source: 'user_added',
-      text,
-      textPolished: null,
-      status: 'draft',
-      sortOrder: rows[type].length,
-      isDeleted: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const now = new Date().toISOString();
 
-    // Optimistic add
-    setRows((prev) => ({
-      ...prev,
-      [type]: [...prev[type], tempRow],
-    }));
+    // Optimistic add — sortOrder derived from current prev state, not closed-over rows
+    setRows((prev) => {
+      const tempRow: ObjectiveRow = {
+        id: tempId,
+        projectId,
+        objectiveType: type,
+        source: 'user_added',
+        text,
+        textPolished: null,
+        status: 'draft',
+        sortOrder: prev[type].length,
+        isDeleted: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+      return { ...prev, [type]: [...prev[type], tempRow] };
+    });
 
     try {
       const res = await fetch(`/api/projects/${projectId}/objectives`, {
@@ -176,30 +176,36 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
         variant: 'destructive',
       });
     }
-  }, [projectId, rows, onUpdate, toast]);
+  }, [projectId, onUpdate, toast]);
 
   // Update an existing objective
   const updateObjective = useCallback(async (id: string, patch: Partial<ObjectiveRow>) => {
-    // Find which type this row belongs to
+    // Capture rowType and prevRow from current state inside the optimistic setRows call
     let rowType: ObjectiveType | null = null;
     let prevRow: ObjectiveRow | null = null;
 
-    for (const type of SECTION_ORDER) {
-      const found = rows[type].find((r) => r.id === id);
-      if (found) {
-        rowType = type;
-        prevRow = found;
-        break;
+    // Optimistic update — also captures rowType/prevRow for revert
+    setRows((prev) => {
+      for (const type of SECTION_ORDER) {
+        const found = prev[type].find((r) => r.id === id);
+        if (found) {
+          rowType = type;
+          prevRow = found;
+          break;
+        }
       }
-    }
+      if (!rowType) return prev;
+      return {
+        ...prev,
+        [rowType]: prev[rowType].map((r) => (r.id === id ? { ...r, ...patch } : r)),
+      };
+    });
 
+    // rowType/prevRow are now set (synchronously from the setState callback above)
     if (!rowType || !prevRow) return;
 
-    // Optimistic update
-    setRows((prev) => ({
-      ...prev,
-      [rowType!]: prev[rowType!].map((r) => (r.id === id ? { ...r, ...patch } : r)),
-    }));
+    const capturedType = rowType;
+    const capturedPrev = prevRow;
 
     try {
       const res = await fetch(`/api/projects/${projectId}/objectives/${id}`, {
@@ -213,7 +219,7 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
 
       setRows((prev) => ({
         ...prev,
-        [rowType!]: prev[rowType!].map((r) => (r.id === id ? updated : r)),
+        [capturedType]: prev[capturedType].map((r) => (r.id === id ? updated : r)),
       }));
 
       onUpdate?.();
@@ -221,7 +227,7 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
       // Revert
       setRows((prev) => ({
         ...prev,
-        [rowType!]: prev[rowType!].map((r) => (r.id === id ? prevRow! : r)),
+        [capturedType]: prev[capturedType].map((r) => (r.id === id ? capturedPrev : r)),
       }));
       toast({
         title: 'Failed to update objective',
@@ -230,29 +236,35 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
       });
       throw err; // Re-throw so ObjectiveRow can handle it
     }
-  }, [projectId, rows, onUpdate, toast]);
+  }, [projectId, onUpdate, toast]);
 
   // Delete an objective
   const deleteObjective = useCallback(async (id: string) => {
     let rowType: ObjectiveType | null = null;
     let deletedRow: ObjectiveRow | null = null;
 
-    for (const type of SECTION_ORDER) {
-      const found = rows[type].find((r) => r.id === id);
-      if (found) {
-        rowType = type;
-        deletedRow = found;
-        break;
+    // Optimistic remove — also captures rowType/deletedRow for revert
+    setRows((prev) => {
+      for (const type of SECTION_ORDER) {
+        const found = prev[type].find((r) => r.id === id);
+        if (found) {
+          rowType = type;
+          deletedRow = found;
+          break;
+        }
       }
-    }
+      if (!rowType) return prev;
+      return {
+        ...prev,
+        [rowType]: prev[rowType].filter((r) => r.id !== id),
+      };
+    });
 
+    // rowType/deletedRow are now set (synchronously from the setState callback above)
     if (!rowType || !deletedRow) return;
 
-    // Optimistic remove
-    setRows((prev) => ({
-      ...prev,
-      [rowType!]: prev[rowType!].filter((r) => r.id !== id),
-    }));
+    const capturedType = rowType;
+    const capturedDeleted = deletedRow;
 
     try {
       const res = await fetch(`/api/projects/${projectId}/objectives/${id}`, {
@@ -264,7 +276,7 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
       // Revert
       setRows((prev) => ({
         ...prev,
-        [rowType!]: [...prev[rowType!], deletedRow!].sort((a, b) => a.sortOrder - b.sortOrder),
+        [capturedType]: [...prev[capturedType], capturedDeleted].sort((a, b) => a.sortOrder - b.sortOrder),
       }));
       toast({
         title: 'Failed to delete objective',
@@ -272,46 +284,18 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
         variant: 'destructive',
       });
     }
-  }, [projectId, rows, onUpdate, toast]);
-
-  // Reorder objectives
-  const reorderObjectives = useCallback(async (
-    updates: { id: string; objectiveType: ObjectiveType; sortOrder: number }[]
-  ) => {
-    try {
-      const res = await fetch(`/api/projects/${projectId}/objectives/reorder`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ updates }),
-      });
-      if (!res.ok) throw new Error('Failed to reorder objectives');
-      onUpdate?.();
-    } catch (err) {
-      toast({
-        title: 'Failed to reorder objectives',
-        description: err instanceof Error ? err.message : 'Unknown error',
-        variant: 'destructive',
-      });
-    }
   }, [projectId, onUpdate, toast]);
 
   // Compute global bullet indices across all sections
-  const computeStartIndices = (): Record<ObjectiveType, number> => {
-    const indices: Record<ObjectiveType, number> = {
-      planning: 1,
-      functional: 1,
-      quality: 1,
-      compliance: 1,
-    };
+  const startIndices = useMemo(() => {
+    const indices: Record<ObjectiveType, number> = { planning: 1, functional: 1, quality: 1, compliance: 1 };
     let counter = 1;
     for (const type of SECTION_ORDER) {
       indices[type] = counter;
       counter += rows[type].length;
     }
     return indices;
-  };
-
-  const startIndices = computeStartIndices();
+  }, [rows]);
 
   const totalRows = SECTION_ORDER.reduce((sum, t) => sum + rows[t].length, 0);
 
