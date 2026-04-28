@@ -7,7 +7,7 @@ import { pgTable, text, timestamp, jsonb, integer, boolean } from 'drizzle-orm/p
 import { projects } from './pg-schema';
 
 // Objective Types
-export type ObjectiveType = 'functional_quality' | 'planning_compliance';
+export type ObjectiveType = 'planning' | 'functional' | 'quality' | 'compliance';
 export type ObjectiveSource = 'explicit' | 'inferred' | 'ai_added' | 'user_added';
 export type ObjectiveStatus = 'draft' | 'polished' | 'approved';
 

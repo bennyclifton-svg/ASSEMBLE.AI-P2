@@ -112,6 +112,7 @@ export const projects = pgTable('projects', {
         ]
     }),
     drawingExtractionEnabled: boolean('drawing_extraction_enabled').default(true),
+    uiPreferences: text('ui_preferences').default('{}').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -1132,8 +1133,8 @@ export const projectProfiles = pgTable('project_profiles', {
 export const profilerObjectives = pgTable('profiler_objectives', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
-    functionalQuality: text('functional_quality').notNull(), // JSON: { content, source, originalAi, editHistory }
-    planningCompliance: text('planning_compliance').notNull(), // JSON: { content, source, originalAi, editHistory }
+    functionalQuality: text('functional_quality').notNull(), // @deprecated — replaced by projectObjectives per-row model
+    planningCompliance: text('planning_compliance').notNull(), // @deprecated — replaced by projectObjectives per-row model
     profileContext: text('profile_context'), // JSON snapshot of profile at generation time
     generatedAt: timestamp('generated_at'),
     polishedAt: timestamp('polished_at'),
@@ -1331,7 +1332,7 @@ export const notes = pgTable('notes', {
     title: text('title').notNull().default('New Note'),
     content: text('content'),
     isStarred: boolean('is_starred').default(false),
-    color: text('color').default('yellow'), // 'yellow' | 'blue' | 'green' | 'pink'
+    color: text('color').default('yellow'), // 'yellow' | 'blue' | 'green' | 'pink' | 'white'
     noteDate: text('note_date'),
     reportingPeriodStart: text('reporting_period_start'),
     reportingPeriodEnd: text('reporting_period_end'),
