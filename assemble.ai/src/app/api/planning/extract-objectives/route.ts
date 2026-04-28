@@ -4,6 +4,7 @@ import { aiComplete } from '@/lib/ai/client';
 import { extractText } from '@/lib/utils/text-extraction';
 import { db } from '@/lib/db';
 import { projectObjectives } from '@/lib/db/objectives-schema';
+import { getCurrentUser } from '@/lib/auth/get-user';
 
 const EXTRACTION_PROMPT = `You are an AI assistant that extracts project objectives from text.
 This may be from a project brief, planning document, email, or other source.
@@ -56,6 +57,11 @@ function calculateObjectivesConfidence(extractedData: any): number {
 // POST /api/planning/extract-objectives
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     // Check for API key first
     if (!process.env.ANTHROPIC_API_KEY) {
       console.error('ANTHROPIC_API_KEY is not configured');

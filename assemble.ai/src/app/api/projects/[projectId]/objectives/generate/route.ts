@@ -490,10 +490,10 @@ ${generateCompliance ? '  "compliance": ["bullet 1", "bullet 2"]' : ''}
       success: true,
       data: insertedBySection,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to generate objectives:', error);
 
-    if (error?.status === 529) {
+    if (typeof error === 'object' && error !== null && 'status' in error && (error as { status: unknown }).status === 529) {
       return NextResponse.json(
         { success: false, error: { code: 'AI_OVERLOADED', message: 'AI service is temporarily busy. Please try again in a moment.' } },
         { status: 503 }
@@ -501,7 +501,7 @@ ${generateCompliance ? '  "compliance": ["bullet 1", "bullet 2"]' : ''}
     }
 
     return NextResponse.json(
-      { success: false, error: { code: 'GENERATION_ERROR', message: 'Failed to generate objectives' } },
+      { success: false, error: { code: 'GENERATION_ERROR', message: error instanceof Error ? error.message : 'Failed to generate objectives' } },
       { status: 500 }
     );
   }
