@@ -16,9 +16,10 @@ import {
     categories,
     subcategories,
 } from '@/lib/db';
+import { projectObjectives, type ObjectiveType } from '@/lib/db/objectives-schema';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { v4 as uuidv4 } from 'uuid';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 interface RouteContext {
     params: Promise<{ projectId: string }>;
@@ -36,7 +37,39 @@ export async function GET(
 
         const { projectId } = await context.params;
 
-        // Find objectives record for this project
+        // Read objectives rows from per-row table, grouped by type
+        const objectiveRows = await db
+            .select({
+                id: projectObjectives.id,
+                objectiveType: projectObjectives.objectiveType,
+                text: projectObjectives.text,
+                textPolished: projectObjectives.textPolished,
+                status: projectObjectives.status,
+                sortOrder: projectObjectives.sortOrder,
+            })
+            .from(projectObjectives)
+            .where(
+                and(
+                    eq(projectObjectives.projectId, projectId),
+                    eq(projectObjectives.isDeleted, false)
+                )
+            )
+            .orderBy(projectObjectives.objectiveType, projectObjectives.sortOrder);
+
+        const groupedObjectives: Record<ObjectiveType, typeof objectiveRows> = {
+            planning: [],
+            functional: [],
+            quality: [],
+            compliance: [],
+        };
+        for (const row of objectiveRows) {
+            const type = row.objectiveType as ObjectiveType;
+            if (groupedObjectives[type]) {
+                groupedObjectives[type].push(row);
+            }
+        }
+
+        // Find anchor record for transmittal FK lookup
         const [objectives] = await db
             .select({ id: profilerObjectives.id })
             .from(profilerObjectives)
@@ -46,6 +79,7 @@ export async function GET(
         if (!objectives) {
             return NextResponse.json({
                 projectId,
+                objectives: groupedObjectives,
                 documents: [],
             });
         }
@@ -86,6 +120,7 @@ export async function GET(
         return NextResponse.json({
             projectId,
             objectivesId: objectives.id,
+            objectives: groupedObjectives,
             documents: result,
         });
     });
@@ -112,7 +147,7 @@ export async function POST(
             );
         }
 
-        // Find or create objectives record
+        // Find or create the legacy anchor record (profilerObjectives.id is the FK for objectivesTransmittals)
         let [objectives] = await db
             .select({ id: profilerObjectives.id })
             .from(profilerObjectives)
@@ -120,18 +155,12 @@ export async function POST(
             .limit(1);
 
         if (!objectives) {
-            const emptyObjective = JSON.stringify({
-                content: '',
-                source: 'pending',
-                originalAi: null,
-                editHistory: null,
-            });
             const newId = uuidv4();
             await db.insert(profilerObjectives).values({
                 id: newId,
                 projectId,
-                functionalQuality: emptyObjective,
-                planningCompliance: emptyObjective,
+                functionalQuality: '',
+                planningCompliance: '',
             });
             objectives = { id: newId };
         }
