@@ -13,7 +13,7 @@
 import 'dotenv/config';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, or } from 'drizzle-orm';
 
 import { profilerObjectives } from '@/lib/db/pg-schema';
 import { projectObjectives } from '@/lib/db/objectives-schema';
@@ -142,7 +142,7 @@ async function main() {
       .where(
         and(
           eq(projectObjectives.projectId, projectId),
-          eq(projectObjectives.isDeleted, false)
+          or(eq(projectObjectives.isDeleted, false), isNull(projectObjectives.isDeleted))
         )
       )
       .limit(1);
