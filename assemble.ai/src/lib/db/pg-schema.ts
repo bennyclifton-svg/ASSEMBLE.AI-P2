@@ -112,7 +112,6 @@ export const projects = pgTable('projects', {
         ]
     }),
     drawingExtractionEnabled: boolean('drawing_extraction_enabled').default(true),
-    uiPreferences: text('ui_preferences').default('{}').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -1129,7 +1128,7 @@ export const projectProfiles = pgTable('project_profiles', {
     index('idx_profiles_region').on(table.region),
 ]);
 
-// Profiler Objectives (new 2-category structure: Functional Quality + Planning Compliance)
+// Profiler Objectives — DEPRECATED: legacy 2-blob model, replaced by projectObjectives per-row model
 export const profilerObjectives = pgTable('profiler_objectives', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
