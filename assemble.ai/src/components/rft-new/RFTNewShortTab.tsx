@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { useFieldGeneration } from '@/lib/hooks/use-field-generation';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { ObjectivesReadOnlyList } from '@/components/profiler/objectives/ObjectivesReadOnlyList';
+import type { ObjectiveRow } from '@/components/profiler/objectives/ObjectivesWorkspace';
 
 function formatDisplayDate(dateString: string): string {
     if (!dateString) return '';
@@ -28,8 +30,10 @@ interface ProjectDetails {
 }
 
 interface ProfilerObjectives {
-    functionalQuality?: string;
-    planningCompliance?: string;
+    planning: ObjectiveRow[];
+    functional: ObjectiveRow[];
+    quality: ObjectiveRow[];
+    compliance: ObjectiveRow[];
 }
 
 interface CostLine {
@@ -419,7 +423,7 @@ export function RFTNewShortTab({
     isDownloading,
 }: RFTNewShortTabProps) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
-    const [objectives, setObjectives] = useState<ProfilerObjectives>({});
+    const [objectives, setObjectives] = useState<ProfilerObjectives>({ planning: [], functional: [], quality: [], compliance: [] });
     const [programActivities, setProgramActivities] = useState<ProgramActivity[]>([]);
     const [briefData, setBriefData] = useState({ service: '', deliverables: '' });
     const [isSavingBrief, setIsSavingBrief] = useState(false);
@@ -520,8 +524,10 @@ export function RFTNewShortTab({
                     const objectivesData = await objectivesRes.json();
                     if (objectivesData.success && objectivesData.data) {
                         setObjectives({
-                            functionalQuality: objectivesData.data.functionalQuality?.content || '',
-                            planningCompliance: objectivesData.data.planningCompliance?.content || '',
+                            planning: objectivesData.data.planning ?? [],
+                            functional: objectivesData.data.functional ?? [],
+                            quality: objectivesData.data.quality ?? [],
+                            compliance: objectivesData.data.compliance ?? [],
                         });
                     }
                 }
@@ -834,44 +840,7 @@ export function RFTNewShortTab({
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     Objectives
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Left: Functional & Quality */}
-                    <div className="overflow-hidden rounded-lg">
-                        <div className="px-4 py-2.5 text-[var(--color-document-header)] font-medium text-sm border-b border-[var(--color-border)]">
-                            Functional & Quality
-                        </div>
-                        <div className="px-4 py-2.5 text-[var(--color-text-primary)] text-sm">
-                            {objectives.functionalQuality ? (
-                                objectives.functionalQuality.includes('<') ? (
-                                    <div
-                                        className="[&_p]:mb-1 [&_p]:leading-normal [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-3 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-2 [&_h3]:text-[var(--color-accent-teal)] [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:my-0"
-                                        dangerouslySetInnerHTML={{ __html: objectives.functionalQuality }}
-                                    />
-                                ) : (
-                                    <div className="whitespace-pre-wrap">{objectives.functionalQuality}</div>
-                                )
-                            ) : '-'}
-                        </div>
-                    </div>
-                    {/* Right: Planning & Compliance */}
-                    <div className="overflow-hidden rounded-lg">
-                        <div className="px-4 py-2.5 text-[var(--color-document-header)] font-medium text-sm border-b border-[var(--color-border)]">
-                            Planning & Compliance
-                        </div>
-                        <div className="px-4 py-2.5 text-[var(--color-text-primary)] text-sm">
-                            {objectives.planningCompliance ? (
-                                objectives.planningCompliance.includes('<') ? (
-                                    <div
-                                        className="[&_p]:mb-1 [&_p]:leading-normal [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_u]:underline [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-3 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-2 [&_h3]:text-[var(--color-accent-teal)] [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_li]:my-0"
-                                        dangerouslySetInnerHTML={{ __html: objectives.planningCompliance }}
-                                    />
-                                ) : (
-                                    <div className="whitespace-pre-wrap">{objectives.planningCompliance}</div>
-                                )
-                            ) : '-'}
-                        </div>
-                    </div>
-                </div>
+                <ObjectivesReadOnlyList data={objectives} />
             </div>
 
             {/* 3. Brief Section - Service & Deliverables side by side */}
