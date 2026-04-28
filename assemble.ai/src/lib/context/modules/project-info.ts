@@ -1,26 +1,32 @@
 // src/lib/context/modules/project-info.ts
-// Project info module fetcher - extracts project details and profiler objectives
+// Project info module fetcher - extracts project details and per-row objectives
 
 import { db } from '@/lib/db';
-import { projectDetails, profilerObjectives } from '@/lib/db/pg-schema';
-import { eq } from 'drizzle-orm';
+import { projectDetails } from '@/lib/db/pg-schema';
+import { projectObjectives } from '@/lib/db/objectives-schema';
+import type { ObjectiveType } from '@/lib/db/objectives-schema';
+import { and, asc, eq } from 'drizzle-orm';
 import type { ModuleResult } from '../types';
+
+export interface ProjectInfoObjectives {
+  planning: string[];
+  functional: string[];
+  quality: string[];
+  compliance: string[];
+}
 
 export interface ProjectInfoData {
   projectName: string | null;
   address: string | null;
   jurisdiction: string | null;
-  objectives: {
-    functionalQuality: string;
-    planningCompliance: string;
-  } | null;
+  objectives: ProjectInfoObjectives | null;
 }
 
 export async function fetchProjectInfo(
   projectId: string
 ): Promise<ModuleResult<ProjectInfoData>> {
   try {
-    const [detailsResult, objectivesResult] = await Promise.all([
+    const [detailsResult, objectiveRows] = await Promise.all([
       db
         .select({
           projectName: projectDetails.projectName,
@@ -32,32 +38,52 @@ export async function fetchProjectInfo(
         .limit(1),
       db
         .select({
-          functionalQuality: profilerObjectives.functionalQuality,
-          planningCompliance: profilerObjectives.planningCompliance,
+          objectiveType: projectObjectives.objectiveType,
+          text: projectObjectives.text,
+          textPolished: projectObjectives.textPolished,
+          sortOrder: projectObjectives.sortOrder,
         })
-        .from(profilerObjectives)
-        .where(eq(profilerObjectives.projectId, projectId))
-        .limit(1),
+        .from(projectObjectives)
+        .where(
+          and(
+            eq(projectObjectives.projectId, projectId),
+            eq(projectObjectives.isDeleted, false)
+          )
+        )
+        .orderBy(
+          asc(projectObjectives.objectiveType),
+          asc(projectObjectives.sortOrder)
+        ),
     ]);
 
     const details = detailsResult[0] ?? null;
-    const objectives = objectivesResult[0] ?? null;
 
-    let parsedObjectives: ProjectInfoData['objectives'] = null;
-    if (objectives) {
-      const fq = objectives.functionalQuality
-        ? JSON.parse(objectives.functionalQuality)
-        : null;
-      const pc = objectives.planningCompliance
-        ? JSON.parse(objectives.planningCompliance)
-        : null;
-      if (fq?.content || pc?.content) {
-        parsedObjectives = {
-          functionalQuality: fq?.content || '',
-          planningCompliance: pc?.content || '',
-        };
+    // Group rows by objectiveType into four arrays of display strings
+    const grouped: ProjectInfoObjectives = {
+      planning: [],
+      functional: [],
+      quality: [],
+      compliance: [],
+    };
+
+    for (const row of objectiveRows) {
+      const display = row.textPolished ?? row.text;
+      if (!display) continue;
+      const type = row.objectiveType as ObjectiveType;
+      if (type in grouped) {
+        grouped[type].push(display);
       }
     }
+
+    const hasAnyObjective =
+      grouped.planning.length > 0 ||
+      grouped.functional.length > 0 ||
+      grouped.quality.length > 0 ||
+      grouped.compliance.length > 0;
+
+    const parsedObjectives: ProjectInfoData['objectives'] = hasAnyObjective
+      ? grouped
+      : null;
 
     const data: ProjectInfoData = {
       projectName: details?.projectName ?? null,

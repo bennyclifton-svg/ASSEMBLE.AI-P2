@@ -633,13 +633,19 @@ function formatProjectInfo(
   if (data.jurisdiction) lines.push(`Jurisdiction: ${data.jurisdiction}`);
 
   if (tier !== 'summary' && data.objectives) {
-    if (data.objectives.functionalQuality) {
-      lines.push(`\n### Functional & Quality Objectives`);
-      lines.push(data.objectives.functionalQuality);
-    }
-    if (data.objectives.planningCompliance) {
-      lines.push(`\n### Planning & Compliance Objectives`);
-      lines.push(data.objectives.planningCompliance);
+    const sections: Array<{ key: keyof typeof data.objectives; label: string }> = [
+      { key: 'planning', label: 'Planning Objectives' },
+      { key: 'functional', label: 'Functional Objectives' },
+      { key: 'quality', label: 'Quality Objectives' },
+      { key: 'compliance', label: 'Compliance Objectives' },
+    ];
+    for (const { key, label } of sections) {
+      const items = data.objectives[key];
+      if (!items || items.length === 0) continue;
+      lines.push(`\n### ${label}`);
+      for (const item of items) {
+        lines.push(`- ${item}`);
+      }
     }
   }
 
