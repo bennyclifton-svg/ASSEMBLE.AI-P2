@@ -97,9 +97,6 @@ export function ProcurementCard({
     onDetailsUpdate,
     onProjectNameChange,
 }: ProcurementCardProps) {
-    // Debug logging
-    console.log('[ProcurementCard] Rendering - projectId:', projectId, 'buildingClass:', buildingClass, 'projectType:', projectType);
-
     // Use unified stakeholders hook instead of separate consultant/contractor hooks
     const { stakeholders, isLoading: isLoadingStakeholders, updateStakeholder } = useStakeholders({ projectId });
 
@@ -151,11 +148,6 @@ export function ProcurementCard({
     // Full profile data for editing
     const [profileData, setProfileData] = useState<ProfileData | null>(null);
 
-    // Debug: Log when profileData changes
-    useEffect(() => {
-        console.log('[ProcurementCard] profileData state changed:', profileData);
-    }, [profileData]);
-
     // Fetch profile status only (for tab enabling)
     const fetchProfileStatusOnly = useCallback(async () => {
         try {
@@ -178,13 +170,10 @@ export function ProcurementCard({
 
     // Fetch profile status and data (for initial load)
     const fetchProfileStatus = useCallback(async () => {
-        console.log('[ProcurementCard] fetchProfileStatus called for project:', projectId);
         try {
             const res = await fetch(`/api/projects/${projectId}/profile`);
-            console.log('[ProcurementCard] Profile fetch response status:', res.status);
             if (res.ok) {
                 const json = await res.json();
-                console.log('[ProcurementCard] Profile data received:', json);
                 if (json.success && json.data) {
                     setProfileStatus({
                         hasProfile: true,
@@ -193,17 +182,13 @@ export function ProcurementCard({
                         complexityScore: json.data.complexityScore,
                     });
                     // Store full profile data for editing
-                    const newProfileData = {
+                    setProfileData({
                         subclass: json.data.subclass || [],
                         subclassOther: json.data.subclassOther || null,
                         scaleData: json.data.scaleData || {},
                         complexity: json.data.complexity || {},
                         workScope: json.data.workScope || [],
-                    };
-                    console.log('[ProcurementCard] Setting profileData:', newProfileData);
-                    setProfileData(newProfileData);
-                } else {
-                    console.log('[ProcurementCard] No profile data found in response');
+                    });
                 }
             }
         } catch (error) {
@@ -212,7 +197,6 @@ export function ProcurementCard({
     }, [projectId]);
 
     useEffect(() => {
-        console.log('[ProcurementCard] Mount effect running, projectId:', projectId);
         fetchProfileStatus();
     }, [fetchProfileStatus, projectId]);
 
@@ -340,12 +324,10 @@ export function ProcurementCard({
                 </TabsContent>
 
                 {/* Objectives Tab Content */}
-                <TabsContent value="objectives" className="flex-1 mt-0 min-h-0 overflow-y-auto">
-                    <div className="py-4 h-full">
-                        <ObjectivesWorkspace
-                            projectId={projectId}
-                        />
-                    </div>
+                <TabsContent value="objectives" className="flex-1 mt-0 min-h-0 overflow-hidden">
+                    <ObjectivesWorkspace
+                        projectId={projectId}
+                    />
                 </TabsContent>
 
                 {/* Project Details Tab Content - forceMount keeps LEPDataCard mounted so it doesn't re-fetch on tab revisit */}

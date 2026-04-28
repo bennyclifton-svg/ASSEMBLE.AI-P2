@@ -100,20 +100,20 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
   const [isExtracting, setIsExtracting] = useState(false);
   const dragCounterRef = useRef(0);
 
-  // Fetch rows — exposed so handlers can trigger a refresh
+  // Fetch rows — single source of truth; used on mount and after extraction
   const fetchRows = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/projects/${projectId}/objectives`);
-      if (!res.ok) throw new Error('Failed to fetch objectives');
+      if (!res.ok) throw new Error('Failed to load objectives');
       const json = await res.json();
       if (json.success) {
         setRows(json.data as GroupedRows);
       }
-    } catch (err) {
+    } catch {
       toast({
-        title: 'Failed to load objectives',
-        description: err instanceof Error ? err.message : 'Unknown error',
+        title: 'Load Failed',
+        description: 'Could not load objectives',
         variant: 'destructive',
       });
     } finally {
@@ -123,31 +123,8 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
 
   // Fetch on mount
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setIsLoading(true);
-      try {
-        const res = await fetch(`/api/projects/${projectId}/objectives`);
-        if (!res.ok) throw new Error('Failed to fetch objectives');
-        const json = await res.json();
-        if (!cancelled && json.success) {
-          setRows(json.data as GroupedRows);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          toast({
-            title: 'Failed to load objectives',
-            description: err instanceof Error ? err.message : 'Unknown error',
-            variant: 'destructive',
-          });
-        }
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, [projectId, toast]);
+    fetchRows();
+  }, [fetchRows]);
 
   // --- Extract from file or text ---
   const handleExtraction = useCallback(async (input: File | string) => {
