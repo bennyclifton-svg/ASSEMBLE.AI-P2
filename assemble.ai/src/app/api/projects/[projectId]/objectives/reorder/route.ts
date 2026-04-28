@@ -8,9 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectObjectives, type ObjectiveType } from '@/lib/db/objectives-schema';
-
-const VALID_TYPES: ObjectiveType[] = ['planning', 'functional', 'quality', 'compliance'];
+import { projectObjectives, type ObjectiveType, VALID_OBJECTIVE_TYPES } from '@/lib/db/objectives-schema';
+import { getCurrentUser } from '@/lib/auth/get-user';
 
 interface ReorderEntry {
   id: string;
@@ -23,6 +22,11 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { projectId } = await params;
     const body = await request.json();
 
@@ -41,7 +45,7 @@ export async function POST(
         typeof entry !== 'object' ||
         entry === null ||
         typeof (entry as any).id !== 'string' ||
-        !VALID_TYPES.includes((entry as any).objectiveType) ||
+        !VALID_OBJECTIVE_TYPES.includes((entry as any).objectiveType) ||
         typeof (entry as any).sortOrder !== 'number'
       ) {
         return NextResponse.json(
@@ -61,14 +65,15 @@ export async function POST(
     const ids = typedUpdates.map((u) => u.id);
 
     await db.transaction(async (tx) => {
-      // Validate all ids belong to this project
+      // Validate all ids belong to this project and are not soft-deleted
       const existing = await tx
         .select({ id: projectObjectives.id })
         .from(projectObjectives)
         .where(
           and(
             eq(projectObjectives.projectId, projectId),
-            inArray(projectObjectives.id, ids)
+            inArray(projectObjectives.id, ids),
+            eq(projectObjectives.isDeleted, false)
           )
         );
 

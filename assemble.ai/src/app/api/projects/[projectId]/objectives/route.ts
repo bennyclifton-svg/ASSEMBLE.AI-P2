@@ -7,15 +7,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eq, and, asc, max } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectObjectives, type ObjectiveType } from '@/lib/db/objectives-schema';
-
-const VALID_TYPES: ObjectiveType[] = ['planning', 'functional', 'quality', 'compliance'];
+import { projectObjectives, type ObjectiveType, VALID_OBJECTIVE_TYPES } from '@/lib/db/objectives-schema';
+import { getCurrentUser } from '@/lib/auth/get-user';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { projectId } = await params;
 
     const rows = await db
@@ -58,6 +62,11 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { projectId } = await params;
     const body = await request.json();
 
@@ -68,13 +77,13 @@ export async function POST(
     };
 
     // Validate type
-    if (!type || !VALID_TYPES.includes(type as ObjectiveType)) {
+    if (!type || !VALID_OBJECTIVE_TYPES.includes(type as ObjectiveType)) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: `type must be one of: ${VALID_TYPES.join(', ')}`,
+            message: `type must be one of: ${VALID_OBJECTIVE_TYPES.join(', ')}`,
           },
         },
         { status: 400 }

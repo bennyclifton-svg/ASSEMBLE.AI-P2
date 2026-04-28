@@ -7,16 +7,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectObjectives, type ObjectiveType, type ObjectiveStatus } from '@/lib/db/objectives-schema';
-
-const VALID_TYPES: ObjectiveType[] = ['planning', 'functional', 'quality', 'compliance'];
-const VALID_STATUSES: ObjectiveStatus[] = ['draft', 'polished', 'approved'];
+import {
+  projectObjectives,
+  type ObjectiveType,
+  type ObjectiveStatus,
+  VALID_OBJECTIVE_TYPES,
+  VALID_OBJECTIVE_STATUSES,
+} from '@/lib/db/objectives-schema';
+import { getCurrentUser } from '@/lib/auth/get-user';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string; id: string }> }
 ) {
   try {
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { projectId, id } = await params;
     const body = await request.json();
 
@@ -48,7 +57,7 @@ export async function PATCH(
     }
 
     // Build partial update — only include fields present in body
-    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    const updates: Partial<typeof projectObjectives.$inferInsert> & { updatedAt: Date } = { updatedAt: new Date() };
 
     if (text !== undefined) {
       if (typeof text !== 'string' || text.trim().length === 0) {
@@ -61,13 +70,13 @@ export async function PATCH(
     }
 
     if (objectiveType !== undefined) {
-      if (!VALID_TYPES.includes(objectiveType as ObjectiveType)) {
+      if (!VALID_OBJECTIVE_TYPES.includes(objectiveType as ObjectiveType)) {
         return NextResponse.json(
           {
             success: false,
             error: {
               code: 'VALIDATION_ERROR',
-              message: `objectiveType must be one of: ${VALID_TYPES.join(', ')}`,
+              message: `objectiveType must be one of: ${VALID_OBJECTIVE_TYPES.join(', ')}`,
             },
           },
           { status: 400 }
@@ -87,13 +96,13 @@ export async function PATCH(
     }
 
     if (status !== undefined) {
-      if (!VALID_STATUSES.includes(status as ObjectiveStatus)) {
+      if (!VALID_OBJECTIVE_STATUSES.includes(status as ObjectiveStatus)) {
         return NextResponse.json(
           {
             success: false,
             error: {
               code: 'VALIDATION_ERROR',
-              message: `status must be one of: ${VALID_STATUSES.join(', ')}`,
+              message: `status must be one of: ${VALID_OBJECTIVE_STATUSES.join(', ')}`,
             },
           },
           { status: 400 }
@@ -114,12 +123,12 @@ export async function PATCH(
 
     const [updatedRow] = await db
       .update(projectObjectives)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .set(updates as any)
+      .set(updates)
       .where(
         and(
           eq(projectObjectives.id, id),
-          eq(projectObjectives.projectId, projectId)
+          eq(projectObjectives.projectId, projectId),
+          eq(projectObjectives.isDeleted, false)
         )
       )
       .returning();
@@ -139,6 +148,11 @@ export async function DELETE(
   { params }: { params: Promise<{ projectId: string; id: string }> }
 ) {
   try {
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { projectId, id } = await params;
 
     // Validate ownership

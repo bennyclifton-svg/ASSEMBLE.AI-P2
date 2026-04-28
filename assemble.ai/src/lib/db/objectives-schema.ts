@@ -11,6 +11,9 @@ export type ObjectiveType = 'planning' | 'functional' | 'quality' | 'compliance'
 export type ObjectiveSource = 'explicit' | 'inferred' | 'ai_added' | 'user_added';
 export type ObjectiveStatus = 'draft' | 'polished' | 'approved';
 
+export const VALID_OBJECTIVE_TYPES: ObjectiveType[] = ['planning', 'functional', 'quality', 'compliance'];
+export const VALID_OBJECTIVE_STATUSES: ObjectiveStatus[] = ['draft', 'polished', 'approved'];
+
 // Main objectives table - stores individual objective items
 export const projectObjectives = pgTable('project_objectives', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
