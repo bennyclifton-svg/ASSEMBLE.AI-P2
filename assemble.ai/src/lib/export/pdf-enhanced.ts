@@ -966,16 +966,42 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
   y = ((d as any).lastAutoTable?.finalY ?? y + 17) + 8;
 
   // 2. OBJECTIVES
-  const fq = parseHtmlContent(data.objectives.functionalQuality);
-  const pc = parseHtmlContent(data.objectives.planningCompliance);
-  if (fq.length > 0 || pc.length > 0) {
-    cpb(25);
-    d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
-    d.text('OBJECTIVES', mg, y); y += 5;
-    y = renderTwoColPDF(d, y, mg, cw, ph, 'Functional & Quality', 'Planning & Compliance', fq, pc);
+  cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+  d.text('OBJECTIVES', mg, y); y += 5;
+
+  const objectiveCategories: { label: string; items: string[] }[] = [
+    { label: 'Planning', items: data.objectives.planning },
+    { label: 'Functional', items: data.objectives.functional },
+    { label: 'Quality', items: data.objectives.quality },
+    { label: 'Compliance', items: data.objectives.compliance },
+  ];
+  const hasAnyObjective = objectiveCategories.some(c => c.items.length > 0);
+
+  if (hasAnyObjective) {
+    let counter = 1;
+    for (const cat of objectiveCategories) {
+      if (cat.items.length === 0) continue;
+      cpb(10);
+      // Subsection heading
+      d.setFontSize(9); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.blue);
+      d.text(cat.label, mg, y); y += 4.5;
+      // Numbered items
+      d.setFontSize(9); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.body);
+      const indentX = mg + 8;
+      const wrapWidth = cw - 8;
+      for (const item of cat.items) {
+        const prefix = `${counter}.`;
+        const lines = d.splitTextToSize(item, wrapWidth);
+        cpb(lines.length * 4 + 1);
+        d.text(prefix, mg + 2, y);
+        d.text(lines, indentX, y);
+        y += lines.length * 4 + 1;
+        counter++;
+      }
+      y += 2;
+    }
+    y += 3;
   } else {
-    cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
-    d.text('OBJECTIVES', mg, y); y += 5;
     d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No objectives defined.', mg, y); y += 8;
   }
 

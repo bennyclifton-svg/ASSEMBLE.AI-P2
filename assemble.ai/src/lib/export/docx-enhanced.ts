@@ -1433,23 +1433,42 @@ export async function exportRFTNewToDOCX(data: RFTExportData): Promise<Buffer> {
     spacing: { before: 100, after: 100 },
   }));
 
-  const fqBlocks = parseHtmlContent(data.objectives.functionalQuality);
-  const pcBlocks = parseHtmlContent(data.objectives.planningCompliance);
-  const fqParas = blocksToDocxParagraphs(fqBlocks);
-  const pcParas = blocksToDocxParagraphs(pcBlocks);
+  const objectiveCategories: { label: string; items: string[] }[] = [
+    { label: 'Planning', items: data.objectives.planning },
+    { label: 'Functional', items: data.objectives.functional },
+    { label: 'Quality', items: data.objectives.quality },
+    { label: 'Compliance', items: data.objectives.compliance },
+  ];
+  const hasAnyObjective = objectiveCategories.some(c => c.items.length > 0);
 
-  children.push(rftTable([
-    // Header row
-    new TableRow({ children: [
-      rftHeaderCell('Functional & Quality', { width: 50 }),
-      rftHeaderCell('Planning & Compliance', { width: 50 }),
-    ]}),
-    // Content row
-    new TableRow({ children: [
-      rftContentCell(fqParas, 50),
-      rftContentCell(pcParas, 50),
-    ]}),
-  ]));
+  if (hasAnyObjective) {
+    let counter = 1;
+    for (const cat of objectiveCategories) {
+      if (cat.items.length === 0) continue;
+      // Subsection heading
+      children.push(new Paragraph({
+        children: [new TextRun({ text: cat.label, bold: true, size: 18, color: RFT_COLORS.blueHex })],
+        spacing: { before: 120, after: 60 },
+      }));
+      // Numbered items
+      for (const item of cat.items) {
+        children.push(new Paragraph({
+          children: [
+            new TextRun({ text: `${counter}.  `, bold: true, size: 17, color: RFT_COLORS.darkHex }),
+            new TextRun({ text: item, size: 17, color: RFT_COLORS.bodyHex }),
+          ],
+          spacing: { after: 40 },
+          indent: { left: 180, hanging: 180 },
+        }));
+        counter++;
+      }
+    }
+  } else {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: 'No objectives defined.', size: 15, color: RFT_COLORS.mutedHex })],
+      spacing: { after: 100 },
+    }));
+  }
 
   children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
 

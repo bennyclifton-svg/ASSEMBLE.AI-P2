@@ -5,7 +5,6 @@ import {
     rftNew,
     projects,
     projectDetails,
-    profilerObjectives,
     programActivities,
     projectStakeholders,
     costLines,
@@ -16,7 +15,8 @@ import {
     categories,
     subcategories
 } from '@/lib/db';
-import { eq, asc } from 'drizzle-orm';
+import { projectObjectives } from '@/lib/db/objectives-schema';
+import { and, eq, asc } from 'drizzle-orm';
 import { exportRFTNewToPDF } from '@/lib/export/pdf-enhanced';
 import { exportRFTNewToDOCX } from '@/lib/export/docx-enhanced';
 import type { RFTExportData } from '@/lib/export/rft-export';
@@ -67,30 +67,30 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .where(eq(projectDetails.projectId, projectId))
             .limit(1);
 
-        // 3. Fetch Profiler Objectives (functionalQuality, planningCompliance)
-        const [objectives] = await db
-            .select({
-                functionalQuality: profilerObjectives.functionalQuality,
-                planningCompliance: profilerObjectives.planningCompliance,
-            })
-            .from(profilerObjectives)
-            .where(eq(profilerObjectives.projectId, projectId))
-            .limit(1);
+        // 3. Fetch Project Objectives (planning, functional, quality, compliance)
+        const objectiveRows = await db
+            .select()
+            .from(projectObjectives)
+            .where(and(
+                eq(projectObjectives.projectId, projectId),
+                eq(projectObjectives.isDeleted, false),
+            ))
+            .orderBy(asc(projectObjectives.objectiveType), asc(projectObjectives.sortOrder));
 
-        // Parse JSON fields to extract content
-        let functionalQualityContent = '';
-        let planningComplianceContent = '';
-
-        if (objectives) {
-            try {
-                const fq = JSON.parse(objectives.functionalQuality || '{}');
-                functionalQualityContent = fq.content || '';
-            } catch { /* ignore parse errors */ }
-            try {
-                const pc = JSON.parse(objectives.planningCompliance || '{}');
-                planningComplianceContent = pc.content || '';
-            } catch { /* ignore parse errors */ }
-        }
+        const objectivesByType = {
+            planning: objectiveRows
+                .filter(r => r.objectiveType === 'planning')
+                .map(r => r.textPolished ?? r.text),
+            functional: objectiveRows
+                .filter(r => r.objectiveType === 'functional')
+                .map(r => r.textPolished ?? r.text),
+            quality: objectiveRows
+                .filter(r => r.objectiveType === 'quality')
+                .map(r => r.textPolished ?? r.text),
+            compliance: objectiveRows
+                .filter(r => r.objectiveType === 'compliance')
+                .map(r => r.textPolished ?? r.text),
+        };
 
         // 4. Fetch Program Activities
         const activities = await db
@@ -162,10 +162,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             address,
             documentLabel,
             issuedDate,
-            objectives: {
-                functionalQuality: functionalQualityContent,
-                planningCompliance: planningComplianceContent,
-            },
+            objectives: objectivesByType,
             brief: {
                 service: briefService,
                 deliverables: briefDeliverables,

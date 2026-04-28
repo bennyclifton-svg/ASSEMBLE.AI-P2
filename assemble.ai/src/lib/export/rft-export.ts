@@ -14,8 +14,10 @@ export interface RFTExportData {
     documentLabel: string;
     issuedDate: string;
     objectives: {
-        functionalQuality: string; // HTML content
-        planningCompliance: string; // HTML content
+        planning: string[];
+        functional: string[];
+        quality: string[];
+        compliance: string[];
     };
     brief: {
         service: string; // HTML content
