@@ -1,22 +1,25 @@
 /**
  * Objectives Generate API
- * Generate AI objectives based on project profile
+ * Generate AI objectives based on project profile — writes individual rows to projectObjectives
  * Feature: 019-profiler
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { projectProfiles, profilerObjectives, objectivesTransmittals } from '@/lib/db/pg-schema';
-import Anthropic from '@anthropic-ai/sdk';
+import {
+  projectObjectives,
+  objectiveGenerationSessions,
+  type ObjectiveType,
+  VALID_OBJECTIVE_TYPES,
+} from '@/lib/db/objectives-schema';
+import { aiComplete } from '@/lib/ai/client';
+import { getCurrentUser } from '@/lib/auth/get-user';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import { evaluateRules, formatRulesForPrompt, type ProjectData } from '@/lib/services/inference-engine';
 import { retrieve, retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
 import { resolveProfileDomainTags, buildProfileSearchQuery } from '@/lib/constants/knowledge-domains';
-
-const anthropic = new Anthropic({ maxRetries: 4 });
-
-type ObjectiveSection = 'functionalQuality' | 'planningCompliance';
 
 /**
  * Resolve work scope value IDs to human-readable labels
@@ -49,9 +52,22 @@ export async function POST(
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { projectId } = await params;
     const body = await request.json().catch(() => ({}));
-    const section = body.section as ObjectiveSection | undefined;
+    const section = body.section as ObjectiveType | undefined;
+
+    // Validate section if provided
+    if (section && !VALID_OBJECTIVE_TYPES.includes(section)) {
+      return NextResponse.json(
+        { success: false, error: { code: 'VALIDATION_ERROR', message: `section must be one of: ${VALID_OBJECTIVE_TYPES.join(', ')}` } },
+        { status: 400 }
+      );
+    }
 
     // Fetch profile
     const [profile] = await db
@@ -60,19 +76,19 @@ export async function POST(
       .where(eq(projectProfiles.projectId, projectId))
       .limit(1);
 
-    // Check for attached documents
-    const [objectives] = await db
+    // Check for attached documents (still uses profilerObjectives as anchor for transmittals)
+    const [objectivesRecord] = await db
       .select({ id: profilerObjectives.id })
       .from(profilerObjectives)
       .where(eq(profilerObjectives.projectId, projectId))
       .limit(1);
 
     let attachedDocumentIds: string[] = [];
-    if (objectives) {
+    if (objectivesRecord) {
       const transmittals = await db
         .select({ documentId: objectivesTransmittals.documentId })
         .from(objectivesTransmittals)
-        .where(eq(objectivesTransmittals.objectivesId, objectives.id));
+        .where(eq(objectivesTransmittals.objectivesId, objectivesRecord.id));
       attachedDocumentIds = transmittals.map(t => t.documentId);
     }
 
@@ -154,7 +170,7 @@ export async function POST(
       }
     }
 
-    let response;
+    let aiText: string;
 
     if (hasAttachedDocuments) {
       // === DOCUMENT EXTRACTION PATH ===
@@ -191,7 +207,7 @@ export async function POST(
 
       const extractionPrompt = `You are an expert construction project manager in Australia.
 
-You have been given excerpts from project documents (briefs, Statements of Environmental Effects, client design objectives, etc.). Extract project objectives from these documents and sort them into two categories.
+You have been given excerpts from project documents (briefs, Statements of Environmental Effects, client design objectives, etc.). Extract project objectives from these documents and sort them into four categories.
 
 ${domainContextSection ? `${domainContextSection}\n` : ''}## Retrieved Content — Functional & Quality Related
 ${functionalContext || '(No relevant content found)'}
@@ -201,45 +217,54 @@ ${planningContext || '(No relevant content found)'}
 
 ## Section Definitions — CRITICAL:
 
-FUNCTIONAL & QUALITY — What the building provides and how well:
+FUNCTIONAL — What the building physically provides and how it operates:
 - Physical attributes (bedrooms, floors, spaces, areas)
 - Design features (open plan, layout, configuration)
 - Operational requirements (storage, parking, amenities)
+Headers to use: Design Requirements, Operational Requirements
+
+QUALITY — How well the building performs and materials/finish standards:
 - Quality/finish standards (premium finishes, materials, fixtures)
 - Performance requirements (acoustic, thermal, structural)
 - User experience (accessibility features, natural light)
-Headers to use: Design Requirements, Quality Standards, Operational Requirements
+Headers to use: Quality Standards, Performance Requirements
 
-PLANNING & COMPLIANCE — Approvals, regulations, and certifications needed:
-- Building codes (NCC, BCA classification)
+PLANNING — Planning approvals and regulatory compliance:
 - Regulatory approvals (DA, CDC, permits)
+- Environmental compliance (contamination, stormwater)
+- Council and authority requirements
+Headers to use: Regulatory Compliance, Authority Approvals
+
+COMPLIANCE — Building codes and certification requirements:
+- Building codes (NCC, BCA classification)
 - Australian Standards (AS 2419.1, AS 3959, etc.)
 - Certifications required (BASIX, NatHERS, fire engineering)
-- Authority requirements (council, fire brigade, utilities)
-- Environmental compliance (contamination, stormwater)
-Headers to use: Regulatory Compliance, Certification Requirements, Authority Approvals
+Headers to use: Certification Requirements, Code Compliance
 
 ## Instructions:
 1. Extract ONLY objectives/requirements that are explicitly stated or clearly implied in the source documents
 2. DO NOT invent or hallucinate any objectives not supported by the documents
-3. Sort each item into the correct section (functional vs planning)
+3. Sort each item into the correct section
 4. Format as SHORT bullet points (2-5 words each)
 5. Group by category using bold headers
-6. Output 8-15 bullets per section where the documents support it
+6. Output 4-8 bullets per section where the documents support it
 7. DO NOT duplicate items between sections
-8. OUTPUT FORMAT: HTML tags — <p><strong>Header</strong></p> for headers, <ul><li>item</li></ul> for bullets
+8. OUTPUT FORMAT: JSON arrays of plain text bullet strings (no HTML)
 
 Respond in JSON format:
 {
-  "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points",
-  "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
+  "functional": ["bullet 1", "bullet 2"],
+  "quality": ["bullet 1", "bullet 2"],
+  "planning": ["bullet 1", "bullet 2"],
+  "compliance": ["bullet 1", "bullet 2"]
 }`;
 
-      response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+      const result = await aiComplete({
+        featureGroup: 'content_generation',
+        maxTokens: 2000,
         messages: [{ role: 'user', content: extractionPrompt }],
       });
+      aiText = result.text;
     } else {
       // === INFERENCE RULES PATH (existing behaviour) ===
 
@@ -283,7 +308,7 @@ Respond in JSON format:
         }
       };
 
-      // Evaluate inference rules for each section
+      // Evaluate inference rules — functional+quality share one rule set, planning+compliance share another
       const functionalRules = evaluateRules('objectives_functional_quality', projectData);
       const planningRules = evaluateRules('objectives_planning_compliance', projectData);
 
@@ -292,23 +317,12 @@ Respond in JSON format:
 
       console.log(`[objectives-generate] Matched ${functionalRules.length} functional rules, ${planningRules.length} planning rules`);
 
-      // Build prompt based on section (or both if not specified)
+      // Determine which sections to generate
       const generateBoth = !section;
-      const generateFunctional = generateBoth || section === 'functionalQuality';
-      const generatePlanning = generateBoth || section === 'planningCompliance';
-
-      const responseFormat = generateBoth
-        ? `{
-  "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points",
-  "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
-}`
-        : section === 'functionalQuality'
-        ? `{
-  "functionalQuality": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
-}`
-        : `{
-  "planningCompliance": "objectives as HTML with <strong>Headers</strong> and <ul><li> bullet points"
-}`;
+      const generateFunctional = generateBoth || section === 'functional';
+      const generateQuality = generateBoth || section === 'quality';
+      const generatePlanning = generateBoth || section === 'planning';
+      const generateCompliance = generateBoth || section === 'compliance';
 
       const workScopeConstraint = hasSpecificScope
         ? `
@@ -319,10 +333,10 @@ Your objectives MUST focus EXCLUSIVELY on these selected items.
         : '';
 
       const suggestedItemsSection = [];
-      if (generateFunctional && functionalRulesFormatted) {
+      if ((generateFunctional || generateQuality) && functionalRulesFormatted) {
         suggestedItemsSection.push(`## Functional & Quality\n${functionalRulesFormatted}`);
       }
-      if (generatePlanning && planningRulesFormatted) {
+      if ((generatePlanning || generateCompliance) && planningRulesFormatted) {
         suggestedItemsSection.push(`## Planning & Compliance\n${planningRulesFormatted}`);
       }
 
@@ -337,84 +351,77 @@ PROJECT PROFILE:
 ${hasSpecificScope ? `- Work Scope: ${workScopeLabels.join(', ')}` : ''}
 ${workScopeConstraint}
 ${domainContextSection ? `${domainContextSection}\n` : ''}SECTION DEFINITIONS - CRITICAL:
-The two sections have DIFFERENT purposes. DO NOT mix content between them:
+The four sections have DIFFERENT purposes. DO NOT mix content between them:
 
-FUNCTIONAL & QUALITY - What the building provides and how well:
+FUNCTIONAL - What the building physically provides and how it operates:
 - Physical attributes (bedrooms, floors, spaces, areas)
 - Design features (open plan, layout, configuration)
 - Operational requirements (storage, parking, amenities)
+
+QUALITY - How well the building performs and materials/finish standards:
 - Quality/finish standards (premium finishes, materials, fixtures)
 - Performance requirements (acoustic, thermal, structural)
 - User experience (accessibility features, natural light)
-Headers to use: Design Requirements, Quality Standards, Operational Requirements
 
-PLANNING & COMPLIANCE - Approvals, regulations, and certifications needed:
-- Building codes (NCC, BCA classification)
+PLANNING - Planning approvals and regulatory compliance:
 - Regulatory approvals (DA, CDC, permits)
+- Environmental compliance (contamination, stormwater)
+- Council and authority requirements
+
+COMPLIANCE - Building codes and certification requirements:
+- Building codes (NCC, BCA classification)
 - Australian Standards (AS 2419.1, AS 3959, etc.)
 - Certifications required (BASIX, NatHERS, fire engineering)
-- Authority requirements (council, fire brigade, utilities)
-- Environmental compliance (contamination, stormwater)
-Headers to use: Regulatory Compliance, Certification Requirements, Authority Approvals
 
 SUGGESTED ITEMS FROM PROJECT ANALYSIS:
 ${suggestedItemsSection.length > 0 ? suggestedItemsSection.join('\n\n') : '(No specific rules matched - generate based on project profile)'}
 
-INSTRUCTIONS - ITERATION 1:
+INSTRUCTIONS:
 Generate SHORT bullet points only (2-5 words each).
-1. Include suggested items ONLY in their correct section (functional items in functionalQuality, compliance items in planningCompliance)
+1. Include suggested items ONLY in their correct section
 2. Add other relevant objectives for this ${buildingClass} ${projectType} project
-3. Group by category using bold headers on their own line, followed by a bullet list
-4. Each bullet: 2-5 words MAXIMUM (e.g., "Premium material selection", "NCC 2022 compliance")
-5. NO prose, NO sentences, NO detailed explanations
-6. Output 8-15 bullets per section
-7. DO NOT duplicate items between sections - each item belongs in only ONE section
-8. OUTPUT FORMAT: Use HTML tags - <p><strong>Header</strong></p> for headers on separate lines, <ul><li>item</li></ul> for bullets
+3. Each bullet: 2-5 words MAXIMUM (e.g., "Premium material selection", "NCC 2022 compliance")
+4. NO prose, NO sentences, NO detailed explanations
+5. Output 4-8 bullets per section
+6. DO NOT duplicate items between sections
+7. OUTPUT FORMAT: plain text arrays in JSON (no HTML)
 
-Example FUNCTIONAL & QUALITY output (use this exact HTML structure):
-<p><strong>Design Requirements</strong></p><ul><li>Multi-bedroom accommodation</li><li>Double garage provision</li><li>Open plan living</li></ul><p><strong>Quality Standards</strong></p><ul><li>Premium specification level</li><li>Acoustic separation</li></ul>
+Respond in JSON format with only the sections requested:
+{
+${generateFunctional ? '  "functional": ["bullet 1", "bullet 2"],' : ''}
+${generateQuality ? '  "quality": ["bullet 1", "bullet 2"],' : ''}
+${generatePlanning ? '  "planning": ["bullet 1", "bullet 2"],' : ''}
+${generateCompliance ? '  "compliance": ["bullet 1", "bullet 2"]' : ''}
+}`;
 
-Example PLANNING & COMPLIANCE output (use this exact HTML structure):
-<p><strong>Regulatory Compliance</strong></p><ul><li>NCC 2022 compliance</li><li>Fire safety provisions</li><li>DDA accessibility</li></ul><p><strong>Certification Requirements</strong></p><ul><li>BASIX certification</li><li>Energy efficiency (NatHERS)</li></ul>
-
-Respond in JSON format:
-${responseFormat}`;
-
-      response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+      const result = await aiComplete({
+        featureGroup: 'content_generation',
+        maxTokens: 2000,
         messages: [{ role: 'user', content: prompt }],
       });
-    }
-
-    // Extract text from response
-    const textContent = response.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from AI');
+      aiText = result.text;
     }
 
     // Parse JSON from response
-    let generated: { functionalQuality?: string; planningCompliance?: string };
+    let generated: Partial<Record<ObjectiveType, string[]>>;
     try {
-      // Extract JSON from response (handle markdown code blocks)
-      let jsonText = textContent.text;
+      let jsonText = aiText;
       const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) {
         jsonText = jsonMatch[1];
       }
-      generated = JSON.parse(jsonText.trim());
+      // Strip trailing commas before closing brace (common AI output issue)
+      jsonText = jsonText.trim().replace(/,\s*\n?\s*}/g, '\n}');
+      generated = JSON.parse(jsonText);
     } catch (e) {
       console.error('Failed to parse AI response:', e);
-      generated = {
-        functionalQuality: '',
-        planningCompliance: '',
-      };
+      generated = {};
     }
 
     // Determine source label
-    const sourceLabel = hasAttachedDocuments ? 'ai_extracted' : 'ai_generated';
+    const sourceLabel = hasAttachedDocuments ? 'explicit' : 'ai_added';
 
-    // Create profile context snapshot (use profile if available)
+    // Create profile context snapshot
     const profileContext = profile ? {
       buildingClass: profile.buildingClass,
       projectType: profile.projectType,
@@ -424,71 +431,64 @@ ${responseFormat}`;
       workScope: JSON.parse(profile.workScope || '[]'),
     } : null;
 
-    // Check if objectives exist
-    const existing = await db
-      .select()
-      .from(profilerObjectives)
-      .where(eq(profilerObjectives.projectId, projectId))
-      .limit(1);
+    // Determine which sections were requested (or all if no section)
+    const sectionsToWrite: ObjectiveType[] = section
+      ? [section]
+      : VALID_OBJECTIVE_TYPES;
 
-    // Build update data based on what was generated
-    const objectivesData: Record<string, any> = {
-      profileContext: profileContext ? JSON.stringify(profileContext) : null,
-      updatedAt: new Date(),
-    };
+    // For each requested section: soft-delete existing rows, then insert new ones
+    const insertedBySection: Partial<Record<ObjectiveType, typeof projectObjectives.$inferSelect[]>> = {};
 
-    if (generated.functionalQuality) {
-      objectivesData.functionalQuality = JSON.stringify({
-        content: generated.functionalQuality,
-        source: sourceLabel,
-        originalAi: generated.functionalQuality,
-        editHistory: null,
-      });
-      objectivesData.generatedAt = new Date();
-    }
+    for (const sec of sectionsToWrite) {
+      const bullets = generated[sec];
+      if (!bullets || bullets.length === 0) continue;
 
-    if (generated.planningCompliance) {
-      objectivesData.planningCompliance = JSON.stringify({
-        content: generated.planningCompliance,
-        source: sourceLabel,
-        originalAi: generated.planningCompliance,
-        editHistory: null,
-      });
-      objectivesData.generatedAt = new Date();
-    }
-
-    if (existing.length > 0) {
+      // Soft-delete existing rows for this project+type
       await db
-        .update(profilerObjectives)
-        .set(objectivesData)
-        .where(eq(profilerObjectives.projectId, projectId));
-    } else {
-      // For new records, both fields are required (NOT NULL)
-      const emptyObjective = JSON.stringify({
-        content: '',
-        source: 'pending',
-        originalAi: null,
-        editHistory: null,
-      });
+        .update(projectObjectives)
+        .set({ isDeleted: true, updatedAt: new Date() })
+        .where(
+          and(
+            eq(projectObjectives.projectId, projectId),
+            eq(projectObjectives.objectiveType, sec),
+            eq(projectObjectives.isDeleted, false)
+          )
+        );
 
-      await db.insert(profilerObjectives).values({
-        id: crypto.randomUUID(),
+      // Insert one row per bullet
+      const toInsert = bullets.map((text, idx) => ({
         projectId,
-        functionalQuality: objectivesData.functionalQuality || emptyObjective,
-        planningCompliance: objectivesData.planningCompliance || emptyObjective,
-        profileContext: objectivesData.profileContext,
-        generatedAt: objectivesData.generatedAt,
-        updatedAt: objectivesData.updatedAt,
+        objectiveType: sec,
+        text: String(text).trim(),
+        source: sourceLabel as 'explicit' | 'ai_added',
+        status: 'draft' as const,
+        sortOrder: idx,
+      }));
+
+      const inserted = await db
+        .insert(projectObjectives)
+        .values(toInsert)
+        .returning();
+
+      insertedBySection[sec] = inserted;
+
+      // Write generation session audit record
+      await db.insert(objectiveGenerationSessions).values({
+        projectId,
+        objectiveType: sec,
+        iteration: 1,
+        profilerSnapshot: profileContext as unknown as Record<string, unknown>,
+        generatedItems: {
+          explicit: sourceLabel === 'explicit' ? bullets : [],
+          inferred: [],
+          ai_added: sourceLabel === 'ai_added' ? bullets : [],
+        },
       });
     }
 
     return NextResponse.json({
       success: true,
-      data: {
-        functionalQuality: generated.functionalQuality,
-        planningCompliance: generated.planningCompliance,
-        generatedAt: new Date().toISOString(),
-      },
+      data: insertedBySection,
     });
   } catch (error: any) {
     console.error('Failed to generate objectives:', error);

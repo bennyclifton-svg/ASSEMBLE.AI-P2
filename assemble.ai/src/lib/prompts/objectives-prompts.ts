@@ -2,8 +2,10 @@
  * Prompt Templates for Objectives Generation
  */
 
+import type { ObjectiveType } from '@/lib/db/objectives-schema';
+
 export interface ObjectivesPromptContext {
-  objectiveType: 'functional_quality' | 'planning_compliance';
+  objectiveType: ObjectiveType;
   projectName: string;
   projectAddress: string;
   jurisdiction: string;
@@ -24,7 +26,7 @@ export interface PolishPromptContext extends ObjectivesPromptContext {
 
 // Iteration 1: Generate
 export function buildObjectivesGeneratePrompt(ctx: ObjectivesPromptContext): string {
-  const typeLabel = ctx.objectiveType === 'functional_quality'
+  const typeLabel = (ctx.objectiveType === 'functional' || ctx.objectiveType === 'quality')
     ? 'Functional & Quality'
     : 'Planning & Compliance';
 
@@ -74,7 +76,7 @@ Return valid JSON only, no markdown:
 
 // Iteration 2: Polish
 export function buildObjectivesPolishPrompt(ctx: PolishPromptContext): string {
-  const typeLabel = ctx.objectiveType === 'functional_quality'
+  const typeLabel = (ctx.objectiveType === 'functional' || ctx.objectiveType === 'quality')
     ? 'Functional & Quality'
     : 'Planning & Compliance';
 

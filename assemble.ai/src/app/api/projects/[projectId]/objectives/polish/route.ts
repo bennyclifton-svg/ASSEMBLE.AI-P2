@@ -1,71 +1,68 @@
 /**
  * Objectives Polish API
- * Polish/improve user-written objectives using AI
+ * Polish individual objective rows by ID using AI
  * Feature: 019-profiler
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { profilerObjectives, projectProfiles } from '@/lib/db/pg-schema';
-import Anthropic from '@anthropic-ai/sdk';
-import { trackPolishEdit, identifyEditPatterns } from '@/lib/services/pattern-learning';
+import { projectObjectives } from '@/lib/db/objectives-schema';
+import { projectProfiles } from '@/lib/db/pg-schema';
+import { aiComplete } from '@/lib/ai/client';
+import { getCurrentUser } from '@/lib/auth/get-user';
 import { retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
 import { resolveProfileDomainTags, buildProfileSearchQuery } from '@/lib/constants/knowledge-domains';
-
-const anthropic = new Anthropic();
-
-type ObjectiveSection = 'functionalQuality' | 'planningCompliance';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
   try {
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
     const { projectId } = await params;
     const body = await request.json();
 
-    // Support both old format (both sections) and new format (single section)
-    const section = body.section as ObjectiveSection | undefined;
-    const content = body.content as string | undefined;
+    const { ids } = body as { ids?: unknown };
 
-    // Legacy support for old format
-    const functionalQualityUser = body.functionalQualityUser as string | undefined;
-    const planningComplianceUser = body.planningComplianceUser as string | undefined;
-
-    // Determine what to polish
-    let polishFunctional = false;
-    let polishPlanning = false;
-    let functionalContent = '';
-    let planningContent = '';
-
-    if (section && content) {
-      // New single-section format
-      if (section === 'functionalQuality') {
-        polishFunctional = true;
-        functionalContent = content;
-      } else {
-        polishPlanning = true;
-        planningContent = content;
-      }
-    } else if (functionalQualityUser || planningComplianceUser) {
-      // Legacy format
-      if (functionalQualityUser) {
-        polishFunctional = true;
-        functionalContent = functionalQualityUser;
-      }
-      if (planningComplianceUser) {
-        polishPlanning = true;
-        planningContent = planningComplianceUser;
-      }
-    } else {
+    if (!Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
-        { success: false, error: { code: 'VALIDATION_ERROR', message: 'No content provided to polish' } },
+        { success: false, error: { code: 'VALIDATION_ERROR', message: 'ids must be a non-empty array of objective row IDs' } },
         { status: 400 }
       );
     }
 
-    // Optionally fetch profile for context
+    const idStrings = ids.filter((id): id is string => typeof id === 'string');
+    if (idStrings.length === 0) {
+      return NextResponse.json(
+        { success: false, error: { code: 'VALIDATION_ERROR', message: 'ids must contain string values' } },
+        { status: 400 }
+      );
+    }
+
+    // Fetch the rows to polish — only rows belonging to this project
+    const rows = await db
+      .select()
+      .from(projectObjectives)
+      .where(
+        inArray(projectObjectives.id, idStrings)
+      );
+
+    // Filter to only rows belonging to this project and not deleted
+    const validRows = rows.filter(r => r.projectId === projectId && !r.isDeleted);
+
+    if (validRows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: { code: 'NOT_FOUND', message: 'No valid objectives found for the provided IDs' } },
+        { status: 404 }
+      );
+    }
+
+    // Fetch profile for context
     const [profile] = await db
       .select()
       .from(projectProfiles)
@@ -74,6 +71,7 @@ export async function POST(
 
     let profileContext = '';
     let domainContextSection = '';
+
     if (profile) {
       const buildingClass = profile.buildingClass;
       const projectType = profile.projectType;
@@ -81,8 +79,8 @@ export async function POST(
       const scaleData = JSON.parse(profile.scaleData || '{}');
       const complexity = JSON.parse(profile.complexity || '{}');
       const region = profile.region ?? 'AU';
-      profileContext = `
-Project Context:
+
+      profileContext = `Project Context:
 - Building Class: ${buildingClass}
 - Project Type: ${projectType}
 - Subclass: ${subclass.join(', ')}
@@ -150,198 +148,78 @@ Project Context:
       }
     }
 
-    // Build prompt based on what sections need polishing
-    const polishBoth = polishFunctional && polishPlanning;
+    // Build the list of bullets to polish (use existing textPolished if available, else text)
+    const bulletList = validRows
+      .map((r, i) => `${i + 1}. ${r.textPolished || r.text}`)
+      .join('\n');
 
-    const contentToPolish = polishBoth
-      ? `Functional & Quality:\n${functionalContent}\n\nPlanning & Compliance:\n${planningContent}`
-      : polishFunctional
-      ? `Functional & Quality:\n${functionalContent}`
-      : `Planning & Compliance:\n${planningContent}`;
-
-    const responseFormat = polishBoth
-      ? `{
-  "functionalQualityPolished": "polished functional and quality objectives",
-  "planningCompliancePolished": "polished planning and compliance objectives"
-}`
-      : polishFunctional
-      ? `{
-  "polished": "polished functional and quality objectives"
-}`
-      : `{
-  "polished": "polished planning and compliance objectives"
-}`;
-
-    // ITERATION 2: Expand short bullets to 10-15 words
     const prompt = `You are an expert construction project manager and technical writer in Australia.
 
 ${profileContext}
-${domainContextSection ? `${domainContextSection}\n` : ''}OBJECTIVES TO EXPAND (may contain HTML formatting):
+${domainContextSection ? `${domainContextSection}\n` : ''}OBJECTIVES TO EXPAND:
 
-${contentToPolish}
+${bulletList}
 
 INSTRUCTIONS - ITERATION 2:
-Expand each bullet point to 10-15 words while preserving HTML structure.
+Expand each bullet point to 10-15 words while preserving meaning.
 1. Use the KNOWLEDGE DOMAIN CONTEXT above to add accurate Australian standards references (NCC 2022, BCA, AS standards) — cite only references found in the domain context, do not invent standards
 2. Make objectives measurable where possible (quantities, percentages, ratings, timeframes)
-3. PRESERVE the HTML structure - keep <p><strong>Headers</strong></p> and <ul><li> format
-4. PRESERVE any user edits - do NOT change, remove, or reorder user-modified items
-5. Keep language professional, formal, and concise - suitable for tender documentation
-6. Do NOT add new categories or bullet points not present in the input
-7. Do NOT remove any items - every input bullet must have a corresponding expanded output
-8. OUTPUT FORMAT: Use HTML tags - <p><strong>Header</strong></p> for headers, <ul><li>item</li></ul> for bullets
+3. Keep language professional, formal, and concise - suitable for tender documentation
+4. Do NOT add new objectives not present in the input
+5. Do NOT remove any items - every input bullet must have a corresponding expanded output
+6. Maintain the same numbered order as the input
 
-Example transformation:
-Input: "<li>NCC 2022 compliance</li>"
-Output: "<li>Deliver design documentation compliant with NCC 2022 Volume One requirements</li>"
+Return a JSON array of expanded strings (same count and order as input):
+["expanded bullet 1", "expanded bullet 2", ...]`;
 
-Input: "<li>Fire safety provisions</li>"
-Output: "<li>Incorporate fire safety provisions per AS 1530.4 and AS 1668.1 standards</li>"
-
-Respond in JSON format:
-${responseFormat}`;
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
+    const { text: aiText } = await aiComplete({
+      featureGroup: 'content_polishing',
+      maxTokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    // Extract text from response
-    const textContent = response.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from AI');
-    }
-
-    // Parse JSON from response
-    let polished: { polished?: string; functionalQualityPolished?: string; planningCompliancePolished?: string };
+    // Parse JSON array from response
+    let polishedTexts: string[];
     try {
-      // Extract JSON from response (handle markdown code blocks)
-      let jsonText = textContent.text;
+      let jsonText = aiText;
       const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) {
         jsonText = jsonMatch[1];
       }
-      polished = JSON.parse(jsonText.trim());
+      polishedTexts = JSON.parse(jsonText.trim());
+      if (!Array.isArray(polishedTexts)) {
+        throw new Error('Response is not an array');
+      }
     } catch (e) {
-      console.error('Failed to parse AI response:', e);
-      // Fallback to original content
-      polished = {};
-      if (polishFunctional) polished.polished = functionalContent;
-      if (polishPlanning) polished.polished = planningContent;
+      console.error('[objectives-polish] Failed to parse AI response:', e);
+      // Fallback: return original texts unchanged
+      polishedTexts = validRows.map(r => r.textPolished || r.text);
     }
 
-    // Normalize response for single-section format
-    const functionalPolished = polished.functionalQualityPolished || (polishFunctional && !polishPlanning ? polished.polished : undefined);
-    const planningPolished = polished.planningCompliancePolished || (polishPlanning && !polishFunctional ? polished.polished : undefined);
+    // Update each row with its polished text
+    const updatedRows = [];
+    for (let i = 0; i < validRows.length; i++) {
+      const row = validRows[i];
+      const polishedText = polishedTexts[i] ?? row.text;
 
-    // Fetch existing objectives for edit history
-    const [existing] = await db
-      .select()
-      .from(profilerObjectives)
-      .where(eq(profilerObjectives.projectId, projectId))
-      .limit(1);
+      const [updated] = await db
+        .update(projectObjectives)
+        .set({
+          textPolished: polishedText,
+          status: 'polished',
+          updatedAt: new Date(),
+        })
+        .where(eq(projectObjectives.id, row.id))
+        .returning();
 
-    // Build updated objectives with edit history
-    let existingFunctional: any = null;
-    let existingPlanning: any = null;
-
-    if (existing) {
-      existingFunctional = existing.functionalQuality ? JSON.parse(existing.functionalQuality) : null;
-      existingPlanning = existing.planningCompliance ? JSON.parse(existing.planningCompliance) : null;
-    }
-
-    const objectivesData: Record<string, any> = {
-      polishedAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    if (functionalPolished) {
-      objectivesData.functionalQuality = JSON.stringify({
-        content: functionalPolished,
-        source: 'ai_polished',
-        originalAi: existingFunctional?.originalAi || null,
-        editHistory: existingFunctional?.content
-          ? [...(existingFunctional.editHistory || []), existingFunctional.content]
-          : null,
-      });
-    }
-
-    if (planningPolished) {
-      objectivesData.planningCompliance = JSON.stringify({
-        content: planningPolished,
-        source: 'ai_polished',
-        originalAi: existingPlanning?.originalAi || null,
-        editHistory: existingPlanning?.content
-          ? [...(existingPlanning.editHistory || []), existingPlanning.content]
-          : null,
-      });
-    }
-
-    if (existing) {
-      await db
-        .update(profilerObjectives)
-        .set(objectivesData)
-        .where(eq(profilerObjectives.projectId, projectId));
-    } else {
-      await db.insert(profilerObjectives).values({
-        id: crypto.randomUUID(),
-        projectId,
-        ...objectivesData,
-      });
-    }
-
-    // Pattern Learning (T058): Track polish edits for template improvement
-    // Non-blocking - runs in background
-    if (profile?.buildingClass && profile?.projectType) {
-      const buildingClass = profile.buildingClass;
-      const projectType = profile.projectType;
-
-      // Analyze edits from original to polished for functional quality
-      if (functionalPolished && functionalContent) {
-        const functionalEdits = identifyEditPatterns(
-          functionalContent,
-          functionalPolished
-        );
-        for (const edit of functionalEdits) {
-          trackPolishEdit(buildingClass, projectType, edit.type, edit.context)
-            .catch(err => console.error('[pattern-learning] polish tracking error:', err));
-        }
-      }
-
-      // Analyze edits from original to polished for planning compliance
-      if (planningPolished && planningContent) {
-        const planningEdits = identifyEditPatterns(
-          planningContent,
-          planningPolished
-        );
-        for (const edit of planningEdits) {
-          trackPolishEdit(buildingClass, projectType, edit.type, edit.context)
-            .catch(err => console.error('[pattern-learning] polish tracking error:', err));
-        }
+      if (updated) {
+        updatedRows.push(updated);
       }
     }
 
-    // Return appropriate response based on request format
-    if (section) {
-      // New single-section format
-      return NextResponse.json({
-        success: true,
-        data: {
-          polished: functionalPolished || planningPolished,
-          polishedAt: new Date().toISOString(),
-        },
-      });
-    }
-
-    // Legacy format
     return NextResponse.json({
       success: true,
-      data: {
-        functionalQualityPolished: functionalPolished,
-        planningCompliancePolished: planningPolished,
-        polishedAt: new Date().toISOString(),
-      },
+      data: { polished: updatedRows },
     });
   } catch (error) {
     console.error('Failed to polish objectives:', error);

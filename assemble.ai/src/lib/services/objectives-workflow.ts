@@ -105,7 +105,7 @@ export async function runGenerate(
   aiClient: { generate: (prompt: string) => Promise<string> }
 ): Promise<WorkflowState> {
   // Get matched rules for audit
-  const contentType = objectiveType === 'functional_quality'
+  const contentType = (objectiveType === 'functional' || objectiveType === 'quality')
     ? 'objectives_functional_quality'
     : 'objectives_planning_compliance';
   const matchedRules = evaluateRules(contentType, projectData);

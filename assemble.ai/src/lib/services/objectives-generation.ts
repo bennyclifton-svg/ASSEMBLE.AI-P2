@@ -19,6 +19,7 @@ import {
   type PolishPromptContext,
   type StakeholderPromptContext
 } from '@/lib/prompts/objectives-prompts';
+import type { ObjectiveType } from '@/lib/db/objectives-schema';
 
 // Types
 export interface GeneratedObjectives {
@@ -80,9 +81,9 @@ function formatStakeholderRules(rules: MatchedRule[]): string {
 // Build context for objectives generation
 function buildObjectivesContext(
   projectData: ProjectData,
-  objectiveType: 'functional_quality' | 'planning_compliance'
+  objectiveType: ObjectiveType
 ): ObjectivesPromptContext {
-  const contentType = objectiveType === 'functional_quality'
+  const contentType = (objectiveType === 'functional' || objectiveType === 'quality')
     ? 'objectives_functional_quality'
     : 'objectives_planning_compliance';
 
@@ -138,7 +139,7 @@ function buildStakeholderContext(projectData: ProjectData): StakeholderPromptCon
 // Main generation functions
 export async function generateObjectives(
   projectData: ProjectData,
-  objectiveType: 'functional_quality' | 'planning_compliance',
+  objectiveType: ObjectiveType,
   aiClient: { generate: (prompt: string) => Promise<string> }
 ): Promise<GeneratedObjectives> {
   const context = buildObjectivesContext(projectData, objectiveType);
@@ -151,7 +152,7 @@ export async function generateObjectives(
   } catch {
     // Fallback: extract from matched rules
     const matchedRules = evaluateRules(
-      objectiveType === 'functional_quality'
+      (objectiveType === 'functional' || objectiveType === 'quality')
         ? 'objectives_functional_quality'
         : 'objectives_planning_compliance',
       projectData
@@ -171,7 +172,7 @@ export async function generateObjectives(
 
 export async function polishObjectives(
   projectData: ProjectData,
-  objectiveType: 'functional_quality' | 'planning_compliance',
+  objectiveType: ObjectiveType,
   originalObjectives: GeneratedObjectives,
   userEditedObjectives: string[],
   aiClient: { generate: (prompt: string) => Promise<string> }
