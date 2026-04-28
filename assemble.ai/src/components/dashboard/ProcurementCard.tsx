@@ -10,8 +10,7 @@ import { ContractorGallery } from '@/components/contractors/ContractorGallery';
 import { CostPlanPanel } from '@/components/cost-plan/CostPlanPanel';
 import { ProgramPanel } from '@/components/program/ProgramPanel';
 import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
-import { ObjectivesProfilerSection } from '@/components/profiler/ObjectivesProfilerSection';
-import { useObjectivesTransmittal } from '@/lib/hooks/use-objectives-transmittal';
+import { ObjectivesWorkspace } from '@/components/profiler/objectives/ObjectivesWorkspace';
 import { StakeholderPanel } from '@/components/stakeholders/StakeholderPanel';
 import { KnowledgePanel } from '@/components/knowledge/KnowledgePanel';
 import { MeetingsReportsContainer } from '@/components/notes-meetings-reports/MeetingsReportsContainer';
@@ -157,9 +156,6 @@ export function ProcurementCard({
         console.log('[ProcurementCard] profileData state changed:', profileData);
     }, [profileData]);
 
-    // Objectives data for ObjectivesProfilerSection
-    const [objectivesData, setObjectivesData] = useState<any>(null);
-
     // Fetch profile status only (for tab enabling)
     const fetchProfileStatusOnly = useCallback(async () => {
         try {
@@ -215,26 +211,10 @@ export function ProcurementCard({
         }
     }, [projectId]);
 
-    // Fetch objectives data
-    const fetchObjectivesData = useCallback(async () => {
-        try {
-            const res = await fetch(`/api/projects/${projectId}/objectives`);
-            if (res.ok) {
-                const json = await res.json();
-                if (json.success && json.data) {
-                    setObjectivesData(json.data);
-                }
-            }
-        } catch (error) {
-            console.error('[ProcurementCard] Failed to fetch objectives:', error);
-        }
-    }, [projectId]);
-
     useEffect(() => {
         console.log('[ProcurementCard] Mount effect running, projectId:', projectId);
         fetchProfileStatus();
-        fetchObjectivesData();
-    }, [fetchProfileStatus, fetchObjectivesData, projectId]);
+    }, [fetchProfileStatus, projectId]);
 
     // Re-fetch profile data when navigating back to the profiler tab
     useEffect(() => {
@@ -291,32 +271,6 @@ export function ProcurementCard({
             console.error('[ProcurementCard] Error loading note transmittal:', err);
         }
     }, [onSetSelectedDocumentIds]);
-
-    // Handlers for objectives transmittal (Save/Load document attachments)
-    const { saveTransmittal: saveObjectivesTransmittal, refetch: refetchObjectivesTransmittal } = useObjectivesTransmittal(projectId);
-
-    const handleObjectivesSaveTransmittal = useCallback(async () => {
-        if (!selectedDocumentIds) return;
-        try {
-            await saveObjectivesTransmittal(selectedDocumentIds);
-        } catch (err) {
-            console.error('[ProcurementCard] Error saving objectives transmittal:', err);
-        }
-    }, [selectedDocumentIds, saveObjectivesTransmittal]);
-
-    const handleObjectivesLoadTransmittal = useCallback(async () => {
-        try {
-            const endpoint = `/api/projects/${projectId}/objectives/transmittal`;
-            const res = await fetch(endpoint);
-            if (res.ok) {
-                const data = await res.json();
-                const documentIds = data.documents?.map((doc: { documentId: string }) => doc.documentId) || [];
-                onSetSelectedDocumentIds?.(documentIds);
-            }
-        } catch (err) {
-            console.error('[ProcurementCard] Error loading objectives transmittal:', err);
-        }
-    }, [projectId, onSetSelectedDocumentIds]);
 
     if (isLoadingStakeholders) {
         return (
@@ -385,22 +339,11 @@ export function ProcurementCard({
                     />
                 </TabsContent>
 
-                {/* Objectives Tab Content - AI generation from profile */}
+                {/* Objectives Tab Content */}
                 <TabsContent value="objectives" className="flex-1 mt-0 min-h-0 overflow-y-auto">
-                    <div className="py-4">
-                        <ObjectivesProfilerSection
+                    <div className="py-4 h-full">
+                        <ObjectivesWorkspace
                             projectId={projectId}
-                            profileData={{
-                                ...profileData,
-                                buildingClass: profileStatus.buildingClass,
-                                projectType: profileStatus.projectType,
-                            }}
-                            objectivesData={objectivesData}
-                            onUpdate={() => {
-                                fetchObjectivesData();
-                            }}
-                            onSaveTransmittal={handleObjectivesSaveTransmittal}
-                            onLoadTransmittal={handleObjectivesLoadTransmittal}
                         />
                     </div>
                 </TabsContent>

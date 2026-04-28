@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Upload } from 'lucide-react';
 import { useToast } from '@/lib/hooks/use-toast';
 import type { ObjectiveType, ObjectiveSource } from '@/lib/db/objectives-schema';
 import { SectionGroup } from './SectionGroup';
@@ -94,11 +95,36 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
   const [isLoading, setIsLoading] = useState(true);
   const [collapsed, setCollapsed] = useState<Partial<Record<ObjectiveType, boolean>>>({});
 
+  // Drag-and-drop / paste extract state
+  const [isDragging, setIsDragging] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  // Fetch rows — exposed so handlers can trigger a refresh
+  const fetchRows = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/objectives`);
+      if (!res.ok) throw new Error('Failed to fetch objectives');
+      const json = await res.json();
+      if (json.success) {
+        setRows(json.data as GroupedRows);
+      }
+    } catch (err) {
+      toast({
+        title: 'Failed to load objectives',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectId, toast]);
+
   // Fetch on mount
   useEffect(() => {
     let cancelled = false;
-
-    async function fetchRows() {
+    async function load() {
       setIsLoading(true);
       try {
         const res = await fetch(`/api/projects/${projectId}/objectives`);
@@ -119,10 +145,170 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
         if (!cancelled) setIsLoading(false);
       }
     }
-
-    fetchRows();
+    load();
     return () => { cancelled = true; };
   }, [projectId, toast]);
+
+  // --- Extract from file or text ---
+  const handleExtraction = useCallback(async (input: File | string) => {
+    setIsExtracting(true);
+    try {
+      let response: Response;
+
+      if (input instanceof File) {
+        const formData = new FormData();
+        formData.append('file', input);
+        formData.append('projectId', projectId);
+        response = await fetch('/api/planning/extract-objectives', {
+          method: 'POST',
+          body: formData,
+        });
+      } else {
+        response = await fetch('/api/planning/extract-objectives', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: input, projectId }),
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to extract objectives');
+      }
+
+      const result = await response.json();
+      const { confidence } = result;
+
+      // Refresh rows — the API already persisted the new rows
+      await fetchRows();
+      onUpdate?.();
+
+      if (confidence < 70) {
+        toast({
+          title: 'Low Confidence Extraction',
+          description: `Extracted with ${confidence}% confidence. Please review the objectives.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Objectives Extracted',
+          description: `Successfully extracted project objectives (${confidence}% confidence)`,
+          variant: 'success',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Extraction Failed',
+        description: error instanceof Error ? error.message : 'Failed to extract objectives',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [projectId, fetchRows, onUpdate, toast]);
+
+  // --- Drag handlers ---
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDragging(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current = 0;
+    setIsDragging(false);
+
+    // Check for text content first (Outlook emails drag as text)
+    const textContent = e.dataTransfer.getData('text/plain');
+    if (textContent && textContent.length > 20) {
+      await handleExtraction(textContent);
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) {
+      toast({
+        title: 'No Content',
+        description: 'No file or text content found',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const file = files[0];
+    const validTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'text/plain',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    const validExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.txt', '.docx'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+
+    if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+      toast({
+        title: 'Invalid File Type',
+        description: 'Please upload a PDF, Word document, image (JPG/PNG), or text file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    await handleExtraction(file);
+  }, [handleExtraction, toast]);
+
+  // --- Paste handler ---
+  const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
+    // Don't intercept if user is typing in an input field
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+      return;
+    }
+
+    e.preventDefault();
+
+    // Try HTML first (Outlook emails paste as HTML)
+    let content = e.clipboardData.getData('text/html');
+    if (!content) {
+      content = e.clipboardData.getData('text/plain');
+    } else {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = content;
+      content = tempDiv.textContent || tempDiv.innerText || '';
+    }
+
+    if (!content || content.length < 20) {
+      toast({
+        title: 'No Content',
+        description: 'Paste some text content to extract project objectives',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    await handleExtraction(content);
+  }, [handleExtraction, toast]);
 
   // Create a new objective
   const createObjective = useCallback(async (type: ObjectiveType, text: string) => {
@@ -304,7 +490,52 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
   }, []);
 
   return (
-    <div className="flex flex-col h-full" style={{ minHeight: 0 }}>
+    <div
+      className="flex flex-col h-full relative"
+      style={{ minHeight: 0 }}
+      onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onPaste={handlePaste}
+      tabIndex={0}
+    >
+      {/* Extraction Progress Overlay */}
+      {isExtracting && (
+        <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 rounded-lg flex items-center justify-center">
+          <div
+            className="border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3"
+            style={{ backgroundColor: 'var(--color-bg-primary)' }}
+          >
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]" />
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Extracting objectives...
+            </p>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              This may take a few moments
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Drag & Drop Overlay */}
+      {isDragging && !isExtracting && (
+        <div className="absolute inset-0 z-50 bg-[var(--color-accent-green)]/20 border-2 border-dashed border-[var(--color-accent-green)] rounded-lg flex items-center justify-center pointer-events-none">
+          <div
+            className="border border-[var(--color-accent-green)] rounded-lg p-6 flex flex-col items-center gap-3"
+            style={{ backgroundColor: 'var(--color-bg-primary)' }}
+          >
+            <Upload className="w-10 h-10" style={{ color: 'var(--color-accent-green)' }} />
+            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Drop to extract objectives
+            </p>
+            <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              PDF, Word, Image, or Text
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main scrollable list */}
       <div className="flex-1 overflow-auto">
         {isLoading ? (
