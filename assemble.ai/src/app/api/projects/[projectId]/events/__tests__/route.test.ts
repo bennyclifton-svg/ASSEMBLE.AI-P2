@@ -78,5 +78,6 @@ describe('GET /api/projects/[projectId]/events', () => {
 
         expect(mockRegister).toHaveBeenCalledWith('proj-1', expect.anything());
         await reader.cancel();
+        expect(mockUnregister).toHaveBeenCalledWith('proj-1', expect.anything());
     });
 });
