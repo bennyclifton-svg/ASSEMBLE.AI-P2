@@ -68,7 +68,10 @@ export function ResizableLayout({
             </Panel>
             <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize h-full" />
             <Panel defaultSize={62} minSize={20} className="bg-[var(--color-bg-tertiary)]">
-                <div className="h-full flex flex-col animate-slide-in-up animate-delay-100 relative">
+                <div
+                    data-chat-dock-anchor="center"
+                    className="h-full flex flex-col animate-slide-in-up animate-delay-100 relative"
+                >
                     {/* Watermark background */}
                     <img
                         src="/images/logo-mask.svg"

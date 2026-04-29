@@ -440,3 +440,52 @@ export function useNoteDropUpload(
         getInputProps,
     };
 }
+
+// ============================================================================
+// EXPORT HOOKS
+// ============================================================================
+
+export type ExportFormat = 'pdf' | 'docx';
+
+interface UseNoteExportReturn {
+    exportNote: (format: ExportFormat) => Promise<void>;
+}
+
+/**
+ * Hook for exporting a note to PDF or DOCX
+ */
+export function useNoteExport(noteId: string | null): UseNoteExportReturn {
+    const exportNote = useCallback(async (format: ExportFormat): Promise<void> => {
+        if (!noteId) {
+            throw new Error('Note ID is required');
+        }
+
+        const response = await fetch(`/api/notes/${noteId}/export?format=${format}`);
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Failed to export note' }));
+            throw new Error(error.error || 'Failed to export note');
+        }
+
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = `Note.${format}`;
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="?([^";\n]+)"?/);
+            if (match) {
+                filename = match[1];
+            }
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }, [noteId]);
+
+    return { exportNote };
+}

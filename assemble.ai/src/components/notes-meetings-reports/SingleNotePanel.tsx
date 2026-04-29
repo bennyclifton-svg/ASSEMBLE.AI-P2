@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import { useNoteDropUpload, useNoteExport, type ExportFormat } from '@/lib/hooks/use-notes';
 import type { Note, NoteColor } from '@/types/notes-meetings-reports';
-import { NOTE_COLOR_MAP } from '@/types/notes-meetings-reports';
+import { getNoteColor, getNoteColorStyles } from '@/types/notes-meetings-reports';
 
 interface NoteWithCount extends Note {
     transmittalCount: number;
@@ -41,7 +41,6 @@ interface SingleNotePanelProps {
 
 export function SingleNotePanel({
     note,
-    noteNumber,
     projectId,
     isExpanded,
     onToggleExpand,
@@ -186,8 +185,8 @@ export function SingleNotePanel({
     }, [exportNote]);
 
     // Get note color for header styling
-    const noteColor = note.color || 'yellow';
-    const colorStyles = NOTE_COLOR_MAP[noteColor];
+    const noteColor = getNoteColor(note.color);
+    const colorStyles = getNoteColorStyles(note.color);
 
     // Collapsed state: Square sticky note
     if (!isExpanded) {

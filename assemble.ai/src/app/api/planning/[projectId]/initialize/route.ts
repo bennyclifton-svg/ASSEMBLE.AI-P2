@@ -5,9 +5,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projects, projectObjectives } from '@/lib/db/pg-schema';
+import { projects, projectQuestionAnswers } from '@/lib/db/pg-schema';
 import type { InitializationRequest } from '@/lib/types/project-initiator';
 
 export async function POST(
@@ -31,45 +31,24 @@ export async function POST(
     // Serialize answers for storage
     const answersJson = answers ? JSON.stringify(answers) : null;
 
-    // Execute initialization in a transaction
+    // Execute initialization in a transaction. The legacy `objectives` blobs
+    // (functional/quality/budget/program) are no longer persisted — the
+    // row-model ObjectivesWorkspace owns objective creation now. Only the
+    // questionnaire answers, used by the cost-plan generator, are saved here.
     const result = await db.transaction(async (tx) => {
-      // Step 1: Update project type
       await tx
         .update(projects)
         .set({ projectType, updatedAt: new Date() })
         .where(eq(projects.id, projectId));
 
-      // Step 2: Check if objectives already exist
-      const existingObjectives = await tx
-        .select()
-        .from(projectObjectives)
-        .where(eq(projectObjectives.projectId, projectId))
-        .limit(1);
-
-      if (existingObjectives.length > 0) {
-        // Update existing objectives
+      if (answersJson !== null) {
         await tx
-          .update(projectObjectives)
-          .set({
-            functional: objectives.functional,
-            quality: objectives.quality,
-            budget: objectives.budget,
-            program: objectives.program,
-            questionAnswers: answersJson,
-            updatedAt: new Date(),
-          })
-          .where(eq(projectObjectives.projectId, projectId));
-      } else {
-        // Create new objectives
-        await tx.insert(projectObjectives).values({
-          id: `obj-${projectId}-${Date.now()}`,
-          projectId,
-          functional: objectives.functional,
-          quality: objectives.quality,
-          budget: objectives.budget,
-          program: objectives.program,
-          questionAnswers: answersJson,
-        });
+          .insert(projectQuestionAnswers)
+          .values({ projectId, answers: answersJson, updatedAt: new Date() })
+          .onConflictDoUpdate({
+            target: projectQuestionAnswers.projectId,
+            set: { answers: answersJson, updatedAt: sql`now()` },
+          });
       }
 
       return {

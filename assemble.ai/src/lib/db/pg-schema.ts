@@ -3,7 +3,7 @@
  * Converted from SQLite schema with subscription support
  */
 
-import { pgTable, text, integer, bigint, boolean, timestamp, serial, varchar, unique, index, primaryKey } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, bigint, boolean, timestamp, serial, varchar, unique, index, primaryKey, jsonb } from 'drizzle-orm/pg-core';
 import { sql, relations } from 'drizzle-orm';
 
 // ============================================================================
@@ -136,14 +136,17 @@ export const projectDetails = pgTable('project_details', {
     updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const projectObjectives = pgTable('project_objectives', {
-    id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    functional: text('functional'),
-    quality: text('quality'),
-    budget: text('budget'),
-    program: text('program'),
-    questionAnswers: text('question_answers'), // JSON string of questionnaire answers for recall
+// Row-model project objectives — defined in objectives-schema.ts and
+// re-exported here so existing `from '@/lib/db/pg-schema'` imports keep
+// pointing at the same table object.
+export { projectObjectives } from './objectives-schema';
+
+// Per-project question answers from the project initialiser wizard.
+// Used by the cost-plan generator for answer recall. Previously lived as a
+// column on the legacy project_objectives blob table.
+export const projectQuestionAnswers = pgTable('project_question_answers', {
+    projectId: text('project_id').primaryKey().references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    answers: text('answers'), // JSON string of questionnaire answers
     updatedAt: timestamp('updated_at').defaultNow(),
 });
 
@@ -350,6 +353,10 @@ export const costLines = pgTable('cost_lines', {
     approvedContractCents: bigint('approved_contract_cents', { mode: 'number' }).default(0),
     masterStage: text('master_stage'),  // NEW: Links to one of 5 master stages (initiation, schematic_design, design_development, procurement, delivery)
     sortOrder: integer('sort_order').notNull(),
+    // Phase 3 of the agent integration plan: optimistic locking. Bumped on every
+    // user PATCH or applied agent approval. Agent tools capture this value at
+    // propose time and require it to match at apply time.
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
     deletedAt: timestamp('deleted_at'),
@@ -1712,4 +1719,112 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
         references: [products.id],
     }),
 }));
+
+// ============================================================================
+// AGENTS / CHAT (Phase 1 of agent integration plan)
+// ============================================================================
+// Tables that back the chat dock and the agent runtime. Defined inline here
+// (rather than in a separate agents-schema.ts) to avoid a circular ESM import
+// — Turbopack on Next 16 is stricter about cycles than Webpack was.
+
+export type ChatMessageRole = 'user' | 'assistant' | 'tool' | 'system';
+export type ChatThreadStatus = 'active' | 'archived';
+export type AgentRunStatus = 'running' | 'complete' | 'error' | 'cancelled';
+export type ToolCallStatus = 'running' | 'complete' | 'error' | 'awaiting_approval';
+
+export const chatThreads = pgTable('chat_threads', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    organizationId: text('organization_id').notNull().references(() => organizations.id),
+    // userId is the Better Auth user id (from auth-schema's user table). No FK
+    // here so this stays decoupled from the auth migration cycle. Application
+    // enforcement via getCurrentUser().
+    userId: text('user_id').notNull(),
+    title: text('title').notNull().default('New conversation'),
+    status: text('status').notNull().$type<ChatThreadStatus>().default('active'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_chat_threads_project').on(table.projectId),
+    index('idx_chat_threads_user').on(table.userId),
+    index('idx_chat_threads_org').on(table.organizationId),
+]);
+
+export const chatMessages = pgTable('chat_messages', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    threadId: text('thread_id').notNull().references(() => chatThreads.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().$type<ChatMessageRole>(),
+    content: text('content').notNull(),
+    agentName: text('agent_name'),
+    runId: text('run_id'),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    index('idx_chat_messages_thread').on(table.threadId),
+]);
+
+export const agentRuns = pgTable('agent_runs', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    threadId: text('thread_id').notNull().references(() => chatThreads.id, { onDelete: 'cascade' }),
+    triggerMessageId: text('trigger_message_id').references(() => chatMessages.id),
+    agentName: text('agent_name').notNull(),
+    status: text('status').notNull().$type<AgentRunStatus>().default('running'),
+    model: text('model'),
+    inputTokens: integer('input_tokens').default(0),
+    outputTokens: integer('output_tokens').default(0),
+    costMicrousd: integer('cost_microusd').default(0),
+    error: jsonb('error'),
+    startedAt: timestamp('started_at').defaultNow(),
+    finishedAt: timestamp('finished_at'),
+}, (table) => [
+    index('idx_agent_runs_thread').on(table.threadId),
+]);
+
+export const toolCalls = pgTable('tool_calls', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    runId: text('run_id').notNull().references(() => agentRuns.id, { onDelete: 'cascade' }),
+    toolName: text('tool_name').notNull(),
+    input: jsonb('input').notNull(),
+    output: jsonb('output'),
+    status: text('status').notNull().$type<ToolCallStatus>().default('running'),
+    durationMs: integer('duration_ms'),
+    error: jsonb('error'),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    index('idx_tool_calls_run').on(table.runId),
+]);
+
+// Phase 3: approvals — proposed mutations awaiting user sign-off. A mutating
+// tool inserts a row here instead of writing directly. The user clicks
+// approve/reject in the chat, which transitions status to applied/rejected
+// and (on apply) executes the mutation under optimistic-locking.
+export type ApprovalStatus =
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'expired'
+    | 'applied'
+    | 'conflict';
+
+export const approvals = pgTable('approvals', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    runId: text('run_id').notNull().references(() => agentRuns.id, { onDelete: 'cascade' }),
+    threadId: text('thread_id').notNull().references(() => chatThreads.id, { onDelete: 'cascade' }),
+    organizationId: text('organization_id').notNull().references(() => organizations.id),
+    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    toolName: text('tool_name').notNull(),
+    toolUseId: text('tool_use_id').notNull(),
+    input: jsonb('input').notNull(),
+    proposedDiff: jsonb('proposed_diff').notNull(),
+    status: text('status').notNull().$type<ApprovalStatus>().default('pending'),
+    appliedOutput: jsonb('applied_output'),
+    expectedRowVersion: integer('expected_row_version'),
+    respondedBy: text('responded_by'),
+    respondedAt: timestamp('responded_at'),
+    expiresAt: timestamp('expires_at'),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    index('idx_approvals_thread').on(table.threadId),
+    index('idx_approvals_status').on(table.status),
+    index('idx_approvals_project').on(table.projectId),
+]);
 

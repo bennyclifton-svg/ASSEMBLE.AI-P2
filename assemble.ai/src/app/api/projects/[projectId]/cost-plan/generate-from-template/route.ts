@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eq, and, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projects, projectObjectives, costLines, projectStakeholders } from '@/lib/db/pg-schema';
+import { projects, projectQuestionAnswers, costLines, projectStakeholders } from '@/lib/db/pg-schema';
 import { generateCostPlan } from '@/lib/utils/cost-plan-generation';
 
 export async function POST(
@@ -32,13 +32,13 @@ export async function POST(
     }
 
     // Fetch question answers
-    const [objectives] = await db
-      .select({ questionAnswers: projectObjectives.questionAnswers })
-      .from(projectObjectives)
-      .where(eq(projectObjectives.projectId, projectId))
+    const [qa] = await db
+      .select({ answers: projectQuestionAnswers.answers })
+      .from(projectQuestionAnswers)
+      .where(eq(projectQuestionAnswers.projectId, projectId))
       .limit(1);
 
-    if (!objectives || !objectives.questionAnswers) {
+    if (!qa || !qa.answers) {
       return NextResponse.json(
         { error: 'Question answers not found. Please complete the project initiator first.' },
         { status: 400 }
@@ -48,7 +48,7 @@ export async function POST(
     // Parse question answers
     let answers: Record<string, string | string[]> = {};
     try {
-      answers = JSON.parse(objectives.questionAnswers);
+      answers = JSON.parse(qa.answers);
     } catch (e) {
       console.error('Failed to parse question answers:', e);
       return NextResponse.json(

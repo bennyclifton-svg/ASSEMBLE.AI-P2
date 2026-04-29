@@ -166,6 +166,7 @@
   --color-accent-primary-muted: #125E9A;
   /* Muted Blue */
   --color-accent-primary-tint: rgba(23, 118, 193, 0.12);
+  --color-on-accent: #FFFFFF;
 
   /* Aurora Secondary Accents */
   --color-accent-blue: #0080FF;
@@ -306,6 +307,7 @@
   --color-accent-primary-muted: #3399FF;
   /* Muted Blue */
   --color-accent-primary-tint: rgba(0, 102, 204, 0.1);
+  --color-on-accent: #FFFFFF;
 
   /* Aurora Secondary Accents for Light Theme */
   --color-accent-blue: #0066CC;

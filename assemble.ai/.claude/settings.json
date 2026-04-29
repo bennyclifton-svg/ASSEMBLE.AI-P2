@@ -9,7 +9,12 @@
       "Bash(git commit -m ' *)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(node -e \"const o=JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude/settings.json','utf8'\\)\\); console.log\\('VALID JSON'\\); console.log\\('defaultMode =', JSON.stringify\\(o.permissions.defaultMode\\)\\); console.log\\('allow entries:', o.permissions.allow.length\\);\")"
+      "Bash(node -e \"const o=JSON.parse\\(require\\('fs'\\).readFileSync\\('.claude/settings.json','utf8'\\)\\); console.log\\('VALID JSON'\\); console.log\\('defaultMode =', JSON.stringify\\(o.permissions.defaultMode\\)\\); console.log\\('allow entries:', o.permissions.allow.length\\);\")",
+      "Bash(git stash *)",
+      "Bash(git checkout *)",
+      "Bash(git apply *)",
+      "Bash(grep -v \"\\\\.md$\")",
+      "Bash(npx jest *)"
     ],
     "defaultMode": "bypassPermissions"
   }

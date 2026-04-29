@@ -111,6 +111,13 @@ export const {
     // Billing tables (Phase 5)
     products,
     transactions,
+    // Agents / Chat (Phase 1 of agent integration plan)
+    chatThreads,
+    chatMessages,
+    agentRuns,
+    toolCalls,
+    // Approval gate (Phase 3 of agent integration plan)
+    approvals,
 } = pgSchema;
 
 // Re-export Better Auth schema tables

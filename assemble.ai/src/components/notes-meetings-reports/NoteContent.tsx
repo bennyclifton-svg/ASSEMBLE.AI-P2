@@ -28,7 +28,7 @@ import {
 import { toast } from 'sonner';
 import type { Editor } from '@tiptap/react';
 import type { Note, NoteColor, GenerateNoteContentResponse } from '@/types/notes-meetings-reports';
-import { NOTE_COLOR_MAP } from '@/types/notes-meetings-reports';
+import { getNoteColor, getNoteColorStyles } from '@/types/notes-meetings-reports';
 import { cn } from '@/lib/utils';
 
 interface NoteWithCount extends Note {
@@ -221,8 +221,8 @@ export function NoteContent({
         }
     }, [note.id, note.projectId]);
 
-    const noteColor = note.color || 'yellow';
-    const colorStyles = NOTE_COLOR_MAP[noteColor];
+    const noteColor = getNoteColor(note.color);
+    const colorStyles = getNoteColorStyles(note.color);
 
     return (
         <div

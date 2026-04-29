@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { useToast } from '@/lib/hooks/use-toast';
 import type { ObjectiveType, ObjectiveSource } from '@/lib/db/objectives-schema';
 import { SectionGroup } from './SectionGroup';
 import { ObjectivesChatPanel } from './ObjectivesChatPanel';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
 
 export interface ObjectiveRow {
   id: string;
@@ -39,46 +41,42 @@ const SECTION_LABELS: Record<ObjectiveType, string> = {
 
 function LoadingSkeleton() {
   return (
-    <div className="flex flex-col gap-3 p-4 animate-pulse">
-      {SECTION_ORDER.map((type) => (
-        <div
-          key={type}
-          className="rounded-md overflow-hidden"
-          style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-        >
-          {/* Header skeleton */}
-          <div className="flex items-stretch gap-0.5 p-2">
+    <div className="p-4">
+      <div
+        className="rounded border border-[var(--color-border)]/50 overflow-hidden animate-pulse"
+      >
+        {SECTION_ORDER.map((type, idx) => (
+          <div
+            key={type}
+            className={idx === SECTION_ORDER.length - 1 ? '' : 'border-b border-[var(--color-border)]/50'}
+          >
+            {/* Header skeleton */}
             <div
-              className="h-10 w-48 rounded-l-md"
-              style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 80%, transparent)' }}
-            />
-            <div
-              className="h-10 flex-1 rounded-r-md"
-              style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 80%, transparent)' }}
-            />
-          </div>
-          {/* Row skeletons */}
-          <div className="px-3 pb-3 space-y-2">
-            {[1, 2].map((i) => (
+              className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--color-border)]/50"
+              style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
+            >
               <div
-                key={i}
-                className="h-8 rounded"
+                className="h-6 w-6 rounded"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 80%, transparent)' }}
+              />
+              <div
+                className="h-4 w-32 rounded"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 80%, transparent)' }}
+              />
+            </div>
+            {/* Row skeletons */}
+            <div
+              className="px-4 py-3"
+              style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
+            >
+              <div
+                className="h-4 w-48 rounded"
                 style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 60%, transparent)' }}
               />
-            ))}
+            </div>
           </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 gap-3">
-      <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-        No objectives yet. Use &ldquo;+ Add&rdquo; in any section to get started.
-      </p>
+        ))}
+      </div>
     </div>
   );
 }
@@ -93,7 +91,7 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
     compliance: [],
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [collapsed, setCollapsed] = useState<Partial<Record<ObjectiveType, boolean>>>({});
+  const [groupToDelete, setGroupToDelete] = useState<ObjectiveType | null>(null);
 
   // Drag-and-drop / paste extract state
   const [isDragging, setIsDragging] = useState(false);
@@ -449,22 +447,51 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
     }
   }, [projectId, onUpdate, toast]);
 
-  // Compute global bullet indices across all sections
-  const startIndices = useMemo(() => {
-    const indices: Record<ObjectiveType, number> = { planning: 1, functional: 1, quality: 1, compliance: 1 };
-    let counter = 1;
-    for (const type of SECTION_ORDER) {
-      indices[type] = counter;
-      counter += rows[type].length;
+  // Bulk delete all objectives in a single section
+  const handleDeleteGroup = useCallback(async () => {
+    if (!groupToDelete) return;
+    const idsToDelete = rows[groupToDelete].map((r) => r.id);
+    setGroupToDelete(null);
+    for (const id of idsToDelete) {
+      await deleteObjective(id);
     }
-    return indices;
+  }, [groupToDelete, rows, deleteObjective]);
+
+  // Keep a ref to the latest rows so bulk-save uses fresh state without
+  // forcing the callback identity to change on every render.
+  const rowsRef = useRef(rows);
+  useEffect(() => {
+    rowsRef.current = rows;
   }, [rows]);
 
-  const totalRows = SECTION_ORDER.reduce((sum, t) => sum + rows[t].length, 0);
+  // Bulk sync a section's textarea content into per-row create/update/delete ops.
+  // Naive line-by-index diff: lines that align are updated in place, extra new
+  // lines become creates, missing lines become deletes.
+  const saveSection = useCallback(async (type: ObjectiveType, newLines: string[]) => {
+    const trimmed = newLines.map((l) => l.trim()).filter((l) => l.length > 0);
+    const currentRows = rowsRef.current[type];
+    const minLen = Math.min(currentRows.length, trimmed.length);
 
-  const toggleCollapse = useCallback((type: ObjectiveType) => {
-    setCollapsed((prev) => ({ ...prev, [type]: !prev[type] }));
-  }, []);
+    for (let i = 0; i < minLen; i++) {
+      const existingText =
+        currentRows[i].status === 'polished' && currentRows[i].textPolished
+          ? currentRows[i].textPolished
+          : currentRows[i].text;
+      if (existingText !== trimmed[i]) {
+        const patch: Partial<ObjectiveRow> =
+          currentRows[i].status === 'polished' && currentRows[i].textPolished
+            ? { textPolished: trimmed[i] }
+            : { text: trimmed[i] };
+        await updateObjective(currentRows[i].id, patch);
+      }
+    }
+    for (let i = currentRows.length; i < trimmed.length; i++) {
+      await createObjective(type, trimmed[i]);
+    }
+    for (let i = trimmed.length; i < currentRows.length; i++) {
+      await deleteObjective(currentRows[i].id);
+    }
+  }, [updateObjective, createObjective, deleteObjective]);
 
   return (
     <div
@@ -517,43 +544,49 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
       <div className="flex-1 overflow-auto">
         {isLoading ? (
           <LoadingSkeleton />
-        ) : totalRows === 0 ? (
-          <div className="flex flex-col gap-3 p-4">
-            {SECTION_ORDER.map((type) => (
-              <SectionGroup
-                key={type}
-                type={type}
-                label={SECTION_LABELS[type]}
-                rows={[]}
-                startIndex={startIndices[type]}
-                onUpdate={updateObjective}
-                onCreate={createObjective}
-                onDelete={deleteObjective}
-                isCollapsed={!!collapsed[type]}
-                onToggleCollapse={() => toggleCollapse(type)}
-              />
-            ))}
-            <EmptyState />
-          </div>
         ) : (
-          <div className="flex flex-col gap-3 p-4">
-            {SECTION_ORDER.map((type) => (
-              <SectionGroup
-                key={type}
-                type={type}
-                label={SECTION_LABELS[type]}
-                rows={rows[type]}
-                startIndex={startIndices[type]}
-                onUpdate={updateObjective}
-                onCreate={createObjective}
-                onDelete={deleteObjective}
-                isCollapsed={!!collapsed[type]}
-                onToggleCollapse={() => toggleCollapse(type)}
-              />
-            ))}
+          <div className="p-4">
+            {/* Single outer card containing all four sections */}
+            <div className="rounded border border-[var(--color-border)]/50 overflow-hidden">
+              {SECTION_ORDER.map((type, idx) => (
+                <SectionGroup
+                  key={type}
+                  type={type}
+                  label={SECTION_LABELS[type]}
+                  rows={rows[type]}
+                  onSave={saveSection}
+                  onDeleteAll={setGroupToDelete}
+                  isLastSection={idx === SECTION_ORDER.length - 1}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>
+
+      {/* Group Delete Confirmation Modal */}
+      <Modal
+        isOpen={groupToDelete !== null}
+        onClose={() => setGroupToDelete(null)}
+        title={`Delete All ${groupToDelete ? SECTION_LABELS[groupToDelete] : ''} Objectives`}
+      >
+        <div className="space-y-4">
+          <p className="text-[var(--color-text-primary)]">
+            Are you sure you want to delete all {groupToDelete ? rows[groupToDelete].length : 0}{' '}
+            {groupToDelete ? SECTION_LABELS[groupToDelete].toLowerCase() : ''} objective
+            {groupToDelete && rows[groupToDelete].length !== 1 ? 's' : ''}?
+          </p>
+          <p className="text-sm text-[var(--color-text-muted)]">This action cannot be undone.</p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setGroupToDelete(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteGroup}>
+              Delete All
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Chat panel anchored at bottom */}
       <ObjectivesChatPanel projectId={projectId} />

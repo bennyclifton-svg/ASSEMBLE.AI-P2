@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ResizableLayout } from '@/components/layout/ResizableLayout';
 import { PlanningCard } from '@/components/dashboard/PlanningCard';
 import { ProcurementCard } from '@/components/dashboard/ProcurementCard';
@@ -21,6 +21,7 @@ interface Project {
 export default function ProjectWorkspace() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const projectId = params.projectId as string;
 
   const [project, setProject] = useState<Project | null>(null);
@@ -36,8 +37,16 @@ export default function ProjectWorkspace() {
   const [profileProjectType, setProfileProjectType] = useState<ProjectType | null>(null);
   const [profileRegion, setProfileRegion] = useState<Region>('AU');
 
-  // Center panel tab state - for cross-panel navigation (default to profiler)
-  const [centerActiveTab, setCenterActiveTab] = useState<string>('profiler');
+  // Center panel tab state - persisted in URL so refresh keeps the user on the same tab
+  const centerActiveTab = searchParams.get('tab') ?? 'profiler';
+  const setCenterActiveTab = useCallback(
+    (tab: string) => {
+      const next = new URLSearchParams(searchParams.toString());
+      next.set('tab', tab);
+      router.replace(`/projects/${projectId}?${next.toString()}`, { scroll: false });
+    },
+    [router, projectId, searchParams]
+  );
 
   // Handler to set selected document IDs from an array (for transmittal load)
   const handleSetSelectedDocumentIds = useCallback((ids: string[]) => {

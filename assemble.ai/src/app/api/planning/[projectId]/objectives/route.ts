@@ -1,13 +1,19 @@
 /**
- * Project Objectives API
- * Fetch and update objectives and question answers for answer recall
+ * Project Objectives API (legacy)
+ *
+ * The legacy four-blob objectives (functional/quality/budget/program) have
+ * been replaced by the row-model ObjectivesWorkspace and its CRUD API at
+ * /api/projects/[projectId]/objectives. This route is preserved only for
+ * the question-answers payload that the project initiator wizard and the
+ * cost-plan generator rely on. Blob fields are returned/ignored as empty.
+ *
  * Feature: 018-project-initiator (Streamlined Workflow)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectObjectives } from '@/lib/db/pg-schema';
+import { projectQuestionAnswers } from '@/lib/db/pg-schema';
 import { z } from 'zod';
 
 const objectivesSchema = z.object({
@@ -25,36 +31,26 @@ export async function GET(
   try {
     const { projectId } = await params;
 
-    const objectives = await db
-      .select()
-      .from(projectObjectives)
-      .where(eq(projectObjectives.projectId, projectId))
+    const [qa] = await db
+      .select({ answers: projectQuestionAnswers.answers })
+      .from(projectQuestionAnswers)
+      .where(eq(projectQuestionAnswers.projectId, projectId))
       .limit(1);
 
-    if (objectives.length === 0) {
-      return NextResponse.json(
-        { error: 'Objectives not found' },
-        { status: 404 }
-      );
-    }
-
-    const objective = objectives[0];
-
-    // Parse questionAnswers from JSON string
-    let questionAnswers = null;
-    if (objective.questionAnswers) {
+    let questionAnswers: unknown = null;
+    if (qa?.answers) {
       try {
-        questionAnswers = JSON.parse(objective.questionAnswers);
+        questionAnswers = JSON.parse(qa.answers);
       } catch (e) {
         console.error('Failed to parse questionAnswers:', e);
       }
     }
 
     return NextResponse.json({
-      functional: objective.functional,
-      quality: objective.quality,
-      budget: objective.budget,
-      program: objective.program,
+      functional: null,
+      quality: null,
+      budget: null,
+      program: null,
       questionAnswers,
     });
   } catch (error) {
@@ -74,58 +70,27 @@ export async function PUT(
     const { projectId } = await params;
     const body = await request.json();
 
-    // Validate input
+    // The blob fields are accepted to preserve the legacy contract, but only
+    // questionAnswers is persisted. Objective text is now owned by the
+    // row-model ObjectivesWorkspace.
     const validated = objectivesSchema.parse(body);
 
-    // Check if objectives exist
-    const existing = await db
-      .select()
-      .from(projectObjectives)
-      .where(eq(projectObjectives.projectId, projectId))
-      .limit(1);
-
-    // Serialize questionAnswers if provided
-    const questionAnswersJson = validated.questionAnswers
-      ? JSON.stringify(validated.questionAnswers)
-      : undefined;
-
-    if (existing.length > 0) {
-      // Update existing
+    if (validated.questionAnswers !== undefined) {
+      const answersJson = JSON.stringify(validated.questionAnswers);
       await db
-        .update(projectObjectives)
-        .set({
-          functional: validated.functional,
-          quality: validated.quality,
-          budget: validated.budget,
-          program: validated.program,
-          ...(questionAnswersJson !== undefined && { questionAnswers: questionAnswersJson }),
-          updatedAt: new Date(),
-        })
-        .where(eq(projectObjectives.projectId, projectId));
-    } else {
-      // Create new
-      await db.insert(projectObjectives).values({
-        id: crypto.randomUUID(),
-        projectId,
-        functional: validated.functional || null,
-        quality: validated.quality || null,
-        budget: validated.budget || null,
-        program: validated.program || null,
-        questionAnswers: questionAnswersJson || null,
-      });
+        .insert(projectQuestionAnswers)
+        .values({ projectId, answers: answersJson, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: projectQuestionAnswers.projectId,
+          set: { answers: answersJson, updatedAt: sql`now()` },
+        });
     }
 
-    // Fetch updated record
-    const [updated] = await db
-      .select()
-      .from(projectObjectives)
-      .where(eq(projectObjectives.projectId, projectId));
-
     return NextResponse.json({
-      functional: updated.functional,
-      quality: updated.quality,
-      budget: updated.budget,
-      program: updated.program,
+      functional: null,
+      quality: null,
+      budget: null,
+      program: null,
     });
   } catch (error) {
     console.error('Failed to update objectives:', error);
