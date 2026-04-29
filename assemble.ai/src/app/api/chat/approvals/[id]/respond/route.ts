@@ -32,6 +32,7 @@ function entityForTool(toolName: string): ProjectEntity | null {
         case 'create_cost_line':
             return 'cost_line';
         default:
+            // Unknown tools: no project-channel event. Add a case here when new mutating tools are registered.
             return null;
     }
 }
@@ -184,7 +185,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         emitChatEvent(approval.threadId, {
             type: 'approval_resolved',
             approvalId,
-            status: 'conflict',
+            status: 'conflict', // ChatEvent union doesn't have 'gone'; extend events.ts when adding gone UI
             error: result.reason,
         });
 
