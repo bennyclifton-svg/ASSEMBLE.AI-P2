@@ -45,15 +45,17 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     }
 
     const encoder = new TextEncoder();
+    let savedController!: ReadableStreamDefaultController;
     const stream = new ReadableStream({
         start(controller) {
+            savedController = controller;
             registerProjectConnection(projectId, controller);
             controller.enqueue(
                 encoder.encode(`event: connected\ndata: ${JSON.stringify({ projectId })}\n\n`)
             );
         },
-        cancel(controller) {
-            unregisterProjectConnection(projectId, controller);
+        cancel() {
+            unregisterProjectConnection(projectId, savedController);
         },
     });
 
