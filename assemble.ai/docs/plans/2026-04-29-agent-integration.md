@@ -331,16 +331,21 @@ A running record of what was actually shipped, deviations from the plan, and wha
 
 **Phase 3.2 follow-on — `record_invoice` (2026-04-29).** Finance can propose invoice/progress-claim records through the same approval gate. The applicator inserts into `invoices`; the runtime guards against text-only "awaiting approval" claims by forcing a corrective tool turn when an invoice request stops without a `record_invoice` call.
 
-**Phase 3.5 — Cross-tab live updates (2026-04-29).** Per-project SSE channel at `/api/projects/[projectId]/events` emits `entity_updated` on agent-approved cost-line writes. `useCostPlan` subscribes and refetches on matching events; the 10-second poll remains as fallback for non-agent writes. Same in-process `globalThis`-pinned Map pattern as the chat events bus.
+**Phase 3.5 — Cross-tab live updates (2026-04-29).** Per-project SSE channel at `/api/projects/[projectId]/events` emits `entity_updated` on agent-approved writes. `useCostPlan` subscribes and refetches on cost-line events; the 10-second poll remains as fallback for non-agent writes. The event bus now covers cost lines, invoices, notes, risks, variations, programme activities/milestones, and stakeholders for future tab refresh wiring. Same in-process `globalThis`-pinned Map pattern as the chat events bus.
 
 **Phase 2 — Orchestrator + Design/Program read-only (2026-04-29).** Reactivated after the Phase 3/3.5 approval work. The default chat agent is now the Orchestrator, which deterministically routes user requests to Finance, Program, and/or Design. Multi-domain status/readiness requests fan out concurrently to quiet specialist runs and return one attributed Orchestrator reply. Added read-only Design and Program specialists, `list_program`, and context injection from the existing project context orchestrator rather than a separate `PROJECT_MEMORY.md`/SQLite memory file. Finance write intents (`add/record/create invoices`, claims, fees, cost lines, variations) override design/program keywords because cost-line names often contain terms like "architect", "scheme design", or "DA".
 
-**Tests:** 67 passing across 9 agent suites (`src/lib/agents`). Multi-tenant cross-org rejection locked via tests at the tool, runner, and API surfaces.
+**Phase 3X — broad write tools (2026-04-30).** Extended the approval-gate pattern to notes, risks, variations, programme activities/milestones, and stakeholder brief/scope fields. Added read tools for notes, risks, variations, stakeholders, and meetings. Row-version optimistic locking added to the editable tables; Finance, Program, and Design prompts/tool lists were updated; Phase 5 agent specs now list which Phase 3X tools they can inherit.
+
+**Agent knowledge access + granular model groups (2026-04-30).** Added `search_knowledge_library` over curated knowledge domain libraries, wired it into Finance/Program/Design, and split model feature groups into `agent_finance`, `agent_program`, `agent_design`, `agent_orchestrator`, and `objectives_generation`. Agent model resolution now uses `getProviderAndModelFor()` through the AI registry.
+
+**Live-refresh wiring + edit-and-approve (2026-05-01).** `useVariations` and `useProgram` now subscribe to the project event bus; agent-approved variation and programme writes refresh those panels immediately without a reload. `ApprovalGate` gains an "Edit" button that reveals per-field inputs so users can tweak a proposed value before approving. Clicking "Save & approve" sends `overrideInput` to the respond route, which merges it with the original tool input before applying. Only the changed fields are overridable; the entity `id` and `expectedRowVersion` are preserved from the original approval.
+
+**Tests:** 85 passing across 11 agent suites (`src/lib/agents`). Multi-tenant cross-org rejection locked via tests at the tool, runner, and API surfaces.
 
 ### Deviations from the plan
 
 - **Phase 2 shipped after Phase 3/3.5.** Went straight from Phase 1 to Phase 3 initially because mutating-cost-plan delivered more day-to-day value sooner. Phase 2 was then reactivated on top of the approval-enabled runtime, so the Orchestrator preserves the existing approval gate instead of replacing it.
-- **Model registry bypassed in `model.ts`.** The plan called for the agent runtime to consume `getProviderAndModelFor()` from `lib/ai/registry.ts`. That registry imports a `modelSettings` Drizzle symbol from in-flight admin work that wasn't checked in yet, causing build errors. Worked around with a raw SQL lookup against `model_settings` plus a hardcoded `claude-sonnet-4-6` fallback. Restore the registry call once the admin schema lands.
 - **`agents-schema.ts` deleted.** Originally the agent tables lived in their own schema file with cross-imports from `pg-schema.ts`. Turbopack on Next 16 doesn't tolerate ESM cycles well — inlined the tables directly into `pg-schema.ts` to eliminate the cycle. Same approach used for the Phase 3 `approvals` table.
 - **SSE `connections` Map pinned to `globalThis`.** Without this, Next.js dev mode hot-reloads produced multiple Map instances; the SSE route registered controllers in instance A while the runner emitted into instance B and events vanished silently. Standard Next.js dev-mode singleton pattern.
 - **SSE replay of pending approvals on connect.** Added so the UI rehydrates after page reloads, dock collapse-and-reopen, or network blips. Without it, approvals already in the DB but proposed before this connection are invisible.
@@ -349,10 +354,9 @@ A running record of what was actually shipped, deviations from the plan, and wha
 
 ### Outstanding (in priority order)
 
-1. **Knowledge-library + domain-repo retrieval tools** (`search_knowledge_libraries`, `search_domain_repos`). Currently `search_rag` only searches documents owned by the current project; firm-wide knowledge libraries and global/seed domain repos are invisible to the agent.
-2. **Edit-and-approve UI** on the `ApprovalGate` card. Today only Approve/Reject; no inline edit.
-3. **Prompt hardening** — model occasionally states a dollar amount in chat text without including it as `budgetCents` in the tool call. Strengthened the prompt 2026-04-29 but worth monitoring.
-4. **Phase 4** (Watchdogs + soft gates), **Phase 5** (Correspondence + remaining specialists), **Phase 6** (BullMQ for long runs + admin observability). All on hold pending lived experience with what's shipped.
+1. **Domain-repo retrieval tool** (`search_domain_repos`). `search_knowledge_library` now covers curated seed/org knowledge libraries; standalone domain repositories still need their own agent-facing tool if they should be queried separately from the curated library path.
+2. **Prompt hardening** — model occasionally states a dollar amount in chat text without including it as `budgetCents` in the tool call. Strengthened the prompt 2026-04-29 but worth monitoring.
+3. **Phase 4** (Watchdogs + soft gates), **Phase 5** (Correspondence + remaining specialists), **Phase 6** (BullMQ for long runs + admin observability). All on hold pending lived experience with what's shipped.
 
 ### Files touched
 
