@@ -5,9 +5,11 @@
  *
  * Approve:
  *   1. Verifies the approval row belongs to the caller's org and project.
- *   2. Calls the matching applicator under optimistic-locking.
- *   3. Marks status='applied' (or 'conflict' if rowVersion didn't match).
- *   4. Emits SSE approval_resolved so the chat UI updates the card.
+ *   2. Atomically claims the pending approval so repeated clicks/retries
+ *      cannot apply an append-style mutation more than once.
+ *   3. Calls the matching applicator under optimistic-locking.
+ *   4. Marks status='applied' (or 'conflict' if rowVersion didn't match).
+ *   5. Emits SSE approval_resolved so the chat UI updates the card.
  *
  * Reject:
  *   1. Same ownership check.
@@ -25,14 +27,38 @@ import { emitChatEvent } from '@/lib/agents/events';
 import { emitProjectEvent, type ProjectEntity } from '@/lib/agents/project-events';
 import { applyApproval } from '@/lib/agents/applicators';
 
-/** Map a mutating tool name to the entity type it touches. Returns null for unknown tools. */
-function entityForTool(toolName: string): ProjectEntity | null {
+/** Map a mutating tool name to the project event it should emit. */
+function eventForTool(toolName: string): { entity: ProjectEntity; op: 'created' | 'updated' } | null {
     switch (toolName) {
-        case 'update_cost_line':
         case 'create_cost_line':
-            return 'cost_line';
+            return { entity: 'cost_line', op: 'created' };
+        case 'update_cost_line':
+            return { entity: 'cost_line', op: 'updated' };
+        case 'record_invoice':
+            return { entity: 'invoice', op: 'created' };
+        case 'create_note':
+            return { entity: 'note', op: 'created' };
+        case 'update_note':
+            return { entity: 'note', op: 'updated' };
+        case 'create_risk':
+            return { entity: 'risk', op: 'created' };
+        case 'update_risk':
+            return { entity: 'risk', op: 'updated' };
+        case 'create_variation':
+            return { entity: 'variation', op: 'created' };
+        case 'update_variation':
+            return { entity: 'variation', op: 'updated' };
+        case 'create_meeting':
+            return { entity: 'meeting', op: 'created' };
+        case 'update_program_activity':
+            return { entity: 'program_activity', op: 'updated' };
+        case 'create_program_milestone':
+            return { entity: 'program_milestone', op: 'created' };
+        case 'update_program_milestone':
+            return { entity: 'program_milestone', op: 'updated' };
+        case 'update_stakeholder':
+            return { entity: 'stakeholder', op: 'updated' };
         default:
-            // Unknown tools: no project-channel event. Add a case here when new mutating tools are registered.
             return null;
     }
 }
@@ -63,6 +89,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             );
         }
 
+        const overrideInput =
+            decision === 'approve' &&
+            body?.overrideInput !== null &&
+            typeof body?.overrideInput === 'object' &&
+            !Array.isArray(body?.overrideInput)
+                ? (body.overrideInput as Record<string, unknown>)
+                : null;
+
         // Load approval + verify org + thread ownership
         const [approval] = await db
             .select()
@@ -91,14 +125,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         if (decision === 'reject') {
-            await db
+            const [claimed] = await db
                 .update(approvals)
                 .set({
                     status: 'rejected',
                     respondedBy: authResult.user.id,
                     respondedAt: new Date(),
                 })
-                .where(eq(approvals.id, approvalId));
+                .where(and(eq(approvals.id, approvalId), eq(approvals.status, 'pending')))
+                .returning({ id: approvals.id });
+
+            if (!claimed) {
+                return NextResponse.json(
+                    { error: 'Approval is already being processed or resolved.' },
+                    { status: 409 }
+                );
+            }
 
             emitChatEvent(approval.threadId, {
                 type: 'approval_resolved',
@@ -110,15 +152,56 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Approve path — run the applicator under optimistic locking.
-        const result = await applyApproval({
-            toolName: approval.toolName,
-            input: approval.input,
-            expectedRowVersion: approval.expectedRowVersion ?? null,
-            ctx: {
-                organizationId: orgId,
-                projectId: approval.projectId,
-            },
-        });
+        const [claimed] = await db
+            .update(approvals)
+            .set({
+                status: 'applying',
+                respondedBy: authResult.user.id,
+                respondedAt: new Date(),
+            })
+            .where(and(eq(approvals.id, approvalId), eq(approvals.status, 'pending')))
+            .returning({ id: approvals.id });
+
+        if (!claimed) {
+            return NextResponse.json(
+                { error: 'Approval is already being processed or resolved.' },
+                { status: 409 }
+            );
+        }
+
+        let result: Awaited<ReturnType<typeof applyApproval>>;
+        try {
+            result = await applyApproval({
+                toolName: approval.toolName,
+                input: overrideInput
+                    ? { ...(approval.input as object), ...overrideInput }
+                    : approval.input,
+                expectedRowVersion: approval.expectedRowVersion ?? null,
+                ctx: {
+                    organizationId: orgId,
+                    projectId: approval.projectId,
+                },
+            });
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to apply approval';
+            await db
+                .update(approvals)
+                .set({
+                    status: 'conflict',
+                    respondedBy: authResult.user.id,
+                    respondedAt: new Date(),
+                })
+                .where(eq(approvals.id, approvalId));
+
+            emitChatEvent(approval.threadId, {
+                type: 'approval_resolved',
+                approvalId,
+                status: 'conflict',
+                error: message,
+            });
+
+            throw err;
+        }
 
         if (result.kind === 'applied') {
             await db
@@ -138,13 +221,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 appliedOutput: result.output,
             });
 
-            const entity = entityForTool(approval.toolName);
+            const event = eventForTool(approval.toolName);
             const appliedId = (result.output as { id?: unknown })?.id;
-            if (entity && typeof appliedId === 'string') {
+            if (event && typeof appliedId === 'string') {
                 emitProjectEvent(approval.projectId, {
                     type: 'entity_updated',
-                    entity,
-                    op: approval.toolName === 'create_cost_line' ? 'created' : 'updated',
+                    entity: event.entity,
+                    op: event.op,
                     id: appliedId,
                 });
             }

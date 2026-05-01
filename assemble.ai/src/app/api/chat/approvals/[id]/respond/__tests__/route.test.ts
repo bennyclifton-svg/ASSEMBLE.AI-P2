@@ -30,7 +30,8 @@ const mockSelect = jest.fn(() => {
     return { from: fromFn };
 });
 
-const mockUpdateWhere = jest.fn().mockResolvedValue(undefined);
+const mockUpdateReturning = jest.fn().mockResolvedValue([{ id: 'approval-1' }]);
+const mockUpdateWhere = jest.fn(() => ({ returning: mockUpdateReturning }));
 const mockUpdateSet = jest.fn(() => ({ where: mockUpdateWhere }));
 const mockUpdate = jest.fn(() => ({ set: mockUpdateSet }));
 
@@ -66,6 +67,7 @@ import { POST } from '../route';
 beforeEach(() => {
     jest.clearAllMocks();
     nextSelectIsApproval = true;
+    mockUpdateReturning.mockResolvedValue([{ id: 'approval-1' }]);
 });
 
 function makeRequest(body: unknown) {
@@ -183,6 +185,17 @@ describe('POST /api/chat/approvals/[id]/respond', () => {
         );
     });
 
+    it('does not apply when another request has already claimed the approval', async () => {
+        mockGetCurrentUser.mockResolvedValue(okSession);
+        mockApprovalsLimit.mockResolvedValueOnce([pendingApproval]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: baseUser.id }]);
+        mockUpdateReturning.mockResolvedValueOnce([]);
+
+        const res = await POST(makeRequest({ decision: 'approve' }), { params });
+        expect(res.status).toBe(409);
+        expect(mockApply).not.toHaveBeenCalled();
+    });
+
     it('approve with optimistic-lock conflict: 409 + status=conflict', async () => {
         mockGetCurrentUser.mockResolvedValue(okSession);
         mockApprovalsLimit.mockResolvedValueOnce([pendingApproval]);
@@ -265,6 +278,39 @@ describe('POST /api/chat/approvals/[id]/respond', () => {
         });
     });
 
+    test('apply of create_meeting emits meeting created', async () => {
+        mockGetCurrentUser.mockResolvedValue({
+            user: { id: 'user-A', organizationId: 'org-A' },
+        });
+        mockApprovalsLimit.mockResolvedValueOnce([
+            {
+                id: 'approval-5',
+                organizationId: 'org-A',
+                threadId: 'thread-1',
+                projectId: 'proj-99',
+                toolName: 'create_meeting',
+                input: { title: 'Pre-DA Meeting' },
+                expectedRowVersion: null,
+                status: 'pending',
+            },
+        ]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: 'user-A' }]);
+        mockApply.mockResolvedValue({
+            kind: 'applied',
+            output: { id: 'meeting-new', title: 'Pre-DA Meeting' },
+        });
+
+        const res = await POST(makeRequest({ decision: 'approve' }), { params });
+        expect(res.status).toBe(200);
+
+        expect(mockEmitProject).toHaveBeenCalledWith('proj-99', {
+            type: 'entity_updated',
+            entity: 'meeting',
+            op: 'created',
+            id: 'meeting-new',
+        });
+    });
+
     test('reject does NOT emit entity_updated', async () => {
         mockGetCurrentUser.mockResolvedValue({
             user: { id: 'user-A', organizationId: 'org-A' },
@@ -312,5 +358,24 @@ describe('POST /api/chat/approvals/[id]/respond', () => {
         expect(res.status).toBe(409);
 
         expect(mockEmitProject).not.toHaveBeenCalled();
+    });
+
+    it('approve with overrideInput: calls applyApproval with merged input', async () => {
+        mockGetCurrentUser.mockResolvedValue(okSession);
+        mockApprovalsLimit.mockResolvedValueOnce([pendingApproval]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: baseUser.id }]);
+        mockApply.mockResolvedValueOnce({ kind: 'applied', output: { id: 'cl-1', budgetCents: 275000 } });
+
+        const res = await POST(
+            makeRequest({ decision: 'approve', overrideInput: { budgetCents: 275000 } }),
+            { params }
+        );
+        expect(res.status).toBe(200);
+        expect(mockApply).toHaveBeenCalledWith(
+            expect.objectContaining({
+                // id comes from approval.input; budgetCents is overridden
+                input: { id: 'cl-1', budgetCents: 275000 },
+            })
+        );
     });
 });
