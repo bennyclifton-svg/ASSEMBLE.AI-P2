@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import type { PendingApprovalView } from '@/lib/hooks/use-chat-stream';
 
@@ -25,14 +25,34 @@ function isDiff(x: unknown): x is DiffShape {
     );
 }
 
+function parseEditValue(field: string, displayValue: string): unknown {
+    if (field.endsWith('Cents')) {
+        const dollars = parseFloat(displayValue.replace(/[^0-9.-]/g, ''));
+        return isNaN(dollars) ? undefined : Math.round(dollars * 100);
+    }
+    return displayValue;
+}
+
+function displayAfter(field: string, after: unknown): string {
+    if (field.endsWith('Cents') && typeof after === 'number') {
+        return (after / 100).toFixed(2);
+    }
+    return String(after ?? '');
+}
+
 export function ApprovalGate({ approval }: ApprovalGateProps) {
     const [submitting, setSubmitting] = useState<'approve' | 'reject' | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [editMode, setEditMode] = useState(false);
+    const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+    const submittingRef = useRef(false);
 
     const diff = isDiff(approval.proposedDiff) ? approval.proposedDiff : null;
     const resolved = approval.resolution;
 
     const respond = async (decision: 'approve' | 'reject') => {
+        if (submittingRef.current || resolved) return;
+        submittingRef.current = true;
         setSubmitting(decision);
         setError(null);
         try {
@@ -50,6 +70,7 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to submit decision');
         } finally {
+            submittingRef.current = false;
             setSubmitting(null);
         }
     };
@@ -211,7 +232,7 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
 
             {statusBanner}
 
-            {!resolved && (
+            {!resolved && !editMode && (
                 <div
                     style={{
                         display: 'flex',
@@ -301,6 +322,164 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
                             {error}
                         </span>
                     )}
+                    {diff && (
+                        <button
+                            type="button"
+                            disabled={submitting !== null}
+                            onClick={() => {
+                                const initial: Record<string, string> = {};
+                                for (const c of diff.changes) {
+                                    initial[c.field] = displayAfter(c.field, c.after);
+                                }
+                                setEditedValues(initial);
+                                setEditMode(true);
+                            }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '6px 12px',
+                                fontSize: 12,
+                                fontWeight: 500,
+                                borderRadius: 4,
+                                cursor: submitting !== null ? 'wait' : 'pointer',
+                                backgroundColor: 'transparent',
+                                color: 'var(--color-text-secondary)',
+                                border: '1px solid var(--color-border)',
+                                opacity: submitting !== null ? 0.5 : 1,
+                                marginLeft: 'auto',
+                            }}
+                            data-testid={`edit-${approval.id}`}
+                        >
+                            Edit
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {!resolved && editMode && (
+                <div style={{ borderTop: '1px solid var(--color-border-subtle)', padding: '12px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                        {diff?.changes.map((c) => (
+                            <div key={c.field} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span
+                                    style={{
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                        color: 'var(--color-text-tertiary)',
+                                        minWidth: 110,
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {c.label}
+                                </span>
+                                <input
+                                    type={c.field.endsWith('Cents') ? 'number' : 'text'}
+                                    value={editedValues[c.field] ?? displayAfter(c.field, c.after)}
+                                    onChange={(e) =>
+                                        setEditedValues((prev) => ({ ...prev, [c.field]: e.target.value }))
+                                    }
+                                    style={{
+                                        flex: 1,
+                                        padding: '4px 8px',
+                                        fontSize: 12,
+                                        borderRadius: 4,
+                                        border: '1px solid var(--color-border)',
+                                        backgroundColor: 'var(--color-bg-primary)',
+                                        color: 'var(--color-text-primary)',
+                                        outline: 'none',
+                                    }}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                            type="button"
+                            disabled={submitting !== null}
+                            onClick={async () => {
+                                if (!diff || submittingRef.current || resolved) return;
+                                submittingRef.current = true;
+                                setSubmitting('approve');
+                                setError(null);
+                                try {
+                                    const overrideInput: Record<string, unknown> = {};
+                                    for (const c of diff.changes) {
+                                        const parsed = parseEditValue(
+                                            c.field,
+                                            editedValues[c.field] ?? displayAfter(c.field, c.after)
+                                        );
+                                        if (parsed !== undefined) overrideInput[c.field] = parsed;
+                                    }
+                                    const res = await fetch(`/api/chat/approvals/${approval.id}/respond`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ decision: 'approve', overrideInput }),
+                                    });
+                                    if (!res.ok && res.status !== 409 && res.status !== 410) {
+                                        const data = await res.json().catch(() => ({}));
+                                        throw new Error(data?.error || `Request failed (${res.status})`);
+                                    }
+                                    setEditMode(false);
+                                } catch (err) {
+                                    setError(err instanceof Error ? err.message : 'Failed to submit decision');
+                                } finally {
+                                    submittingRef.current = false;
+                                    setSubmitting(null);
+                                }
+                            }}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                padding: '6px 12px',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                borderRadius: 4,
+                                border: 'none',
+                                cursor: submitting !== null ? 'wait' : 'pointer',
+                                backgroundColor: 'var(--color-accent-primary)',
+                                color: 'var(--color-on-accent)',
+                                opacity: submitting !== null ? 0.5 : 1,
+                                transition: 'opacity 0.15s, filter 0.15s',
+                            }}
+                            onMouseEnter={(e) => {
+                                if (submitting === null)
+                                    (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.filter = '';
+                            }}
+                            data-testid={`save-approve-${approval.id}`}
+                        >
+                            {submitting === 'approve' ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                            Save & approve
+                        </button>
+                        <button
+                            type="button"
+                            disabled={submitting !== null}
+                            onClick={() => { setEditMode(false); setError(null); }}
+                            style={{
+                                padding: '6px 12px',
+                                fontSize: 12,
+                                fontWeight: 500,
+                                borderRadius: 4,
+                                cursor: submitting !== null ? 'wait' : 'pointer',
+                                backgroundColor: 'transparent',
+                                color: 'var(--color-text-secondary)',
+                                border: '1px solid var(--color-border)',
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        {error && (
+                            <span style={{ fontSize: 11, marginLeft: 8, color: 'var(--color-error)', alignSelf: 'center' }}>
+                                {error}
+                            </span>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
