@@ -2,11 +2,14 @@
 
 import { useRef, useState } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { mutate as globalMutate } from 'swr';
 import type { PendingApprovalView } from '@/lib/hooks/use-chat-stream';
 
 interface ApprovalGateProps {
     approval: PendingApprovalView;
 }
+
+type ApprovalResolution = NonNullable<PendingApprovalView['resolution']>;
 
 interface DiffShape {
     entity: string;
@@ -40,17 +43,76 @@ function displayAfter(field: string, after: unknown): string {
     return String(after ?? '');
 }
 
+function isEditableField(field: string): boolean {
+    return field !== 'documentIds' && field !== 'attachDocumentIds';
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+}
+
+function resolutionFromResponse(
+    decision: 'approve' | 'reject',
+    response: Response,
+    data: Record<string, unknown>
+): ApprovalResolution | null {
+    const status = typeof data.status === 'string' ? data.status : null;
+    const error =
+        typeof data.error === 'string'
+            ? data.error
+            : 'The proposed change could not be applied. Please ask the assistant to try again with current project data.';
+
+    if (status === 'applied') {
+        return { status: 'applied', appliedOutput: data.output };
+    }
+    if (status === 'rejected' || (response.ok && decision === 'reject')) {
+        return { status: 'rejected' };
+    }
+    if (status === 'conflict' || status === 'gone' || response.status === 409 || response.status === 410) {
+        return { status: 'conflict', error };
+    }
+    return null;
+}
+
+function revalidateAppliedEntity(toolName: string, appliedOutput: unknown): void {
+    if (
+        toolName !== 'create_note' &&
+        toolName !== 'update_note' &&
+        toolName !== 'attach_documents_to_note'
+    ) {
+        return;
+    }
+
+    const output = asRecord(appliedOutput);
+    const projectId = typeof output.projectId === 'string' ? output.projectId : null;
+    const id = typeof output.id === 'string' ? output.id : null;
+    if (!projectId) return;
+
+    void globalMutate(`/api/notes?projectId=${projectId}`);
+    if (id) {
+        void globalMutate(`/api/notes/${id}`);
+        void globalMutate(`/api/notes/${id}/transmittal`);
+    }
+}
+
 export function ApprovalGate({ approval }: ApprovalGateProps) {
     const [submitting, setSubmitting] = useState<'approve' | 'reject' | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [editMode, setEditMode] = useState(false);
     const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+    const [localResolution, setLocalResolution] = useState<PendingApprovalView['resolution']>(null);
     const submittingRef = useRef(false);
 
     const diff = isDiff(approval.proposedDiff) ? approval.proposedDiff : null;
-    const resolved = approval.resolution;
+    const resolved = approval.resolution ?? localResolution;
+    const editableChanges = diff?.changes.filter((change) => isEditableField(change.field)) ?? [];
 
-    const respond = async (decision: 'approve' | 'reject') => {
+    const respond = async (
+        decision: 'approve' | 'reject',
+        overrideInput?: Record<string, unknown>
+    ) => {
         if (submittingRef.current || resolved) return;
         submittingRef.current = true;
         setSubmitting(decision);
@@ -59,14 +121,24 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
             const res = await fetch(`/api/chat/approvals/${approval.id}/respond`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ decision }),
+                body: JSON.stringify(
+                    overrideInput === undefined ? { decision } : { decision, overrideInput }
+                ),
             });
+            const data = asRecord(await res.json().catch(() => ({})));
             if (!res.ok && res.status !== 409 && res.status !== 410) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data?.error || `Request failed (${res.status})`);
+                throw new Error(
+                    typeof data.error === 'string' ? data.error : `Request failed (${res.status})`
+                );
             }
-            // SSE pushes the resolution; useChatStream will populate
-            // approval.resolution and the card transitions automatically.
+            const nextResolution = resolutionFromResponse(decision, res, data);
+            if (nextResolution) {
+                setLocalResolution(nextResolution);
+                if (nextResolution.status === 'applied') {
+                    revalidateAppliedEntity(approval.toolName, nextResolution.appliedOutput);
+                }
+            }
+            setEditMode(false);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to submit decision');
         } finally {
@@ -322,13 +394,13 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
                             {error}
                         </span>
                     )}
-                    {diff && (
+                    {editableChanges.length > 0 && (
                         <button
                             type="button"
                             disabled={submitting !== null}
                             onClick={() => {
                                 const initial: Record<string, string> = {};
-                                for (const c of diff.changes) {
+                                for (const c of editableChanges) {
                                     initial[c.field] = displayAfter(c.field, c.after);
                                 }
                                 setEditedValues(initial);
@@ -360,7 +432,7 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
             {!resolved && editMode && (
                 <div style={{ borderTop: '1px solid var(--color-border-subtle)', padding: '12px' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
-                        {diff?.changes.map((c) => (
+                        {editableChanges.map((c) => (
                             <div key={c.field} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span
                                     style={{
@@ -401,34 +473,15 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
                             disabled={submitting !== null}
                             onClick={async () => {
                                 if (!diff || submittingRef.current || resolved) return;
-                                submittingRef.current = true;
-                                setSubmitting('approve');
-                                setError(null);
-                                try {
-                                    const overrideInput: Record<string, unknown> = {};
-                                    for (const c of diff.changes) {
-                                        const parsed = parseEditValue(
-                                            c.field,
-                                            editedValues[c.field] ?? displayAfter(c.field, c.after)
-                                        );
-                                        if (parsed !== undefined) overrideInput[c.field] = parsed;
-                                    }
-                                    const res = await fetch(`/api/chat/approvals/${approval.id}/respond`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ decision: 'approve', overrideInput }),
-                                    });
-                                    if (!res.ok && res.status !== 409 && res.status !== 410) {
-                                        const data = await res.json().catch(() => ({}));
-                                        throw new Error(data?.error || `Request failed (${res.status})`);
-                                    }
-                                    setEditMode(false);
-                                } catch (err) {
-                                    setError(err instanceof Error ? err.message : 'Failed to submit decision');
-                                } finally {
-                                    submittingRef.current = false;
-                                    setSubmitting(null);
+                                const overrideInput: Record<string, unknown> = {};
+                                for (const c of editableChanges) {
+                                    const parsed = parseEditValue(
+                                        c.field,
+                                        editedValues[c.field] ?? displayAfter(c.field, c.after)
+                                    );
+                                    if (parsed !== undefined) overrideInput[c.field] = parsed;
                                 }
+                                await respond('approve', overrideInput);
                             }}
                             style={{
                                 display: 'inline-flex',

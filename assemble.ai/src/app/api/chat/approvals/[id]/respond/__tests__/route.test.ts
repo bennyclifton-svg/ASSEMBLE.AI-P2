@@ -38,6 +38,8 @@ const mockUpdate = jest.fn(() => ({ set: mockUpdateSet }));
 const mockApply = jest.fn();
 const mockEmit = jest.fn();
 const mockEmitProject = jest.fn();
+const mockWorkflowDependenciesAreApplied = jest.fn();
+const mockSyncWorkflowStepForApproval = jest.fn();
 
 jest.mock('@/lib/auth/get-user', () => ({
     getCurrentUser: () => mockGetCurrentUser(),
@@ -62,12 +64,19 @@ jest.mock('@/lib/agents/project-events', () => ({
     emitProjectEvent: (...args: unknown[]) => mockEmitProject(...args),
 }));
 
+jest.mock('@/lib/workflows', () => ({
+    workflowDependenciesAreApplied: (...args: unknown[]) => mockWorkflowDependenciesAreApplied(...args),
+    syncWorkflowStepForApproval: (...args: unknown[]) => mockSyncWorkflowStepForApproval(...args),
+}));
+
 import { POST } from '../route';
 
 beforeEach(() => {
     jest.clearAllMocks();
     nextSelectIsApproval = true;
     mockUpdateReturning.mockResolvedValue([{ id: 'approval-1' }]);
+    mockWorkflowDependenciesAreApplied.mockResolvedValue({ ok: true });
+    mockSyncWorkflowStepForApproval.mockResolvedValue([]);
 });
 
 function makeRequest(body: unknown) {
@@ -176,13 +185,60 @@ describe('POST /api/chat/approvals/[id]/respond', () => {
             expect.objectContaining({
                 toolName: 'update_cost_line',
                 expectedRowVersion: 3,
-                ctx: { organizationId: 'org-A', projectId: 'proj-1' },
+                ctx: expect.objectContaining({ organizationId: 'org-A', projectId: 'proj-1' }),
             })
         );
         expect(mockEmit).toHaveBeenCalledWith(
             'thread-1',
             expect.objectContaining({ type: 'approval_resolved', status: 'applied' })
         );
+    });
+
+    it('emits the next unblocked workflow approval after applying a dependency', async () => {
+        mockGetCurrentUser.mockResolvedValue(okSession);
+        mockApprovalsLimit.mockResolvedValueOnce([pendingApproval]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: baseUser.id }]);
+        mockApply.mockResolvedValueOnce({ kind: 'applied', output: { id: 'cl-1', budgetCents: 500000 } });
+        mockSyncWorkflowStepForApproval.mockResolvedValueOnce([
+            {
+                id: 'approval-next',
+                runId: 'run-1',
+                toolName: 'create_note',
+                proposedDiff: { entity: 'note', entityId: null, summary: 'Create note', changes: [] },
+                createdAt: '2026-05-03T00:00:00.000Z',
+            },
+        ]);
+
+        const res = await POST(makeRequest({ decision: 'approve' }), { params });
+        expect(res.status).toBe(200);
+
+        expect(mockEmit).toHaveBeenCalledWith(
+            'thread-1',
+            expect.objectContaining({
+                type: 'awaiting_approval',
+                approvalId: 'approval-next',
+                toolName: 'create_note',
+            })
+        );
+    });
+
+    it('blocks approval when an earlier workflow dependency has not applied', async () => {
+        mockGetCurrentUser.mockResolvedValue(okSession);
+        mockApprovalsLimit.mockResolvedValueOnce([pendingApproval]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: baseUser.id }]);
+        mockWorkflowDependenciesAreApplied.mockResolvedValueOnce({
+            ok: false,
+            reason: 'Earlier workflow step is still waiting.',
+        });
+
+        const res = await POST(makeRequest({ decision: 'approve' }), { params });
+        expect(res.status).toBe(409);
+        const body = await res.json();
+        expect(body).toEqual({
+            status: 'blocked',
+            error: 'Earlier workflow step is still waiting.',
+        });
+        expect(mockApply).not.toHaveBeenCalled();
     });
 
     it('does not apply when another request has already claimed the approval', async () => {
@@ -308,6 +364,76 @@ describe('POST /api/chat/approvals/[id]/respond', () => {
             entity: 'meeting',
             op: 'created',
             id: 'meeting-new',
+        });
+    });
+
+    test('apply of create_addendum emits addendum created', async () => {
+        mockGetCurrentUser.mockResolvedValue({
+            user: { id: 'user-A', organizationId: 'org-A' },
+        });
+        mockApprovalsLimit.mockResolvedValueOnce([
+            {
+                id: 'approval-6',
+                organizationId: 'org-A',
+                threadId: 'thread-1',
+                projectId: 'proj-99',
+                toolName: 'create_addendum',
+                input: {
+                    stakeholderId: 'stk-mech',
+                    content: 'General update to the mechanical design documents.',
+                    documentIds: ['doc-1'],
+                },
+                expectedRowVersion: null,
+                status: 'pending',
+            },
+        ]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: 'user-A' }]);
+        mockApply.mockResolvedValue({
+            kind: 'applied',
+            output: { id: 'addendum-new', addendumNumber: 1 },
+        });
+
+        const res = await POST(makeRequest({ decision: 'approve' }), { params });
+        expect(res.status).toBe(200);
+
+        expect(mockEmitProject).toHaveBeenCalledWith('proj-99', {
+            type: 'entity_updated',
+            entity: 'addendum',
+            op: 'created',
+            id: 'addendum-new',
+        });
+    });
+
+    test('apply of attach_documents_to_note emits note updated', async () => {
+        mockGetCurrentUser.mockResolvedValue({
+            user: { id: 'user-A', organizationId: 'org-A' },
+        });
+        mockApprovalsLimit.mockResolvedValueOnce([
+            {
+                id: 'approval-7',
+                organizationId: 'org-A',
+                threadId: 'thread-1',
+                projectId: 'proj-99',
+                toolName: 'attach_documents_to_note',
+                input: { id: 'note-1', attachDocumentIds: ['doc-1'] },
+                expectedRowVersion: 2,
+                status: 'pending',
+            },
+        ]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: 'user-A' }]);
+        mockApply.mockResolvedValue({
+            kind: 'applied',
+            output: { id: 'note-1', attachedDocumentIds: ['doc-1'] },
+        });
+
+        const res = await POST(makeRequest({ decision: 'approve' }), { params });
+        expect(res.status).toBe(200);
+
+        expect(mockEmitProject).toHaveBeenCalledWith('proj-99', {
+            type: 'entity_updated',
+            entity: 'note',
+            op: 'updated',
+            id: 'note-1',
         });
     });
 

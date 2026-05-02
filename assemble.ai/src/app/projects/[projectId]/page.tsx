@@ -8,6 +8,12 @@ import { ProcurementCard } from '@/components/dashboard/ProcurementCard';
 import { DocumentCard } from '@/components/dashboard/DocumentCard';
 import { StakeholderRefreshProvider } from '@/lib/contexts/stakeholder-refresh-context';
 import { KnowledgeSubcategoryRefreshProvider } from '@/lib/contexts/knowledge-subcategory-refresh-context';
+import { useChatViewContextPatch } from '@/lib/contexts/chat-view-context';
+import { useProjectEvents } from '@/lib/hooks/use-project-events';
+import {
+  DOCUMENT_SELECTION_CHANGED_EVENT,
+  type DocumentSelectionChangedDetail,
+} from '@/lib/chat/document-selection-events';
 import { Loader2 } from 'lucide-react';
 import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
 
@@ -16,6 +22,11 @@ interface Project {
   name: string;
   code: string;
   status: string;
+}
+
+interface PlanningData {
+  details?: unknown;
+  [key: string]: unknown;
 }
 
 export default function ProjectWorkspace() {
@@ -28,24 +39,89 @@ export default function ProjectWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<Set<string>>(new Set());
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const { setViewContextPatch } = useChatViewContextPatch();
 
   // Planning data state for details panel
-  const [planningData, setPlanningData] = useState<any>(null);
+  const [planningData, setPlanningData] = useState<PlanningData | null>(null);
 
   // Profiler state - shared between left nav and middle panel
   const [profileBuildingClass, setProfileBuildingClass] = useState<BuildingClass | null>(null);
   const [profileProjectType, setProfileProjectType] = useState<ProjectType | null>(null);
   const [profileRegion, setProfileRegion] = useState<Region>('AU');
 
-  // Center panel tab state - persisted in URL so refresh keeps the user on the same tab
-  const centerActiveTab = searchParams.get('tab') ?? 'profiler';
+  // Center panel tab state - persisted in URL so refresh keeps the user on the same tab.
+  // This is pure client UI, so use native history instead of an App Router navigation
+  // to avoid re-rendering the whole project route on every tab switch.
+  const [centerActiveTab, setCenterActiveTabState] = useState(searchParams.get('tab') ?? 'brief');
+
+  // Sub-tab state (only meaningful when centerActiveTab === 'brief'). URL is the source of truth.
+  const VALID_BRIEF_SUBS = ['lot', 'building', 'objectives'] as const;
+  const rawSub = searchParams.get('sub');
+  const centerActiveSubTab = (VALID_BRIEF_SUBS as readonly string[]).includes(rawSub ?? '')
+    ? (rawSub as string)
+    : 'lot';
+
+  useEffect(() => {
+    setViewContextPatch({
+      tab: centerActiveTab,
+      sub: centerActiveTab === 'brief' ? centerActiveSubTab : undefined,
+      selectedEntityIds: {
+        document: Array.from(selectedDocumentIds),
+      },
+    });
+  }, [centerActiveSubTab, centerActiveTab, selectedDocumentIds, setViewContextPatch]);
+
+  // Legacy URL redirect: map old tab values to brief + matching sub.
+  // Runs once when an old value is detected; guarded so it never loops.
+  useEffect(() => {
+    const LEGACY_TO_SUB: Record<string, string> = {
+      profiler: 'building',
+      objectives: 'objectives',
+      'project-details': 'lot',
+    };
+    const tabParam = searchParams.get('tab');
+    if (tabParam && LEGACY_TO_SUB[tabParam]) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.set('tab', 'brief');
+      next.set('sub', LEGACY_TO_SUB[tabParam]);
+      window.history.replaceState(null, '', `/projects/${projectId}?${next.toString()}`);
+      setCenterActiveTabState('brief');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const nextTab = searchParams.get('tab') ?? 'brief';
+    setCenterActiveTabState((current) => (current === nextTab ? current : nextTab));
+  }, [searchParams]);
+
   const setCenterActiveTab = useCallback(
     (tab: string) => {
+      setCenterActiveTabState(tab);
       const next = new URLSearchParams(searchParams.toString());
       next.set('tab', tab);
-      router.replace(`/projects/${projectId}?${next.toString()}`, { scroll: false });
+      window.history.replaceState(
+        null,
+        '',
+        `/projects/${projectId}?${next.toString()}`
+      );
     },
-    [router, projectId, searchParams]
+    [projectId, searchParams]
+  );
+
+  const setCenterActiveSubTab = useCallback(
+    (sub: string) => {
+      const next = new URLSearchParams(searchParams.toString());
+      next.set('tab', 'brief');
+      next.set('sub', sub);
+      window.history.replaceState(
+        null,
+        '',
+        `/projects/${projectId}?${next.toString()}`
+      );
+      setCenterActiveTabState('brief');
+    },
+    [projectId, searchParams]
   );
 
   // Handler to set selected document IDs from an array (for transmittal load)
@@ -53,16 +129,45 @@ export default function ProjectWorkspace() {
     setSelectedDocumentIds(new Set(ids));
   }, []);
 
+  const applyDocumentSelection = useCallback(
+    (event: { mode: 'replace' | 'add' | 'remove' | 'clear'; documentIds: string[] }) => {
+      setSelectedDocumentIds((current) => {
+        if (event.mode === 'clear') return new Set();
+        const next = event.mode === 'replace' ? new Set<string>() : new Set(current);
+        for (const id of event.documentIds) {
+          if (event.mode === 'remove') {
+            next.delete(id);
+          } else {
+            next.add(id);
+          }
+        }
+        return next;
+      });
+    },
+    []
+  );
+
+  useProjectEvents(projectId, (event) => {
+    if (event.type !== 'document_selection_changed') return;
+    applyDocumentSelection(event);
+  });
+
+  useEffect(() => {
+    const handleChatSelection = (event: Event) => {
+      const detail = (event as CustomEvent<DocumentSelectionChangedDetail>).detail;
+      if (!detail || detail.projectId !== projectId) return;
+      applyDocumentSelection(detail);
+    };
+
+    window.addEventListener(DOCUMENT_SELECTION_CHANGED_EVENT, handleChatSelection);
+    return () => {
+      window.removeEventListener(DOCUMENT_SELECTION_CHANGED_EVENT, handleChatSelection);
+    };
+  }, [applyDocumentSelection, projectId]);
+
   // Handler for project name changes - triggers refresh of project switcher
   const handleProjectNameChange = useCallback(() => {
     setRefreshTrigger((prev) => prev + 1);
-  }, []);
-
-  // Handler for profile class/type changes from left nav
-  const handleProfileChange = useCallback((buildingClass: string | null, projectType: string | null, region?: Region) => {
-    setProfileBuildingClass(buildingClass as BuildingClass | null);
-    setProfileProjectType(projectType as ProjectType | null);
-    if (region) setProfileRegion(region);
   }, []);
 
   // Handler for building class change from middle panel
@@ -90,33 +195,23 @@ export default function ProjectWorkspace() {
   // Handler for stakeholder navigation - switches center panel to Stakeholders tab
   const handleStakeholderNavigate = useCallback(() => {
     setCenterActiveTab('stakeholders');
-  }, []);
+  }, [setCenterActiveTab]);
 
   // Handler for knowledge navigation - switches center panel to Knowledge tab
   const handleKnowledgeNavigate = useCallback(() => {
     setCenterActiveTab('knowledge');
-  }, []);
+  }, [setCenterActiveTab]);
 
-  // Handler for profiler navigation - switches center panel to Profiler tab
-  const handleShowProfiler = useCallback(() => {
-    setCenterActiveTab('profiler');
-  }, []);
-
-  // Handler for objectives navigation - switches center panel to Objectives tab
-  const handleShowObjectives = useCallback(() => {
-    setCenterActiveTab('objectives');
-  }, []);
-
-  // Handler for project details navigation - switches center panel to Project Details tab
-  const handleShowProjectDetails = useCallback(() => {
-    setCenterActiveTab('project-details');
-  }, []);
+  // Handler for Brief navigation - switches center panel to Brief tab
+  const handleShowBrief = useCallback(() => {
+    setCenterActiveTab('brief');
+  }, [setCenterActiveTab]);
 
   // Fetch planning data
   const fetchPlanningData = useCallback(async () => {
     try {
       const response = await fetch(`/api/planning/${projectId}`);
-      const data = await response.json();
+      const data = await response.json() as PlanningData;
       setPlanningData(data);
     } catch (error) {
       console.error('Error fetching planning data:', error);
@@ -206,15 +301,9 @@ export default function ProjectWorkspace() {
           leftContent={
             <PlanningCard
               projectId={project.id}
-              selectedDocumentIds={Array.from(selectedDocumentIds)}
-              onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
-              onProjectNameChange={handleProjectNameChange}
-              onProfileChange={handleProfileChange}
               onStakeholderNavigate={handleStakeholderNavigate}
               onKnowledgeNavigate={handleKnowledgeNavigate}
-              onShowProfiler={handleShowProfiler}
-              onShowObjectives={handleShowObjectives}
-              onShowProjectDetails={handleShowProjectDetails}
+              onShowBrief={handleShowBrief}
               activeMainTab={centerActiveTab}
               refreshKey={refreshTrigger}
               selectedProject={project}
@@ -236,6 +325,8 @@ export default function ProjectWorkspace() {
               onProfileLoad={handleProfileLoad}
               activeMainTab={centerActiveTab}
               onMainTabChange={setCenterActiveTab}
+              activeSubTab={centerActiveSubTab}
+              onSubTabChange={setCenterActiveSubTab}
               detailsData={planningData?.details}
               onDetailsUpdate={fetchPlanningData}
               onProjectNameChange={handleProjectNameChange}

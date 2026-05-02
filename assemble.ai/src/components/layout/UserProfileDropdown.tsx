@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { CreditCard, ExternalLink, LogOut, Moon, Settings, Sun } from 'lucide-react';
+import { CreditCard, ExternalLink, LogOut, Moon, Settings, Shield, Sun } from 'lucide-react';
 import { useSession, signOut } from '@/lib/auth-client';
 import { useTheme } from '@/lib/hooks/use-theme';
 import { UserAvatar } from './UserAvatar';
@@ -58,6 +58,10 @@ export function UserProfileDropdown() {
   }
 
   const { user } = session;
+  // isSuperAdmin is wired via better-auth additionalFields in src/lib/better-auth.ts.
+  // The client session type doesn't pick it up automatically (no inferAdditionalFields
+  // plugin), so we narrow at the read site.
+  const isSuperAdmin = (user as { isSuperAdmin?: boolean }).isSuperAdmin === true;
 
   return (
     <DropdownMenu>
@@ -105,6 +109,13 @@ export function UserProfileDropdown() {
           <CreditCard className="mr-2 h-4 w-4" />
           <span>Billing</span>
         </DropdownMenuItem>
+
+        {isSuperAdmin && (
+          <DropdownMenuItem onClick={() => handleNavigation('/admin')}>
+            <Shield className="mr-2 h-4 w-4" />
+            <span>Admin</span>
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuItem onClick={() => handleNavigation('/settings')} disabled>
           <Settings className="mr-2 h-4 w-4" />

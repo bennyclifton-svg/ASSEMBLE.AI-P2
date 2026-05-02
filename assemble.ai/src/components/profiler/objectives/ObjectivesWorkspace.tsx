@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { useToast } from '@/lib/hooks/use-toast';
+import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import type { ObjectiveType, ObjectiveSource } from '@/lib/db/objectives-schema';
 import { SectionGroup } from './SectionGroup';
-import { ObjectivesChatPanel } from './ObjectivesChatPanel';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 
@@ -92,6 +92,7 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
   });
   const [isLoading, setIsLoading] = useState(true);
   const [groupToDelete, setGroupToDelete] = useState<ObjectiveType | null>(null);
+  const [generatingSection, setGeneratingSection] = useState<ObjectiveType | null>(null);
 
   // Drag-and-drop / paste extract state
   const [isDragging, setIsDragging] = useState(false);
@@ -123,6 +124,13 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
   useEffect(() => {
     fetchRows();
   }, [fetchRows]);
+
+  useProjectEvents(projectId, (event) => {
+    if (event.entity === 'objective') {
+      fetchRows();
+      onUpdate?.();
+    }
+  });
 
   // --- Extract from file or text ---
   const handleExtraction = useCallback(async (input: File | string) => {
@@ -181,6 +189,43 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
       setIsExtracting(false);
     }
   }, [projectId, fetchRows, onUpdate, toast]);
+
+  // --- Generate from project profile (per section) ---
+  const handleGenerateSection = useCallback(async (type: ObjectiveType) => {
+    if (generatingSection) return;
+    setGeneratingSection(type);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/objectives/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section: type }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        const message =
+          errBody?.error?.message ||
+          (res.status === 404
+            ? 'Complete the building profile first.'
+            : 'Failed to generate objectives');
+        throw new Error(message);
+      }
+      await fetchRows();
+      onUpdate?.();
+      toast({
+        title: 'Objectives Generated',
+        description: `${SECTION_LABELS[type]} objectives are ready for review`,
+        variant: 'success',
+      });
+    } catch (error) {
+      toast({
+        title: 'Generation Failed',
+        description: error instanceof Error ? error.message : 'Failed to generate objectives',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingSection(null);
+    }
+  }, [projectId, generatingSection, fetchRows, onUpdate, toast]);
 
   // --- Drag handlers ---
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -556,6 +601,9 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
                   rows={rows[type]}
                   onSave={saveSection}
                   onDeleteAll={setGroupToDelete}
+                  onGenerate={handleGenerateSection}
+                  isGenerating={generatingSection === type}
+                  isAnyGenerating={generatingSection !== null}
                   isLastSection={idx === SECTION_ORDER.length - 1}
                 />
               ))}
@@ -587,9 +635,6 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
           </div>
         </div>
       </Modal>
-
-      {/* Chat panel anchored at bottom */}
-      <ObjectivesChatPanel projectId={projectId} />
     </div>
   );
 }

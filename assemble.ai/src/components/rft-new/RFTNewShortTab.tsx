@@ -9,11 +9,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { type RftNew } from '@/lib/hooks/use-rft-new';
 import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
-import { Textarea } from '@/components/ui/textarea';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { useFieldGeneration } from '@/lib/hooks/use-field-generation';
+import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { ObjectivesReadOnlyList } from '@/components/profiler/objectives/ObjectivesReadOnlyList';
 import type { ObjectiveRow } from '@/components/profiler/objectives/ObjectivesWorkspace';
@@ -492,87 +492,97 @@ export function RFTNewShortTab({
         onDateChange?.(newDate);
     }, [onDateChange]);
 
-    // Fetch all data when component mounts
-    useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                // Fetch all planning data from consolidated endpoint
-                const planningRes = await fetch(`/api/planning/${projectId}`);
-                if (planningRes.ok) {
-                    const data = await planningRes.json();
+    const fetchData = useCallback(async (showLoading = true) => {
+        if (showLoading) setIsLoading(true);
+        try {
+            // Fetch all planning data from consolidated endpoint
+            const planningRes = await fetch(`/api/planning/${projectId}`);
+            if (planningRes.ok) {
+                const data = await planningRes.json();
 
-                    // Set Details
-                    if (data.details) {
-                        setProjectDetails({
-                            projectName: data.details.projectName || 'Untitled Project',
-                            address: data.details.address || '',
-                        });
-                    } else {
-                        // Fallback if details are missing but we need to show something (or rely on initial null)
-                        setProjectDetails({
-                            projectName: 'Untitled Project',
-                            address: '',
-                        });
-                    }
-
-                }
-
-                // Fetch Objectives from new profilerObjectives API
-                const objectivesRes = await fetch(`/api/projects/${projectId}/objectives`);
-                if (objectivesRes.ok) {
-                    const objectivesData = await objectivesRes.json();
-                    if (objectivesData.success && objectivesData.data) {
-                        setObjectives({
-                            planning: objectivesData.data.planning ?? [],
-                            functional: objectivesData.data.functional ?? [],
-                            quality: objectivesData.data.quality ?? [],
-                            compliance: objectivesData.data.compliance ?? [],
-                        });
-                    }
-                }
-
-                // Fetch Program Activities
-                const programRes = await fetch(`/api/projects/${projectId}/program`);
-                if (programRes.ok) {
-                    const programData = await programRes.json();
-                    if (Array.isArray(programData.activities)) {
-                        setProgramActivities(programData.activities.sort((a: ProgramActivity, b: ProgramActivity) => a.sortOrder - b.sortOrder));
-                    }
-                }
-
-                // Fetch cost lines filtered by stakeholder
-                let costUrl = `/api/projects/${projectId}/cost-lines`;
-                if (stakeholderId) {
-                    costUrl += `?stakeholderId=${stakeholderId}`;
-
-                    // Fetch Stakeholder Brief info
-                    const stakeholderRes = await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`);
-                    if (stakeholderRes.ok) {
-                        const stakeholderData = await stakeholderRes.json();
-                        setBriefData({
-                            service: stakeholderData.briefServices || stakeholderData.scopeWorks || '',
-                            deliverables: stakeholderData.briefDeliverables || stakeholderData.scopeDeliverables || '',
-                        });
-                    }
-                }
-
-                const costRes = await fetch(costUrl);
-                if (costRes.ok) {
-                    const costData = await costRes.json();
-                    setCostLines(costData || []);
+                // Set Details
+                if (data.details) {
+                    setProjectDetails({
+                        projectName: data.details.projectName || 'Untitled Project',
+                        address: data.details.address || '',
+                    });
                 } else {
-                    setCostLines([]);
+                    // Fallback if details are missing but we need to show something (or rely on initial null)
+                    setProjectDetails({
+                        projectName: 'Untitled Project',
+                        address: '',
+                    });
                 }
-            } catch (error) {
-                console.error('Error fetching RFT data:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
 
-        fetchData();
+            }
+
+            // Fetch Objectives from new profilerObjectives API
+            const objectivesRes = await fetch(`/api/projects/${projectId}/objectives`);
+            if (objectivesRes.ok) {
+                const objectivesData = await objectivesRes.json();
+                if (objectivesData.success && objectivesData.data) {
+                    setObjectives({
+                        planning: objectivesData.data.planning ?? [],
+                        functional: objectivesData.data.functional ?? [],
+                        quality: objectivesData.data.quality ?? [],
+                        compliance: objectivesData.data.compliance ?? [],
+                    });
+                }
+            }
+
+            // Fetch Program Activities
+            const programRes = await fetch(`/api/projects/${projectId}/program`);
+            if (programRes.ok) {
+                const programData = await programRes.json();
+                if (Array.isArray(programData.activities)) {
+                    setProgramActivities(programData.activities.sort((a: ProgramActivity, b: ProgramActivity) => a.sortOrder - b.sortOrder));
+                }
+            }
+
+            // Fetch cost lines filtered by stakeholder
+            let costUrl = `/api/projects/${projectId}/cost-lines`;
+            if (stakeholderId) {
+                costUrl += `?stakeholderId=${stakeholderId}`;
+
+                // Fetch Stakeholder Brief info
+                const stakeholderRes = await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`);
+                if (stakeholderRes.ok) {
+                    const stakeholderData = await stakeholderRes.json();
+                    setBriefData({
+                        service: stakeholderData.briefServices || stakeholderData.scopeWorks || '',
+                        deliverables: stakeholderData.briefDeliverables || stakeholderData.scopeDeliverables || '',
+                    });
+                }
+            }
+
+            const costRes = await fetch(costUrl);
+            if (costRes.ok) {
+                const costData = await costRes.json();
+                setCostLines(costData || []);
+            } else {
+                setCostLines([]);
+            }
+        } catch (error) {
+            console.error('Error fetching RFT data:', error);
+        } finally {
+            if (showLoading) setIsLoading(false);
+        }
     }, [projectId, stakeholderId]);
+
+    // Fetch all data when component mounts.
+    useEffect(() => {
+        void fetchData();
+    }, [fetchData]);
+
+    useProjectEvents(projectId, (event) => {
+        if (
+            event.type === 'entity_updated' &&
+            event.entity === 'stakeholder' &&
+            event.id === stakeholderId
+        ) {
+            void fetchData(false);
+        }
+    });
 
     /**
      * Build informative description of sources used for generation

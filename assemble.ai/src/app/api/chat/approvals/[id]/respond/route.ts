@@ -20,16 +20,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { approvals, chatThreads } from '@/lib/db/pg-schema';
+import { actionInvocations, approvals, chatThreads } from '@/lib/db/pg-schema';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { and, eq } from 'drizzle-orm';
 import { emitChatEvent } from '@/lib/agents/events';
 import { emitProjectEvent, type ProjectEntity } from '@/lib/agents/project-events';
 import { applyApproval } from '@/lib/agents/applicators';
+import { getActionByToolName } from '@/lib/actions/registry';
+import {
+    syncWorkflowStepForApproval,
+    workflowDependenciesAreApplied,
+} from '@/lib/workflows';
+import '@/lib/actions';
 
 /** Map a mutating tool name to the project event it should emit. */
 function eventForTool(toolName: string): { entity: ProjectEntity; op: 'created' | 'updated' } | null {
     switch (toolName) {
+        case 'create_addendum':
+            return { entity: 'addendum', op: 'created' };
         case 'create_cost_line':
             return { entity: 'cost_line', op: 'created' };
         case 'update_cost_line':
@@ -39,6 +47,7 @@ function eventForTool(toolName: string): { entity: ProjectEntity; op: 'created' 
         case 'create_note':
             return { entity: 'note', op: 'created' };
         case 'update_note':
+        case 'attach_documents_to_note':
             return { entity: 'note', op: 'updated' };
         case 'create_risk':
             return { entity: 'risk', op: 'created' };
@@ -58,13 +67,56 @@ function eventForTool(toolName: string): { entity: ProjectEntity; op: 'created' 
             return { entity: 'program_milestone', op: 'updated' };
         case 'update_stakeholder':
             return { entity: 'stakeholder', op: 'updated' };
+        case 'set_project_objectives':
+            return { entity: 'objective', op: 'updated' };
         default:
             return null;
     }
 }
 
+function emitActionEvents(
+    projectId: string,
+    action: ReturnType<typeof getActionByToolName>,
+    output: unknown
+): boolean {
+    if (!action?.emits?.length) return false;
+    const record =
+        output && typeof output === 'object' && !Array.isArray(output)
+            ? (output as Record<string, unknown>)
+            : {};
+
+    for (const event of action.emits) {
+        const outputKey = event.idFromOutput ?? 'id';
+        const id = record[outputKey];
+        if (typeof id !== 'string') continue;
+        emitProjectEvent(projectId, {
+            type: 'entity_updated',
+            entity: event.entity,
+            op: event.op,
+            id,
+        });
+    }
+
+    return true;
+}
+
 interface RouteParams {
     params: Promise<{ id: string }>;
+}
+
+async function updateActionInvocationForApproval(
+    approvalId: string,
+    patch: Partial<typeof actionInvocations.$inferInsert>
+): Promise<void> {
+    try {
+        await db
+            .update(actionInvocations)
+            .set(patch)
+            .where(eq(actionInvocations.approvalId, approvalId));
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.warn('[chat] action invocation audit update skipped', { approvalId, error: message });
+    }
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -142,6 +194,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 );
             }
 
+            await updateActionInvocationForApproval(approvalId, {
+                status: 'rejected',
+                error: { reason: 'User rejected the proposed action.' },
+                finishedAt: new Date(),
+            });
+            await syncWorkflowStepForApproval({
+                approvalId,
+                state: 'rejected',
+                error: { reason: 'User rejected the proposed action.' },
+            });
+
             emitChatEvent(approval.threadId, {
                 type: 'approval_resolved',
                 approvalId,
@@ -152,6 +215,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Approve path — run the applicator under optimistic locking.
+        const dependencyCheck = await workflowDependenciesAreApplied(approvalId);
+        if (dependencyCheck.ok === false) {
+            return NextResponse.json(
+                { status: 'blocked', error: dependencyCheck.reason },
+                { status: 409 }
+            );
+        }
+
         const [claimed] = await db
             .update(approvals)
             .set({
@@ -180,6 +251,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 ctx: {
                     organizationId: orgId,
                     projectId: approval.projectId,
+                    userId: authResult.user.id,
+                    threadId: approval.threadId,
+                    runId: approval.runId,
                 },
             });
         } catch (err) {
@@ -192,6 +266,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     respondedAt: new Date(),
                 })
                 .where(eq(approvals.id, approvalId));
+
+            await updateActionInvocationForApproval(approvalId, {
+                status: 'error',
+                error: { message },
+                finishedAt: new Date(),
+            });
+            await syncWorkflowStepForApproval({
+                approvalId,
+                state: 'failed',
+                error: { message },
+            });
 
             emitChatEvent(approval.threadId, {
                 type: 'approval_resolved',
@@ -214,6 +299,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 })
                 .where(eq(approvals.id, approvalId));
 
+            await updateActionInvocationForApproval(approvalId, {
+                status: 'applied',
+                output: result.output as object,
+                finishedAt: new Date(),
+            });
+            const newlyActionableApprovals =
+                (await syncWorkflowStepForApproval({
+                    approvalId,
+                    state: 'applied',
+                    output: result.output,
+                })) ?? [];
+
             emitChatEvent(approval.threadId, {
                 type: 'approval_resolved',
                 approvalId,
@@ -221,15 +318,29 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 appliedOutput: result.output,
             });
 
-            const event = eventForTool(approval.toolName);
-            const appliedId = (result.output as { id?: unknown })?.id;
-            if (event && typeof appliedId === 'string') {
-                emitProjectEvent(approval.projectId, {
-                    type: 'entity_updated',
-                    entity: event.entity,
-                    op: event.op,
-                    id: appliedId,
+            for (const nextApproval of newlyActionableApprovals) {
+                emitChatEvent(approval.threadId, {
+                    type: 'awaiting_approval',
+                    runId: nextApproval.runId,
+                    approvalId: nextApproval.id,
+                    toolName: nextApproval.toolName,
+                    proposedDiff: nextApproval.proposedDiff,
+                    createdAt: nextApproval.createdAt,
                 });
+            }
+
+            const action = getActionByToolName(approval.toolName);
+            if (!emitActionEvents(approval.projectId, action, result.output)) {
+                const event = eventForTool(approval.toolName);
+                const appliedId = (result.output as { id?: unknown })?.id;
+                if (event && typeof appliedId === 'string') {
+                    emitProjectEvent(approval.projectId, {
+                        type: 'entity_updated',
+                        entity: event.entity,
+                        op: event.op,
+                        id: appliedId,
+                    });
+                }
             }
 
             return NextResponse.json({ status: 'applied', output: result.output });
@@ -244,6 +355,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     respondedAt: new Date(),
                 })
                 .where(eq(approvals.id, approvalId));
+
+            await updateActionInvocationForApproval(approvalId, {
+                status: 'error',
+                error: { reason: result.reason },
+                finishedAt: new Date(),
+            });
+            await syncWorkflowStepForApproval({
+                approvalId,
+                state: 'failed',
+                error: { reason: result.reason },
+            });
 
             emitChatEvent(approval.threadId, {
                 type: 'approval_resolved',
@@ -264,6 +386,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 respondedAt: new Date(),
             })
             .where(eq(approvals.id, approvalId));
+
+        await updateActionInvocationForApproval(approvalId, {
+            status: 'error',
+            error: { reason: result.reason },
+            finishedAt: new Date(),
+        });
+        await syncWorkflowStepForApproval({
+            approvalId,
+            state: 'failed',
+            error: { reason: result.reason },
+        });
 
         emitChatEvent(approval.threadId, {
             type: 'approval_resolved',

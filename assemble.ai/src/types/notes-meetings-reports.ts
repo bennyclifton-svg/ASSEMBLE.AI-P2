@@ -53,6 +53,69 @@ export function getNoteColorStyles(value: unknown): NoteColorStyles {
   return NOTE_COLOR_MAP[getNoteColor(value)];
 }
 
+export const NOTE_TYPES = [
+  'rfi',
+  'notice',
+  'eot',
+  'defect',
+  'variation',
+  'risk',
+  'transmittal',
+  'review',
+  'note',
+] as const;
+
+export type NoteType = typeof NOTE_TYPES[number];
+
+export const DEFAULT_NOTE_TYPE: NoteType = 'note';
+
+export const NOTE_TYPE_LABELS: Record<NoteType, string> = {
+  rfi: 'RFI',
+  notice: 'Notice',
+  eot: 'EOT',
+  defect: 'Defect',
+  variation: 'Variation',
+  risk: 'Risk',
+  transmittal: 'Transmittal',
+  review: 'Review',
+  note: 'Note',
+};
+
+export function isNoteType(value: unknown): value is NoteType {
+  return typeof value === 'string' && (NOTE_TYPES as readonly string[]).includes(value);
+}
+
+export function getNoteType(value: unknown): NoteType {
+  return isNoteType(value) ? value : DEFAULT_NOTE_TYPE;
+}
+
+export function getNoteTypeLabel(value: unknown): string {
+  return NOTE_TYPE_LABELS[getNoteType(value)];
+}
+
+export const NOTE_STATUSES = ['open', 'closed'] as const;
+
+export type NoteStatus = typeof NOTE_STATUSES[number];
+
+export const DEFAULT_NOTE_STATUS: NoteStatus = 'open';
+
+export const NOTE_STATUS_LABELS: Record<NoteStatus, string> = {
+  open: 'Open',
+  closed: 'Closed',
+};
+
+export function isNoteStatus(value: unknown): value is NoteStatus {
+  return typeof value === 'string' && (NOTE_STATUSES as readonly string[]).includes(value);
+}
+
+export function getNoteStatus(value: unknown): NoteStatus {
+  return isNoteStatus(value) ? value : DEFAULT_NOTE_STATUS;
+}
+
+export function getNoteStatusLabel(value: unknown): string {
+  return NOTE_STATUS_LABELS[getNoteStatus(value)];
+}
+
 export interface Note {
   id: string;
   projectId: string;
@@ -61,6 +124,8 @@ export interface Note {
   content: string | null;
   isStarred: boolean;
   color: NoteColor;
+  type: NoteType;
+  status: NoteStatus;
   noteDate: string | null;
   reportingPeriodStart: string | null;
   reportingPeriodEnd: string | null;
@@ -86,6 +151,8 @@ export interface CreateNoteRequest {
   title?: string;
   content?: string;
   color?: NoteColor;
+  type?: NoteType;
+  status?: NoteStatus;
 }
 
 export interface UpdateNoteRequest {
@@ -93,6 +160,8 @@ export interface UpdateNoteRequest {
   content?: string;
   isStarred?: boolean;
   color?: NoteColor;
+  type?: NoteType;
+  status?: NoteStatus;
   noteDate?: string | null;
   reportingPeriodStart?: string | null;
   reportingPeriodEnd?: string | null;

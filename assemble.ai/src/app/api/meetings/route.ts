@@ -20,7 +20,11 @@ import { getCurrentUser } from '@/lib/auth/get-user';
 import { createMeetingSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, isNull, desc, sql } from 'drizzle-orm';
-import { STANDARD_AGENDA_SECTIONS } from '@/lib/constants/sections';
+import {
+    generateMeetingAgendaSections,
+    splitParentAndChildSections,
+    toMeetingSectionRows,
+} from '@/lib/services/section-generation';
 
 export async function GET(request: NextRequest) {
     return handleApiError(async () => {
@@ -120,6 +124,7 @@ export async function POST(request: NextRequest) {
         // Create new meeting
         const id = uuidv4();
         const now = new Date().toISOString();
+        const resolvedAgendaType = agendaType || 'standard';
 
         await db.insert(meetings).values({
             id,
@@ -128,27 +133,22 @@ export async function POST(request: NextRequest) {
             groupId: groupId || null,
             title: title || 'New Meeting',
             meetingDate: meetingDate || null,
-            agendaType: agendaType || 'standard',
+            agendaType: resolvedAgendaType,
             createdAt: now,
             updatedAt: now,
         });
 
-        // Create default standard agenda sections
-        const sectionsToCreate = STANDARD_AGENDA_SECTIONS.map((section) => ({
-            id: uuidv4(),
-            meetingId: id,
-            sectionKey: section.key,
-            sectionLabel: section.label,
-            content: null,
-            sortOrder: section.sortOrder,
-            parentSectionId: null,
-            stakeholderId: null,
-            createdAt: now,
-            updatedAt: now,
-        }));
+        const generatedSections = await generateMeetingAgendaSections(projectId, resolvedAgendaType);
+        const sectionsToCreate = toMeetingSectionRows(generatedSections, id, now);
 
         if (sectionsToCreate.length > 0) {
-            await db.insert(meetingSections).values(sectionsToCreate);
+            const { parentSections, childSections } = splitParentAndChildSections(sectionsToCreate);
+            if (parentSections.length > 0) {
+                await db.insert(meetingSections).values(parentSections);
+            }
+            if (childSections.length > 0) {
+                await db.insert(meetingSections).values(childSections);
+            }
         }
 
         // Fetch and return the created meeting with counts

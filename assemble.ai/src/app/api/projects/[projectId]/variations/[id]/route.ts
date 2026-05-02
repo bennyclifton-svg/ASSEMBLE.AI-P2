@@ -79,7 +79,7 @@ export async function PATCH(
             updatedAt: now,
         };
 
-        if (body.costLineId !== undefined) updateData.costLineId = body.costLineId;
+        if (body.costLineId !== undefined) updateData.costLineId = body.costLineId || null;
         if (body.category !== undefined) updateData.category = body.category;
         if (body.description !== undefined) updateData.description = body.description;
         if (body.status !== undefined) updateData.status = body.status;

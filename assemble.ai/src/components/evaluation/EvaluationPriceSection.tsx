@@ -144,7 +144,7 @@ export function EvaluationPriceSection({
     };
 
     return (
-        <div className="mt-6">
+        <div className="mt-2">
             {/* Header - Segmented white ribbons with grey surround */}
             <div className="flex items-stretch gap-0.5 p-2">
                 {/* Evaluation Price segment */}

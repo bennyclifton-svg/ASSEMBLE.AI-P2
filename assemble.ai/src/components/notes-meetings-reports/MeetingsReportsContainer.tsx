@@ -88,7 +88,7 @@ export function MeetingsReportsContainer({
     const btnClass = "flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--primary-foreground)] bg-[var(--color-accent-green)] hover:bg-[var(--primitive-green-dark)] disabled:opacity-50";
 
     return (
-        <div className={cn('flex flex-col h-full gap-4 overflow-y-auto pt-2', className)}>
+        <div className={cn('flex flex-col h-full gap-2 overflow-y-auto pt-2', className)}>
             {/* Top row: + New Meeting / + New Report buttons */}
             <div className="flex items-center justify-end gap-2 px-2">
                 <button

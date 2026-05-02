@@ -13,13 +13,19 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { retrieve, retrieveFromDomains } from '@/lib/rag/retrieval';
+import { retrieve, retrieveFromDomains, type RetrievalResult } from '@/lib/rag/retrieval';
 import { ragDb } from '@/lib/db/rag-client';
 import { db } from '@/lib/db';
 import { sql, eq } from 'drizzle-orm';
 import Anthropic from '@anthropic-ai/sdk';
 import { getCurrentUser } from '@/lib/auth/get-user';
-import { normalizeTag, isKnownTag } from '@/lib/constants/knowledge-domains';
+import type { ProfileTagInput } from '@/lib/constants/knowledge-domains';
+import {
+    PROJECT_KNOWLEDGE_SET_NAMES,
+    RFT_DOMAIN_TYPES,
+    RFT_FALLBACK_DOMAIN_TAGS,
+    resolveRftKnowledgeTags,
+} from '@/lib/rag/rft-knowledge';
 import {
     type FieldType,
     type InputInterpretation,
@@ -87,6 +93,13 @@ interface GenerateFieldResponse {
     };
 }
 
+interface ProjectContextResult {
+    text: string;
+    profileTags: ProfileTagInput;
+    projectType?: string;
+    state?: string;
+}
+
 export async function POST(req: NextRequest) {
     try {
         // Authenticate user
@@ -94,6 +107,7 @@ export async function POST(req: NextRequest) {
         if (!authResult.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+        const organizationId = authResult.user.organizationId || undefined;
 
         const body: GenerateFieldRequest = await req.json();
 
@@ -158,35 +172,56 @@ export async function POST(req: NextRequest) {
         }
 
         // Attempt RAG retrieval (optional - don't fail if unavailable)
-        let ragResults: any[] = [];
+        let ragResults: RetrievalResult[] = [];
         let ragChunksContext = '';
         let documentNames = new Map<string, string>();
         let ragAvailable = false;
 
         try {
-            // Find the project's Knowledge document set
+            const knowledgeSetNames = `{${PROJECT_KNOWLEDGE_SET_NAMES.join(',')}}`;
+
+            // Find the project's knowledge-source document sets. Historical
+            // flows created "Knowledge"; the current document UI creates
+            // "Ingest". Include the project repo as a fallback for synced
+            // project-scoped RAG documents.
             const documentSetResult = await ragDb.execute(sql`
                 SELECT id, name
                 FROM document_sets
                 WHERE project_id = ${body.projectId}
-                AND name = 'Knowledge'
-                LIMIT 1
+                AND (
+                    name = ANY(${knowledgeSetNames}::text[])
+                    OR repo_type = 'project'
+                )
+                ORDER BY
+                    CASE
+                        WHEN name = 'Knowledge' THEN 1
+                        WHEN name = 'Ingest' THEN 2
+                        WHEN repo_type = 'project' THEN 3
+                        ELSE 4
+                    END
             `);
 
-            const documentSets = (documentSetResult.rows || []) as any[];
+            const documentSets = (documentSetResult.rows || []) as Array<{
+                id: string;
+                name: string;
+            }>;
 
             if (documentSets.length > 0) {
-                const documentSetId = documentSets[0].id;
+                const documentSetIds = [
+                    ...new Set(documentSets.map((set) => set.id).filter(Boolean)),
+                ];
+                const documentSetIdsArray = `{${documentSetIds.join(',')}}`;
 
                 // Get synced documents in the set
                 const memberResults = await ragDb.execute(sql`
                     SELECT DISTINCT document_id as "documentId"
                     FROM document_set_members
-                    WHERE document_set_id = ${documentSetId}
+                    WHERE document_set_id = ANY(${documentSetIdsArray}::text[])
                     AND sync_status = 'synced'
                 `);
 
-                const documentIds = ((memberResults.rows || []) as any[]).map(m => m.documentId);
+                const documentIds = ((memberResults.rows || []) as Array<{ documentId: string }>)
+                    .map(m => m.documentId);
 
                 if (documentIds.length > 0) {
                     // Build query for RAG retrieval based on mode
@@ -206,7 +241,7 @@ export async function POST(req: NextRequest) {
                         // Build RAG chunks context
                         ragChunksContext = ragResults
                             .map((r, i) => `[Source ${i + 1}${r.sectionTitle ? ` - ${r.sectionTitle}` : ''}]\n${r.content}`)
-                            .join('\n\n---\n\n');
+                        .join('\n\n---\n\n');
 
                         // Get document names for sources
                         documentNames = await getDocumentNames(ragResults.map(r => r.documentId));
@@ -218,32 +253,56 @@ export async function POST(req: NextRequest) {
             console.log('[generate-field] RAG retrieval unavailable:', ragError);
         }
 
-        // Domain knowledge retrieval for discipline-specific fields
+        // Domain knowledge retrieval for discipline/trade-specific fields
         let domainContext = '';
         let domainAvailable = false;
         if (metadata.requiresDiscipline || metadata.requiresTrade) {
             try {
-                const normalizedDiscipline = normalizeTag(contextName);
-                const discipline = isKnownTag(normalizedDiscipline) ? normalizedDiscipline : undefined;
+                const ragQuery = buildRagQuery(body.userInput, inputMode, body.fieldType, contextName);
+                const domainTags = resolveRftKnowledgeTags({
+                    contextName,
+                    fieldType: body.fieldType,
+                    profile: projectContext.profileTags,
+                });
 
-                if (discipline) {
-                    const ragQuery = buildRagQuery(body.userInput, inputMode, body.fieldType, contextName);
-                    const domainResults = await retrieveFromDomains(ragQuery, {
-                        domainTags: [discipline],
-                        domainTypes: ['best_practices'],
+                console.log(`[generate-field] Domain tags: ${domainTags.join(', ') || '(none)'}`);
+
+                let domainResults = domainTags.length > 0
+                    ? await retrieveFromDomains(ragQuery, {
+                        domainTags,
+                        domainTypes: RFT_DOMAIN_TYPES,
+                        organizationId,
+                        projectType: projectContext.projectType,
+                        state: projectContext.state,
                         includePrebuilt: true,
-                        includeOrganization: true,
-                        topK: 10,
-                        rerankTopK: 3,
-                        minRelevanceScore: 0.3,
-                    });
+                        includeOrganization: Boolean(organizationId),
+                        topK: 14,
+                        rerankTopK: 5,
+                        minRelevanceScore: 0.25,
+                    })
+                    : [];
 
-                    if (domainResults.length > 0) {
-                        domainAvailable = true;
-                        domainContext = domainResults
-                            .map((r, i) => `[Domain ${i + 1} — ${r.domainName}${r.sectionTitle ? `: ${r.sectionTitle}` : ''}]\n${r.content}`)
-                            .join('\n\n---\n\n');
-                    }
+                if (domainResults.length === 0) {
+                    console.log('[generate-field] No exact domain results; retrying broad RFT fallback domains');
+                    domainResults = await retrieveFromDomains(ragQuery, {
+                        domainTags: RFT_FALLBACK_DOMAIN_TAGS,
+                        domainTypes: ['best_practices'],
+                        organizationId,
+                        projectType: projectContext.projectType,
+                        state: projectContext.state,
+                        includePrebuilt: true,
+                        includeOrganization: Boolean(organizationId),
+                        topK: 14,
+                        rerankTopK: 5,
+                        minRelevanceScore: 0.15,
+                    });
+                }
+
+                if (domainResults.length > 0) {
+                    domainAvailable = true;
+                    domainContext = domainResults
+                        .map((r, i) => `[Domain ${i + 1} - ${r.domainName}${r.sectionTitle ? `: ${r.sectionTitle}` : ''}]\n${r.content}`)
+                        .join('\n\n---\n\n');
                 }
             } catch (domainError) {
                 console.log('[generate-field] Domain knowledge retrieval unavailable:', domainError);
@@ -251,14 +310,14 @@ export async function POST(req: NextRequest) {
         }
 
         // Log which sources are available
-        console.log(`[generate-field] Sources: RAG=${ragAvailable}, Domain=${domainAvailable}, ProjectContext=${!!projectContext}, StakeholderContext=${!!stakeholderContext}`);
+        console.log(`[generate-field] Sources: RAG=${ragAvailable}, Domain=${domainAvailable}, ProjectContext=${!!projectContext.text}, StakeholderContext=${!!stakeholderContext}`);
 
         // Build the full prompt
         const promptTemplate = getPromptTemplate(body.fieldType, inputMode, ragAvailable);
         const fullPrompt = buildFullPrompt(
             promptTemplate,
             body.userInput,
-            projectContext,
+            projectContext.text,
             contextName,
             ragChunksContext,
             body.additionalContext,
@@ -301,9 +360,9 @@ export async function POST(req: NextRequest) {
             metadata: {
                 usedRAG: ragAvailable,
                 usedDomainKnowledge: domainAvailable,
-                usedProjectContext: !!projectContext && projectContext !== 'No project context available.',
-                usedProfiler: projectContext.includes('## Project Profile'),
-                usedObjectives: projectContext.includes('## Project Objectives'),
+                usedProjectContext: !!projectContext.text && projectContext.text !== 'No project context available.',
+                usedProfiler: projectContext.text.includes('## Project Profile'),
+                usedObjectives: projectContext.text.includes('## Project Objectives'),
                 ragDocumentCount: new Set(ragResults.map(r => r.documentId)).size,
                 ragChunkCount: ragResults.length,
             },
@@ -326,7 +385,7 @@ export async function POST(req: NextRequest) {
  * Includes profiler selections (buildingClass, projectType, subclass, complexity, scale)
  * and profiler objectives (functional quality, planning compliance)
  */
-async function fetchProjectContext(projectId: string): Promise<string> {
+async function fetchProjectContext(projectId: string): Promise<ProjectContextResult> {
     try {
         // Fetch project details
         const [details] = await db
@@ -352,6 +411,8 @@ async function fetchProjectContext(projectId: string): Promise<string> {
             : [null];
 
         const lines: string[] = [];
+        const profileTags: ProfileTagInput = {};
+        let state: string | undefined;
 
         // Project Details
         if (details) {
@@ -362,14 +423,22 @@ async function fetchProjectContext(projectId: string): Promise<string> {
             if (details.buildingClass) lines.push(`Building Class: ${details.buildingClass}`);
             if (details.zoning) lines.push(`Zoning: ${details.zoning}`);
             if (details.lotArea) lines.push(`Lot Area: ${details.lotArea} sqm`);
+            if (details.buildingClass) profileTags.buildingClass = details.buildingClass;
+            state = normalizeAustralianState(details.jurisdiction);
         }
 
         // Profiler Data
         if (profile) {
             lines.push('');
             lines.push('## Project Profile');
-            if (profile.buildingClass) lines.push(`Building Class: ${profile.buildingClass}`);
-            if (profile.projectType) lines.push(`Project Type: ${profile.projectType}`);
+            if (profile.buildingClass) {
+                lines.push(`Building Class: ${profile.buildingClass}`);
+                profileTags.buildingClass = profile.buildingClass;
+            }
+            if (profile.projectType) {
+                lines.push(`Project Type: ${profile.projectType}`);
+                profileTags.projectType = profile.projectType;
+            }
 
             // Parse and add subclass
             if (profile.subclass) {
@@ -377,6 +446,7 @@ async function fetchProjectContext(projectId: string): Promise<string> {
                     const subclasses = JSON.parse(profile.subclass);
                     if (Array.isArray(subclasses) && subclasses.length > 0) {
                         lines.push(`Subclass: ${subclasses.join(', ')}`);
+                        profileTags.subclass = subclasses;
                     }
                 } catch { /* ignore parse errors */ }
             }
@@ -387,7 +457,7 @@ async function fetchProjectContext(projectId: string): Promise<string> {
                     const scale = JSON.parse(profile.scaleData);
                     if (Object.keys(scale).length > 0) {
                         const scaleItems = Object.entries(scale)
-                            .filter(([_, v]) => v !== null && v !== undefined)
+                            .filter(([, v]) => v !== null && v !== undefined)
                             .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
                             .join(', ');
                         if (scaleItems) lines.push(`Scale: ${scaleItems}`);
@@ -401,10 +471,11 @@ async function fetchProjectContext(projectId: string): Promise<string> {
                     const complexity = JSON.parse(profile.complexity);
                     if (Object.keys(complexity).length > 0) {
                         const complexityItems = Object.entries(complexity)
-                            .filter(([_, v]) => v !== null && v !== undefined && v !== '')
+                            .filter(([, v]) => v !== null && v !== undefined && v !== '')
                             .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${v}`)
                             .join(', ');
                         if (complexityItems) lines.push(`Complexity: ${complexityItems}`);
+                        profileTags.complexity = complexity as Record<string, string | string[]>;
                     }
                 } catch { /* ignore parse errors */ }
             }
@@ -454,11 +525,25 @@ async function fetchProjectContext(projectId: string): Promise<string> {
             if (legacyObjectives.program) lines.push(`Program Objectives: ${legacyObjectives.program}`);
         }
 
-        return lines.length > 0 ? lines.join('\n') : 'No project context available.';
+        return {
+            text: lines.length > 0 ? lines.join('\n') : 'No project context available.',
+            profileTags,
+            projectType: profileTags.projectType,
+            state,
+        };
     } catch (error) {
         console.error('[generate-field] Error fetching project context:', error);
-        return 'Project context not available.';
+        return {
+            text: 'Project context not available.',
+            profileTags: {},
+        };
     }
+}
+
+function normalizeAustralianState(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const match = value.toUpperCase().match(/\b(NSW|VIC|QLD|WA|SA|TAS|ACT|NT)\b/);
+    return match?.[1];
 }
 
 /**
@@ -564,7 +649,7 @@ async function getDocumentNames(documentIds: string[]): Promise<Map<string, stri
             WHERE d.id IN (${sql.join(documentIds.map(id => sql`${id}`), sql`, `)})
         `);
 
-        for (const row of (results.rows || []) as any[]) {
+        for (const row of (results.rows || []) as Array<{ id: string; original_name?: string | null }>) {
             if (row.original_name) {
                 names.set(row.id, row.original_name);
             }

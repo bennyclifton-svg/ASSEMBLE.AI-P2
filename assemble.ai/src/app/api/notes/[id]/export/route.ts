@@ -24,6 +24,7 @@ import { getCurrentUser } from '@/lib/auth/get-user';
 import { eq, and, isNull } from 'drizzle-orm';
 import { exportToPDF } from '@/lib/export/pdf-enhanced';
 import { exportToDOCX } from '@/lib/export/docx-enhanced';
+import { getNoteStatusLabel, getNoteTypeLabel } from '@/types/notes-meetings-reports';
 
 interface RouteContext {
     params: Promise<{ id: string }>;
@@ -42,6 +43,8 @@ function buildNoteHeaderHtml(
     projectName: string,
     address: string | null,
     noteTitle: string,
+    noteType: string,
+    noteStatus: string,
     noteDate: string | null,
 ): string {
     const projectLabel = projectCode ? `${projectCode} — ${projectName}` : projectName;
@@ -72,6 +75,11 @@ function buildNoteHeaderHtml(
       <td class="label-col" style="font-weight:bold;color:#1A6FB5;padding:4px 6px;border:1px solid #DADADA;">Document</td>
       <td style="padding:4px 6px;border:1px solid #DADADA;font-weight:bold;">${escapeHtml(noteTitle)}</td>
       <td class="issued-col" style="font-weight:bold;color:#1A6FB5;padding:4px 6px;border:1px solid #DADADA;text-align:right;">${escapeHtml(issuedStr)}</td>
+    </tr>
+    <tr>
+      <td class="label-col" style="font-weight:bold;color:#1A6FB5;padding:4px 6px;border:1px solid #DADADA;">Type</td>
+      <td style="padding:4px 6px;border:1px solid #DADADA;">${escapeHtml(noteType)}</td>
+      <td style="padding:4px 6px;border:1px solid #DADADA;text-align:right;">${escapeHtml(noteStatus)}</td>
     </tr>
   </tbody>
 </table>
@@ -199,6 +207,8 @@ export async function GET(
             projectRow?.projectName ?? title,
             projectRow?.address ?? null,
             title,
+            getNoteTypeLabel(note.type),
+            getNoteStatusLabel(note.status),
             note.noteDate ?? null,
         );
 

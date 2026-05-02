@@ -16,12 +16,14 @@ import type {
 interface StakeholderRowProps {
   stakeholder: StakeholderWithStatus;
   onUpdate?: (id: string, data: UpdateStakeholderRequest) => Promise<StakeholderWithStatus | null>;
-  onUpdateTenderStatus?: (id: string, statusType: TenderStatusType, isActive: boolean) => void;
+  onUpdateTenderStatus?: (id: string, statusType: TenderStatusType, isActive: boolean) => Promise<boolean> | void;
   onUpdateSubmissionStatus?: (id: string, status: SubmissionStatus) => void;
   onDelete?: (id: string) => Promise<boolean>;
   isSelected?: boolean;
   onSelect?: (id: string, event: React.MouseEvent) => void;
 }
+
+const TENDER_STATUS_ORDER: TenderStatusType[] = ['brief', 'tender', 'rec', 'award'];
 
 // Tender status labels (T-S-R-A display)
 const TENDER_STATUS_LABELS: Record<TenderStatusType, string> = {
@@ -271,26 +273,25 @@ export function StakeholderRow({
         {/* Tender Progress Bar (Consultant/Contractor) */}
         {isConsultantOrContractor && tenderStatuses.length > 0 && (
           <div className="flex items-center gap-0.5">
-            {(['brief', 'tender', 'rec', 'award'] as TenderStatusType[]).map((type) => {
+            {TENDER_STATUS_ORDER.map((type) => {
               const status = tenderStatuses.find((s) => s.statusType === type);
-              const isActive = status?.isActive || false;
-              const isComplete = status?.isComplete || false;
+              const isActive = Boolean(status?.isActive || status?.isComplete);
 
               return (
                 <button
                   key={type}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (onUpdateTenderStatus) {
                       onUpdateTenderStatus(stakeholder.id, type, !isActive);
                     }
                   }}
+                  aria-pressed={isActive}
                   className={cn(
                     'w-5 h-5 text-xs font-medium rounded transition-colors',
-                    isComplete
-                      ? 'bg-[var(--color-accent-green)] text-white'
-                      : isActive
+                    isActive
                       ? 'bg-[var(--color-accent-blue)] text-white'
-                      : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)]',
+                      : 'bg-white text-[var(--color-text-muted)] border border-[var(--color-border)]',
                     'hover:opacity-80 cursor-pointer'
                   )}
                   title={TENDER_STATUS_TOOLTIPS[type]}

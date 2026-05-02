@@ -18,7 +18,7 @@ interface NotesToolbarProps {
 
 const SORT_FIELDS: { key: NotesSortField; label: string }[] = [
     { key: 'date', label: 'Date' },
-    { key: 'color', label: 'Color' },
+    { key: 'type', label: 'Type' },
 ];
 
 export function NotesToolbar({

@@ -5,6 +5,7 @@ import { Trash } from 'lucide-react';
 import type { ObjectiveType } from '@/lib/db/objectives-schema';
 import type { ObjectiveRow } from './ObjectivesWorkspace';
 import { cn } from '@/lib/utils';
+import { DiamondIcon } from '@/components/ui/diamond-icon';
 
 interface SectionGroupProps {
   type: ObjectiveType;
@@ -12,6 +13,9 @@ interface SectionGroupProps {
   rows: ObjectiveRow[];
   onSave: (type: ObjectiveType, lines: string[]) => Promise<void>;
   onDeleteAll: (type: ObjectiveType) => void;
+  onGenerate: (type: ObjectiveType) => void;
+  isGenerating?: boolean;
+  isAnyGenerating?: boolean;
   isLastSection?: boolean;
 }
 
@@ -29,6 +33,9 @@ export function SectionGroup({
   rows,
   onSave,
   onDeleteAll,
+  onGenerate,
+  isGenerating = false,
+  isAnyGenerating = false,
   isLastSection = false,
 }: SectionGroupProps) {
   const initial = rowsToText(rows);
@@ -89,19 +96,42 @@ export function SectionGroup({
             </span>
           )}
         </span>
-        <button
-          onClick={() => onDeleteAll(type)}
-          className={cn(
-            'p-1 rounded transition-colors',
-            hasRows
-              ? 'text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10'
-              : 'text-[var(--color-text-muted)]/30 cursor-not-allowed',
-          )}
-          title={`Delete all ${label} objectives`}
-          disabled={!hasRows}
-        >
-          <Trash className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onGenerate(type)}
+            disabled={isAnyGenerating}
+            className={cn(
+              'flex items-center gap-1.5 text-sm font-medium transition-all',
+              isGenerating
+                ? 'text-[var(--color-accent-copper)] cursor-wait'
+                : isAnyGenerating
+                  ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
+                  : 'text-[var(--color-accent-copper)] hover:opacity-80',
+            )}
+            title={isGenerating ? 'Generating...' : `Generate ${label} objectives`}
+          >
+            <DiamondIcon
+              className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
+              variant="empty"
+            />
+            <span className={isGenerating ? 'animate-text-aurora' : ''}>
+              {isGenerating ? 'Generating...' : 'Generate'}
+            </span>
+          </button>
+          <button
+            onClick={() => onDeleteAll(type)}
+            className={cn(
+              'p-1 rounded transition-colors',
+              hasRows
+                ? 'text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10'
+                : 'text-[var(--color-text-muted)]/30 cursor-not-allowed',
+            )}
+            title={`Delete all ${label} objectives`}
+            disabled={!hasRows}
+          >
+            <Trash className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Textarea body */}

@@ -232,7 +232,7 @@ export function MeetingsPanel({
     );
 
     return (
-        <div className={cn('mt-6', className)}>
+        <div className={cn(className)}>
             {/* Header - Segmented ribbon with numbered tabs */}
             <SectionHeader
                 title={activeMeeting?.title || groupTitle || "Meetings"}

@@ -8,15 +8,17 @@
 
 'use client';
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import Image from 'next/image';
 import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SingleNotePanel } from './SingleNotePanel';
+import { NotesToolbar } from './NotesToolbar';
 import { useNotes, useNoteMutations } from '@/lib/hooks/use-notes';
+import { useUiPreferences, type NotesSortDir, type NotesSortField, type NotesViewMode } from '@/lib/hooks/use-ui-preferences';
 import { cn } from '@/lib/utils';
-import type { Note, NoteColor } from '@/types/notes-meetings-reports';
+import { getNoteType, NOTE_TYPES, type Note, type NoteColor, type NoteType } from '@/types/notes-meetings-reports';
 
 interface NoteWithCount extends Note {
     transmittalCount: number;
@@ -30,6 +32,34 @@ interface NotesPanelProps {
     className?: string;
 }
 
+const DEFAULT_SORT_DIR_BY_FIELD: Record<NotesSortField, NotesSortDir> = {
+    date: 'desc',
+    type: 'asc',
+};
+
+const TYPE_SORT_ORDER: Record<NoteType, number> = NOTE_TYPES.reduce((acc, type, index) => {
+    acc[type] = index;
+    return acc;
+}, {} as Record<NoteType, number>);
+
+function normaliseView(value: unknown): NotesViewMode {
+    return value === 'list' ? 'list' : 'tiles';
+}
+
+function normaliseSortField(value: unknown): NotesSortField {
+    return value === 'type' ? 'type' : 'date';
+}
+
+function normaliseSortDir(value: unknown, field: NotesSortField): NotesSortDir {
+    return value === 'asc' || value === 'desc' ? value : DEFAULT_SORT_DIR_BY_FIELD[field];
+}
+
+function noteSortTimestamp(note: NoteWithCount): number {
+    const date = note.noteDate || note.createdAt;
+    const time = date ? new Date(date.includes('T') ? date : `${date}T00:00:00`).getTime() : 0;
+    return Number.isNaN(time) ? 0 : time;
+}
+
 export function NotesPanel({
     projectId,
     onSaveTransmittal,
@@ -39,9 +69,19 @@ export function NotesPanel({
 }: NotesPanelProps) {
     const { notes, isLoading, error, refetch } = useNotes({ projectId });
     const { createNote, updateNote, deleteNote, copyNote } = useNoteMutations(projectId);
+    const { preferences, updatePreferences } = useUiPreferences(projectId);
 
     // Track expanded state for each note independently
     const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+    const prefNotes = preferences.notes ?? {};
+    const view = normaliseView(prefNotes.view);
+    const sortField = normaliseSortField(prefNotes.sortField);
+    const sortDir = normaliseSortDir(prefNotes.sortDir, sortField);
+    const [sortDirByField, setSortDirByField] = useState<Record<NotesSortField, NotesSortDir>>(DEFAULT_SORT_DIR_BY_FIELD);
+    const effectiveSortDirByField = useMemo(
+        () => ({ ...sortDirByField, [sortField]: sortDir }),
+        [sortDirByField, sortField, sortDir]
+    );
 
     // Notify parent when expansion state changes
     useEffect(() => {
@@ -75,10 +115,7 @@ export function NotesPanel({
         });
     }, [deleteNote]);
 
-    const handleUpdateNote = useCallback(async (
-        noteId: string,
-        data: { title?: string; content?: string; isStarred?: boolean; color?: NoteColor; noteDate?: string | null }
-    ) => {
+    const handleUpdateNote = useCallback(async (noteId: string, data: Parameters<typeof updateNote>[1]) => {
         await updateNote(noteId, data);
     }, [updateNote]);
 
@@ -86,6 +123,30 @@ export function NotesPanel({
         await copyNote(noteId);
         // Copied note stays collapsed by default
     }, [copyNote]);
+
+    const handleViewChange = useCallback((nextView: NotesViewMode) => {
+        updatePreferences({ notes: { view: nextView } });
+    }, [updatePreferences]);
+
+    const handleSortChange = useCallback((field: NotesSortField, dir: NotesSortDir) => {
+        setSortDirByField((prev) => ({ ...prev, [field]: dir }));
+        updatePreferences({ notes: { sortField: field, sortDir: dir } });
+    }, [updatePreferences]);
+
+    const sortedNotes = useMemo(() => {
+        const direction = sortDir === 'asc' ? 1 : -1;
+        return [...(notes as NoteWithCount[])].sort((a, b) => {
+            if (sortField === 'type') {
+                const typeDiff = TYPE_SORT_ORDER[getNoteType(a.type)] - TYPE_SORT_ORDER[getNoteType(b.type)];
+                if (typeDiff !== 0) return typeDiff * direction;
+            } else {
+                const dateDiff = noteSortTimestamp(a) - noteSortTimestamp(b);
+                if (dateDiff !== 0) return dateDiff * direction;
+                if (!!a.noteDate !== !!b.noteDate) return a.noteDate ? -1 : 1;
+            }
+            return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
+        });
+    }, [notes, sortDir, sortField]);
 
     // Error state
     if (error) {
@@ -175,8 +236,6 @@ export function NotesPanel({
         { name: 'sticky_green', color: 'green' },
     ];
 
-    const hasExpanded = expandedNotes.size > 0;
-
     return (
         <div className={cn('mt-6 flex gap-4', className)}>
             {/* Sticky note buttons - vertical column */}
@@ -205,6 +264,16 @@ export function NotesPanel({
 
             {/* Notes grid - to the right of sticky buttons */}
             <div className="flex-1 min-w-0">
+                <NotesToolbar
+                    view={view}
+                    sortField={sortField}
+                    sortDir={sortDir}
+                    sortDirByField={effectiveSortDirByField}
+                    onViewChange={handleViewChange}
+                    onSortChange={handleSortChange}
+                    className="mb-3"
+                />
+
                 {notes.length === 0 ? (
                     <div className="p-4 text-center">
                         <p className="text-sm text-[var(--color-text-muted)]">
@@ -212,47 +281,33 @@ export function NotesPanel({
                         </p>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-4">
-                        {/* Collapsed notes in grid */}
-                        <div className="grid gap-x-2 gap-y-4 shrink-0" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
-                            {[...(notes as NoteWithCount[])].sort((a, b) =>
-                                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                            ).filter(note => !expandedNotes.has(note.id)).map((note, index) => (
-                                <SingleNotePanel
+                    <div
+                        className={cn(view === 'list' ? 'flex flex-col gap-2' : 'grid gap-x-2 gap-y-4')}
+                        style={view === 'tiles' ? { gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' } : undefined}
+                    >
+                        {sortedNotes.map((note, index) => {
+                            const expanded = expandedNotes.has(note.id);
+                            return (
+                                <div
                                     key={note.id}
-                                    note={note}
-                                    noteNumber={index + 1}
-                                    projectId={projectId}
-                                    isExpanded={false}
-                                    onToggleExpand={() => toggleNoteExpanded(note.id)}
-                                    onUpdate={(data) => handleUpdateNote(note.id, data)}
-                                    onCopy={() => handleCopyNote(note.id)}
-                                    onDelete={() => handleDeleteNote(note.id)}
-                                    onSaveTransmittal={onSaveTransmittal ? () => onSaveTransmittal(note.id) : undefined}
-                                    onLoadTransmittal={onLoadTransmittal ? () => onLoadTransmittal(note.id) : undefined}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Expanded notes below the grid, each fills remaining space */}
-                        {[...(notes as NoteWithCount[])].sort((a, b) =>
-                            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-                        ).filter(note => expandedNotes.has(note.id)).map((note, index) => (
-                            <div key={note.id}>
-                                <SingleNotePanel
-                                    note={note}
-                                    noteNumber={index + 1}
-                                    projectId={projectId}
-                                    isExpanded={true}
-                                    onToggleExpand={() => toggleNoteExpanded(note.id)}
-                                    onUpdate={(data) => handleUpdateNote(note.id, data)}
-                                    onCopy={() => handleCopyNote(note.id)}
-                                    onDelete={() => handleDeleteNote(note.id)}
-                                    onSaveTransmittal={onSaveTransmittal ? () => onSaveTransmittal(note.id) : undefined}
-                                    onLoadTransmittal={onLoadTransmittal ? () => onLoadTransmittal(note.id) : undefined}
-                                />
-                            </div>
-                        ))}
+                                    style={view === 'tiles' && expanded ? { gridColumn: '1 / -1' } : undefined}
+                                >
+                                    <SingleNotePanel
+                                        note={note}
+                                        noteNumber={index + 1}
+                                        projectId={projectId}
+                                        isExpanded={expanded}
+                                        isListMode={view === 'list'}
+                                        onToggleExpand={() => toggleNoteExpanded(note.id)}
+                                        onUpdate={(data) => handleUpdateNote(note.id, data)}
+                                        onCopy={() => handleCopyNote(note.id)}
+                                        onDelete={() => handleDeleteNote(note.id)}
+                                        onSaveTransmittal={onSaveTransmittal ? () => onSaveTransmittal(note.id) : undefined}
+                                        onLoadTransmittal={onLoadTransmittal ? () => onLoadTransmittal(note.id) : undefined}
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

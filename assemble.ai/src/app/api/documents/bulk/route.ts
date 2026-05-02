@@ -61,7 +61,7 @@ export async function DELETE(request: NextRequest) {
         // 5. Delete file assets (if not referenced elsewhere)
         // 6. Delete documents
 
-        const { versions, fileAssets, transmittalItems, addendumTransmittals, rftNewTransmittals, trrTransmittals, noteTransmittals, meetingTransmittals, reportTransmittals } = await import('@/lib/db/schema');
+        const { versions, fileAssets, transmittalItems, addendumTransmittals, rftNewTransmittals, trrTransmittals, noteTransmittals, meetingTransmittals, reportTransmittals } = await import('@/lib/db/pg-schema');
         const { eq, inArray, and } = await import('drizzle-orm');
 
         // First, verify all documents belong to the specified project

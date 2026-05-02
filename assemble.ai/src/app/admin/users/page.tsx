@@ -76,9 +76,9 @@ export default async function AdminUsersPage() {
     return (
         <div className="mx-auto max-w-6xl px-6 py-8">
             <div className="mb-6">
-                <h1 className="text-2xl font-semibold text-white">Users</h1>
-                <p className="mt-1 text-sm text-gray-400">
-                    {users.length} total. All actions are logged to <code className="text-xs">admin_audit_log</code>.
+                <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Users</h1>
+                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+                    {users.length} total. All actions are logged to <code className="text-xs text-[var(--color-text-secondary)]">admin_audit_log</code>.
                 </p>
             </div>
             <UsersTable initialUsers={users} />

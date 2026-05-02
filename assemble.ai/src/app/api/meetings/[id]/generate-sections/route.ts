@@ -14,7 +14,9 @@ import { generateSectionsSchema } from '@/lib/validations/notes-meetings-reports
 import { eq, and, isNull, sql } from 'drizzle-orm';
 import {
     generateMeetingAgendaSections,
-    addTimestampsToSections,
+    nestGeneratedSections,
+    splitParentAndChildSections,
+    toMeetingSectionRows,
 } from '@/lib/services/section-generation';
 
 interface RouteContext {
@@ -75,25 +77,17 @@ export async function POST(
         // Generate new sections based on agenda type
         const generatedSections = await generateMeetingAgendaSections(meeting.projectId, agendaType);
 
-        // Add meeting ID and timestamps
-        const sectionsToInsert = addTimestampsToSections(generatedSections, id, 'meeting');
+        const sectionsToInsert = toMeetingSectionRows(generatedSections, id);
 
         // Insert sections
         if (sectionsToInsert.length > 0) {
-            await db.insert(meetingSections).values(
-                sectionsToInsert.map(s => ({
-                    id: s.id,
-                    meetingId: id,
-                    sectionKey: s.sectionKey,
-                    sectionLabel: s.sectionLabel,
-                    content: s.content,
-                    sortOrder: s.sortOrder,
-                    parentSectionId: s.parentSectionId,
-                    stakeholderId: s.stakeholderId,
-                    createdAt: s.createdAt,
-                    updatedAt: s.updatedAt,
-                }))
-            );
+            const { parentSections, childSections } = splitParentAndChildSections(sectionsToInsert);
+            if (parentSections.length > 0) {
+                await db.insert(meetingSections).values(parentSections);
+            }
+            if (childSections.length > 0) {
+                await db.insert(meetingSections).values(childSections);
+            }
         }
 
         // Update meeting's agendaType and updatedAt
@@ -105,19 +99,10 @@ export async function POST(
             })
             .where(eq(meetings.id, id));
 
-        // Build nested structure for response
-        const topLevelSections = generatedSections.filter(s => !s.parentSectionId);
-        const childSections = generatedSections.filter(s => s.parentSectionId);
-
-        const sectionsWithChildren = topLevelSections.map(parent => ({
-            ...parent,
-            childSections: childSections.filter(child => child.parentSectionId === parent.id),
-        }));
-
         return NextResponse.json({
             success: true,
             agendaType,
-            sections: sectionsWithChildren,
+            sections: nestGeneratedSections(generatedSections),
             total: generatedSections.length,
         });
     });

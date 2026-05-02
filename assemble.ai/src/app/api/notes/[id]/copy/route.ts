@@ -67,6 +67,8 @@ export async function POST(
             title: `${original.title} copy`,
             content: original.content,
             color: original.color, // Preserve the original color
+            type: original.type ?? 'note',
+            status: original.status ?? 'open',
             isStarred: false, // Don't copy starred status
             reportingPeriodStart: original.reportingPeriodStart,
             reportingPeriodEnd: original.reportingPeriodEnd,

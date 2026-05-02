@@ -7,12 +7,12 @@ interface AgentBadgeProps {
 const DISPLAY: Record<string, string> = {
     finance: 'Finance',
     design: 'Design',
-    program: 'Program',
+    program: 'Programme',
     procurement: 'Procurement',
     delivery: 'Delivery',
     feasibility: 'Feasibility',
     correspondence: 'Correspondence',
-    orchestrator: 'Orchestrator',
+    orchestrator: 'Project Assistant',
 };
 
 export function AgentBadge({ name }: AgentBadgeProps) {

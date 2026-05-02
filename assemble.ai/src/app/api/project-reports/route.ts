@@ -13,7 +13,11 @@ import { getCurrentUser } from '@/lib/auth/get-user';
 import { createReportSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, and, isNull, desc, sql } from 'drizzle-orm';
-import { STANDARD_CONTENTS_SECTIONS } from '@/lib/constants/sections';
+import {
+    generateReportContentsSections,
+    splitParentAndChildSections,
+    toReportSectionRows,
+} from '@/lib/services/section-generation';
 
 export async function GET(request: NextRequest) {
     return handleApiError(async () => {
@@ -111,6 +115,7 @@ export async function POST(request: NextRequest) {
         // Create new report
         const id = uuidv4();
         const now = new Date().toISOString();
+        const resolvedContentsType = contentsType || 'standard';
 
         await db.insert(reports).values({
             id,
@@ -121,26 +126,24 @@ export async function POST(request: NextRequest) {
             reportDate: reportDate || null,
             preparedFor: preparedFor || null,
             preparedBy: preparedBy || null,
-            contentsType: contentsType || 'standard',
+            contentsType: resolvedContentsType,
             createdAt: now,
             updatedAt: now,
         });
 
-        // Create default standard contents sections
-        const sectionsToCreate = STANDARD_CONTENTS_SECTIONS.map((section) => ({
-            id: uuidv4(),
-            reportId: id,
-            sectionKey: section.key,
-            sectionLabel: section.label,
-            sortOrder: section.sortOrder,
-            createdAt: now,
-            updatedAt: now,
-        }));
+        const generatedSections = await generateReportContentsSections(projectId, resolvedContentsType);
+        const sectionsToCreate = toReportSectionRows(generatedSections, id, now);
 
         let actualSectionCount = 0;
         if (sectionsToCreate.length > 0) {
             try {
-                await db.insert(reportSections).values(sectionsToCreate);
+                const { parentSections, childSections } = splitParentAndChildSections(sectionsToCreate);
+                if (parentSections.length > 0) {
+                    await db.insert(reportSections).values(parentSections);
+                }
+                if (childSections.length > 0) {
+                    await db.insert(reportSections).values(childSections);
+                }
                 actualSectionCount = sectionsToCreate.length;
             } catch (sectionError: any) {
                 console.error('Failed to create report sections:', {

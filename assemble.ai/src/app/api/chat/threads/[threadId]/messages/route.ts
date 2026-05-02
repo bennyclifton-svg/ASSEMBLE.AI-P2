@@ -19,6 +19,8 @@ import { runAgent } from '@/lib/agents/runner';
 import { DEFAULT_AGENT_NAME } from '@/lib/agents/registry';
 import { runOrchestrator } from '@/lib/agents/orchestrator';
 import type { AgentMessage } from '@/lib/agents/completion';
+import { sanitizeChatViewContext } from '@/lib/chat/view-context';
+import { buildAgentHistoryFromRows } from '@/lib/chat/history';
 
 interface RouteParams {
     params: Promise<{ threadId: string }>;
@@ -65,6 +67,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         if (thread.userId !== authResult.user.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
+        const viewContext = sanitizeChatViewContext(body?.viewContext, thread.projectId);
 
         // Persist the user message first so polling clients see it immediately.
         const [userMessage] = await db
@@ -79,21 +82,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // Bump the thread updatedAt so it floats to the top of the list.
         await db.update(chatThreads).set({ updatedAt: new Date() }).where(eq(chatThreads.id, threadId));
 
-        // Build conversation history. For Phase 1 we replay raw text turns
-        // only; saved tool_use/tool_result blocks are not persisted yet
-        // (they live only in run + tool_calls audit rows for later replay).
+        // Build a bounded, de-poisoned text history. Saved tool_use/tool_result
+        // blocks are not persisted yet; stale compact approval claims are
+        // deliberately not replayed because they can teach the model to repeat
+        // "approval card above" even when no card rendered.
         const priorRows = await db
             .select()
             .from(chatMessages)
             .where(eq(chatMessages.threadId, threadId))
             .orderBy(asc(chatMessages.createdAt));
 
-        const history: AgentMessage[] = priorRows
-            .filter((m) => m.role === 'user' || m.role === 'assistant')
-            .map((m) => ({
-                role: m.role as 'user' | 'assistant',
-                content: m.content,
-            }));
+        const history: AgentMessage[] = buildAgentHistoryFromRows(priorRows);
 
         // Kick off the run in the background. The route returns immediately;
         // the runner emits SSE events as work progresses.
@@ -109,6 +108,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     projectId,
                     triggerMessageId,
                     history,
+                    viewContext,
                 })
                 : runAgent({
                     agentName: requestedAgent,
@@ -118,6 +118,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                     projectId,
                     triggerMessageId,
                     history,
+                    viewContext,
                 });
         void runPromise.catch((err) => {
             console.error('[chat] agent run failed', { threadId, requestedAgent, error: err });

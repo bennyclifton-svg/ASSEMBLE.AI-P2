@@ -12,7 +12,7 @@ import { z } from 'zod/v4';
 
 // Inline schema for Zod v4 compatibility
 const profileSchema = z.object({
-  buildingClass: z.enum(['residential', 'commercial', 'industrial', 'institution', 'mixed', 'infrastructure']),
+  buildingClass: z.enum(['residential', 'commercial', 'industrial', 'institution', 'mixed', 'infrastructure', 'agricultural', 'defense_secure']),
   projectType: z.enum(['refurb', 'extend', 'new', 'remediation', 'advisory']),
   subclass: z.array(z.string()).default([]),
   subclassOther: z.array(z.string()).nullable().optional(),
@@ -84,14 +84,14 @@ export async function PUT(
     // Validate input
     const validation = profileSchema.safeParse(body);
     if (!validation.success) {
-      console.log('[Profile API] Validation failed:', JSON.stringify(validation.error.errors, null, 2));
+      console.log('[Profile API] Validation failed:', JSON.stringify(validation.error.issues, null, 2));
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid profile data',
-            details: validation.error.errors.map(e => ({
+            details: validation.error.issues.map(e => ({
               field: e.path.join('.'),
               message: e.message,
             })),

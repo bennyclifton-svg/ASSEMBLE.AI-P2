@@ -84,6 +84,8 @@ export function ResizableLayout({
                     <div className="flex-1 min-h-0 overflow-hidden relative z-10">
                         {centerContent}
                     </div>
+                    {/* Spacer so the ChatDock doesn't cover content */}
+                    <div className="flex-shrink-0" style={{ height: 'var(--chat-dock-height, 0px)', transition: 'height 0.15s ease' }} />
                 </div>
             </Panel>
             <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize h-full" />

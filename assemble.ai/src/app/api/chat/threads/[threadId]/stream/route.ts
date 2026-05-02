@@ -86,6 +86,7 @@ async function replayPendingApprovals(
                 toolName: approvals.toolName,
                 proposedDiff: approvals.proposedDiff,
                 status: approvals.status,
+                createdAt: approvals.createdAt,
             })
             .from(approvals)
             .where(and(eq(approvals.threadId, threadId), eq(approvals.status, 'pending')))
@@ -101,6 +102,7 @@ async function replayPendingApprovals(
                 approvalId: r.id,
                 toolName: r.toolName,
                 proposedDiff: r.proposedDiff,
+                createdAt: r.createdAt,
             };
             try {
                 controller.enqueue(
@@ -115,4 +117,3 @@ async function replayPendingApprovals(
         console.error('[chat-stream] failed to replay pending approvals', { threadId, err });
     }
 }
-

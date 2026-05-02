@@ -8,7 +8,8 @@ beforeAll(() => {
 
 function approval(
     id: string,
-    resolution: PendingApprovalView['resolution']
+    resolution: PendingApprovalView['resolution'],
+    createdAt: string | null = null
 ): PendingApprovalView {
     return {
         id,
@@ -27,12 +28,31 @@ function approval(
                 },
             ],
         },
+        createdAt,
         resolution,
     };
 }
 
 describe('MessageList approvals', () => {
-    it('renders only unresolved approval cards in the live approval area', () => {
+    it('shows local pending feedback before a streamed run starts', () => {
+        render(
+            <MessageList
+                messages={[]}
+                activeRun={null}
+                approvals={{}}
+                pendingStatus="Assistant is working..."
+            />
+        );
+
+        expect(screen.getByTestId('chat-pending-status')).toHaveTextContent(
+            'Assistant is working...'
+        );
+        expect(
+            screen.queryByText('Ask the Finance agent about your cost plan or project documents.')
+        ).not.toBeInTheDocument();
+    });
+
+    it('keeps resolved approval cards visible so users see the apply result', () => {
         render(
             <MessageList
                 messages={[]}
@@ -45,7 +65,41 @@ describe('MessageList approvals', () => {
         );
 
         expect(screen.getByText('Approval pending')).toBeInTheDocument();
-        expect(screen.queryByText('Approval applied')).not.toBeInTheDocument();
-        expect(screen.queryByText('Applied')).not.toBeInTheDocument();
+        expect(screen.getByText('Approval applied')).toBeInTheDocument();
+        expect(screen.getByText('Applied')).toBeInTheDocument();
+    });
+
+    it('interleaves approval cards with later chat messages by timestamp', () => {
+        render(
+            <MessageList
+                messages={[
+                    {
+                        id: 'message-before',
+                        role: 'user',
+                        content: 'Before approval',
+                        agentName: null,
+                        createdAt: '2026-05-02T01:00:00.000Z',
+                    },
+                    {
+                        id: 'message-after',
+                        role: 'user',
+                        content: 'After approval',
+                        agentName: null,
+                        createdAt: '2026-05-02T01:02:00.000Z',
+                    },
+                ]}
+                activeRun={null}
+                approvals={{
+                    pending: approval('pending', null, '2026-05-02T01:01:00.000Z'),
+                }}
+            />
+        );
+
+        const before = screen.getByText('Before approval');
+        const card = screen.getByText('Approval pending');
+        const after = screen.getByText('After approval');
+
+        expect(before.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(card.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 });

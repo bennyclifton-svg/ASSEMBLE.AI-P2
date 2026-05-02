@@ -9,13 +9,11 @@ import { ConsultantGallery } from '@/components/consultants/ConsultantGallery';
 import { ContractorGallery } from '@/components/contractors/ContractorGallery';
 import { CostPlanPanel } from '@/components/cost-plan/CostPlanPanel';
 import { ProgramPanel } from '@/components/program/ProgramPanel';
-import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
-import { ObjectivesWorkspace } from '@/components/profiler/objectives/ObjectivesWorkspace';
+import { BriefPanel } from '@/components/brief/BriefPanel';
 import { StakeholderPanel } from '@/components/stakeholders/StakeholderPanel';
 import { KnowledgePanel } from '@/components/knowledge/KnowledgePanel';
 import { MeetingsReportsContainer } from '@/components/notes-meetings-reports/MeetingsReportsContainer';
 import { NotesPanel } from '@/components/notes-meetings-reports/NotesPanel';
-import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
 import { AlertCircle } from 'lucide-react';
 import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
 import type { StakeholderWithStatus } from '@/types/stakeholder';
@@ -34,6 +32,8 @@ interface ProcurementCardProps {
     onProfileLoad?: (buildingClass: BuildingClass, projectType: ProjectType) => void;
     activeMainTab?: string;
     onMainTabChange?: (tab: string) => void;
+    activeSubTab?: string;
+    onSubTabChange?: (sub: string) => void;
     detailsData?: any;
     onDetailsUpdate?: () => void;
     onProjectNameChange?: () => void;
@@ -93,6 +93,8 @@ export function ProcurementCard({
     onProfileLoad,
     activeMainTab: externalActiveMainTab,
     onMainTabChange,
+    activeSubTab,
+    onSubTabChange,
     detailsData,
     onDetailsUpdate,
     onProjectNameChange,
@@ -129,7 +131,7 @@ export function ProcurementCard({
     }, [updateStakeholder]);
 
     // Track active tabs - use external value if provided, otherwise manage internally
-    const [internalActiveMainTab, setInternalActiveMainTab] = useState<string>('cost-planning');
+    const [internalActiveMainTab, setInternalActiveMainTab] = useState<string>('brief');
     const activeMainTab = externalActiveMainTab ?? internalActiveMainTab;
     const setActiveMainTab = (tab: string) => {
         setInternalActiveMainTab(tab);
@@ -189,23 +191,32 @@ export function ProcurementCard({
                         complexity: json.data.complexity || {},
                         workScope: json.data.workScope || [],
                     });
+                    // Propagate buildingClass/projectType up to the page-level state
+                    // so saved selections render immediately on visit (without
+                    // requiring a Load Profile click).
+                    if (json.data.buildingClass) {
+                        onClassChange?.(json.data.buildingClass as BuildingClass);
+                    }
+                    if (json.data.projectType) {
+                        onTypeChange?.(json.data.projectType as ProjectType);
+                    }
                 }
             }
         } catch (error) {
             console.error('[ProcurementCard] Failed to fetch profile status:', error);
         }
-    }, [projectId]);
+    }, [projectId, onClassChange, onTypeChange]);
 
     useEffect(() => {
         fetchProfileStatus();
     }, [fetchProfileStatus, projectId]);
 
-    // Re-fetch profile data when navigating back to the profiler tab
+    // Re-fetch profile data when navigating to the Building sub-tab of the Brief tab
     useEffect(() => {
-        if (activeMainTab === 'profiler') {
+        if (activeMainTab === 'brief' && activeSubTab === 'building') {
             fetchProfileStatus();
         }
-    }, [activeMainTab, fetchProfileStatus]);
+    }, [activeMainTab, activeSubTab, fetchProfileStatus]);
 
     // Check if profile is complete enough for Cost/Program tabs
     const isProfileComplete = profileStatus.hasProfile && profileStatus.buildingClass && profileStatus.projectType;
@@ -300,43 +311,31 @@ export function ProcurementCard({
                     </TabsTrigger>
                 </TabsList>
 
-                {/* Profiler Tab Content - 3 column layout for Subclass/Scale/Complexity */}
-                <TabsContent value="profiler" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <ProfilerMiddlePanel
+                {/* Brief Tab Content - sub-tabs: Lot | Building | Objectives.
+                    forceMount preserves LEPDataCard fetch state when switching to other top tabs. */}
+                <TabsContent value="brief" forceMount className="flex-1 mt-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
+                    <BriefPanel
                         projectId={projectId}
-                        buildingClass={buildingClass}
-                        projectType={projectType}
+                        activeSubTab={activeSubTab ?? 'lot'}
+                        onSubTabChange={onSubTabChange ?? (() => {})}
+                        detailsData={detailsData}
+                        onDetailsUpdate={onDetailsUpdate ?? (() => {})}
+                        onProjectNameChange={onProjectNameChange}
+                        buildingClass={buildingClass ?? null}
+                        projectType={projectType ?? null}
+                        region={region}
                         onClassChange={onClassChange}
                         onTypeChange={onTypeChange}
-                        region={region}
                         onRegionChange={onRegionChange}
-                        initialData={profileData || undefined}
+                        profileData={profileData || undefined}
                         onProfileComplete={() => {
                             onProfileComplete?.();
                             fetchProfileStatusOnly(); // Only refresh status (for tab enabling), not data
-                            // Stay on profiler tab - don't auto-switch
                         }}
                         onProfileLoad={(loadedClass, loadedType) => {
                             onProfileLoad?.(loadedClass, loadedType);
                             fetchProfileStatus(); // Refresh profile status after load
                         }}
-                    />
-                </TabsContent>
-
-                {/* Objectives Tab Content */}
-                <TabsContent value="objectives" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <ObjectivesWorkspace
-                        projectId={projectId}
-                    />
-                </TabsContent>
-
-                {/* Project Details Tab Content - forceMount keeps LEPDataCard mounted so it doesn't re-fetch on tab revisit */}
-                <TabsContent value="project-details" forceMount className="flex-1 mt-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
-                    <ProjectDetailsPanel
-                        projectId={projectId}
-                        data={detailsData}
-                        onUpdate={onDetailsUpdate || (() => {})}
-                        onProjectNameChange={onProjectNameChange}
                     />
                 </TabsContent>
 

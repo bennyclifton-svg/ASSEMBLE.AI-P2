@@ -10,6 +10,9 @@ interface ToolCallCardProps {
 
 const TOOL_LABELS: Record<string, string> = {
     search_rag: 'Searching documents',
+    list_project_documents: 'Reading document repository',
+    select_project_documents: 'Selecting documents',
+    attach_documents_to_note: 'Attaching documents to note',
     list_cost_lines: 'Reading cost plan',
 };
 

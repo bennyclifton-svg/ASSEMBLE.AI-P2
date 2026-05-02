@@ -2,254 +2,350 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Save, Check, AlertTriangle } from 'lucide-react';
+import { Loader2, Check, AlertTriangle, MessageSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { ModelSettingsRow } from './page';
 import type { FeatureGroup, Provider } from '@/lib/ai/types';
 import type { ModelInfo } from '@/lib/ai/pricing';
+import { modelsForProviderRanked } from '@/lib/ai/pricing';
+
+interface RowMeta {
+    title: string;
+    description: string;
+    /** Optional icon — used for the Chat Dock master row. */
+    icon?: React.ComponentType<{ className?: string }>;
+}
 
 interface Props {
+    chatDockSettings: ModelSettingsRow[];
     initialSettings: ModelSettingsRow[];
     catalog: ModelInfo[];
-    groupLabels: Record<FeatureGroup, { title: string; description: string }>;
+    groupLabels: Partial<Record<FeatureGroup, { title: string; description: string }>>;
 }
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-const CUSTOM_SENTINEL = '__custom__';
+const CHAT_DOCK_ROW_KEY = '__chat_dock__';
 
-export function ModelSettingsForm({ initialSettings, catalog, groupLabels }: Props) {
+/**
+ * Per-row state in the form.
+ *
+ * Real feature groups have `featureGroup` set. The synthetic Chat Dock master
+ * row has `featureGroup` undefined and writes via the bulk PUT endpoint.
+ */
+interface RowState {
+    key: string;
+    featureGroup?: FeatureGroup;
+    meta: RowMeta;
+    provider: Provider;
+    modelId: string;
+    /** True when current draft has not been saved yet. */
+    dirty: boolean;
+    saveState: SaveState;
+    error: string | null;
+    /** Mixed = chat-dock agents currently disagree; normalize on save. */
+    mixed?: boolean;
+}
+
+const PROVIDER_ORDER: Provider[] = ['anthropic', 'openai', 'openrouter'];
+
+const PROVIDER_LABELS: Record<Provider, string> = {
+    anthropic: 'Anthropic',
+    openai: 'OpenAI',
+    openrouter: 'OpenRouter',
+};
+
+export function ModelSettingsForm({ chatDockSettings, initialSettings, catalog: _catalog, groupLabels }: Props) {
     const router = useRouter();
 
-    // Detect any initially-saved model IDs that aren't in the catalog (custom entries).
-    function getInitialDraft(s: ModelSettingsRow): ModelSettingsRow {
-        const inCatalog = catalog.some((m) => m.provider === s.provider && m.modelId === s.modelId);
-        if (!inCatalog && s.provider === 'openrouter') {
-            return { ...s, modelId: CUSTOM_SENTINEL };
-        }
-        return s;
-    }
+    const initialRows = useMemo<RowState[]>(() => {
+        const rows: RowState[] = [];
 
-    const [drafts, setDrafts] = useState<Record<FeatureGroup, ModelSettingsRow>>(
-        Object.fromEntries(initialSettings.map((s) => [s.featureGroup, getInitialDraft(s)])) as Record<FeatureGroup, ModelSettingsRow>
-    );
-    // Tracks the free-text model ID for groups using the custom sentinel.
-    const [customIds, setCustomIds] = useState<Partial<Record<FeatureGroup, string>>>(
-        Object.fromEntries(
-            initialSettings
-                .filter((s) => s.provider === 'openrouter' && !catalog.some((m) => m.provider === s.provider && m.modelId === s.modelId))
-                .map((s) => [s.featureGroup, s.modelId])
-        )
-    );
-    const [saved, setSaved] = useState(initialSettings);
-    const [busy, setBusy] = useState<Record<FeatureGroup, SaveState>>({} as Record<FeatureGroup, SaveState>);
-    const [errors, setErrors] = useState<Record<FeatureGroup, string | null>>({} as Record<FeatureGroup, string | null>);
-
-    const providers = useMemo(() => Array.from(new Set(catalog.map((m) => m.provider))), [catalog]);
-    const modelsByProvider = useMemo(() => {
-        const map: Record<string, ModelInfo[]> = {};
-        for (const p of providers) map[p] = catalog.filter((m) => m.provider === p);
-        return map;
-    }, [providers, catalog]);
-
-    // Resolve the effective model ID for a group (custom sentinel → actual custom ID)
-    function effectiveModelId(group: FeatureGroup): string {
-        const draft = drafts[group];
-        if (draft.modelId === CUSTOM_SENTINEL) return customIds[group] ?? '';
-        return draft.modelId;
-    }
-
-    function isDirty(group: FeatureGroup): boolean {
-        const draft = drafts[group];
-        const original = saved.find((s) => s.featureGroup === group);
-        if (!original) return true;
-        const effectiveId = effectiveModelId(group);
-        return draft.provider !== original.provider || effectiveId !== original.modelId;
-    }
-
-    function updateDraft(group: FeatureGroup, patch: Partial<ModelSettingsRow>) {
-        setDrafts((prev) => {
-            const next = { ...prev[group], ...patch } as ModelSettingsRow;
-            if (patch.provider && patch.provider !== prev[group].provider) {
-                // Snap to first model in the new provider's list
-                const firstForProvider = modelsByProvider[patch.provider]?.[0];
-                if (firstForProvider) next.modelId = firstForProvider.modelId;
-            }
-            return { ...prev, [group]: next };
+        // Chat Dock master row, derived from the four agent_* settings.
+        const chatFirst = chatDockSettings[0];
+        const allAgree =
+            chatDockSettings.length > 0 &&
+            chatDockSettings.every(
+                (s) => s.provider === chatFirst.provider && s.modelId === chatFirst.modelId
+            );
+        rows.push({
+            key: CHAT_DOCK_ROW_KEY,
+            meta: {
+                title: 'Chat Dock',
+                description:
+                    'Sets the provider and model for all four chat-dock agents at once (Orchestrator, Finance, Program, Design). Use this to A/B test cheaper models.',
+                icon: MessageSquare,
+            },
+            provider: allAgree && chatFirst ? chatFirst.provider : 'anthropic',
+            modelId: allAgree && chatFirst ? chatFirst.modelId : '',
+            dirty: false,
+            saveState: 'idle',
+            error: null,
+            mixed: chatDockSettings.length > 0 && !allAgree,
         });
-        setBusy((b) => ({ ...b, [group]: 'idle' }));
-        setErrors((e) => ({ ...e, [group]: null }));
+
+        for (const s of initialSettings) {
+            const meta = groupLabels[s.featureGroup];
+            if (!meta) continue;
+            rows.push({
+                key: s.featureGroup,
+                featureGroup: s.featureGroup,
+                meta,
+                provider: s.provider,
+                modelId: s.modelId,
+                dirty: false,
+                saveState: 'idle',
+                error: null,
+            });
+        }
+        return rows;
+    }, [chatDockSettings, initialSettings, groupLabels]);
+
+    const [rows, setRows] = useState<RowState[]>(initialRows);
+
+    function patchRow(key: string, patch: Partial<RowState>) {
+        setRows((prev) => prev.map((r) => (r.key === key ? { ...r, ...patch } : r)));
     }
 
-    function updateCustomId(group: FeatureGroup, value: string) {
-        setCustomIds((prev) => ({ ...prev, [group]: value }));
-        setBusy((b) => ({ ...b, [group]: 'idle' }));
-        setErrors((e) => ({ ...e, [group]: null }));
+    function selectProvider(key: string, next: Provider) {
+        setRows((prev) =>
+            prev.map((r) => {
+                if (r.key !== key) return r;
+                if (r.provider === next) return r;
+                // Snap model to cheapest for the new provider (top of the list).
+                const ranked = modelsForProviderRanked(next);
+                const nextModelId = ranked[0]?.modelId ?? '';
+                return {
+                    ...r,
+                    provider: next,
+                    modelId: nextModelId,
+                    dirty: true,
+                    saveState: 'idle',
+                    error: null,
+                    mixed: false,
+                };
+            })
+        );
     }
 
-    async function save(group: FeatureGroup) {
-        const draft = drafts[group];
-        const modelId = effectiveModelId(group);
+    function selectModel(key: string, modelId: string) {
+        setRows((prev) =>
+            prev.map((r) => {
+                if (r.key !== key) return r;
+                if (r.modelId === modelId && !r.mixed) return r;
+                return {
+                    ...r,
+                    modelId,
+                    dirty: true,
+                    saveState: 'idle',
+                    error: null,
+                    mixed: false,
+                };
+            })
+        );
+    }
 
-        if (!modelId) {
-            setErrors((e) => ({ ...e, [group]: 'Enter a model ID before saving.' }));
+    async function save(key: string) {
+        const row = rows.find((r) => r.key === key);
+        if (!row) return;
+        if (!row.modelId) {
+            patchRow(key, { error: 'Pick a model before saving.' });
             return;
         }
 
-        setBusy((b) => ({ ...b, [group]: 'saving' }));
-        setErrors((e) => ({ ...e, [group]: null }));
+        patchRow(key, { saveState: 'saving', error: null });
 
         try {
+            const isChatDock = row.key === CHAT_DOCK_ROW_KEY;
             const res = await fetch('/api/admin/models', {
-                method: 'PATCH',
+                method: isChatDock ? 'PUT' : 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...draft, modelId }),
+                body: JSON.stringify(
+                    isChatDock
+                        ? { provider: row.provider, modelId: row.modelId }
+                        : {
+                              featureGroup: row.featureGroup,
+                              provider: row.provider,
+                              modelId: row.modelId,
+                          }
+                ),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Save failed');
 
-            setSaved((prev) => prev.map((s) => (s.featureGroup === group ? { ...draft, modelId } : s)));
-            setBusy((b) => ({ ...b, [group]: 'saved' }));
-            setTimeout(() => setBusy((b) => ({ ...b, [group]: 'idle' })), 1500);
+            patchRow(key, { saveState: 'saved', dirty: false, mixed: false });
+            setTimeout(() => patchRow(key, { saveState: 'idle' }), 1500);
             router.refresh();
         } catch (err) {
-            setBusy((b) => ({ ...b, [group]: 'error' }));
-            setErrors((e) => ({ ...e, [group]: err instanceof Error ? err.message : 'Save failed' }));
+            patchRow(key, {
+                saveState: 'error',
+                error: err instanceof Error ? err.message : 'Save failed',
+            });
         }
     }
 
     return (
         <div className="space-y-3">
-            {Object.entries(groupLabels).map(([key, meta]) => {
-                const group = key as FeatureGroup;
-                const draft = drafts[group];
-                if (!draft) {
-                    return (
-                        <div key={group} className="rounded-lg border border-yellow-900/50 bg-yellow-950/20 p-4 text-sm text-yellow-300">
-                            <AlertTriangle className="mr-2 inline h-4 w-4" />
-                            Missing <code>model_settings</code> row for <code>{group}</code>. Re-run the Phase 1 migration.
-                        </div>
-                    );
-                }
-
-                const isCustom = draft.modelId === CUSTOM_SENTINEL;
-                const effectiveId = effectiveModelId(group);
-                const info = catalog.find((m) => m.provider === draft.provider && m.modelId === effectiveId);
-                const dirty = isDirty(group);
-                const state = busy[group] ?? 'idle';
-
-                return (
-                    <div key={group} className="rounded-lg border border-gray-700 bg-[#252526] p-4">
-                        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-                            {/* Group label */}
-                            <div className="lg:col-span-4">
-                                <h3 className="text-sm font-semibold text-white">{meta.title}</h3>
-                                <p className="mt-1 text-xs text-gray-400">{meta.description}</p>
-                            </div>
-
-                            {/* Provider */}
-                            <div className="lg:col-span-2">
-                                <label className="mb-1 block text-[10px] uppercase tracking-wider text-gray-500">Provider</label>
-                                <select
-                                    value={draft.provider}
-                                    onChange={(e) => updateDraft(group, { provider: e.target.value as Provider })}
-                                    className="w-full rounded-md border border-gray-700 bg-[#1e1e1e] px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-                                >
-                                    {providers.map((p) => (
-                                        <option key={p} value={p}>
-                                            {p}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Model */}
-                            <div className="lg:col-span-3">
-                                <label className="mb-1 block text-[10px] uppercase tracking-wider text-gray-500">Model</label>
-                                <select
-                                    value={draft.modelId}
-                                    onChange={(e) => updateDraft(group, { modelId: e.target.value })}
-                                    className="w-full rounded-md border border-gray-700 bg-[#1e1e1e] px-2 py-1.5 text-sm text-white focus:border-blue-500 focus:outline-none"
-                                >
-                                    {(modelsByProvider[draft.provider] ?? []).map((m) => (
-                                        <option key={m.modelId} value={m.modelId}>
-                                            {m.label}
-                                        </option>
-                                    ))}
-                                    {/* OpenRouter: allow any model ID not yet in the catalog */}
-                                    {draft.provider === 'openrouter' && (
-                                        <option value={CUSTOM_SENTINEL}>Enter custom model ID…</option>
-                                    )}
-                                </select>
-
-                                {/* Custom model ID input — shown when sentinel is selected */}
-                                {isCustom && (
-                                    <input
-                                        type="text"
-                                        value={customIds[group] ?? ''}
-                                        onChange={(e) => updateCustomId(group, e.target.value)}
-                                        placeholder="e.g. openai/o3-mini"
-                                        className="mt-1.5 w-full rounded-md border border-blue-600 bg-[#1e1e1e] px-2 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-400"
-                                    />
-                                )}
-                            </div>
-
-                            {/* Cost + save */}
-                            <div className="lg:col-span-3 flex flex-col items-stretch justify-between gap-2 lg:items-end">
-                                <div className="text-right">
-                                    <div className="text-[10px] uppercase tracking-wider text-gray-500">~$/1M tok</div>
-                                    {info ? (
-                                        <div className="text-sm text-gray-200">
-                                            <span className="text-gray-400">in</span> ${info.inputPer1M}
-                                            <span className="mx-1 text-gray-600">·</span>
-                                            <span className="text-gray-400">out</span> ${info.outputPer1M}
-                                        </div>
-                                    ) : (
-                                        <div className="text-sm text-gray-500">—</div>
-                                    )}
-                                </div>
-                                <button
-                                    onClick={() => save(group)}
-                                    disabled={!dirty || state === 'saving'}
-                                    className={`flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                                        state === 'saved'
-                                            ? 'bg-green-700 text-white'
-                                            : dirty
-                                              ? 'bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'
-                                              : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                    }`}
-                                >
-                                    {state === 'saving' ? (
-                                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    ) : state === 'saved' ? (
-                                        <Check className="h-3.5 w-3.5" />
-                                    ) : (
-                                        <Save className="h-3.5 w-3.5" />
-                                    )}
-                                    {state === 'saved' ? 'Saved' : state === 'saving' ? 'Saving' : dirty ? 'Save' : 'Saved'}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Model notes */}
-                        {info?.notes && (
-                            <p className="mt-3 border-t border-gray-700/50 pt-2 text-xs italic text-gray-500">{info.notes}</p>
-                        )}
-                        {/* Custom model hint */}
-                        {isCustom && !info && (
-                            <p className="mt-3 border-t border-gray-700/50 pt-2 text-xs text-gray-500">
-                                Pricing data unavailable for custom models — check{' '}
-                                <span className="text-gray-400">openrouter.ai/models</span> for current rates.
-                            </p>
-                        )}
-                        {errors[group] && (
-                            <p className="mt-2 text-xs text-red-400">{errors[group]}</p>
-                        )}
-                    </div>
-                );
-            })}
-            <p className="pt-2 text-[11px] text-gray-500">
+            {rows.map((row) => (
+                <FeatureGroupRow
+                    key={row.key}
+                    row={row}
+                    onSelectProvider={(p) => selectProvider(row.key, p)}
+                    onSelectModel={(m) => selectModel(row.key, m)}
+                    onSave={() => save(row.key)}
+                />
+            ))}
+            <p className="pt-2 text-[11px] text-[var(--color-text-muted)]">
                 Prices are approximate references for cost comparison only — confirm current rates with the provider before relying on them for billing decisions.
             </p>
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Row component
+// ---------------------------------------------------------------------------
+
+interface RowProps {
+    row: RowState;
+    onSelectProvider: (p: Provider) => void;
+    onSelectModel: (modelId: string) => void;
+    onSave: () => void;
+}
+
+function FeatureGroupRow({ row, onSelectProvider, onSelectModel, onSave }: RowProps) {
+    const Icon = row.meta.icon;
+    const rankedModels = useMemo(() => modelsForProviderRanked(row.provider), [row.provider]);
+    const selectedInfo = rankedModels.find((m) => m.modelId === row.modelId);
+
+    return (
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+                {/* Title + description */}
+                <div className="lg:col-span-4">
+                    <div className="flex items-start gap-2">
+                        {Icon && <Icon className="mt-0.5 h-5 w-5 text-[var(--color-accent-primary)]" />}
+                        <div className="flex-1">
+                            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                                {row.meta.title}
+                            </h3>
+                            <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                                {row.meta.description}
+                            </p>
+                            {row.mixed && (
+                                <div className="mt-2 flex items-start gap-1.5 rounded border border-yellow-700/40 bg-yellow-950/30 px-2 py-1.5 text-[11px] text-yellow-200">
+                                    <AlertTriangle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                                    <span>
+                                        Chat-dock agents have mixed settings. Pick a model to normalize them.
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Provider — stacked toggle, no dropdown */}
+                <div className="lg:col-span-3">
+                    <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                        Provider
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                        {PROVIDER_ORDER.map((p) => {
+                            const active = p === row.provider;
+                            return (
+                                <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => onSelectProvider(p)}
+                                    aria-pressed={active}
+                                    className={cn(
+                                        'rounded-md border px-3 py-2 text-left text-sm font-medium transition-colors',
+                                        active
+                                            ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary-tint)] text-[var(--color-text-primary)]'
+                                            : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]'
+                                    )}
+                                >
+                                    {PROVIDER_LABELS[p]}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Model — full ranked column, no dropdown */}
+                <div className="lg:col-span-4">
+                    <div className="mb-1.5 flex items-center justify-between">
+                        <div className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                            Model
+                        </div>
+                        <div className="text-[10px] text-[var(--color-text-muted)]">
+                            cheapest → most expensive
+                        </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        {rankedModels.map((m) => {
+                            const active = m.modelId === row.modelId;
+                            return (
+                                <button
+                                    key={m.modelId}
+                                    type="button"
+                                    onClick={() => onSelectModel(m.modelId)}
+                                    aria-pressed={active}
+                                    className={cn(
+                                        'flex items-center justify-between gap-3 rounded-md border px-3 py-1.5 text-left text-xs transition-colors',
+                                        active
+                                            ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary-tint)] text-[var(--color-text-primary)]'
+                                            : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]'
+                                    )}
+                                >
+                                    <span className="truncate font-medium">{m.label}</span>
+                                    <span className="flex-shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                                        ${m.inputPer1M}/${m.outputPer1M}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Save action */}
+                <div className="flex flex-col items-stretch justify-end gap-2 lg:col-span-1">
+                    <button
+                        type="button"
+                        onClick={onSave}
+                        disabled={!row.dirty || row.saveState === 'saving' || !row.modelId}
+                        className={cn(
+                            'flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors',
+                            row.saveState === 'saved'
+                                ? 'bg-[var(--color-accent-green)] text-white'
+                                : row.dirty && row.modelId
+                                  ? 'bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary-hover)]'
+                                  : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] cursor-not-allowed'
+                        )}
+                    >
+                        {row.saveState === 'saving' ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : row.saveState === 'saved' ? (
+                            <Check className="h-3.5 w-3.5" />
+                        ) : null}
+                        {row.saveState === 'saved'
+                            ? 'Saved'
+                            : row.saveState === 'saving'
+                              ? 'Saving'
+                              : 'Save'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Notes / errors */}
+            {selectedInfo?.notes && (
+                <p className="mt-3 border-t border-[var(--color-border-subtle)] pt-2 text-xs italic text-[var(--color-text-secondary)]">
+                    {selectedInfo.notes}
+                </p>
+            )}
+            {row.error && (
+                <p className="mt-2 text-xs text-red-400">{row.error}</p>
+            )}
         </div>
     );
 }

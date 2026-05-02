@@ -9,6 +9,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ChatDockMount } from '@/components/chat/ChatDockMount';
+import { ChatViewContextProvider } from '@/lib/contexts/chat-view-context';
 
 export default async function ProjectLayout({
     children,
@@ -22,9 +23,9 @@ export default async function ProjectLayout({
     }
 
     return (
-        <>
+        <ChatViewContextProvider>
             {children}
             <ChatDockMount />
-        </>
+        </ChatViewContextProvider>
     );
 }

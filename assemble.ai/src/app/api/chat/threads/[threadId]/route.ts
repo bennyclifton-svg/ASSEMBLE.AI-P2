@@ -7,15 +7,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { approvals, chatThreads, chatMessages } from '@/lib/db/pg-schema';
+import {
+    agentRuns,
+    approvals,
+    chatThreads,
+    chatMessages,
+    toolCalls,
+} from '@/lib/db/pg-schema';
 import { getCurrentUser } from '@/lib/auth/get-user';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, gte } from 'drizzle-orm';
+import { filterActionablePendingApprovals } from '@/lib/workflows';
+import type {
+    DocumentSelectionChangedDetail,
+    DocumentSelectionMode,
+} from '@/lib/chat/document-selection-events';
 
 interface RouteParams {
     params: Promise<{ threadId: string }>;
 }
 
-export async function GET(_req: NextRequest, { params }: RouteParams) {
+export async function GET(req: NextRequest, { params }: RouteParams) {
     return handleApiError(async () => {
         const { threadId } = await params;
 
@@ -50,11 +61,81 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
                 runId: approvals.runId,
                 toolName: approvals.toolName,
                 proposedDiff: approvals.proposedDiff,
+                createdAt: approvals.createdAt,
             })
             .from(approvals)
             .where(and(eq(approvals.threadId, threadId), eq(approvals.status, 'pending')))
             .orderBy(asc(approvals.createdAt));
+        const actionablePendingApprovals =
+            await filterActionablePendingApprovals(pendingApprovals);
 
-        return NextResponse.json({ thread, messages, pendingApprovals });
+        const selectionSinceParam = req.nextUrl.searchParams.get('selectionSince');
+        const selectionSince = selectionSinceParam ? new Date(selectionSinceParam) : null;
+        const documentSelections =
+            selectionSince && Number.isFinite(selectionSince.getTime())
+                ? await getRecentDocumentSelections(threadId, thread.projectId, selectionSince)
+                : [];
+
+        return NextResponse.json({
+            thread,
+            messages,
+            pendingApprovals: actionablePendingApprovals,
+            documentSelections,
+        });
     });
+}
+
+async function getRecentDocumentSelections(
+    threadId: string,
+    projectId: string,
+    selectionSince: Date
+): Promise<Array<DocumentSelectionChangedDetail & { createdAt: Date | null }>> {
+    const rows = await db
+        .select({
+            output: toolCalls.output,
+            createdAt: toolCalls.createdAt,
+        })
+        .from(toolCalls)
+        .innerJoin(agentRuns, eq(toolCalls.runId, agentRuns.id))
+        .where(
+            and(
+                eq(agentRuns.threadId, threadId),
+                eq(toolCalls.toolName, 'select_project_documents'),
+                eq(toolCalls.status, 'complete'),
+                gte(toolCalls.createdAt, selectionSince)
+            )
+        )
+        .orderBy(desc(toolCalls.createdAt))
+        .limit(5);
+
+    return rows
+        .map((row) => parseDocumentSelectionOutput(row.output, projectId, row.createdAt))
+        .filter((selection): selection is DocumentSelectionChangedDetail & { createdAt: Date | null } =>
+            selection !== null
+        )
+        .reverse();
+}
+
+function parseDocumentSelectionOutput(
+    output: unknown,
+    projectId: string,
+    createdAt: Date | null
+): (DocumentSelectionChangedDetail & { createdAt: Date | null }) | null {
+    if (!output || typeof output !== 'object' || Array.isArray(output)) return null;
+    const obj = output as Record<string, unknown>;
+    if (obj.status !== 'selection_updated') return null;
+    if (!isDocumentSelectionMode(obj.mode)) return null;
+    if (!Array.isArray(obj.documentIds)) return null;
+
+    const documentIds = obj.documentIds.filter((id): id is string => typeof id === 'string');
+    return {
+        projectId,
+        mode: obj.mode,
+        documentIds,
+        createdAt,
+    };
+}
+
+function isDocumentSelectionMode(value: unknown): value is DocumentSelectionMode {
+    return value === 'replace' || value === 'add' || value === 'remove' || value === 'clear';
 }

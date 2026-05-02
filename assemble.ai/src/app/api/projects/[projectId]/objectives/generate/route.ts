@@ -260,7 +260,7 @@ Respond in JSON format:
 }`;
 
       const result = await aiComplete({
-        featureGroup: 'content_generation',
+        featureGroup: 'objectives_generation',
         maxTokens: 2000,
         messages: [{ role: 'user', content: extractionPrompt }],
       });
@@ -395,7 +395,7 @@ ${generateCompliance ? '  "compliance": ["bullet 1", "bullet 2"]' : ''}
 }`;
 
       const result = await aiComplete({
-        featureGroup: 'content_generation',
+        featureGroup: 'objectives_generation',
         maxTokens: 2000,
         messages: [{ role: 'user', content: prompt }],
       });

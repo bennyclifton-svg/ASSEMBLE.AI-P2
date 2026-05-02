@@ -9,7 +9,7 @@
 'use client';
 
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { Trash, Star, Copy, Loader2, Upload } from 'lucide-react';
+import { CheckCircle2, Circle, Trash, Star, Copy, Loader2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
@@ -18,8 +18,16 @@ import { NoteContent } from './NoteContent';
 import { cn } from '@/lib/utils';
 import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import { useNoteDropUpload, useNoteExport, type ExportFormat } from '@/lib/hooks/use-notes';
-import type { Note, NoteColor } from '@/types/notes-meetings-reports';
-import { getNoteColor, getNoteColorStyles } from '@/types/notes-meetings-reports';
+import type { Note, NoteColor, NoteStatus, NoteType, UpdateNoteRequest } from '@/types/notes-meetings-reports';
+import {
+    getNoteColor,
+    getNoteColorStyles,
+    getNoteStatus,
+    getNoteStatusLabel,
+    getNoteType,
+    NOTE_TYPE_LABELS,
+    NOTE_TYPES,
+} from '@/types/notes-meetings-reports';
 
 interface NoteWithCount extends Note {
     transmittalCount: number;
@@ -30,8 +38,9 @@ interface SingleNotePanelProps {
     noteNumber: number;
     projectId: string;
     isExpanded: boolean;
+    isListMode?: boolean;
     onToggleExpand: () => void;
-    onUpdate: (data: { title?: string; content?: string; isStarred?: boolean; color?: NoteColor; noteDate?: string | null }) => Promise<void>;
+    onUpdate: (data: UpdateNoteRequest) => Promise<void>;
     onCopy: () => Promise<void>;
     onDelete: () => Promise<void>;
     onSaveTransmittal?: () => void;
@@ -43,6 +52,7 @@ export function SingleNotePanel({
     note,
     projectId,
     isExpanded,
+    isListMode = false,
     onToggleExpand,
     onUpdate,
     onCopy,
@@ -125,6 +135,10 @@ export function SingleNotePanel({
         await onUpdate({ color });
     }, [onUpdate]);
 
+    const handleTypeChange = useCallback(async (type: NoteType) => {
+        await onUpdate({ type });
+    }, [onUpdate]);
+
     const formatNoteDate = (iso: string) => {
         const d = new Date(iso + 'T00:00:00');
         return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -147,6 +161,12 @@ export function SingleNotePanel({
     const handleStarToggle = useCallback(async () => {
         await onUpdate({ isStarred: !note.isStarred });
     }, [onUpdate, note.isStarred]);
+
+    const noteStatus = getNoteStatus(note.status);
+
+    const handleStatusToggle = useCallback(async () => {
+        await onUpdate({ status: noteStatus === 'open' ? 'closed' : 'open' });
+    }, [onUpdate, noteStatus]);
 
     const handleCopy = useCallback(async () => {
         setIsCopying(true);
@@ -187,6 +207,126 @@ export function SingleNotePanel({
     // Get note color for header styling
     const noteColor = getNoteColor(note.color);
     const colorStyles = getNoteColorStyles(note.color);
+    const noteType = getNoteType(note.type);
+
+    if (!isExpanded && isListMode) {
+        return (
+            <>
+                <div {...getRootProps()} className={cn('w-full', className)}>
+                    <input {...getInputProps()} />
+                    <div
+                        className={cn(
+                            'relative flex min-h-11 w-full items-center gap-2 rounded-md border border-[var(--color-border)] px-2 py-1.5 shadow-sm transition-all duration-150',
+                            isDragOver && 'border-2 border-dashed border-[var(--color-accent-copper)] opacity-80',
+                        )}
+                        style={{ backgroundColor: colorStyles.bg, color: colorStyles.text }}
+                    >
+                        {isDragOver && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-10 pointer-events-none">
+                                <Upload className="w-6 h-6 opacity-60" />
+                            </div>
+                        )}
+
+                        {isUploading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/10 z-10 pointer-events-none">
+                                <div className="flex items-center gap-1.5">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    {uploadProgress && uploadProgress.total > 1 && (
+                                        <span className="text-[10px] font-medium">{uploadProgress.current}/{uploadProgress.total}</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <NoteColorPicker
+                            selectedColor={noteColor}
+                            onColorChange={handleColorChange}
+                            compact={true}
+                        />
+
+                        <TypeSelect value={noteType} onChange={handleTypeChange} compact />
+                        <StatusToggle status={noteStatus} onToggle={handleStatusToggle} compact />
+
+                        <div
+                            className="min-w-0 flex-1 cursor-pointer"
+                            onClick={!isEditingTitle ? handleTitleClick : undefined}
+                            title={!isEditingTitle ? 'Click to edit title' : undefined}
+                        >
+                            {isEditingTitle ? (
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    value={localTitle}
+                                    onChange={(e) => setLocalTitle(e.target.value)}
+                                    onBlur={handleTitleBlur}
+                                    onKeyDown={handleTitleKeyDown}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-6 w-full min-w-0 bg-transparent text-sm font-medium text-inherit"
+                                    style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
+                                    placeholder="New Note"
+                                />
+                            ) : (
+                                <span className="block truncate text-sm font-medium text-inherit hover:text-[var(--color-accent-copper)] transition-colors">
+                                    {localTitle || 'New Note'}
+                                </span>
+                            )}
+                        </div>
+
+                        <input
+                            ref={dateInputRef}
+                            type="date"
+                            value={localDate}
+                            onChange={handleDateChange}
+                            className="absolute opacity-0 pointer-events-none w-0 h-0"
+                            tabIndex={-1}
+                        />
+                        <button
+                            type="button"
+                            onClick={handleDateClick}
+                            className="hidden sm:block shrink-0 text-xs font-medium opacity-70 hover:opacity-100 transition-opacity whitespace-nowrap"
+                            title={localDate ? 'Click to change date' : 'Set date'}
+                        >
+                            {localDate ? formatNoteDate(localDate) : '+ date'}
+                        </button>
+
+                        <button
+                            onClick={handleCopy}
+                            disabled={isCopying}
+                            className="p-1 opacity-60 hover:opacity-100 transition-colors disabled:opacity-50"
+                            title="Copy note"
+                        >
+                            {isCopying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+
+                        <button
+                            onClick={handleDeleteClick}
+                            disabled={isDeleting}
+                            className="p-1 opacity-60 hover:text-red-500 hover:opacity-100 transition-colors disabled:opacity-50"
+                            title="Delete note"
+                        >
+                            <Trash className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                            onClick={onToggleExpand}
+                            className="p-1 opacity-60 hover:opacity-100 transition-colors"
+                            title="Expand"
+                        >
+                            <CornerBracketIcon direction="left" className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                </div>
+
+                <AuroraConfirmDialog
+                    open={deleteDialogOpen}
+                    onOpenChange={setDeleteDialogOpen}
+                    onConfirm={handleConfirmDelete}
+                    title="Delete this note?"
+                    description="This will permanently delete this note and all its attachments."
+                />
+            </>
+        );
+    }
 
     // Collapsed state: Square sticky note
     if (!isExpanded) {
@@ -257,6 +397,11 @@ export function SingleNotePanel({
                             >
                                 <CornerBracketIcon direction="left" className="w-3.5 h-3.5" />
                             </button>
+                        </div>
+
+                        <div className="mb-1 flex items-center gap-1">
+                            <TypeSelect value={noteType} onChange={handleTypeChange} compact />
+                            <StatusToggle status={noteStatus} onToggle={handleStatusToggle} compact />
                         </div>
 
                         {/* Editable Title - fills remaining space, centered and lowered */}
@@ -336,6 +481,10 @@ export function SingleNotePanel({
                             {localTitle || 'New Note'}
                         </span>
                     )}
+                    <div className="ml-3 hidden shrink-0 items-center gap-1.5 sm:flex">
+                        <TypeSelect value={noteType} onChange={handleTypeChange} />
+                        <StatusToggle status={noteStatus} onToggle={handleStatusToggle} />
+                    </div>
 
                     {/* Date — hidden native picker triggered by click */}
                     <input
@@ -491,6 +640,63 @@ export function SingleNotePanel({
                 />
             </div>
         </div>
+    );
+}
+
+interface TypeSelectProps {
+    value: NoteType;
+    onChange: (type: NoteType) => void;
+    compact?: boolean;
+}
+
+function TypeSelect({ value, onChange, compact = false }: TypeSelectProps) {
+    return (
+        <select
+            value={value}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onChange(e.target.value as NoteType)}
+            className={cn(
+                'shrink-0 rounded border border-[var(--color-border)] bg-white/25 font-semibold text-inherit outline-none transition-colors hover:bg-white/35 focus:border-[var(--color-accent-copper)]',
+                compact ? 'h-5 max-w-[76px] px-1 text-[10px]' : 'h-6 max-w-[116px] px-1.5 text-[11px]'
+            )}
+            title="Type"
+        >
+            {NOTE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                    {NOTE_TYPE_LABELS[type]}
+                </option>
+            ))}
+        </select>
+    );
+}
+
+interface StatusToggleProps {
+    status: NoteStatus;
+    onToggle: () => void;
+    compact?: boolean;
+}
+
+function StatusToggle({ status, onToggle, compact = false }: StatusToggleProps) {
+    const isClosed = status === 'closed';
+    const Icon = isClosed ? CheckCircle2 : Circle;
+
+    return (
+        <button
+            type="button"
+            onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+            }}
+            className={cn(
+                'inline-flex shrink-0 items-center gap-1 rounded border border-[var(--color-border)] bg-white/20 font-semibold text-inherit transition-colors hover:bg-white/35',
+                isClosed && 'opacity-70',
+                compact ? 'h-5 px-1 text-[10px]' : 'h-6 px-1.5 text-[11px]'
+            )}
+            title={isClosed ? 'Reopen note' : 'Close note'}
+        >
+            <Icon className={compact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
+            <span>{getNoteStatusLabel(status)}</span>
+        </button>
     );
 }
 

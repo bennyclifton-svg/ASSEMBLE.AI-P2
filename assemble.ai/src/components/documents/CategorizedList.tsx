@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Trash2, Loader2, FileIcon, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload, Download } from 'lucide-react';
+import { Loader2, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload, Download } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { useSyncStatus, SyncStatus } from '@/lib/hooks/use-sync-status';
 import { useRenderLoopGuard, useStableArray } from '@/lib/hooks/use-render-loop-guard';
@@ -383,15 +383,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         return () => clearInterval(interval);
     }, [hasProcessingDrawings, projectId, isInCooldown, fetchData]);
 
-    const handleSelectAll = (checked: boolean) => {
-        const newSelection = checked ? new Set(documents.map(d => d.id)) : new Set<string>();
-        setSelectedIds(newSelection);
-        onSelectionChange?.(newSelection);
-        setLastSelectedId(null);
-    };
-
     const handleSelect = (id: string, event: React.MouseEvent) => {
-        let newSelected = new Set(selectedIds);
+        const newSelected = new Set(selectedIds);
         const isSelected = newSelected.has(id);
 
         if (event.shiftKey && lastSelectedId) {
@@ -683,7 +676,10 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             /* Table View */
             <>
             {/* Table Toolbar */}
-            <div className="flex items-center justify-end mb-1">
+            <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="text-xs font-medium text-[var(--color-accent-yellow)]">
+                    {selectedIds.size > 0 ? `${selectedIds.size} selected` : null}
+                </div>
                 <button
                     onClick={handleDownload}
                     disabled={selectedIds.size === 0 || isDownloading}
@@ -836,7 +832,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         key={doc.id}
                                         className={cn(
                                             "border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer select-none h-9",
-                                            selectedIds.has(doc.id) && "bg-[var(--color-bg-hover)]"
+                                            selectedIds.has(doc.id) &&
+                                                "bg-[var(--color-accent-yellow-tint)] hover:bg-[var(--color-accent-yellow-tint)] shadow-[inset_3px_0_0_var(--color-accent-yellow)]"
                                         )}
                                         onMouseEnter={() => setHoveredRowId(doc.id)}
                                         onMouseLeave={() => setHoveredRowId(null)}

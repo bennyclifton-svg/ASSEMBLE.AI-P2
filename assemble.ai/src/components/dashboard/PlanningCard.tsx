@@ -1,10 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Box } from 'lucide-react';
-import { DetailsSection } from './planning/DetailsSection';
-import { ObjectivesNav } from './planning/ObjectivesNav';
-import { ProfileSection } from '@/components/profiler/ProfileSection';
+import { BriefSection } from './planning/BriefSection';
 import { StakeholderNav } from '@/components/stakeholders/StakeholderNav';
 import { KnowledgeNav } from '@/components/knowledge/KnowledgeNav';
 import { ProjectSwitcher } from './ProjectSwitcher';
@@ -19,15 +16,9 @@ interface Project {
 
 interface PlanningCardProps {
     projectId: string;
-    selectedDocumentIds?: string[];
-    onSetSelectedDocumentIds?: (ids: string[]) => void;
-    onProjectNameChange?: () => void;
-    onProfileChange?: (buildingClass: string | null, projectType: string | null) => void;
     onStakeholderNavigate?: () => void;
     onKnowledgeNavigate?: () => void;
-    onShowProfiler?: () => void;
-    onShowObjectives?: () => void;
-    onShowProjectDetails?: () => void;
+    onShowBrief?: () => void;
     activeMainTab?: string;
     refreshKey?: number;
     selectedProject?: Project | null;
@@ -36,78 +27,20 @@ interface PlanningCardProps {
 
 export function PlanningCard({
     projectId,
-    selectedDocumentIds = [],
-    onSetSelectedDocumentIds,
-    onProjectNameChange,
-    onProfileChange,
     onStakeholderNavigate,
     onKnowledgeNavigate,
-    onShowProfiler,
-    onShowObjectives,
-    onShowProjectDetails,
+    onShowBrief,
     activeMainTab,
     refreshKey,
     selectedProject,
     onSelectProject,
 }: PlanningCardProps) {
-    const [data, setData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        // Reset state when projectId changes or refreshKey triggers re-fetch
-        setIsLoading(true);
-        setData(null);
-        fetchPlanningData();
-    }, [projectId, refreshKey]);
-
-    const fetchPlanningData = async () => {
-        try {
-            const response = await fetch(`/api/planning/${projectId}`);
-            const planningData = await response.json();
-            setData(planningData);
-        } catch (error) {
-            console.error('Error fetching planning data:', error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    if (isLoading) {
-        return (
-            <div className="h-full flex items-center justify-center">
-                <div className="text-[var(--color-text-secondary)]">Loading planning data...</div>
-            </div>
-        );
-    }
-
     return (
         <div className="h-full overflow-y-auto section-planning">
             <div className="nav-panel-unified pt-[60px]">
-                <DetailsSection
-                    key={projectId}
-                    projectId={projectId}
-                    data={data?.details}
-                    onUpdate={fetchPlanningData}
-                    onProjectNameChange={onProjectNameChange}
-                    isActive={activeMainTab === 'project-details'}
-                    onToggle={onShowProjectDetails}
-                />
-
-                <ProfileSection
-                    projectId={projectId}
-                    data={data?.profile}
-                    onUpdate={fetchPlanningData}
-                    onProfileChange={onProfileChange}
-                    onShowProfiler={onShowProfiler}
-                    isActive={activeMainTab === 'profiler'}
-                />
-
-                <ObjectivesNav
-                    projectId={projectId}
-                    data={data?.objectives}
-                    profileData={data?.profile}
-                    onShowObjectives={onShowObjectives}
-                    isActive={activeMainTab === 'objectives'}
+                <BriefSection
+                    isActive={activeMainTab === 'brief'}
+                    onShowBrief={onShowBrief}
                 />
 
                 <StakeholderNav
