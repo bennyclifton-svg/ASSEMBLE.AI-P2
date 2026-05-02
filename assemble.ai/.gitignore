@@ -67,3 +67,12 @@ dev-server.log
 # Test artifacts
 test-*.docx
 full_test_results.txt
+
+# Local-only caches and ephemeral state
+.npm-cache/
+.skill-downloads/
+.tmp/
+demo-uploads/
+
+# Local-only Claude settings (per-machine overrides)
+.claude/settings.local.json

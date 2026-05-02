@@ -14,7 +14,9 @@
       "Bash(git checkout *)",
       "Bash(git apply *)",
       "Bash(grep -v \"\\\\.md$\")",
-      "Bash(npx jest *)"
+      "Bash(npx jest *)",
+      "Bash(git reset *)",
+      "Bash(grep -E \"Bin [0-9]+ -> [1-9][0-9]{6,}\")"
     ],
     "defaultMode": "bypassPermissions"
   }

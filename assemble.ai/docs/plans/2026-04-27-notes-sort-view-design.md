@@ -1,87 +1,104 @@
-# Notes — Sort & View Modes
+# Notes - Typed Capture Register
 
 **Date:** 2026-04-27
+**Updated:** 2026-05-01
 **Component:** Notes panel (Feature 021)
 
 ## Summary
 
-Add sort controls (date / color / title, each with toggleable direction) and a view-mode switch (tiles / list) to the Notes panel. Persist the user's choice per project in the database.
+Keep Notes as the lightweight project capture surface, separate from the fuller Meetings and Reports sections. Notes can now be typed as construction-management instruments, carry a simple open/closed status, and be sorted by date or type.
+
+## Capture Types
+
+Supported note types:
+
+- RFI
+- Notice
+- EOT
+- Defect
+- Variation
+- Risk
+- Transmittal
+- Review
+- Note
+
+Internal values are stored as lowercase keys:
+
+```ts
+'rfi' | 'notice' | 'eot' | 'defect' | 'variation' | 'risk' | 'transmittal' | 'review' | 'note'
+```
+
+## Status
+
+Each note has a simple status:
+
+```ts
+'open' | 'closed'
+```
+
+No due date is included in this pass.
 
 ## Data
 
-Add a single `uiPreferences` JSONB column to the `projects` table, default `{}`. Reusable for future per-project UI state.
+Add note metadata to the `notes` table:
 
 ```ts
-uiPreferences: jsonb("ui_preferences").default({}).notNull()
+type: text('type').notNull().default('note')
+status: text('status').notNull().default('open')
 ```
 
-Notes feature shape:
+Per-project UI state stays in `projects.ui_preferences`:
 
 ```json
 {
   "notes": {
     "view": "tiles" | "list",
-    "sortField": "date" | "color" | "title",
+    "sortField": "date" | "type",
     "sortDir": "asc" | "desc"
   }
 }
 ```
 
-Each sort field remembers its own direction independently (kept in client state; only the active field's direction is persisted).
+## Sort Semantics
 
-## API
+Sorting remains client-side because notes are already loaded.
 
-`PATCH /api/projects/[projectId]/ui-preferences` — accepts a partial object, deep-merges into the existing `uiPreferences`, returns the merged result.
+- **date** uses `noteDate ?? createdAt`, newest first by default.
+- **type** uses the construction-management order listed above.
 
-## Sort semantics (client-side; notes already loaded)
+## UI
 
-- **date** → `noteDate ?? createdAt`. Notes with explicit `noteDate` rank above implicit ones on ties.
-- **title** → `localeCompare`, case-insensitive.
-- **color** → fixed order (yellow → blue → pink → green → white) so tiles cluster.
+The Notes toolbar exposes:
 
-Defaults on first activation: date desc (newest first), title asc (A→Z), color asc.
-
-## Toolbar
-
-Always rendered (even at zero notes). Sits above the notes grid.
-
-```
-[ ▦ Tiles | ☰ List ]    Sort:  [ Date ↓ ] [ Color ] [ Title ]
+```text
+[ Tiles | List ]    Sort: [ Date ] [ Type ]
 ```
 
-- View toggle: segmented pair, active = `bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]`.
-- Sort buttons: plain text, only the active button shows an `ArrowUp`/`ArrowDown` (lucide). Click active to flip direction; click inactive to switch (using its remembered direction).
-- All styling uses TESSERA tokens — no hardcoded colors.
+Each note exposes:
 
-## List view row
+- Type selector
+- Open/Closed toggle
+- Existing title, date, colour, copy, delete, expand, attachment, and export controls
 
-Replaces the 140px tile grid when `view === "list"`. One row per note, full width, ~`h-10`, background = note color.
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│ ● [Title — click to edit]              23/04/2026   ⊙  ⧉  🗑  ⌐     │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-- Color chip on left (8px, opens `NoteColorPicker`).
-- Title in the middle, click-to-edit (same logic as collapsed tile, `<input>` instead of `<textarea>`).
-- Date right-aligned, hidden native picker (existing pattern).
-- Four icons on right, same order as collapsed tile: color picker, copy, delete, expand (`CornerBracketIcon`).
+List view acts as the tidy register-style scan. Tile view remains the quick sticky-note workspace.
 
 ## Files
 
 | File | Change |
 |------|--------|
-| `drizzle-pg/schema.ts` | Add `uiPreferences` JSONB column |
-| `drizzle-pg/0xxx_*.sql` | Generated migration |
-| `src/app/api/projects/[projectId]/ui-preferences/route.ts` | New PATCH endpoint |
-| `src/lib/hooks/use-ui-preferences.ts` | New hook (read + write) |
-| `src/components/notes-meetings-reports/NotesToolbar.tsx` | New toolbar component |
-| `src/components/notes-meetings-reports/SingleNotePanel.tsx` | Add `isListMode` branch in collapsed path |
-| `src/components/notes-meetings-reports/NotesPanel.tsx` | Toolbar + sort comparator + grid/list switch |
+| `drizzle-pg/0043_notes_type_status.sql` | Add note `type` and `status` columns |
+| `src/lib/db/pg-schema.ts` | Add `projects.uiPreferences`, `notes.type`, and `notes.status` |
+| `src/types/notes-meetings-reports.ts` | Add note type/status constants and helpers |
+| `src/lib/validations/notes-meetings-reports-schema.ts` | Validate type/status create and update payloads |
+| `src/app/api/notes/**` | Create, update, copy, and export type/status metadata |
+| `src/components/notes-meetings-reports/NotesToolbar.tsx` | Sort only by date or type |
+| `src/components/notes-meetings-reports/NotesPanel.tsx` | Persist view/sort preferences and apply sorting |
+| `src/components/notes-meetings-reports/SingleNotePanel.tsx` | Render type/status controls in tile, list, and expanded modes |
+| `src/lib/agents/tools/*note*.ts` and applicators | Preserve type/status through agent note proposals |
 
-## Out of scope
+## Out of Scope
 
-- Filtering (color/starred) — design separately if needed.
-- Drag-to-reorder — sort is comparator-driven only.
-- Multi-select / bulk actions on rows.
+- Due dates
+- Formal RFI/EOT/Notice registers
+- Multi-select and bulk status updates
+- Promotion from note to formal register item

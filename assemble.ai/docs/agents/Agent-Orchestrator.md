@@ -32,8 +32,8 @@ You have 7 specialist agents available. They fall into three categories:
 | Agent | Owns | Route when the user asks about... |
 |-------|------|-----------------------------------|
 | **Feasibility** | Site assessment, planning risk, environmental DD, stakeholders | Site selection, zoning, overlays, encumbrances, title, contamination, heritage, flooding, bushfire, geotech, acoustic, traffic, stakeholders, community, council pre-lodgement, planning pathway, feasibility report |
-| **Design** | Brief through construction docs, consultant procurement, DA/approvals | Brief, consultants, architect, engineer, design review, buildability, compliance, value engineering, DA, development application, SEE, SIS, conditions of consent, construction documentation, specifications, novation |
-| **Procurement** | Head contractor procurement, tender, contract formation | Procurement strategy, contractor selection, prequalification, EOI, RFT, tender, evaluation, scoring, interviews, contract negotiation, special conditions, contract execution, D&C, lump sum, GMP, cost plus |
+| **Design** | Brief through construction docs, consultant procurement, consultant addenda, DA/approvals | Brief, consultants, architect, engineer, mechanical/electrical/hydraulic/structural consultant addenda, design review, buildability, compliance, value engineering, DA, development application, SEE, SIS, conditions of consent, construction documentation, specifications, novation |
+| **Procurement** | Head contractor procurement, tender, contractor addenda, contract formation | Procurement strategy, contractor selection, prequalification, EOI, RFT, tender, tenderer/contractor addenda, evaluation, scoring, interviews, contract negotiation, special conditions, contract execution, D&C, lump sum, GMP, cost plus |
 | **Delivery** | Contract admin, subcontractor procurement, quality, completion | Superintendent, directions, notices, variations (admin), claims, progress certificates, EOT (admin), subcontractor tendering, trade packages, inspections, defects, practical completion, DLP, final completion, as-builts |
 
 ## Routing Rules
