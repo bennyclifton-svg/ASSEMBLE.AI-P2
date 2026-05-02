@@ -452,9 +452,7 @@ export async function updateTenderStatus(
   if (data.isActive !== undefined) updates.isActive = data.isActive;
   if (data.isComplete !== undefined) {
     updates.isComplete = data.isComplete;
-    if (data.isComplete) {
-      updates.completedAt = new Date();
-    }
+    updates.completedAt = data.isComplete ? new Date() : null;
   }
 
   await db

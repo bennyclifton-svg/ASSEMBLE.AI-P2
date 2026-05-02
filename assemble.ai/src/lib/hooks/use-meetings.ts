@@ -9,6 +9,7 @@
 
 import useSWR, { mutate as globalMutate } from 'swr';
 import { useCallback } from 'react';
+import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import type {
     Meeting,
     MeetingWithDetails,
@@ -145,6 +146,19 @@ export function useMeetings({ projectId, groupId }: UseMeetingsOptions): UseMeet
             revalidateOnFocus: false,
             dedupingInterval: 5000,
         }
+    );
+
+    useProjectEvents(
+        projectId || null,
+        useCallback(
+            (event) => {
+                if (event.entity !== 'meeting') return;
+                mutate();
+                globalMutate(`/api/meetings/${event.id}`);
+                globalMutate(`/api/meetings/${event.id}/sections`);
+            },
+            [mutate]
+        )
     );
 
     const refetch = useCallback(() => {

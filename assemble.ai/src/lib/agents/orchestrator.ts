@@ -10,8 +10,10 @@ import { db } from '@/lib/db';
 import { agentRuns, chatMessages } from '@/lib/db/pg-schema';
 import { eq } from 'drizzle-orm';
 import { emitChatEvent } from './events';
+import { isIssueVariationWorkflowRequest, isVariationWriteRequest } from './intent';
 import { runAgent } from './runner';
 import type { AgentMessage } from './completion';
+import type { ChatViewContext } from '@/lib/chat/view-context';
 
 export interface RunOrchestratorArgs {
     threadId: string;
@@ -20,6 +22,7 @@ export interface RunOrchestratorArgs {
     projectId: string;
     triggerMessageId: string;
     history: AgentMessage[];
+    viewContext?: ChatViewContext | null;
 }
 
 export interface RunOrchestratorResult {
@@ -37,6 +40,12 @@ const SPECIALIST_LABELS: Record<SpecialistName, string> = {
     finance: 'Finance Agent',
     program: 'Program Agent',
     design: 'Design Agent',
+};
+
+const DOMAIN_LABELS: Record<SpecialistName, string> = {
+    finance: 'Finance',
+    program: 'Programme',
+    design: 'Design',
 };
 
 export async function runOrchestrator(args: RunOrchestratorArgs): Promise<RunOrchestratorResult> {
@@ -71,31 +80,26 @@ export async function runOrchestrator(args: RunOrchestratorArgs): Promise<RunOrc
                     projectId: args.projectId,
                     triggerMessageId: args.triggerMessageId,
                     history: buildSpecialistHistory(args.history, agentName, latestUserMessage),
+                    viewContext: args.viewContext ?? null,
                     persistAssistantMessage: false,
                 })
             )
         );
 
-        const sections: string[] = [];
+        const sections: OrchestratorResponseSection[] = [];
         results.forEach((result, index) => {
             const agentName = routedAgents[index];
             if (result.status === 'fulfilled') {
                 totalInputTokens += result.value.inputTokens;
                 totalOutputTokens += result.value.outputTokens;
-                sections.push(`**${SPECIALIST_LABELS[agentName]}:**\n${result.value.finalText.trim()}`);
+                sections.push({ agentName, text: result.value.finalText.trim() });
             } else {
                 const message = result.reason instanceof Error ? result.reason.message : String(result.reason);
-                sections.push(`**${SPECIALIST_LABELS[agentName]}:**\nI couldn't complete this specialist check: ${message}`);
+                sections.push({ agentName, text: message, isError: true });
             }
         });
 
-        const finalText = [
-            routedAgents.length > 1
-                ? `I routed this to ${routedAgents.map((a) => SPECIALIST_LABELS[a]).join(', ')}.`
-                : `I routed this to ${SPECIALIST_LABELS[routedAgents[0]]}.`,
-            '',
-            sections.join('\n\n'),
-        ].join('\n');
+        const finalText = formatOrchestratorFinalText(sections);
 
         const [assistantMessage] = await db
             .insert(chatMessages)
@@ -164,6 +168,40 @@ export async function runOrchestrator(args: RunOrchestratorArgs): Promise<RunOrc
     }
 }
 
+interface OrchestratorResponseSection {
+    agentName: SpecialistName;
+    text: string;
+    isError?: boolean;
+}
+
+export function formatOrchestratorFinalText(sections: OrchestratorResponseSection[]): string {
+    if (sections.length === 0) {
+        return "I couldn't complete that project check.";
+    }
+
+    if (sections.length === 1) {
+        const [section] = sections;
+        return section.isError
+            ? `I couldn't complete that project check: ${section.text}`
+            : section.text;
+    }
+
+    const checked = sections.map((section) => DOMAIN_LABELS[section.agentName]).join(', ');
+    return [
+        `I checked ${checked}.`,
+        '',
+        sections
+            .map((section) => {
+                const label = DOMAIN_LABELS[section.agentName];
+                const text = section.isError
+                    ? `I couldn't complete this part: ${section.text}`
+                    : section.text;
+                return `**${label}:**\n${text}`;
+            })
+            .join('\n\n'),
+    ].join('\n');
+}
+
 export function routeAgents(text: string): SpecialistName[] {
     const lower = text.toLowerCase();
 
@@ -174,15 +212,67 @@ export function routeAgents(text: string): SpecialistName[] {
         return ['finance', 'program', 'design'];
     }
 
+    const consultantAddendum =
+        /\b(addendum|addenda)\b/.test(lower) &&
+        /\b(consultants?|architects?|engineers?|mechanical|electrical|hydraulic|structural|civil|bca|planners?|town planners?)\b/.test(lower);
+    if (consultantAddendum) {
+        return ['design'];
+    }
+
+    const documentSelection =
+        /\b(select|tick|check|choose|highlight)\b[\s\S]{0,140}\b(documents?|docs?|drawings?|files?)\b/.test(lower) ||
+        /\b(documents?|docs?|drawings?|files?)\b[\s\S]{0,140}\b(select|tick|checked|highlighted|chosen)\b/.test(lower);
+    if (documentSelection) {
+        return ['design'];
+    }
+
+    const rftWrite =
+        /\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,140}\b(rft|request for tender|tender package|tender document|tender documents|brief|services brief|deliverables)\b/.test(lower) &&
+        /\b(rft|request for tender|tender package|tender document|tender documents)\b/.test(lower);
+    if (rftWrite) {
+        return ['design'];
+    }
+
+    const noteWrite =
+        /\b(add|record|create|enter|post|log|update|change|set)\b[\s\S]{0,140}\b(notes?|decision record)\b/.test(lower);
+    const financeNote =
+        noteWrite &&
+        /\b(finance|financial|commercial|cost|budget|variation|invoice|claim|progress claim|qs)\b/.test(lower);
+    const programNote =
+        noteWrite &&
+        /\b(programme|program|schedule|milestone|activity|eot|completion)\b/.test(lower);
+    if (isIssueVariationWorkflowRequest(text) || isVariationWriteRequest(text)) {
+        return ['finance'];
+    }
+    if (noteWrite && !financeNote && !programNote) {
+        return ['design'];
+    }
+
     const financeWrite =
-        /\b(add|record|create|enter|post|allocate|log)\b[\s\S]{0,140}\b(invoices?|progress claims?|claims?|fees?|cost lines?|variations?)\b/.test(lower);
+        /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set)\b[\s\S]{0,140}\b(invoices?|progress claims?|claims?|fees?|cost lines?|variations?|commercial risks?|finance notes?)\b/.test(lower);
     if (financeWrite) {
         return ['finance'];
     }
 
-    const finance = /\b(cost|budget|forecast|variance|cashflow|invoices?|claims?|contingency|variation|financial|fees?|contract sum|qs)\b/.test(lower);
-    const program = /\b(programme|program|schedule|milestone|delay|eot|extension of time|critical path|float|completion|duration)\b/.test(lower);
-    const design = /\b(design|drawing|architect|engineer|consultant|brief|da\b|development application|planning|ncc|bca|condition|specification)\b/.test(lower);
+    if (programNote) {
+        return ['program'];
+    }
+
+    const programWrite =
+        /\b(add|record|create|enter|post|log|update|change|set|move)\b[\s\S]{0,140}\b(programme|program|schedule|activities?|milestones?|programme risks?|schedule risks?)\b/.test(lower);
+    if (programWrite) {
+        return ['program'];
+    }
+
+    const designWrite =
+        /\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,140}\b(objectives?|project objectives?|brief|project brief|profile|stakeholders?|consultants?|contractors?|authorities?|contacts?|design notes?|meetings?|pre-da|da meetings?|design meetings?|addendum|addenda)\b/.test(lower);
+    if (designWrite) {
+        return ['design'];
+    }
+
+    const finance = /\b(cost|budget|forecast|variance|cashflow|invoices?|claims?|contingency|variation|financial|fees?|contract sum|qs|commercial risk)\b/.test(lower);
+    const program = /\b(programme|program|schedule|milestone|delay|eot|extension of time|critical path|float|completion|duration|risk register|schedule risk)\b/.test(lower);
+    const design = /\b(design|drawing|documents?|architect|engineer|consultant|stakeholder|contractor|authority|brief|objectives?|profile|da\b|development application|planning|ncc|bca|condition|specification|meeting|addendum|addenda)\b/.test(lower);
 
     const matches: SpecialistName[] = [];
     if (finance) matches.push('finance');
@@ -198,16 +288,53 @@ function buildSpecialistHistory(
     latestUserMessage: string
 ): AgentMessage[] {
     const previous = history.slice(0, -1);
+    const routingHint = specialistRoutingHint(agentName, latestUserMessage);
     return [
         ...previous,
         {
             role: 'user',
             content:
                 `The Orchestrator routed this request to you as the ${SPECIALIST_LABELS[agentName]}. ` +
-                `Answer only from your domain. If the request requires another specialist, name that dependency briefly.\n\n` +
+                `Answer only from your domain and use your available tools for in-domain write requests. If the request requires another specialist, name that dependency briefly.\n` +
+                routingHint +
+                `\n` +
                 `Original user request:\n${latestUserMessage}`,
         },
     ];
+}
+
+function specialistRoutingHint(agentName: SpecialistName, latestUserMessage: string): string {
+    const lower = latestUserMessage.toLowerCase();
+    if (agentName === 'finance' && isIssueVariationWorkflowRequest(latestUserMessage)) {
+        return (
+            'Routing note: this is an issue-variation workflow request. ' +
+            'Read cost/programme context first, ask one concise mapping question only if needed, then use start_issue_variation_workflow. ' +
+            'Do not satisfy this with create_note, create_variation, update_cost_line, or update_program_activity directly.'
+        );
+    }
+    if (
+        agentName === 'design' &&
+        /\b(rft|request for tender|tender package|tender document|tender documents)\b/.test(lower) &&
+        !/\b(addendum|addenda|notes?|decision record)\b/.test(lower)
+    ) {
+        return (
+            'Routing note: this is RFT content work, not a note or addendum. ' +
+            'The RFT Brief section uses stakeholder briefServices and briefDeliverables. ' +
+            'Resolve the relevant consultant, then use update_stakeholder if possible.'
+        );
+    }
+    if (
+        agentName === 'design' &&
+        /\b(addendum|addenda)\b/.test(lower) &&
+        /\b(consultants?|architects?|engineers?|mechanical|electrical|hydraulic|structural|civil|bca|planners?)\b/.test(lower)
+    ) {
+        return (
+            'Routing note: consultant addenda are in Design scope. Do not hand this to a Document Controller/Admin Agent. ' +
+            'If earlier conversation turns said otherwise, treat that as superseded by the current toolset. ' +
+            'Resolve the consultant and documents, then use create_addendum if possible.'
+        );
+    }
+    return '';
 }
 
 function latestUserText(history: AgentMessage[]): string {

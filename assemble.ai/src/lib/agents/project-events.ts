@@ -22,15 +22,34 @@ const connections: Map<string, Set<ReadableStreamDefaultController>> =
     (globalThis.__assembleProjectConnections = new Map());
 const encoder = new TextEncoder();
 
-export type ProjectEntity = 'cost_line';
+export type ProjectEntity =
+    | 'addendum'
+    | 'cost_line'
+    | 'invoice'
+    | 'note'
+    | 'risk'
+    | 'variation'
+    | 'meeting'
+    | 'objective'
+    | 'program_activity'
+    | 'program_milestone'
+    | 'stakeholder';
 export type ProjectEntityOp = 'created' | 'updated' | 'deleted';
 
-export type ProjectEvent = {
+export type EntityUpdatedEvent = {
     type: 'entity_updated';
     entity: ProjectEntity;
     op: ProjectEntityOp;
     id: string;
 };
+
+export type DocumentSelectionChangedEvent = {
+    type: 'document_selection_changed';
+    mode: 'replace' | 'add' | 'remove' | 'clear';
+    documentIds: string[];
+};
+
+export type ProjectEvent = EntityUpdatedEvent | DocumentSelectionChangedEvent;
 
 export function registerProjectConnection(
     projectId: string,

@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { dispatchDocumentSelectionChanged } from '@/lib/chat/document-selection-events';
 
 export type ChatStreamEvent =
     | { type: 'connected'; threadId: string }
@@ -27,6 +28,7 @@ export type ChatStreamEvent =
           approvalId: string;
           toolName: string;
           proposedDiff: unknown;
+          createdAt?: string | Date | null;
       }
     | {
           type: 'approval_resolved';
@@ -34,6 +36,12 @@ export type ChatStreamEvent =
           status: 'applied' | 'rejected' | 'conflict';
           appliedOutput?: unknown;
           error?: string;
+      }
+    | {
+          type: 'document_selection_changed';
+          projectId: string;
+          mode: 'replace' | 'add' | 'remove' | 'clear';
+          documentIds: string[];
       }
     | { type: 'assistant_message'; runId: string; messageId: string; content: string }
     | {
@@ -68,6 +76,7 @@ export interface PendingApprovalView {
     runId: string;
     toolName: string;
     proposedDiff: unknown;
+    createdAt?: string | Date | null;
     /** Resolution status, set when an approval_resolved event arrives. */
     resolution: null | {
         status: 'applied' | 'rejected' | 'conflict';
@@ -99,6 +108,15 @@ export function useChatStream(threadId: string | null) {
     const sourceRef = useRef<EventSource | null>(null);
 
     const apply = useCallback((event: ChatStreamEvent) => {
+        if (event.type === 'document_selection_changed') {
+            dispatchDocumentSelectionChanged({
+                projectId: event.projectId,
+                mode: event.mode,
+                documentIds: event.documentIds,
+            });
+            return;
+        }
+
         setState((prev) => {
             switch (event.type) {
                 case 'connected':
@@ -169,6 +187,7 @@ export function useChatStream(threadId: string | null) {
                                 runId: event.runId,
                                 toolName: event.toolName,
                                 proposedDiff: event.proposedDiff,
+                                createdAt: event.createdAt ?? new Date().toISOString(),
                                 resolution: null,
                             },
                         },
@@ -185,6 +204,7 @@ export function useChatStream(threadId: string | null) {
                                     runId: '',
                                     toolName: '',
                                     proposedDiff: null,
+                                    createdAt: new Date().toISOString(),
                                 }),
                                 resolution: {
                                     status: event.status,
@@ -226,6 +246,7 @@ export function useChatStream(threadId: string | null) {
             'tool_call_finished',
             'awaiting_approval',
             'approval_resolved',
+            'document_selection_changed',
             'assistant_message',
             'run_finished',
         ];

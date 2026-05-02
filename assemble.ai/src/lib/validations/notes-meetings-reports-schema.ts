@@ -7,18 +7,23 @@
  */
 
 import { z } from 'zod';
+import { NOTE_STATUSES, NOTE_TYPES } from '@/types/notes-meetings-reports';
 
 // ============================================================================
 // NOTES VALIDATION
 // ============================================================================
 
 export const noteColorSchema = z.enum(['yellow', 'blue', 'green', 'pink']);
+export const noteTypeSchema = z.enum(NOTE_TYPES);
+export const noteStatusSchema = z.enum(NOTE_STATUSES);
 
 export const createNoteSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1).max(200).optional(),
   content: z.string().optional(),
   color: noteColorSchema.optional(),
+  type: noteTypeSchema.optional(),
+  status: noteStatusSchema.optional(),
 });
 
 export const updateNoteSchema = z.object({
@@ -26,6 +31,8 @@ export const updateNoteSchema = z.object({
   content: z.string().optional(),
   isStarred: z.boolean().optional(),
   color: noteColorSchema.optional(),
+  type: noteTypeSchema.optional(),
+  status: noteStatusSchema.optional(),
   noteDate: z.string().nullable().optional(),
   reportingPeriodStart: z.string().nullable().optional(),
   reportingPeriodEnd: z.string().nullable().optional(),

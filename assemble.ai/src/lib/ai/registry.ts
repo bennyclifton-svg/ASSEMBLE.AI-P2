@@ -17,6 +17,10 @@ import { eq } from 'drizzle-orm';
 import type { FeatureGroup, ModelChoice, Provider } from './types';
 
 const TTL_MS = 60 * 1000;
+const FALLBACK: ModelChoice = {
+    provider: 'anthropic',
+    modelId: 'claude-sonnet-4-6',
+};
 
 interface CacheEntry {
     value: ModelChoice;
@@ -32,9 +36,13 @@ async function fetchFromDb(group: FeatureGroup): Promise<ModelChoice> {
         .where(eq(modelSettings.featureGroup, group));
 
     if (!row) {
-        throw new Error(
-            `No model_settings row for feature_group="${group}". Did the Phase 1 migration run?`
-        );
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn(
+                `[ai-registry] No model_settings row for feature_group="${group}". ` +
+                    `Using fallback ${FALLBACK.modelId}.`
+            );
+        }
+        return FALLBACK;
     }
 
     return { provider: row.provider as Provider, modelId: row.modelId };
@@ -45,7 +53,16 @@ async function getChoice(group: FeatureGroup): Promise<ModelChoice> {
     const hit = cache.get(group);
     if (hit && hit.expiresAt > now) return hit.value;
 
-    const fresh = await fetchFromDb(group);
+    let fresh: ModelChoice;
+    try {
+        fresh = await fetchFromDb(group);
+    } catch (err) {
+        if (process.env.NODE_ENV !== 'production') {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`[ai-registry] model_settings lookup failed (${msg}). Using fallback ${FALLBACK.modelId}.`);
+        }
+        fresh = FALLBACK;
+    }
     cache.set(group, { value: fresh, expiresAt: now + TTL_MS });
     return fresh;
 }

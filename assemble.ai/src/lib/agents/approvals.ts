@@ -47,6 +47,8 @@ export interface ProposeApprovalArgs {
     proposedDiff: ProposedDiff;
     /** Snapshot of the row's row_version at propose time. */
     expectedRowVersion: number | null;
+    /** Workflow steps may create a pending approval before it is actionable. */
+    emit?: boolean;
 }
 
 export interface ProposalResult {
@@ -75,17 +77,20 @@ export async function proposeApproval(args: ProposeApprovalArgs): Promise<Propos
             expectedRowVersion: args.expectedRowVersion ?? undefined,
             status: 'pending',
         })
-        .returning({ id: approvals.id });
+        .returning({ id: approvals.id, createdAt: approvals.createdAt });
 
     const approvalId = row.id;
 
-    emitChatEvent(args.ctx.threadId, {
-        type: 'awaiting_approval',
-        runId: args.ctx.runId,
-        approvalId,
-        toolName: args.toolName,
-        proposedDiff: args.proposedDiff,
-    });
+    if (args.emit !== false) {
+        emitChatEvent(args.ctx.threadId, {
+            type: 'awaiting_approval',
+            runId: args.ctx.runId,
+            approvalId,
+            toolName: args.toolName,
+            proposedDiff: args.proposedDiff,
+            createdAt: row.createdAt,
+        });
+    }
 
     return {
         approvalId,

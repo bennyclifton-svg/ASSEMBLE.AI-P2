@@ -7,7 +7,7 @@
  */
 
 import { db } from '@/lib/db';
-import { costLines } from '@/lib/db/pg-schema';
+import { costLines, projectStakeholders } from '@/lib/db/pg-schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import { registerTool, type AgentToolDefinition } from './catalog';
 import { assertProjectOrg, type ToolContext } from './_context';
@@ -43,6 +43,9 @@ interface ListCostLinesOutput {
         activity: string;
         budgetCents: number;
         approvedContractCents: number;
+        stakeholderId: string | null;
+        stakeholderName: string | null;
+        disciplineOrTrade: string | null;
     }>;
     truncated: boolean;
 }
@@ -60,7 +63,7 @@ const definition: AgentToolDefinition<ListCostLinesInput, ListCostLinesOutput> =
             'variance. Use to answer cost-position questions, identify top-variance ' +
             'lines, or summarise the cost plan by section. Filter by masterStage to ' +
             'scope to a phase (initiation, schematic_design, design_development, ' +
-            'procurement, delivery).',
+            'procurement, delivery). Includes stakeholder/discipline labels so you can map a user phrase like "Mechanical / Detail Design" to a cost line id.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -132,9 +135,13 @@ const definition: AgentToolDefinition<ListCostLinesInput, ListCostLinesOutput> =
                 activity: costLines.activity,
                 budgetCents: costLines.budgetCents,
                 approvedContractCents: costLines.approvedContractCents,
+                stakeholderId: costLines.stakeholderId,
+                stakeholderName: projectStakeholders.name,
+                disciplineOrTrade: projectStakeholders.disciplineOrTrade,
                 sortOrder: costLines.sortOrder,
             })
             .from(costLines)
+            .leftJoin(projectStakeholders, eq(costLines.stakeholderId, projectStakeholders.id))
             .where(and(...conditions))
             .orderBy(costLines.section, costLines.sortOrder)
             .limit(limit + 1);
@@ -165,6 +172,9 @@ const definition: AgentToolDefinition<ListCostLinesInput, ListCostLinesOutput> =
                 activity: r.activity,
                 budgetCents: r.budgetCents ?? 0,
                 approvedContractCents: r.approvedContractCents ?? 0,
+                stakeholderId: r.stakeholderId ?? null,
+                stakeholderName: r.stakeholderName ?? null,
+                disciplineOrTrade: r.disciplineOrTrade ?? null,
             })),
             truncated,
         };

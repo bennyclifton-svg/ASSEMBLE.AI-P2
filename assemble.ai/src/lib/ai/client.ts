@@ -21,6 +21,7 @@ const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 let anthropicClient: Anthropic | null = null;
 let openrouterClient: OpenAI | null = null;
+let openaiClient: OpenAI | null = null;
 
 function getAnthropic(): Anthropic {
     if (!anthropicClient) {
@@ -32,7 +33,7 @@ function getAnthropic(): Anthropic {
     return anthropicClient;
 }
 
-function getOpenRouter(): OpenAI {
+export function getOpenRouter(): OpenAI {
     if (!openrouterClient) {
         if (!process.env.OPENROUTER_API_KEY) {
             throw new Error(
@@ -49,6 +50,31 @@ function getOpenRouter(): OpenAI {
         });
     }
     return openrouterClient;
+}
+
+export function getOpenAI(): OpenAI {
+    if (!openaiClient) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error(
+                'OPENAI_API_KEY is not set. Switch the feature group back to Anthropic in /admin/models, or add the key to .env.'
+            );
+        }
+        openaiClient = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+    }
+    return openaiClient;
+}
+
+/**
+ * Returns the OpenAI-compatible client for a given provider. Both OpenRouter
+ * and OpenAI use the same chat-completions wire format; only the base URL and
+ * key differ. Anthropic uses a different SDK and shouldn't be passed here.
+ */
+function getOpenAICompatibleClient(provider: Provider): OpenAI {
+    if (provider === 'openrouter') return getOpenRouter();
+    if (provider === 'openai') return getOpenAI();
+    throw new Error(`Provider "${provider}" is not OpenAI-compatible`);
 }
 
 // ----------------------------------------------------------------------------
@@ -111,8 +137,8 @@ export async function aiComplete(req: AiCompleteRequest): Promise<AiCompleteResu
         };
     }
 
-    // openrouter (OpenAI-compatible)
-    const openai = getOpenRouter();
+    // openrouter or openai (both OpenAI-compatible)
+    const openai = getOpenAICompatibleClient(provider);
     const messages: OpenAI.ChatCompletionMessageParam[] = [];
     if (req.system) messages.push({ role: 'system', content: req.system });
     for (const m of req.messages) messages.push({ role: m.role, content: m.content });
@@ -125,7 +151,7 @@ export async function aiComplete(req: AiCompleteRequest): Promise<AiCompleteResu
     });
 
     const text = response.choices[0]?.message?.content ?? '';
-    if (!text) throw new Error('OpenRouter response contained no text');
+    if (!text) throw new Error(`${provider} response contained no text`);
 
     return {
         text,
@@ -197,8 +223,8 @@ export async function* aiCompleteStream(
         };
     }
 
-    // openrouter
-    const openai = getOpenRouter();
+    // openrouter or openai (both OpenAI-compatible)
+    const openai = getOpenAICompatibleClient(provider);
     const messages: OpenAI.ChatCompletionMessageParam[] = [];
     if (req.system) messages.push({ role: 'system', content: req.system });
     for (const m of req.messages) messages.push({ role: m.role, content: m.content });

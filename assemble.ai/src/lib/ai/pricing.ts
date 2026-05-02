@@ -59,6 +59,56 @@ export const MODEL_CATALOG: ModelInfo[] = [
         notes: 'Fast and cheap. Good for extraction and matching.',
         supportsNativePdf: true,
     },
+    // -- OpenAI (direct, no OpenRouter margin) --
+    // Pricing approximate; confirm at https://openai.com/api/pricing/
+    {
+        provider: 'openai',
+        modelId: 'gpt-4o-mini',
+        label: 'GPT-4o mini',
+        inputPer1M: 0.15,
+        outputPer1M: 0.60,
+        notes: 'Cheap and capable. Good general-purpose alternative to Haiku.',
+    },
+    {
+        provider: 'openai',
+        modelId: 'gpt-4.1-nano',
+        label: 'GPT-4.1 nano',
+        inputPer1M: 0.10,
+        outputPer1M: 0.40,
+        notes: 'Smallest GPT-4.1 variant. Cheapest direct OpenAI option.',
+    },
+    {
+        provider: 'openai',
+        modelId: 'gpt-4.1-mini',
+        label: 'GPT-4.1 mini',
+        inputPer1M: 0.40,
+        outputPer1M: 1.60,
+        notes: 'Mid-tier GPT-4.1. Better reasoning than nano at modest cost.',
+    },
+    {
+        provider: 'openai',
+        modelId: 'o3-mini',
+        label: 'o3-mini',
+        inputPer1M: 1.10,
+        outputPer1M: 4.40,
+        notes: 'Reasoning model. Higher latency, stronger logic.',
+    },
+    {
+        provider: 'openai',
+        modelId: 'gpt-4.1',
+        label: 'GPT-4.1',
+        inputPer1M: 2.00,
+        outputPer1M: 8.00,
+        notes: 'Full GPT-4.1. Strong general-purpose model.',
+    },
+    {
+        provider: 'openai',
+        modelId: 'gpt-4o',
+        label: 'GPT-4o',
+        inputPer1M: 2.50,
+        outputPer1M: 10.00,
+        notes: 'Flagship multimodal model.',
+    },
     // -- OpenRouter (OpenAI-compatible) --
     // Pricing approximate; confirm at https://openrouter.ai/models
     // --- GPT family ---
@@ -164,4 +214,15 @@ export function findModelInfo(provider: Provider, modelId: string): ModelInfo | 
 
 export function modelsForProvider(provider: Provider): ModelInfo[] {
     return MODEL_CATALOG.filter((m) => m.provider === provider);
+}
+
+/**
+ * Models for a provider, sorted cheapest → most expensive by total cost
+ * (input + output per 1M tokens). Lets the admin UI display a cost ladder
+ * the operator can scan top-to-bottom from cheapest to most capable.
+ */
+export function modelsForProviderRanked(provider: Provider): ModelInfo[] {
+    return modelsForProvider(provider).sort(
+        (a, b) => a.inputPer1M + a.outputPer1M - (b.inputPer1M + b.outputPer1M)
+    );
 }

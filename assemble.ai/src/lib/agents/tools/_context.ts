@@ -12,6 +12,7 @@
 import { db } from '@/lib/db';
 import { projects } from '@/lib/db/pg-schema';
 import { eq } from 'drizzle-orm';
+import type { ChatViewContext } from '@/lib/chat/view-context';
 
 export interface ToolContext {
     userId: string;
@@ -20,6 +21,7 @@ export interface ToolContext {
     projectId: string;
     threadId: string;
     runId: string;
+    viewContext?: ChatViewContext | null;
 }
 
 export class CrossTenantAccessError extends Error {

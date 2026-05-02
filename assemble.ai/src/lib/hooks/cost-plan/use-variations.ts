@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Variation, VariationWithCostLine, CreateVariationInput, UpdateVariationInput } from '@/types/variation';
-import { useProjectEvents } from '@/lib/hooks/use-project-events';
+import { useProjectEvents, type ProjectEvent } from '@/lib/hooks/use-project-events';
 
 export function useVariations(projectId: string, filters?: {
   costLineId?: string;
@@ -40,9 +40,10 @@ export function useVariations(projectId: string, filters?: {
     fetchVariations();
   }, [fetchVariations]);
 
-  useProjectEvents(projectId || null, (event) => {
+  const handleVariationEvent = useCallback((event: ProjectEvent) => {
     if (event.entity === 'variation') fetchVariations();
-  });
+  }, [fetchVariations]);
+  useProjectEvents(projectId || null, handleVariationEvent);
 
   return {
     variations,

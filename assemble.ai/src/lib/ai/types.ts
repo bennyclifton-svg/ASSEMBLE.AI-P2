@@ -12,16 +12,20 @@ export const FEATURE_GROUPS = [
     'cost_line_matching',
     'content_generation',
     'content_polishing',
+    'objectives_generation',
     // Agent-runtime groups (Phase 1+ of agent integration plan).
     // Until model_settings is seeded with these rows, the agent registry
     // falls back to a hardcoded Claude model — see lib/agents/model.ts.
     'agent_specialist',
     'agent_orchestrator',
+    'agent_finance',
+    'agent_program',
+    'agent_design',
 ] as const;
 
 export type FeatureGroup = (typeof FEATURE_GROUPS)[number];
 
-export type Provider = 'anthropic' | 'openrouter';
+export type Provider = 'anthropic' | 'openrouter' | 'openai';
 
 export interface ModelChoice {
     provider: Provider;

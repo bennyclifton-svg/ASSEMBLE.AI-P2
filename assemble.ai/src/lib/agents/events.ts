@@ -46,6 +46,7 @@ export type ChatEvent =
           toolName: string;
           // Free-form structured diff for UI rendering: { entity, entityId, before, after }.
           proposedDiff: unknown;
+          createdAt?: string | Date | null;
       }
     | {
           type: 'approval_resolved';
@@ -54,6 +55,12 @@ export type ChatEvent =
           status: 'applied' | 'rejected' | 'conflict';
           appliedOutput?: unknown;
           error?: string;
+      }
+    | {
+          type: 'document_selection_changed';
+          projectId: string;
+          mode: 'replace' | 'add' | 'remove' | 'clear';
+          documentIds: string[];
       }
     | { type: 'assistant_message'; runId: string; messageId: string; content: string }
     | {

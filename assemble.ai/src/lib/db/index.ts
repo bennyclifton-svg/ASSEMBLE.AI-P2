@@ -5,6 +5,8 @@
 
 import * as pgSchema from './pg-schema';
 import * as authSchema from './auth-schema';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool } from 'pg';
 
 const connectionString = process.env.DATABASE_URL || process.env.SUPABASE_POSTGRES_URL;
 
@@ -14,9 +16,6 @@ if (!connectionString) {
         'For local development, run: npm run db:up'
     );
 }
-
-const { drizzle } = require('drizzle-orm/node-postgres');
-const { Pool } = require('pg');
 
 const pool = new Pool({
     connectionString,
@@ -118,6 +117,8 @@ export const {
     toolCalls,
     // Approval gate (Phase 3 of agent integration plan)
     approvals,
+    // Unified action surface
+    actionInvocations,
 } = pgSchema;
 
 // Re-export Better Auth schema tables

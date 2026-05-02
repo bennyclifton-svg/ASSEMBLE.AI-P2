@@ -10,7 +10,7 @@ import { z } from 'zod';
 // ============================================================================
 
 // Define enums directly for Zod v4 compatibility
-export const buildingClassSchema = z.enum(['residential', 'commercial', 'industrial', 'institution', 'mixed', 'infrastructure']);
+export const buildingClassSchema = z.enum(['residential', 'commercial', 'industrial', 'institution', 'mixed', 'infrastructure', 'agricultural', 'defense_secure']);
 export const projectTypeSchema = z.enum(['refurb', 'extend', 'new', 'remediation', 'advisory']);
 
 export const profileSchema = z.object({
@@ -18,8 +18,8 @@ export const profileSchema = z.object({
   projectType: projectTypeSchema,
   subclass: z.array(z.string()).default([]), // Allow empty array for partial saves
   subclassOther: z.array(z.string()).nullable().optional(),
-  scaleData: z.record(z.number().positive('Scale values must be positive')).default({}), // Allow empty for partial saves
-  complexity: z.record(z.string()).default({}), // Allow empty for partial saves
+  scaleData: z.record(z.string(), z.number().positive('Scale values must be positive')).default({}), // Allow empty for partial saves
+  complexity: z.record(z.string(), z.string()).default({}), // Allow empty for partial saves
 });
 
 // Mixed class allows multiple subclasses (up to 4)
@@ -110,7 +110,7 @@ export function validateProfile(data: unknown): { success: true; data: ProfileSc
 }
 
 export function formatValidationErrors(errors: z.ZodError): Array<{ field: string; message: string }> {
-  return errors.errors.map((err) => ({
+  return errors.issues.map((err) => ({
     field: err.path.join('.'),
     message: err.message,
   }));

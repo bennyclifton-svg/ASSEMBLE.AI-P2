@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useProjectEvents } from '@/lib/hooks/use-project-events';
+import { useProjectEvents, type ProjectEvent } from '@/lib/hooks/use-project-events';
 import type {
     ProgramData,
     ProgramActivity,
@@ -42,11 +42,10 @@ export function useProgram(projectId: string) {
         fetchData();
     }, [fetchData]);
 
-    useProjectEvents(projectId || null, (event) => {
-        if (event.entity === 'program_activity' || event.entity === 'program_milestone') {
-            fetchData();
-        }
-    });
+    const handleProgramEvent = useCallback((event: ProjectEvent) => {
+        if (event.entity === 'program_activity' || event.entity === 'program_milestone') fetchData();
+    }, [fetchData]);
+    useProjectEvents(projectId || null, handleProgramEvent);
 
     return {
         data,

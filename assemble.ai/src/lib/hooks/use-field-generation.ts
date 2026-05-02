@@ -163,7 +163,14 @@ export function useFieldGeneration(
         setIsGenerating(false);
       }
     },
-    [options.projectId, options.fieldType, options.disciplineId, options.tradeId, options.additionalContext]
+    [
+      options.projectId,
+      options.fieldType,
+      options.stakeholderId,
+      options.disciplineId,
+      options.tradeId,
+      options.additionalContext,
+    ]
   );
 
   const clearError = useCallback(() => {

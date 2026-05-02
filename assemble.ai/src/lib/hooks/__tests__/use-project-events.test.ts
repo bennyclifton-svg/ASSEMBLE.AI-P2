@@ -67,6 +67,20 @@ describe('useProjectEvents', () => {
         expect(onEvent).toHaveBeenCalledWith(ev);
     });
 
+    test('invokes the callback when document_selection_changed fires', () => {
+        const onEvent = jest.fn();
+        renderHook(() => useProjectEvents('proj-1', onEvent));
+
+        const ev: ProjectEvent = {
+            type: 'document_selection_changed',
+            mode: 'replace',
+            documentIds: ['doc-1', 'doc-2'],
+        };
+        MockEventSource.instances[0].fire('document_selection_changed', ev);
+
+        expect(onEvent).toHaveBeenCalledWith(ev);
+    });
+
     test('does not open a connection when projectId is null', () => {
         renderHook(() => useProjectEvents(null, () => {}));
         expect(MockEventSource.instances).toHaveLength(0);

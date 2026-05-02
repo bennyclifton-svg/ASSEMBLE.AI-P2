@@ -6,7 +6,7 @@
 
 'use client';
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 
 // Section types that can be expanded
 type SectionType = 'rft' | 'trr' | 'addendum' | 'evaluationPrice' | 'evaluationNonPrice' | 'notes' | 'meetings' | 'reports';
@@ -339,7 +339,7 @@ export function ProcurementUIProvider({ children }: { children: ReactNode }) {
         }));
     }, [updateProjectState]);
 
-    const value: ProcurementUIContextValue = {
+    const value = useMemo<ProcurementUIContextValue>(() => ({
         getRFTState,
         setRFTExpanded,
         setRFTActiveId,
@@ -367,7 +367,16 @@ export function ProcurementUIProvider({ children }: { children: ReactNode }) {
         setReportsExpanded,
         setReportsMenuExpanded,
         setReportsActiveId,
-    };
+    }), [
+        getRFTState, setRFTExpanded, setRFTActiveId,
+        getTRRState, setTRRExpanded, setTRRActiveId,
+        getAddendumState, setAddendumExpanded, setAddendumActiveId,
+        getEvaluationPriceState, setEvaluationPriceExpanded, setEvaluationPriceActiveId,
+        getEvaluationNonPriceState, setEvaluationNonPriceExpanded,
+        getNotesState, setNotesExpanded, setNotesMenuExpanded, setNotesActiveId,
+        getMeetingsState, setMeetingsExpanded, setMeetingsMenuExpanded, setMeetingsActiveId,
+        getReportsState, setReportsExpanded, setReportsMenuExpanded, setReportsActiveId,
+    ]);
 
     return (
         <ProcurementUIContext.Provider value={value}>
@@ -483,14 +492,20 @@ export function useNotesSectionUI(projectId: string | undefined) {
     const ctx = useProcurementUI();
     const id = projectId || '';
     const state = ctx.getNotesState(id);
+    // Destructure the stable setters (useCallback with [] deps in provider) so
+    // the returned functions are stable references and don't re-trigger effects.
+    const { setNotesExpanded, setNotesMenuExpanded, setNotesActiveId } = ctx;
+    const setExpanded = useCallback((expanded: boolean) => setNotesExpanded(id, expanded), [setNotesExpanded, id]);
+    const setMenuExpanded = useCallback((expanded: boolean) => setNotesMenuExpanded(id, expanded), [setNotesMenuExpanded, id]);
+    const setActiveNoteId = useCallback((noteId: string | null) => setNotesActiveId(id, noteId), [setNotesActiveId, id]);
 
     return {
         isExpanded: state.isExpanded,
         isMenuExpanded: state.isMenuExpanded,
         activeNoteId: state.activeNoteId,
-        setExpanded: (expanded: boolean) => ctx.setNotesExpanded(id, expanded),
-        setMenuExpanded: (expanded: boolean) => ctx.setNotesMenuExpanded(id, expanded),
-        setActiveNoteId: (noteId: string | null) => ctx.setNotesActiveId(id, noteId),
+        setExpanded,
+        setMenuExpanded,
+        setActiveNoteId,
     };
 }
 
@@ -498,14 +513,20 @@ export function useMeetingsSectionUI(projectId: string | undefined) {
     const ctx = useProcurementUI();
     const id = projectId || '';
     const state = ctx.getMeetingsState(id);
+    // Stable setters prevent the auto-select useEffect in MeetingsPanel from
+    // re-running on every context update (which caused a re-render cascade).
+    const { setMeetingsExpanded, setMeetingsMenuExpanded, setMeetingsActiveId } = ctx;
+    const setExpanded = useCallback((expanded: boolean) => setMeetingsExpanded(id, expanded), [setMeetingsExpanded, id]);
+    const setMenuExpanded = useCallback((expanded: boolean) => setMeetingsMenuExpanded(id, expanded), [setMeetingsMenuExpanded, id]);
+    const setActiveMeetingId = useCallback((meetingId: string | null) => setMeetingsActiveId(id, meetingId), [setMeetingsActiveId, id]);
 
     return {
         isExpanded: state.isExpanded,
         isMenuExpanded: state.isMenuExpanded,
         activeMeetingId: state.activeMeetingId,
-        setExpanded: (expanded: boolean) => ctx.setMeetingsExpanded(id, expanded),
-        setMenuExpanded: (expanded: boolean) => ctx.setMeetingsMenuExpanded(id, expanded),
-        setActiveMeetingId: (meetingId: string | null) => ctx.setMeetingsActiveId(id, meetingId),
+        setExpanded,
+        setMenuExpanded,
+        setActiveMeetingId,
     };
 }
 
@@ -513,13 +534,18 @@ export function useReportsSectionUI(projectId: string | undefined) {
     const ctx = useProcurementUI();
     const id = projectId || '';
     const state = ctx.getReportsState(id);
+    // Same pattern as useMeetingsSectionUI — stable setters prevent cascade.
+    const { setReportsExpanded, setReportsMenuExpanded, setReportsActiveId } = ctx;
+    const setExpanded = useCallback((expanded: boolean) => setReportsExpanded(id, expanded), [setReportsExpanded, id]);
+    const setMenuExpanded = useCallback((expanded: boolean) => setReportsMenuExpanded(id, expanded), [setReportsMenuExpanded, id]);
+    const setActiveReportId = useCallback((reportId: string | null) => setReportsActiveId(id, reportId), [setReportsActiveId, id]);
 
     return {
         isExpanded: state.isExpanded,
         isMenuExpanded: state.isMenuExpanded,
         activeReportId: state.activeReportId,
-        setExpanded: (expanded: boolean) => ctx.setReportsExpanded(id, expanded),
-        setMenuExpanded: (expanded: boolean) => ctx.setReportsMenuExpanded(id, expanded),
-        setActiveReportId: (reportId: string | null) => ctx.setReportsActiveId(id, reportId),
+        setExpanded,
+        setMenuExpanded,
+        setActiveReportId,
     };
 }

@@ -103,6 +103,7 @@ export const projects = pgTable('projects', {
     revision: text('revision').default('REV A'),
     currencyCode: text('currency_code').default('AUD'),
     showGst: boolean('show_gst').default(false),
+    uiPreferences: text('ui_preferences').notNull().default('{}'),
     // Project Initiator (Feature 018) - 14 project types
     projectType: text('project_type', {
         enum: [
@@ -172,6 +173,7 @@ export const risks = pgTable('risks', {
     mitigation: text('mitigation'),
     status: text('status').default('identified'),
     order: integer('order').notNull(),
+    rowVersion: integer('row_version').notNull().default(1),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
 
@@ -385,6 +387,7 @@ export const variations = pgTable('variations', {
     dateApproved: text('date_approved'),
     requestedBy: text('requested_by'),
     approvedBy: text('approved_by'),
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
     deletedAt: timestamp('deleted_at'),
@@ -714,6 +717,7 @@ export const programActivities = pgTable('program_activities', {
     masterStage: text('master_stage'),  // NEW: Links to one of 5 master stages (initiation, schematic_design, design_development, procurement, delivery)
     color: text('color'),
     sortOrder: integer('sort_order').notNull(),
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -733,6 +737,7 @@ export const programMilestones = pgTable('program_milestones', {
     name: text('name').notNull(),
     date: text('date').notNull(),
     sortOrder: integer('sort_order').notNull(),
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -1244,6 +1249,7 @@ export const projectStakeholders = pgTable('project_stakeholders', {
     sortOrder: integer('sort_order').default(0),
     notes: text('notes'),
     isAiGenerated: boolean('is_ai_generated').default(false),
+    rowVersion: integer('row_version').notNull().default(1),
 
     // Timestamps
     createdAt: timestamp('created_at').defaultNow(),
@@ -1339,9 +1345,12 @@ export const notes = pgTable('notes', {
     content: text('content'),
     isStarred: boolean('is_starred').default(false),
     color: text('color').default('yellow'), // 'yellow' | 'blue' | 'green' | 'pink' | 'white'
+    type: text('type').notNull().default('note'),
+    status: text('status').notNull().default('open'),
     noteDate: text('note_date'),
     reportingPeriodStart: text('reporting_period_start'),
     reportingPeriodEnd: text('reporting_period_end'),
+    rowVersion: integer('row_version').notNull().default(1),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
     deletedAt: text('deleted_at'),
@@ -1799,6 +1808,7 @@ export const toolCalls = pgTable('tool_calls', {
 // and (on apply) executes the mutation under optimistic-locking.
 export type ApprovalStatus =
     | 'pending'
+    | 'applying'
     | 'approved'
     | 'rejected'
     | 'expired'
@@ -1826,5 +1836,102 @@ export const approvals = pgTable('approvals', {
     index('idx_approvals_thread').on(table.threadId),
     index('idx_approvals_status').on(table.status),
     index('idx_approvals_project').on(table.projectId),
+]);
+
+// Unified action audit trail. This is the bridge between traditional UI
+// operations, chat-driven tools, and future workflow steps.
+export type ActionInvocationActorKind = 'user' | 'agent' | 'workflow' | 'system';
+export type ActionInvocationStatus = 'running' | 'applied' | 'proposed' | 'rejected' | 'error';
+
+export const actionInvocations = pgTable('action_invocations', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    actionId: text('action_id').notNull(),
+    actorKind: text('actor_kind').notNull().$type<ActionInvocationActorKind>(),
+    actorId: text('actor_id').notNull(),
+    organizationId: text('organization_id').notNull().references(() => organizations.id),
+    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    threadId: text('thread_id').references(() => chatThreads.id, { onDelete: 'set null' }),
+    runId: text('run_id').references(() => agentRuns.id, { onDelete: 'set null' }),
+    workflowStepId: text('workflow_step_id'),
+    input: jsonb('input').notNull(),
+    output: jsonb('output'),
+    approvalId: text('approval_id').references(() => approvals.id, { onDelete: 'set null' }),
+    viewContext: jsonb('view_context'),
+    status: text('status').notNull().$type<ActionInvocationStatus>().default('running'),
+    error: jsonb('error'),
+    createdAt: timestamp('created_at').defaultNow(),
+    finishedAt: timestamp('finished_at'),
+}, (table) => [
+    index('idx_action_invocations_action').on(table.actionId),
+    index('idx_action_invocations_project').on(table.projectId),
+    index('idx_action_invocations_actor').on(table.actorKind, table.actorId),
+    index('idx_action_invocations_approval').on(table.approvalId),
+]);
+
+export type WorkflowRunStatus =
+    | 'draft'
+    | 'previewed'
+    | 'awaiting_approval'
+    | 'running'
+    | 'applied'
+    | 'skipped'
+    | 'rejected'
+    | 'failed';
+export type WorkflowStepState =
+    | 'pending'
+    | 'running'
+    | 'awaiting_approval'
+    | 'applied'
+    | 'skipped'
+    | 'rejected'
+    | 'failed';
+export type WorkflowFailurePolicy = 'abort_workflow' | 'continue' | 'retry_n' | 'ask_user';
+
+export const workflowRuns = pgTable('workflow_runs', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    workflowKey: text('workflow_key').notNull(),
+    userGoal: text('user_goal').notNull(),
+    status: text('status').notNull().$type<WorkflowRunStatus>().default('draft'),
+    organizationId: text('organization_id').notNull().references(() => organizations.id),
+    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    threadId: text('thread_id').references(() => chatThreads.id, { onDelete: 'set null' }),
+    actorUserId: text('actor_user_id'),
+    activeAgent: text('active_agent'),
+    currentStepIds: jsonb('current_step_ids').$type<string[]>().default([]),
+    preferenceSnapshot: jsonb('preference_snapshot'),
+    plan: jsonb('plan'),
+    summary: text('summary'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    finishedAt: timestamp('finished_at'),
+}, (table) => [
+    index('idx_workflow_runs_project').on(table.projectId),
+    index('idx_workflow_runs_thread').on(table.threadId),
+    index('idx_workflow_runs_status').on(table.status),
+    index('idx_workflow_runs_key').on(table.workflowKey),
+]);
+
+export const workflowSteps = pgTable('workflow_steps', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    workflowRunId: text('workflow_run_id').notNull().references(() => workflowRuns.id, { onDelete: 'cascade' }),
+    stepKey: text('step_key').notNull(),
+    title: text('title').notNull(),
+    actionId: text('action_id').notNull(),
+    state: text('state').notNull().$type<WorkflowStepState>().default('pending'),
+    dependencyIds: jsonb('dependency_ids').$type<string[]>().default([]),
+    input: jsonb('input').notNull(),
+    output: jsonb('output'),
+    approvalId: text('approval_id').references(() => approvals.id, { onDelete: 'set null' }),
+    failurePolicy: text('failure_policy').notNull().$type<WorkflowFailurePolicy>().default('ask_user'),
+    risk: text('risk').notNull(),
+    preview: jsonb('preview'),
+    error: jsonb('error'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_workflow_steps_run').on(table.workflowRunId),
+    index('idx_workflow_steps_state').on(table.state),
+    index('idx_workflow_steps_approval').on(table.approvalId),
 ]);
 

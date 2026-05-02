@@ -18,6 +18,8 @@ import type {
 } from '@/types/stakeholder';
 import { useStakeholderRefresh } from '@/lib/contexts/stakeholder-refresh-context';
 
+const TENDER_STATUS_ORDER: TenderStatusType[] = ['brief', 'tender', 'rec', 'award'];
+
 interface UseStakeholdersOptions {
   projectId: string;
   groupFilter?: StakeholderGroup;
@@ -220,32 +222,84 @@ export function useStakeholders({
     [updateStakeholder]
   );
 
-  // Update tender status
+  // Update tender status as a sequential progress control.
   const updateTenderStatus = useCallback(
     async (id: string, statusType: TenderStatusType, isActive: boolean): Promise<boolean> => {
-      try {
-        const response = await fetch(`/api/projects/${projectId}/stakeholders/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            statusUpdate: {
-              type: 'tender',
-              data: { statusType, isActive },
-            },
-          }),
-        });
+      const clickedIndex = TENDER_STATUS_ORDER.indexOf(statusType);
+      if (clickedIndex === -1) return false;
 
-        if (!response.ok) throw new Error('Failed to update tender status');
+      const nextStatusState = (type: TenderStatusType) => {
+        const index = TENDER_STATUS_ORDER.indexOf(type);
+        return isActive ? index <= clickedIndex : index < clickedIndex;
+      };
+
+      const nextStatuses = TENDER_STATUS_ORDER.map((type) => ({
+        statusType: type,
+        isActive: nextStatusState(type),
+      }));
+
+      const previousStakeholders = stakeholders;
+      const now = new Date().toISOString();
+
+      setStakeholders(prev =>
+        prev.map(s => {
+          if (s.id !== id || !('tenderStatuses' in s)) return s;
+
+          return {
+            ...s,
+            tenderStatuses: TENDER_STATUS_ORDER.map((type) => {
+              const existing = s.tenderStatuses.find(status => status.statusType === type);
+              const nextActive = nextStatusState(type);
+
+              return {
+                id: existing?.id ?? `${id}-${type}`,
+                stakeholderId: id,
+                statusType: type,
+                isActive: nextActive,
+                isComplete: nextActive,
+                completedAt: nextActive ? existing?.completedAt ?? now : undefined,
+                createdAt: existing?.createdAt,
+                updatedAt: now,
+              };
+            }),
+          };
+        })
+      );
+
+      try {
+        const responses = await Promise.all(
+          nextStatuses.map(status =>
+            fetch(`/api/projects/${projectId}/stakeholders/${id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                statusUpdate: {
+                  type: 'tender',
+                  data: {
+                    statusType: status.statusType,
+                    isActive: status.isActive,
+                    isComplete: status.isActive,
+                  },
+                },
+              }),
+            })
+          )
+        );
+
+        if (responses.some(response => !response.ok)) {
+          throw new Error('Failed to update tender status');
+        }
 
         // Refetch to get updated statuses without full loading
         await fetchStakeholders(false);
         return true;
       } catch (err) {
+        setStakeholders(previousStakeholders);
         setError(err instanceof Error ? err.message : 'Unknown error');
         return false;
       }
     },
-    [projectId, fetchStakeholders]
+    [projectId, fetchStakeholders, stakeholders]
   );
 
   // Update submission status

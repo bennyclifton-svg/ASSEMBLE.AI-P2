@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useProjectEvents } from '@/lib/hooks/use-project-events';
+import { useProjectEvents, type ProjectEvent } from '@/lib/hooks/use-project-events';
 import type { CostPlan, CostLineWithCalculations } from '@/types/cost-plan';
 
 // Stable empty array reference to prevent infinite re-renders
@@ -61,11 +61,10 @@ export function useCostPlan(
   }, [projectId, fetchCostPlan]);
 
   // Agent-approved cost line writes publish project events; refetch immediately.
-  useProjectEvents(projectId || null, (event) => {
-    if (event.entity === 'cost_line') {
-      fetchCostPlan();
-    }
-  });
+  const handleCostPlanEvent = useCallback((event: ProjectEvent) => {
+    if (event.entity === 'cost_line') fetchCostPlan();
+  }, [fetchCostPlan]);
+  useProjectEvents(projectId || null, handleCostPlanEvent);
 
   return {
     costPlan,

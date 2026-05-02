@@ -1,5 +1,4 @@
-import { db } from './src/lib/db/index.js';
-import { projects } from './src/lib/db/schema.js';
+import { db, projects } from './src/lib/db/index.js';
 
 async function seedDefaultProject() {
     try {

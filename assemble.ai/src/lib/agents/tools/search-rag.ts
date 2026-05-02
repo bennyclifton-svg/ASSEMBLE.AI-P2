@@ -8,9 +8,9 @@
  */
 
 import { db } from '@/lib/db';
-import { documents } from '@/lib/db/pg-schema';
+import { documents, fileAssets, versions } from '@/lib/db/pg-schema';
 import { retrieve } from '@/lib/rag/retrieval';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { registerTool, type AgentToolDefinition } from './catalog';
 import { assertProjectOrg, type ToolContext } from './_context';
 
@@ -24,6 +24,7 @@ interface SearchRagOutput {
     resultCount: number;
     results: Array<{
         documentId: string;
+        documentName: string | null;
         sectionTitle: string | null;
         clauseNumber: string | null;
         relevanceScore: number;
@@ -43,7 +44,7 @@ const definition: AgentToolDefinition<SearchRagInput, SearchRagOutput> = {
             'specifications, correspondence) using semantic search. Returns excerpts ' +
             'with document IDs and section references for citation. Use this for ' +
             'questions like "what does the geotech report say about water table" or ' +
-            '"are there any planning constraints noted in the DA conditions".',
+            '"are there any planning constraints noted in the DA conditions". The response includes document IDs; pass those IDs to create_note.documentIds or update_note.attachDocumentIds when the user asks to attach source documents to a note.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -99,12 +100,30 @@ const definition: AgentToolDefinition<SearchRagInput, SearchRagOutput> = {
             documentIds: docRows.map((r) => r.id),
             rerankTopK: topK,
         });
+        const resultDocumentIds = Array.from(new Set(results.map((r) => r.documentId)));
+        const documentNames = new Map<string, string | null>();
+        if (resultDocumentIds.length > 0) {
+            const metadata = await db
+                .select({
+                    documentId: documents.id,
+                    originalName: fileAssets.originalName,
+                    drawingName: fileAssets.drawingName,
+                })
+                .from(documents)
+                .leftJoin(versions, eq(documents.latestVersionId, versions.id))
+                .leftJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
+                .where(inArray(documents.id, resultDocumentIds));
+            for (const row of metadata) {
+                documentNames.set(row.documentId, row.drawingName ?? row.originalName ?? null);
+            }
+        }
 
         return {
             query: input.query,
             resultCount: results.length,
             results: results.map((r) => ({
                 documentId: r.documentId,
+                documentName: documentNames.get(r.documentId) ?? null,
                 sectionTitle: r.sectionTitle,
                 clauseNumber: r.clauseNumber,
                 relevanceScore: Number(r.relevanceScore.toFixed(3)),

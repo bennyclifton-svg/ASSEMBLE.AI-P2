@@ -16,7 +16,7 @@
  * - polar_subscription: Tracks active subscriptions
  */
 
-import { pgTable, text, integer, boolean, timestamp, index, unique } from 'drizzle-orm/pg-core';
+import { pgTable, text, boolean, timestamp, index, unique, jsonb } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // ============================================================================
@@ -40,6 +40,8 @@ export const user = pgTable('user', {
     // Custom fields for organization support
     organizationId: text('organization_id'),
     displayName: text('display_name'),
+    isSuperAdmin: boolean('is_super_admin').notNull().default(false),
+    suspendedAt: timestamp('suspended_at'),
 }, (table) => [
     index('user_email_idx').on(table.email),
 ]);
@@ -152,6 +154,42 @@ export const polarSubscription = pgTable('polar_subscription', {
     index('polar_subscription_customer_id_idx').on(table.customerId),
     index('polar_subscription_polar_id_idx').on(table.polarSubscriptionId),
     index('polar_subscription_status_idx').on(table.status),
+]);
+
+// ============================================================================
+// ADMIN CONSOLE TABLES
+// ============================================================================
+
+/**
+ * Runtime AI model registry.
+ *
+ * One row per FeatureGroup. Admin pages and AI call sites use this to resolve
+ * the active provider/model without redeploying.
+ */
+export const modelSettings = pgTable('model_settings', {
+    featureGroup: text('feature_group').primaryKey(),
+    provider: text('provider').notNull(),
+    modelId: text('model_id').notNull(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    updatedBy: text('updated_by').references(() => user.id, { onDelete: 'set null' }),
+});
+
+/**
+ * Append-only audit log for super-admin actions.
+ */
+export const adminAuditLog = pgTable('admin_audit_log', {
+    id: text('id').primaryKey(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    actorUserId: text('actor_user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    action: text('action').notNull(),
+    targetType: text('target_type').notNull(),
+    targetId: text('target_id'),
+    beforeJson: jsonb('before_json'),
+    afterJson: jsonb('after_json'),
+}, (table) => [
+    index('admin_audit_log_created_at_idx').on(table.createdAt),
+    index('admin_audit_log_actor_idx').on(table.actorUserId),
+    index('admin_audit_log_action_idx').on(table.action),
 ]);
 
 // ============================================================================

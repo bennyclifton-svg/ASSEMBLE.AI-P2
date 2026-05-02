@@ -1,5 +1,5 @@
 import { db } from './index';
-import { categories } from './schema';
+import { categories } from './pg-schema';
 import { DOCUMENT_CATEGORIES } from '../constants/categories';
 
 export async function seedCategories() {

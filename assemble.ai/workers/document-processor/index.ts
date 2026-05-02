@@ -40,6 +40,7 @@ async function bootstrap() {
     const { parseDocument } = await import('../../src/lib/rag/parsing');
     const { chunkDocument } = await import('../../src/lib/rag/chunking');
     const { generateEmbedding, generateEmbeddings } = await import('../../src/lib/rag/embeddings');
+    const { batchItems, chunksToDocumentChunkRows, RAG_SYNC_STATUS } = await import('../../src/lib/rag/ingestion');
     const { QUEUE_NAMES, getConnection } = await import('../../src/lib/queue/client');
     const { eq, and } = await import('drizzle-orm');
     const { storage } = await import('../../src/lib/storage');
@@ -74,7 +75,7 @@ async function bootstrap() {
             console.log(`[worker] Updating status to 'processing' for document ${documentId} in set ${documentSetId}`);
             const processingResult = await ragDb
                 .update(documentSetMembers)
-                .set({ syncStatus: 'processing' })
+                .set({ syncStatus: RAG_SYNC_STATUS.processing })
                 .where(
                     and(
                         eq(documentSetMembers.documentSetId, documentSetId),
@@ -106,22 +107,14 @@ async function bootstrap() {
             job.updateProgress(80);
             console.log(`[worker] Inserting chunks into database`);
 
-            const chunkRecords = chunks.map((chunk: any, idx: number) => ({
-                id: chunk.id,
+            const chunkRecords = chunksToDocumentChunkRows(
                 documentId,
-                parentChunkId: chunk.parentId,
-                hierarchyLevel: chunk.hierarchyLevel,
-                hierarchyPath: chunk.hierarchyPath,
-                sectionTitle: chunk.sectionTitle,
-                clauseNumber: chunk.clauseNumber,
-                content: chunk.content,
-                embedding: embeddingsResult.embeddings[idx],
-                tokenCount: chunk.tokenCount,
-            }));
+                chunks,
+                embeddingsResult.embeddings
+            );
 
             // Insert in batches
-            for (let i = 0; i < chunkRecords.length; i += 50) {
-                const batch = chunkRecords.slice(i, i + 50);
+            for (const batch of batchItems(chunkRecords)) {
                 await ragDb.insert(documentChunks).values(batch);
             }
 
@@ -130,7 +123,7 @@ async function bootstrap() {
             await ragDb
                 .update(documentSetMembers)
                 .set({
-                    syncStatus: 'synced',
+                    syncStatus: RAG_SYNC_STATUS.synced,
                     syncedAt: new Date(),
                     chunksCreated: chunks.length,
                 })
@@ -151,7 +144,7 @@ async function bootstrap() {
                 const updateResult = await ragDb
                     .update(documentSetMembers)
                     .set({
-                        syncStatus: 'failed',
+                        syncStatus: RAG_SYNC_STATUS.failed,
                         errorMessage: error instanceof Error ? error.message : 'Unknown error',
                     })
                     .where(

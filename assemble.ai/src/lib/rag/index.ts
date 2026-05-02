@@ -45,3 +45,13 @@ export {
     type RetrievalResult,
     type RetrievalOptions,
 } from './retrieval';
+
+// Ingestion
+export {
+    RAG_SYNC_STATUS,
+    DOCUMENT_CHUNK_INSERT_BATCH_SIZE,
+    batchItems,
+    chunksToDocumentChunkRows,
+    type DocumentChunkInsertRow,
+    type RagSyncStatus,
+} from './ingestion';

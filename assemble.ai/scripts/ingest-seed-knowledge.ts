@@ -86,6 +86,7 @@ async function main() {
     const { knowledgeDomainSources } = await import('../src/lib/db/knowledge-domain-sources-schema');
     const { chunkSeedContent } = await import('../src/lib/rag/chunking');
     const { generateEmbeddings } = await import('../src/lib/rag/embeddings');
+    const { chunksToDocumentChunkRows, RAG_SYNC_STATUS } = await import('../src/lib/rag/ingestion');
 
     const seedDir = resolve(process.cwd(), 'src/lib/constants/knowledge-seed');
 
@@ -224,18 +225,7 @@ async function main() {
             .where(eq(documentChunks.documentId, documentId));
 
         // 8. Insert new chunks with embeddings
-        const chunkRows = chunks.map((chunk, i) => ({
-            id: chunk.id,
-            documentId,
-            parentChunkId: chunk.parentId,
-            hierarchyLevel: chunk.hierarchyLevel,
-            hierarchyPath: chunk.hierarchyPath,
-            sectionTitle: chunk.sectionTitle,
-            clauseNumber: chunk.clauseNumber,
-            content: chunk.content,
-            embedding: embeddings[i],
-            tokenCount: chunk.tokenCount,
-        }));
+        const chunkRows = chunksToDocumentChunkRows(documentId, chunks, embeddings);
 
         // Batch insert (drizzle handles array of values)
         await ragDb.insert(documentChunks).values(chunkRows);
@@ -256,7 +246,7 @@ async function main() {
             await ragDb
                 .update(documentSetMembers)
                 .set({
-                    syncStatus: 'synced',
+                    syncStatus: RAG_SYNC_STATUS.synced,
                     syncedAt: new Date(),
                     chunksCreated: chunks.length,
                     errorMessage: null,
@@ -267,7 +257,7 @@ async function main() {
                 id: `dsm_${generateId()}`,
                 documentSetId: fm.domainSlug,
                 documentId,
-                syncStatus: 'synced',
+                syncStatus: RAG_SYNC_STATUS.synced,
                 syncedAt: new Date(),
                 chunksCreated: chunks.length,
             });

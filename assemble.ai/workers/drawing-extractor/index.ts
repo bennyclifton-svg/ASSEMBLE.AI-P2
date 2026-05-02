@@ -36,7 +36,7 @@ if (!process.env.REDIS_URL) {
 async function bootstrap() {
     const { Worker, Job } = await import('bullmq');
     const { db } = await import('../../src/lib/db');
-    const { fileAssets, versions, documents, projects } = await import('../../src/lib/db/schema');
+    const { fileAssets, versions, documents, projects } = await import('../../src/lib/db/pg-schema');
     const { extractDrawingInfo } = await import('../../src/lib/services/drawing-extraction');
     const { QUEUE_NAMES, getConnection } = await import('../../src/lib/queue/client');
     const { eq } = await import('drizzle-orm');

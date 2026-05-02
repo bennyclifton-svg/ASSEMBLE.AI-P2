@@ -11,6 +11,7 @@ import useSWR, { mutate as globalMutate } from 'swr';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
+import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import type {
     Note,
     NoteWithTransmittals,
@@ -109,6 +110,19 @@ export function useNotes({ projectId }: UseNotesOptions): UseNotesReturn {
             revalidateOnFocus: false,
             dedupingInterval: 5000,
         }
+    );
+
+    useProjectEvents(
+        projectId || null,
+        useCallback(
+            (event) => {
+                if (event.entity !== 'note') return;
+                mutate();
+                globalMutate(`/api/notes/${event.id}`);
+                globalMutate(`/api/notes/${event.id}/transmittal`);
+            },
+            [mutate]
+        )
     );
 
     const refetch = useCallback(() => {

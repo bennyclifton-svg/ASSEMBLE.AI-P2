@@ -89,7 +89,7 @@ export const CONTRACT_TAGS = [
     'mba',
 ] as const;
 
-/** Master tag list — union of all tag categories */
+/** Master tag list - union of all tag categories */
 export const ALL_DOMAIN_TAGS = [
     ...BUILDING_TYPE_TAGS,
     ...DISCIPLINE_TAGS,
@@ -343,46 +343,145 @@ export const SECTION_TO_DOMAIN_TAGS: Record<string, DomainTag[]> = {
 
 /**
  * Alias map for common discipline/trade display names that don't directly
- * match a canonical domain tag. Maps normalized form → canonical tag.
- * e.g. "Architecture" → normalizes to "architecture" → alias resolves to "architectural"
+ * match a canonical domain tag. Maps normalized form -> canonical tag.
+ * e.g. "Architecture" -> normalizes to "architecture" -> alias resolves to "architectural"
  */
 const DISCIPLINE_TAG_ALIASES: Record<string, DomainTag> = {
     'architecture': 'architectural',
     'architect': 'architectural',
+    'architectural-consultant': 'architectural',
     'structure': 'structural',
     'structures': 'structural',
+    'structural-engineer': 'structural',
+    'structural-consultant': 'structural',
+    'mechanical-engineer': 'mechanical',
+    'mechanical-consultant': 'mechanical',
     'mechanical-services': 'mechanical',
     'hvac': 'mechanical',
+    'electrical-engineer': 'electrical',
+    'electrical-consultant': 'electrical',
     'electrical-services': 'electrical',
+    'hydraulic-engineer': 'hydraulic',
+    'hydraulic-consultant': 'hydraulic',
     'hydraulic-services': 'hydraulic',
     'hydraulics': 'hydraulic',
     'plumbing': 'hydraulic',
     'fire-services': 'fire',
     'fire-engineering': 'fire',
     'fire-engineer': 'fire',
+    'fire-consultant': 'fire',
     'civil-engineering': 'civil',
     'civil-engineer': 'civil',
+    'civil-consultant': 'civil',
     'landscape-architecture': 'landscape',
     'landscape-architect': 'landscape',
+    'landscape-consultant': 'landscape',
     'interior-design': 'interior',
     'interior-designer': 'interior',
     'fitout': 'interior',
     'esd': 'sustainability',
     'sustainability-consultant': 'sustainability',
+    'quantity-surveyor': 'cost-management',
+    'quantity-surveying': 'cost-management',
+    'qs': 'cost-management',
+    'cost-consultant': 'cost-management',
+    'cost-manager': 'cost-management',
+    'bca': 'ncc',
+    'building-certifier': 'ncc',
+    'building-certification': 'ncc',
+    'certifier': 'ncc',
+    'bca-consultant': 'ncc',
+    'access-consultant': 'ncc',
+    'accessibility-consultant': 'ncc',
+    'accessibility': 'ncc',
+    'town-planner': 'regulatory',
+    'town-planning': 'regulatory',
+    'planning-consultant': 'regulatory',
+    'planning': 'regulatory',
+    'planner': 'regulatory',
+    'traffic': 'civil',
+    'traffic-engineer': 'civil',
+    'traffic-consultant': 'civil',
+    'geotechnical': 'civil',
+    'geotechnical-engineer': 'civil',
+    'geotech': 'civil',
+    'geotech-consultant': 'civil',
+    'geotech-engineer': 'civil',
+    'surveyor': 'civil',
+    'acoustic': 'regulatory',
+    'acoustics': 'regulatory',
+    'acoustic-consultant': 'regulatory',
+    'acoustic-engineer': 'regulatory',
 };
+
+const DISCIPLINE_MULTI_TAG_ALIASES: Record<string, DomainTag[]> = {
+    'bca': ['ncc', 'regulatory', 'as-standards'],
+    'bca-consultant': ['ncc', 'regulatory', 'as-standards'],
+    'building-certifier': ['ncc', 'regulatory', 'as-standards'],
+    'building-certification': ['ncc', 'regulatory', 'as-standards'],
+    'certifier': ['ncc', 'regulatory', 'as-standards'],
+    'access-consultant': ['ncc', 'regulatory', 'as-standards'],
+    'accessibility-consultant': ['ncc', 'regulatory', 'as-standards'],
+    'accessibility': ['ncc', 'regulatory', 'as-standards'],
+    'town-planner': ['regulatory', 'procurement'],
+    'town-planning': ['regulatory', 'procurement'],
+    'planning-consultant': ['regulatory', 'procurement'],
+    'planning': ['regulatory', 'procurement'],
+    'planner': ['regulatory', 'procurement'],
+    'traffic': ['civil', 'regulatory'],
+    'traffic-engineer': ['civil', 'regulatory'],
+    'traffic-consultant': ['civil', 'regulatory'],
+    'geotechnical': ['civil', 'environmental'],
+    'geotechnical-engineer': ['civil', 'environmental'],
+    'geotech': ['civil', 'environmental'],
+    'geotech-consultant': ['civil', 'environmental'],
+    'geotech-engineer': ['civil', 'environmental'],
+    'surveyor': ['civil'],
+    'quantity-surveyor': ['cost-management', 'procurement'],
+    'quantity-surveying': ['cost-management', 'procurement'],
+    'qs': ['cost-management', 'procurement'],
+    'cost-consultant': ['cost-management', 'procurement'],
+    'cost-manager': ['cost-management', 'procurement'],
+    'acoustic': ['regulatory', 'construction'],
+    'acoustics': ['regulatory', 'construction'],
+    'acoustic-consultant': ['regulatory', 'construction'],
+    'acoustic-engineer': ['regulatory', 'construction'],
+};
+
+const DISCIPLINE_ALIAS_EXCLUSIONS: Record<string, string[]> = {
+    surveyor: ['quantity-surveyor', 'quantity-surveying'],
+};
+
+function normalizeTagKey(tag: string): string {
+    return tag
+        .trim()
+        .toLowerCase()
+        .replace(/[_\s]+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+}
+
+function containsNormalizedTerm(normalizedText: string, normalizedTerm: string): boolean {
+    if (!normalizedTerm) return false;
+    return normalizedText === normalizedTerm
+        || normalizedText.startsWith(`${normalizedTerm}-`)
+        || normalizedText.endsWith(`-${normalizedTerm}`)
+        || normalizedText.includes(`-${normalizedTerm}-`);
+}
+
+function shouldSkipContainedAlias(normalizedText: string, alias: string): boolean {
+    return DISCIPLINE_ALIAS_EXCLUSIONS[alias]?.some((excludedTerm) =>
+        containsNormalizedTerm(normalizedText, excludedTerm)
+    ) ?? false;
+}
 
 /**
  * Normalize a tag string to the canonical format: lowercase, hyphenated, trimmed.
  * Ensures consistent tag storage regardless of user input format.
  */
 export function normalizeTag(tag: string): string {
-    const normalized = tag
-        .trim()
-        .toLowerCase()
-        .replace(/[_\s]+/g, '-')     // Underscores and spaces to hyphens
-        .replace(/[^a-z0-9-]/g, '')  // Remove non-alphanumeric except hyphens
-        .replace(/-+/g, '-')         // Collapse multiple hyphens
-        .replace(/^-|-$/g, '');      // Trim leading/trailing hyphens
+    const normalized = normalizeTagKey(tag);
 
     // Check aliases for discipline display names that differ from canonical tags
     return DISCIPLINE_TAG_ALIASES[normalized] ?? normalized;
@@ -394,6 +493,51 @@ export function normalizeTag(tag: string): string {
  */
 export function isKnownTag(tag: string): boolean {
     return (ALL_DOMAIN_TAGS as readonly string[]).includes(normalizeTag(tag));
+}
+
+/**
+ * Resolve a free-text discipline/trade label into one or more knowledge tags.
+ * Some consultant labels are genuinely multi-domain: for example a BCA
+ * consultant should retrieve NCC, regulatory, and AS Standards context.
+ */
+export function resolveDomainTagsFromText(label: string): DomainTag[] {
+    const normalized = normalizeTagKey(label);
+    if (!normalized) return [];
+
+    const tags: DomainTag[] = [];
+    const addTags = (nextTags: DomainTag[]) => {
+        for (const tag of nextTags) {
+            if (!tags.includes(tag)) tags.push(tag);
+        }
+    };
+
+    const exactMulti = DISCIPLINE_MULTI_TAG_ALIASES[normalized];
+    if (exactMulti) addTags(exactMulti);
+
+    const tag = normalizeTag(label);
+    if (isKnownTag(tag)) addTags([tag as DomainTag]);
+
+    for (const [alias, aliasTags] of Object.entries(DISCIPLINE_MULTI_TAG_ALIASES)) {
+        if (shouldSkipContainedAlias(normalized, alias)) continue;
+        if (containsNormalizedTerm(normalized, alias)) {
+            addTags(aliasTags);
+        }
+    }
+
+    for (const [alias, aliasTag] of Object.entries(DISCIPLINE_TAG_ALIASES)) {
+        if (shouldSkipContainedAlias(normalized, alias)) continue;
+        if (containsNormalizedTerm(normalized, alias)) {
+            addTags([aliasTag]);
+        }
+    }
+
+    for (const knownTag of ALL_DOMAIN_TAGS) {
+        if (containsNormalizedTerm(normalized, knownTag)) {
+            addTags([knownTag]);
+        }
+    }
+
+    return tags;
 }
 
 // ============================================
@@ -423,7 +567,7 @@ const BUILDING_CLASS_TAG_MAP: Record<string, DomainTag[]> = {
  * Used by objectives generation to determine which knowledge bases to search.
  *
  * Three-layer architecture:
- *   Layer 1 (this function): Coarse tag selection → which domains to search
+ *   Layer 1 (this function): Coarse tag selection -> which domains to search
  *   Layer 2 (retrieveFromDomains): applicableProjectTypes/States filtering
  *   Layer 3 (buildProfileSearchQuery): Semantic query for vector similarity
  */

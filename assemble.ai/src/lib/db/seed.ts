@@ -1,5 +1,5 @@
 import { db } from './index';
-import { categories, subcategories } from './schema';
+import { categories, subcategories } from './pg-schema';
 import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_CATEGORIES = [

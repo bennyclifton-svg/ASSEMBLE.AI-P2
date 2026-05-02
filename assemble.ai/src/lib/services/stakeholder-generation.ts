@@ -109,7 +109,7 @@ function matchesDisciplineConditions(
 
   // Check complexity
   if (def.conditions.complexity) {
-    const complexityValues = Object.values(profile.complexity);
+    const complexityValues = Object.values(profile.complexity).flat();
     const hasMatch = def.conditions.complexity.some(c => complexityValues.includes(c));
     if (!hasMatch) return false;
   }
@@ -144,7 +144,7 @@ function matchesAuthorityConditions(
 
   // Check complexity
   if (conditions.complexity) {
-    const complexityValues = Object.values(profile.complexity);
+    const complexityValues = Object.values(profile.complexity).flat();
     const hasMatch = conditions.complexity.some(c => complexityValues.includes(c));
     if (!hasMatch) return false;
   }

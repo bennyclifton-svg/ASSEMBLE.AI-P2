@@ -18,7 +18,6 @@ import {
     generateStakeholderSectionKey,
 } from '@/lib/constants/sections';
 import type { MeetingAgendaType, ReportContentsType } from '@/types/notes-meetings-reports';
-import type { StakeholderGroup } from '@/types/stakeholder';
 
 // ============================================================================
 // TYPES
@@ -32,6 +31,36 @@ export interface GeneratedSection {
     sortOrder: number;
     parentSectionId: string | null;
     stakeholderId: string | null;
+}
+
+export type GeneratedSectionWithChildren = GeneratedSection & {
+    childSections: GeneratedSection[];
+};
+
+export interface MeetingSectionInsert {
+    id: string;
+    meetingId: string;
+    sectionKey: string;
+    sectionLabel: string;
+    content: string | null;
+    sortOrder: number;
+    parentSectionId: string | null;
+    stakeholderId: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ReportSectionInsert {
+    id: string;
+    reportId: string;
+    sectionKey: string;
+    sectionLabel: string;
+    content: string | null;
+    sortOrder: number;
+    parentSectionId: string | null;
+    stakeholderId: string | null;
+    createdAt: string;
+    updatedAt: string;
 }
 
 interface StakeholderInfo {
@@ -166,9 +195,10 @@ function generateDetailedSections(
         const stakeholderGroups = DETAILED_SECTION_STAKEHOLDER_MAPPING[baseSection.key as keyof typeof DETAILED_SECTION_STAKEHOLDER_MAPPING];
 
         if (stakeholderGroups) {
+            const groups = stakeholderGroups as readonly string[];
             // Filter stakeholders by the required groups
             const relevantStakeholders = stakeholders.filter(s =>
-                stakeholderGroups.includes(s.stakeholderGroup as StakeholderGroup)
+                groups.includes(s.stakeholderGroup)
             );
 
             // Create sub-sections for each relevant stakeholder
@@ -307,6 +337,61 @@ export function addTimestampsToSections(
         ...(parentType === 'meeting' ? { meetingId: parentId } : { reportId: parentId }),
         createdAt: now,
         updatedAt: now,
+    }));
+}
+
+export function toMeetingSectionRows(
+    sections: GeneratedSection[],
+    meetingId: string,
+    now: string = new Date().toISOString()
+): MeetingSectionInsert[] {
+    return sections.map((section) => ({
+        id: section.id,
+        meetingId,
+        sectionKey: section.sectionKey,
+        sectionLabel: section.sectionLabel,
+        content: section.content ?? null,
+        sortOrder: section.sortOrder,
+        parentSectionId: section.parentSectionId ?? null,
+        stakeholderId: section.stakeholderId ?? null,
+        createdAt: now,
+        updatedAt: now,
+    }));
+}
+
+export function toReportSectionRows(
+    sections: GeneratedSection[],
+    reportId: string,
+    now: string = new Date().toISOString()
+): ReportSectionInsert[] {
+    return sections.map((section) => ({
+        id: section.id,
+        reportId,
+        sectionKey: section.sectionKey,
+        sectionLabel: section.sectionLabel,
+        content: section.content ?? null,
+        sortOrder: section.sortOrder,
+        parentSectionId: section.parentSectionId ?? null,
+        stakeholderId: section.stakeholderId ?? null,
+        createdAt: now,
+        updatedAt: now,
+    }));
+}
+
+export function splitParentAndChildSections<T extends { parentSectionId: string | null }>(
+    sections: T[]
+): { parentSections: T[]; childSections: T[] } {
+    return {
+        parentSections: sections.filter((section) => !section.parentSectionId),
+        childSections: sections.filter((section) => Boolean(section.parentSectionId)),
+    };
+}
+
+export function nestGeneratedSections(sections: GeneratedSection[]): GeneratedSectionWithChildren[] {
+    const { parentSections, childSections } = splitParentAndChildSections(sections);
+    return parentSections.map((parent) => ({
+        ...parent,
+        childSections: childSections.filter((child) => child.parentSectionId === parent.id),
     }));
 }
 
