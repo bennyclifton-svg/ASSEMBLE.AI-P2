@@ -17,7 +17,7 @@ import { retrieve, retrieveFromDomains, type RetrievalResult } from '@/lib/rag/r
 import { ragDb } from '@/lib/db/rag-client';
 import { db } from '@/lib/db';
 import { sql, eq } from 'drizzle-orm';
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import type { ProfileTagInput } from '@/lib/constants/knowledge-domains';
 import {
@@ -325,25 +325,17 @@ export async function POST(req: NextRequest) {
             domainContext
         );
 
-        // Generate content using Claude
-        const anthropic = new Anthropic();
-        const message = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2000,
+        const { text } = await aiComplete({
+            featureGroup: 'extraction',
+            maxTokens: 2000,
             messages: [{
                 role: 'user',
                 content: fullPrompt,
             }],
         });
 
-        // Extract the text response
-        const textContent = message.content.find(c => c.type === 'text');
-        if (!textContent || textContent.type !== 'text') {
-            throw new Error('No text response from Claude');
-        }
-
         // Clean up formatting (remove excessive blank lines)
-        const cleanedContent = cleanupFormatting(textContent.text);
+        const cleanedContent = cleanupFormatting(text);
 
         // Build sources array (empty if RAG not used)
         const sources = ragResults.map(r => ({

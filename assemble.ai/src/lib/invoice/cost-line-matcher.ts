@@ -8,7 +8,7 @@
  * 3. Fuzzy fallback (when no stakeholder match)
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { db } from '@/lib/db';
 import { costLines, projectStakeholders } from '@/lib/db';
 import { eq, and, isNull } from 'drizzle-orm';
@@ -167,17 +167,6 @@ function calculateSimilarity(a: string, b: string): number {
 }
 
 // ============================================================================
-// ANTHROPIC CLIENT
-// ============================================================================
-
-function getAnthropicClient(): Anthropic {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error('ANTHROPIC_API_KEY environment variable is required');
-  }
-  return new Anthropic();
-}
-
-// ============================================================================
 // AI MATCHING FUNCTION
 // ============================================================================
 
@@ -186,8 +175,6 @@ async function aiMatchInvoiceToCostLine(
   poNumber: string | null,
   costLinesList: Array<{ id: string; activity: string; section: string }>
 ): Promise<AIMatchResult> {
-  const anthropic = getAnthropicClient();
-
   // Build cost lines list for prompt
   const costLinesText = costLinesList
     .map((cl, idx) => `${idx + 1}. [ID: ${cl.id}] ${cl.activity} (${cl.section})`)
@@ -207,9 +194,9 @@ async function aiMatchInvoiceToCostLine(
   console.log(`[invoice-cost-matcher] Calling AI to match among ${costLinesList.length} cost lines`);
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 500,
+    const { text } = await aiComplete({
+      featureGroup: 'extraction',
+      maxTokens: 500,
       messages: [
         {
           role: 'user',
@@ -218,13 +205,8 @@ async function aiMatchInvoiceToCostLine(
       ],
     });
 
-    const textContent = response.content.find((c) => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      throw new Error('No text response from Claude');
-    }
-
     // Parse JSON response
-    let jsonText = textContent.text.trim();
+    let jsonText = text.trim();
     if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
     }

@@ -69,6 +69,7 @@ function formatCents(value: unknown): string {
 
 export const updateCostLineAction = defineAction<UpdateCostLineInput, Record<string, unknown>>({
     id: 'finance.cost_plan.update_line',
+    toolName: 'update_cost_line',
     domain: 'finance',
     description: 'Update one project cost-plan line.',
     inputSchema,

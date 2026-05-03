@@ -8,7 +8,7 @@
  * - Health & Safety, Insurance, Departures
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { parseDocument } from '@/lib/rag/parsing';
 import { NON_PRICE_CRITERIA, CRITERIA_PROMPTS } from '@/lib/constants/non-price-criteria';
 import type {
@@ -27,12 +27,6 @@ export interface NonPriceParseResult {
     overallConfidence: number;
     error?: string;
 }
-
-// ============================================================================
-// ANTHROPIC CLIENT
-// ============================================================================
-
-const anthropic = new Anthropic();
 
 // ============================================================================
 // EXTRACTION PROMPT
@@ -101,9 +95,9 @@ async function extractCriterion(
     const prompt = buildExtractionPrompt(criteriaKey, documentContent);
 
     try {
-        const response = await anthropic.messages.create({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 1500,
+        const { text } = await aiComplete({
+            featureGroup: 'extraction',
+            maxTokens: 1500,
             system: SYSTEM_PROMPT,
             messages: [
                 {
@@ -113,14 +107,8 @@ async function extractCriterion(
             ],
         });
 
-        // Extract text content from response
-        const textContent = response.content.find((c) => c.type === 'text');
-        if (!textContent || textContent.type !== 'text') {
-            throw new Error('No text response from Claude');
-        }
-
         // Parse JSON response
-        let jsonText = textContent.text.trim();
+        let jsonText = text.trim();
 
         // Try to extract JSON from markdown code block first
         const codeBlockMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);

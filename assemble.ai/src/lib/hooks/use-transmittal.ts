@@ -15,6 +15,7 @@ interface Transmittal {
     id: string;
     name: string;
     projectId: string | null;
+    stakeholderId: string | null;
     disciplineId: string | null;
     tradeId: string | null;
     status: 'DRAFT' | 'ISSUED';
@@ -28,6 +29,7 @@ interface TransmittalResponse {
     id: string;
     name: string;
     projectId: string | null;
+    stakeholderId: string | null;
     disciplineId: string | null;
     tradeId: string | null;
     status: 'DRAFT' | 'ISSUED';
@@ -74,8 +76,9 @@ const fetcher = async (url: string): Promise<Transmittal | null> => {
         id: data.id,
         name: data.name,
         projectId: data.projectId,
-        disciplineId: data.disciplineId,
-        tradeId: data.tradeId,
+        stakeholderId: data.stakeholderId,
+        disciplineId: data.disciplineId ?? data.stakeholderId,
+        tradeId: data.tradeId ?? null,
         status: data.status,
         documentIds: data.items.map(item => item.documentId),
         documentCount: data.items.length,
@@ -101,12 +104,12 @@ export function useTransmittal({
     const { toast } = useToast();
 
     // Build the query URL for fetching transmittal
+    const stakeholderId = disciplineId || tradeId || null;
     const queryParams = new URLSearchParams();
     queryParams.set('projectId', projectId);
-    if (disciplineId) queryParams.set('disciplineId', disciplineId);
-    if (tradeId) queryParams.set('tradeId', tradeId);
+    if (stakeholderId) queryParams.set('stakeholderId', stakeholderId);
 
-    const shouldFetch = projectId && (disciplineId || tradeId);
+    const shouldFetch = projectId && stakeholderId;
     const swrKey = shouldFetch ? `/api/transmittals?${queryParams.toString()}` : null;
 
     const { data, error, isLoading } = useSWR<Transmittal | null>(
@@ -123,7 +126,7 @@ export function useTransmittal({
      * Upserts (creates or replaces) the transmittal
      */
     const saveTransmittal = useCallback(async (documentIds: string[]): Promise<{ success: boolean; id?: string; error?: string }> => {
-        if (!projectId || (!disciplineId && !tradeId)) {
+        if (!projectId || !stakeholderId) {
             return { success: false, error: 'Project and discipline/trade are required' };
         }
 
@@ -141,8 +144,7 @@ export function useTransmittal({
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     projectId,
-                    disciplineId: disciplineId || null,
-                    tradeId: tradeId || null,
+                    stakeholderId,
                     name,
                     documentIds,
                 }),
@@ -174,7 +176,7 @@ export function useTransmittal({
             });
             return { success: false, error: errorMessage };
         }
-    }, [projectId, disciplineId, tradeId, contextName, swrKey, toast]);
+    }, [projectId, stakeholderId, disciplineId, contextName, swrKey, toast]);
 
     /**
      * Load the transmittal's document IDs

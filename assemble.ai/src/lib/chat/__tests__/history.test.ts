@@ -73,6 +73,26 @@ describe('buildAgentHistoryFromRows', () => {
 
         expect(history).toEqual([{ role: 'user', content: 'Please retry the variation' }]);
     });
+
+    it('uses only the latest issue-variation workflow prompt so older test wording cannot bleed in', () => {
+        const latest =
+            'Client asked for extra air conditioning to meeting rooms. Please issue a variation for $9,999, link it to the right cost line/programme activity and add a short project note.';
+
+        const history = buildAgentHistoryFromRows([
+            {
+                role: 'user',
+                content:
+                    'Client asked for extra acoustic treatment to meeting rooms. Please issue a variation for $18,750, link it to the right cost line/programme activity and add a short project note.',
+            },
+            {
+                role: 'assistant',
+                content: 'There is one open variation for extra acoustic treatment.',
+            },
+            { role: 'user', content: latest },
+        ]);
+
+        expect(history).toEqual([{ role: 'user', content: latest }]);
+    });
 });
 
 describe('buildVisibleChatRows', () => {

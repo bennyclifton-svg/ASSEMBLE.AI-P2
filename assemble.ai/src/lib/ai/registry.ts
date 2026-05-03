@@ -68,8 +68,8 @@ async function getChoice(group: FeatureGroup): Promise<ModelChoice> {
 }
 
 /**
- * Phase 3 use: returns just the model ID for the group.
- * Call site uses it as `model: await getModelFor('content_generation')`.
+ * Returns just the model ID for the group.
+ * Call site uses it as `model: await getModelFor('generation')`.
  */
 export async function getModelFor(group: FeatureGroup): Promise<string> {
     const choice = await getChoice(group);

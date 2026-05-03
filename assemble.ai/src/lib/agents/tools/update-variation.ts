@@ -38,7 +38,7 @@ interface UpdateVariationInput extends Record<string, unknown> {
 }
 
 const VARIATION_CATEGORIES = ['Principal', 'Contractor', 'Lessor Works'] as const;
-const VARIATION_STATUSES = ['Forecast', 'Submitted', 'Approved', 'Rejected', 'Withdrawn'] as const;
+const VARIATION_STATUSES = ['Forecast', 'Approved', 'Rejected', 'Withdrawn'] as const;
 type VariationCategory = (typeof VARIATION_CATEGORIES)[number];
 type VariationStatus = (typeof VARIATION_STATUSES)[number];
 const TOOL = 'update_variation';

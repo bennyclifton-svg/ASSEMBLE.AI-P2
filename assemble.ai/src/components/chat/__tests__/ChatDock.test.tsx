@@ -102,7 +102,7 @@ describe('ChatDock approvals', () => {
         });
     });
 
-    it('does not show duplicate bulk controls for a single pending approval', async () => {
+    it('does not show bulk approval controls', async () => {
         render(<ChatDock projectId="proj-1" />);
 
         fireEvent.click(screen.getByTestId('chat-dock-toggle'));
@@ -206,84 +206,6 @@ describe('ChatDock approvals', () => {
         expect(transcript).not.toContain('technical error in the workflow process');
         expect(transcript).not.toContain('insert into "action_invocations"');
         expect(transcript.match(/extra acoustic treatment/g)).toHaveLength(1);
-    });
-
-    it('can approve all pending approvals from the chat input chips', async () => {
-        (global.fetch as jest.Mock).mockReset();
-        (global.fetch as jest.Mock)
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    threads: [{ id: 'thread-1', title: 'Thread', projectId: 'proj-1' }],
-                }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    thread: { id: 'thread-1' },
-                    messages: [],
-                    pendingApprovals: [
-                        {
-                            id: 'approval-1',
-                            runId: 'run-1',
-                            toolName: 'record_invoice',
-                            proposedDiff: {
-                                entity: 'invoice',
-                                entityId: null,
-                                summary: 'Record invoice',
-                                changes: [],
-                            },
-                        },
-                        {
-                            id: 'approval-2',
-                            runId: 'run-1',
-                            toolName: 'create_note',
-                            proposedDiff: {
-                                entity: 'note',
-                                entityId: null,
-                                summary: 'Create note',
-                                changes: [],
-                            },
-                        },
-                    ],
-                }),
-            });
-        render(<ChatDock projectId="proj-1" />);
-
-        fireEvent.click(screen.getByTestId('chat-dock-toggle'));
-
-        await waitFor(() => {
-            expect(screen.getByTestId('approval-chip-approve-all')).toBeInTheDocument();
-        });
-
-        (global.fetch as jest.Mock)
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ status: 'applied', output: { id: 'invoice-1' } }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ status: 'applied', output: { id: 'note-1' } }),
-            });
-
-        fireEvent.click(screen.getByTestId('approval-chip-approve-all'));
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                '/api/chat/approvals/approval-1/respond',
-                expect.objectContaining({
-                    method: 'POST',
-                    body: JSON.stringify({ decision: 'approve' }),
-                })
-            );
-            expect(global.fetch).toHaveBeenCalledWith(
-                '/api/chat/approvals/approval-2/respond',
-                expect.objectContaining({
-                    method: 'POST',
-                    body: JSON.stringify({ decision: 'approve' }),
-                })
-            );
-        });
     });
 
     it('shows streamed agent run errors in the dock', async () => {

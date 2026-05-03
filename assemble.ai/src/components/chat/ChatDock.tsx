@@ -39,8 +39,6 @@ export function ChatDock({ projectId }: ChatDockProps) {
     const [isSending, setIsSending] = useState(false);
     const [pendingRunStatus, setPendingRunStatus] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [approvalChipBusy, setApprovalChipBusy] = useState<string | null>(null);
-    const [chipResolutions, setChipResolutions] = useState<Record<string, PendingApprovalView['resolution']>>({});
     const postSendRefreshTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
     const pendingRunStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const pendingSendStartedAtRef = useRef<number | null>(null);
@@ -80,7 +78,6 @@ export function ChatDock({ projectId }: ChatDockProps) {
         setThread(null);
         setMessages([]);
         setHydratedApprovals({});
-        setChipResolutions({});
         uiActionSinceRef.current = null;
         clearPostSendRefreshTimers();
         clearPendingRunStatus();
@@ -299,69 +296,6 @@ export function ChatDock({ projectId }: ChatDockProps) {
         thread,
     ]);
 
-    const resolveApprovalFromResponse = useCallback(
-        async (approval: PendingApprovalView, decision: 'approve' | 'reject') => {
-            const res = await fetch(`/api/chat/approvals/${approval.id}/respond`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ decision }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok && res.status !== 409 && res.status !== 410) {
-                throw new Error(data?.error || `Approval ${decision} failed (${res.status})`);
-            }
-            const status = typeof data?.status === 'string' ? data.status : null;
-            const resolution: PendingApprovalView['resolution'] =
-                status === 'applied'
-                    ? { status: 'applied', appliedOutput: data.output }
-                    : status === 'rejected' || (res.ok && decision === 'reject')
-                      ? { status: 'rejected' }
-                      : {
-                            status: 'conflict',
-                            error:
-                                typeof data?.error === 'string'
-                                    ? data.error
-                                    : 'The approval could not be applied.',
-                        };
-            setChipResolutions((current) => ({
-                ...current,
-                [approval.id]: resolution,
-            }));
-        },
-        []
-    );
-
-    const handleApprovalChip = useCallback(
-        async (decision: 'approve' | 'reject') => {
-            if (approvalChipBusy) return;
-            const pending = Object.values({
-                ...hydratedApprovals,
-                ...stream.approvals,
-            }).filter((approval) => !(approval.resolution ?? chipResolutions[approval.id]));
-            if (pending.length === 0) return;
-
-            const busyKey = `${decision}-all`;
-            setApprovalChipBusy(busyKey);
-            setError(null);
-            try {
-                for (const approval of pending) {
-                    await resolveApprovalFromResponse(approval, decision);
-                }
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to resolve approval');
-            } finally {
-                setApprovalChipBusy(null);
-            }
-        },
-        [
-            approvalChipBusy,
-            chipResolutions,
-            hydratedApprovals,
-            resolveApprovalFromResponse,
-            stream.approvals,
-        ]
-    );
-
     // Render into the center panel when that layout is present. The dock can
     // mount before the panel exists, so keep looking until the anchor appears.
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -438,7 +372,7 @@ export function ChatDock({ projectId }: ChatDockProps) {
             id,
             {
                 ...approval,
-                resolution: approval.resolution ?? chipResolutions[id] ?? null,
+                resolution: approval.resolution ?? null,
             },
         ])
     );
@@ -544,40 +478,6 @@ export function ChatDock({ projectId }: ChatDockProps) {
                             }}
                         >
                             {visibleError}
-                        </div>
-                    )}
-
-                    {unresolvedApprovalCount > 1 && (
-                        <div
-                            className="flex flex-wrap items-center gap-1.5 px-2 py-1.5"
-                            style={{ borderTop: '1px solid var(--color-border-subtle)' }}
-                            data-testid="approval-bulk-actions"
-                        >
-                            <span
-                                className="px-1 text-xs font-medium"
-                                style={{ color: 'var(--color-text-secondary)' }}
-                            >
-                                Bulk actions ({unresolvedApprovalCount} pending)
-                            </span>
-                            <button
-                                type="button"
-                                onClick={() => void handleApprovalChip('approve')}
-                                disabled={approvalChipBusy !== null}
-                                className="px-2 py-1 text-xs rounded border disabled:opacity-50"
-                                style={{ borderColor: 'var(--color-border)' }}
-                                data-testid="approval-chip-approve-all"
-                            >
-                                Approve all
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => void handleApprovalChip('reject')}
-                                disabled={approvalChipBusy !== null}
-                                className="px-2 py-1 text-xs rounded border disabled:opacity-50"
-                                style={{ borderColor: 'var(--color-border)' }}
-                            >
-                                Reject all
-                            </button>
                         </div>
                     )}
 

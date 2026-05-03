@@ -4,7 +4,7 @@ import type { WorkflowPlan, WorkflowPlanStep } from './types';
 export const ISSUE_VARIATION_WORKFLOW_KEY = 'issue-variation';
 
 const variationCategorySchema = z.enum(['Principal', 'Contractor', 'Lessor Works']);
-const variationStatusSchema = z.enum(['Forecast', 'Submitted', 'Approved', 'Rejected', 'Withdrawn']);
+const variationStatusSchema = z.enum(['Forecast', 'Approved', 'Rejected', 'Withdrawn']);
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const masterStageSchema = z.enum([
     'initiation',
@@ -17,7 +17,7 @@ const masterStageSchema = z.enum([
 const createVariationInputSchema = z.object({
     category: variationCategorySchema.default('Principal'),
     description: z.string().trim().min(1),
-    status: variationStatusSchema.default('Submitted'),
+    status: variationStatusSchema.default('Forecast'),
     costLineId: z.string().trim().min(1).optional(),
     costLineReference: z.string().trim().min(1).optional(),
     disciplineOrTrade: z.string().trim().min(1).optional(),
@@ -107,6 +107,41 @@ function hasAnyDefinedKey<T extends readonly string[]>(
     return keys.some((key) => record[key] !== undefined);
 }
 
+function workflowText(input: ParsedIssueVariationWorkflowInput): string {
+    return [
+        input.userGoal,
+        ...(input.evidence ?? []),
+        ...(input.assumptions ?? []),
+        input.note?.title,
+        input.note?.content,
+    ]
+        .filter((entry): entry is string => typeof entry === 'string')
+        .join(' ');
+}
+
+function explicitCostPlanUpdateRequested(input: ParsedIssueVariationWorkflowInput): boolean {
+    const text = workflowText(input).toLowerCase();
+    const updateVerb = /\b(update|change|adjust|increase|decrease|revise|set|amend|reduce)\b/;
+    const costPlanTarget =
+        /\b(cost plan|budget|approved contract|contract sum|contract value|base contract|trade contract)\b/;
+    const addToCostPlanTarget =
+        /\badd(?:ed)?\b[\s\S]{0,60}\b(to|onto)\b[\s\S]{0,40}\b(cost plan|budget|approved contract|contract sum|contract value|base contract|trade contract)\b/;
+    return (updateVerb.test(text) && costPlanTarget.test(text)) || addToCostPlanTarget.test(text);
+}
+
+function variationWithLinkedCostLine(
+    input: ParsedIssueVariationWorkflowInput
+): ParsedIssueVariationWorkflowInput['variation'] {
+    if (input.variation.costLineId || !input.costLineUpdate?.id) {
+        return input.variation;
+    }
+
+    return {
+        ...input.variation,
+        costLineId: input.costLineUpdate.id,
+    };
+}
+
 function defaultVariationNoteContent(input: ParsedIssueVariationWorkflowInput): string {
     const lines = [`Client requested variation: ${input.variation.description}.`];
     const costLineLabel = [
@@ -129,24 +164,38 @@ function defaultVariationNoteContent(input: ParsedIssueVariationWorkflowInput): 
 
 export function buildIssueVariationPlan(rawInput: IssueVariationWorkflowInput): WorkflowPlan {
     const input = issueVariationWorkflowInputSchema.parse(rawInput);
+    const variation = variationWithLinkedCostLine(input);
     const userGoal =
         input.userGoal ??
-        `Issue variation - ${input.variation.description}`;
+        `Issue variation - ${variation.description}`;
     const evidence = input.evidence ?? [];
     const assumptions = [...(input.assumptions ?? [])];
+    if (
+        input.variation.costLineId &&
+        input.costLineUpdate?.id &&
+        input.variation.costLineId !== input.costLineUpdate.id
+    ) {
+        assumptions.push(
+            'Variation cost-line link differs from the cost-plan row context; the variation link was left as supplied.'
+        );
+    }
     const steps: WorkflowPlanStep[] = [
         {
             stepKey: 'create_variation',
             title: 'Create variation register item',
             actionId: 'finance.variations.create',
-            input: asRecord(input.variation),
+            input: asRecord(variation),
             dependencyStepKeys: [],
             failurePolicy: 'abort_workflow',
             risk: 'sensitive',
         },
     ];
 
-    if (input.costLineUpdate?.id && hasAnyDefinedKey(input.costLineUpdate, COST_LINE_CHANGE_KEYS)) {
+    if (
+        input.costLineUpdate?.id &&
+        hasAnyDefinedKey(input.costLineUpdate, COST_LINE_CHANGE_KEYS) &&
+        explicitCostPlanUpdateRequested(input)
+    ) {
         steps.push({
             stepKey: 'update_cost_plan',
             title: 'Update linked cost plan line',
@@ -156,6 +205,13 @@ export function buildIssueVariationPlan(rawInput: IssueVariationWorkflowInput): 
             failurePolicy: 'ask_user',
             risk: 'propose',
         });
+    } else if (
+        input.costLineUpdate?.id &&
+        hasAnyDefinedKey(input.costLineUpdate, COST_LINE_CHANGE_KEYS)
+    ) {
+        assumptions.push(
+            'Cost-plan monetary update was skipped because the request only linked the variation to the cost line; variation amounts are tracked on the variation register.'
+        );
     } else if (input.costLineUpdate?.id) {
         assumptions.push(
             'Cost line was resolved and linked on the variation; no base cost-plan row update was required.'
@@ -188,7 +244,7 @@ export function buildIssueVariationPlan(rawInput: IssueVariationWorkflowInput): 
     {
         const noteInput = {
             ...input.note,
-            title: input.note?.title ?? `Variation - ${input.variation.description}`,
+            title: input.note?.title ?? `Variation - ${variation.description}`,
             content:
                 input.note?.content ??
                 defaultVariationNoteContent(input),
@@ -207,7 +263,7 @@ export function buildIssueVariationPlan(rawInput: IssueVariationWorkflowInput): 
     }
 
     const amount =
-        input.variation.amountApprovedCents ?? input.variation.amountForecastCents;
+        variation.amountApprovedCents ?? variation.amountForecastCents;
     const amountText =
         typeof amount === 'number'
             ? new Intl.NumberFormat('en-AU', {
@@ -218,7 +274,7 @@ export function buildIssueVariationPlan(rawInput: IssueVariationWorkflowInput): 
             : 'an unpriced amount';
 
     const executionBrief = [
-        `Understood: prepare an issue-variation workflow for "${input.variation.description}" at ${amountText}.`,
+        `Understood: prepare an issue-variation workflow for "${variation.description}" at ${amountText}.`,
         evidence.length > 0 ? `Evidence used: ${evidence.join('; ')}.` : 'Evidence used: current project context and supplied instruction.',
         assumptions.length > 0 ? `Assumptions: ${assumptions.join('; ')}.` : 'Assumptions: none recorded.',
         `Prepared ${steps.length} dependency-aware step${steps.length === 1 ? '' : 's'}: ${steps.map((step) => step.title).join(' -> ')}.`,
@@ -228,7 +284,7 @@ export function buildIssueVariationPlan(rawInput: IssueVariationWorkflowInput): 
     return {
         workflowKey: ISSUE_VARIATION_WORKFLOW_KEY,
         userGoal,
-        summary: `Issue variation - ${input.variation.description}`,
+        summary: `Issue variation - ${variation.description}`,
         executionBrief,
         evidence,
         assumptions,

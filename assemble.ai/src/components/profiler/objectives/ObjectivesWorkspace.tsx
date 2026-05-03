@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { useToast } from '@/lib/hooks/use-toast';
 import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import type { ObjectiveType, ObjectiveSource } from '@/lib/db/objectives-schema';
-import { SectionGroup } from './SectionGroup';
+import { SectionGroup, type ViewMode } from './SectionGroup';
+import { computeRowOps, type EditorItem } from './save-section-diff';
+import { hasManualEdits } from '@/lib/services/objectives-edit-detection';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
+import { getSectionConfig, isAdvisory } from '@/lib/constants/objective-section-config';
 
 export interface ObjectiveRow {
   id: string;
@@ -31,13 +34,6 @@ interface ObjectivesWorkspaceProps {
 }
 
 const SECTION_ORDER: ObjectiveType[] = ['planning', 'functional', 'quality', 'compliance'];
-
-const SECTION_LABELS: Record<ObjectiveType, string> = {
-  planning: 'Planning',
-  functional: 'Functional',
-  quality: 'Quality',
-  compliance: 'Compliance',
-};
 
 function LoadingSkeleton() {
   return (
@@ -93,6 +89,35 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
   const [isLoading, setIsLoading] = useState(true);
   const [groupToDelete, setGroupToDelete] = useState<ObjectiveType | null>(null);
   const [generatingSection, setGeneratingSection] = useState<ObjectiveType | null>(null);
+  const [viewModes, setViewModes] = useState<Record<ObjectiveType, ViewMode>>({
+    planning: 'short',
+    functional: 'short',
+    quality: 'short',
+    compliance: 'short',
+  });
+  const [snapshots, setSnapshots] = useState<Record<ObjectiveType, string[] | null>>({
+    planning: null,
+    functional: null,
+    quality: null,
+    compliance: null,
+  });
+  const [pendingRegenerate, setPendingRegenerate] = useState<{ type: ObjectiveType; mode: ViewMode } | null>(null);
+  const [projectType, setProjectType] = useState<string | null>(null);
+  const [hasAttachedDocuments, setHasAttachedDocuments] = useState<boolean>(false);
+
+  // Per-project-type section labels — drives both UI and (via the same lookup
+  // table) the AI prompt section definitions, so the two cannot drift apart.
+  const sectionLabels = useMemo<Record<ObjectiveType, string>>(() => {
+    const config = getSectionConfig(projectType);
+    return {
+      planning: config.sections.planning.label,
+      functional: config.sections.functional.label,
+      quality: config.sections.quality.label,
+      compliance: config.sections.compliance.label,
+    };
+  }, [projectType]);
+
+  const showAdvisoryDraftBanner = isAdvisory(projectType) && !hasAttachedDocuments;
 
   // Drag-and-drop / paste extract state
   const [isDragging, setIsDragging] = useState(false);
@@ -108,6 +133,11 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
       const json = await res.json();
       if (json.success) {
         setRows(json.data as GroupedRows);
+        if (json.snapshots) {
+          setSnapshots(json.snapshots as Record<ObjectiveType, string[] | null>);
+        }
+        setProjectType(typeof json.projectType === 'string' ? json.projectType : null);
+        setHasAttachedDocuments(Boolean(json.hasAttachedDocuments));
       }
     } catch {
       toast({
@@ -124,6 +154,27 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
   useEffect(() => {
     fetchRows();
   }, [fetchRows]);
+
+  // Derive each section's initial view mode from its rows: a section that has
+  // any polished rows opens in Long view; otherwise Short.
+  useEffect(() => {
+    setViewModes((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const type of SECTION_ORDER) {
+        const anyPolished = rows[type].some((r) => r.status === 'polished');
+        const want: ViewMode = anyPolished ? 'long' : 'short';
+        if (next[type] !== want) {
+          next[type] = want;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    // Run only when the rows shape changes from the server fetch — not on every
+    // optimistic in-memory edit. Keying on isLoading transitions covers that.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading]);
 
   useProjectEvents(projectId, (event) => {
     if (event.entity === 'objective') {
@@ -190,12 +241,17 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
     }
   }, [projectId, fetchRows, onUpdate, toast]);
 
-  // --- Generate from project profile (per section) ---
-  const handleGenerateSection = useCallback(async (type: ObjectiveType) => {
+  // --- Run the regenerate API call (used by handleRegenerate and by the
+  // confirmation modal's "Replace" button after the user has acknowledged the
+  // destructive prompt). ---
+  const runRegenerate = useCallback(async (type: ObjectiveType, mode: ViewMode) => {
     if (generatingSection) return;
     setGeneratingSection(type);
     try {
-      const res = await fetch(`/api/projects/${projectId}/objectives/generate`, {
+      const url = mode === 'short'
+        ? `/api/projects/${projectId}/objectives/generate`
+        : `/api/projects/${projectId}/objectives/polish`;
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ section: type }),
@@ -206,26 +262,71 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
           errBody?.error?.message ||
           (res.status === 404
             ? 'Complete the building profile first.'
-            : 'Failed to generate objectives');
+            : 'Failed to regenerate');
         throw new Error(message);
+      }
+      // Long-mode regenerate produces polished content — flip the view to Long
+      // so the user sees what they just generated.
+      if (mode === 'long') {
+        setViewModes((prev) => ({ ...prev, [type]: 'long' }));
       }
       await fetchRows();
       onUpdate?.();
       toast({
-        title: 'Objectives Generated',
-        description: `${SECTION_LABELS[type]} objectives are ready for review`,
+        title: mode === 'short' ? 'Short bullets generated' : 'Long bullets generated',
+        description: `${sectionLabels[type]} content is ready`,
         variant: 'success',
       });
     } catch (error) {
       toast({
-        title: 'Generation Failed',
-        description: error instanceof Error ? error.message : 'Failed to generate objectives',
+        title: 'Regeneration Failed',
+        description: error instanceof Error ? error.message : 'Failed to regenerate',
         variant: 'destructive',
       });
     } finally {
       setGeneratingSection(null);
     }
   }, [projectId, generatingSection, fetchRows, onUpdate, toast]);
+
+  // --- Entry point from the ↻ button. Short-mode regenerate is destructive,
+  // so when the section has manual edits we pop a confirmation modal first.
+  // Long-mode regenerate is non-destructive (polish preserves the short text)
+  // and runs immediately. ---
+  const handleRegenerate = useCallback((type: ObjectiveType, mode: ViewMode) => {
+    if (generatingSection) return;
+
+    if (mode === 'short' && rows[type].length > 0) {
+      const dirty = hasManualEdits({
+        rows: rows[type].map((r) => ({ id: r.id, text: r.text })),
+        snapshot: snapshots[type],
+      });
+      if (dirty) {
+        setPendingRegenerate({ type, mode });
+        return;
+      }
+    }
+
+    void runRegenerate(type, mode);
+  }, [generatingSection, rows, snapshots, runRegenerate]);
+
+  // --- View toggle ---
+  const handleViewModeChange = useCallback(async (type: ObjectiveType, mode: ViewMode) => {
+    setViewModes((prev) => ({ ...prev, [type]: mode }));
+    try {
+      await fetch(`/api/projects/${projectId}/objectives/view-mode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section: type, viewMode: mode }),
+      });
+      await fetchRows();
+    } catch (err) {
+      toast({
+        title: 'View change failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  }, [projectId, fetchRows, toast]);
 
   // --- Drag handlers ---
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -509,32 +610,38 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
     rowsRef.current = rows;
   }, [rows]);
 
-  // Bulk sync a section's textarea content into per-row create/update/delete ops.
-  // Naive line-by-index diff: lines that align are updated in place, extra new
-  // lines become creates, missing lines become deletes.
-  const saveSection = useCallback(async (type: ObjectiveType, newLines: string[]) => {
-    const trimmed = newLines.map((l) => l.trim()).filter((l) => l.length > 0);
+  // ID-based diff: items from the editor carry the row id (or null for new
+  // bullets); compare against the current rows to derive create/update/delete
+  // ops. Plain text is a valid HTML payload, so AI-written text round-trips
+  // without modification.
+  const saveSection = useCallback(async (type: ObjectiveType, items: EditorItem[]) => {
     const currentRows = rowsRef.current[type];
-    const minLen = Math.min(currentRows.length, trimmed.length);
+    const ops = computeRowOps({ currentRows, editorItems: items });
 
-    for (let i = 0; i < minLen; i++) {
-      const existingText =
-        currentRows[i].status === 'polished' && currentRows[i].textPolished
-          ? currentRows[i].textPolished
-          : currentRows[i].text;
-      if (existingText !== trimmed[i]) {
-        const patch: Partial<ObjectiveRow> =
-          currentRows[i].status === 'polished' && currentRows[i].textPolished
-            ? { textPolished: trimmed[i] }
-            : { text: trimmed[i] };
-        await updateObjective(currentRows[i].id, patch);
+    for (const update of ops.updates) {
+      const row = currentRows.find((r) => r.id === update.id);
+      if (!row) continue;
+      const patch: Partial<ObjectiveRow> = {};
+      if (update.html !== undefined) {
+        // Write to whichever column the row is currently sourced from.
+        if (row.status === 'polished' && row.textPolished) {
+          patch.textPolished = update.html;
+        } else {
+          patch.text = update.html;
+        }
       }
+      if (update.sortOrder !== undefined) patch.sortOrder = update.sortOrder;
+      await updateObjective(update.id, patch);
     }
-    for (let i = currentRows.length; i < trimmed.length; i++) {
-      await createObjective(type, trimmed[i]);
+
+    for (const create of ops.creates) {
+      const trimmed = create.html.replace(/^<p>([\s\S]*?)<\/p>$/i, '$1').trim();
+      if (trimmed.length === 0) continue;
+      await createObjective(type, trimmed);
     }
-    for (let i = trimmed.length; i < currentRows.length; i++) {
-      await deleteObjective(currentRows[i].id);
+
+    for (const id of ops.deletes) {
+      await deleteObjective(id);
     }
   }, [updateObjective, createObjective, deleteObjective]);
 
@@ -590,18 +697,34 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
         {isLoading ? (
           <LoadingSkeleton />
         ) : (
-          <div className="p-4">
+          <div className="p-4 space-y-3">
+            {showAdvisoryDraftBanner && (
+              <div
+                className="rounded border border-[var(--color-border)]/50 px-3 py-2 text-xs"
+                style={{
+                  backgroundColor:
+                    'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)',
+                  color: 'var(--color-text-muted)',
+                }}
+                role="note"
+              >
+                Draft from your scope selections — refine after attaching reference material.
+              </div>
+            )}
             {/* Single outer card containing all four sections */}
             <div className="rounded border border-[var(--color-border)]/50 overflow-hidden">
               {SECTION_ORDER.map((type, idx) => (
                 <SectionGroup
                   key={type}
                   type={type}
-                  label={SECTION_LABELS[type]}
+                  label={sectionLabels[type]}
                   rows={rows[type]}
                   onSave={saveSection}
                   onDeleteAll={setGroupToDelete}
-                  onGenerate={handleGenerateSection}
+                  onRegenerate={handleRegenerate}
+                  viewMode={viewModes[type]}
+                  onViewModeChange={handleViewModeChange}
+                  hasLongContent={rows[type].some((r) => !!r.textPolished)}
                   isGenerating={generatingSection === type}
                   isAnyGenerating={generatingSection !== null}
                   isLastSection={idx === SECTION_ORDER.length - 1}
@@ -616,12 +739,12 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
       <Modal
         isOpen={groupToDelete !== null}
         onClose={() => setGroupToDelete(null)}
-        title={`Delete All ${groupToDelete ? SECTION_LABELS[groupToDelete] : ''} Objectives`}
+        title={`Delete All ${groupToDelete ? sectionLabels[groupToDelete] : ''} Objectives`}
       >
         <div className="space-y-4">
           <p className="text-[var(--color-text-primary)]">
             Are you sure you want to delete all {groupToDelete ? rows[groupToDelete].length : 0}{' '}
-            {groupToDelete ? SECTION_LABELS[groupToDelete].toLowerCase() : ''} objective
+            {groupToDelete ? sectionLabels[groupToDelete].toLowerCase() : ''} objective
             {groupToDelete && rows[groupToDelete].length !== 1 ? 's' : ''}?
           </p>
           <p className="text-sm text-[var(--color-text-muted)]">This action cannot be undone.</p>
@@ -631,6 +754,40 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
             </Button>
             <Button variant="destructive" onClick={handleDeleteGroup}>
               Delete All
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Destructive ↻ Short confirmation modal — only shown when manual edits
+          (text divergence from the last AI snapshot or HTML markup) are
+          detected. Long-mode ↻ is non-destructive and skips this gate. */}
+      <Modal
+        isOpen={pendingRegenerate !== null}
+        onClose={() => setPendingRegenerate(null)}
+        title={`Replace ${pendingRegenerate ? sectionLabels[pendingRegenerate.type] : ''} content?`}
+      >
+        <div className="space-y-4">
+          <p className="text-[var(--color-text-primary)]">
+            This section has manual edits or formatting that will be lost.
+            Regenerating will replace all bullets with fresh AI content.
+          </p>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Tip: switch to Long view and click ↻ instead — that preserves your short bullets.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setPendingRegenerate(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                const p = pendingRegenerate;
+                setPendingRegenerate(null);
+                if (p) void runRegenerate(p.type, p.mode);
+              }}
+            >
+              Replace
             </Button>
           </div>
         </div>

@@ -12,7 +12,9 @@ import {
     consultantDisciplines,
     contractorTrades,
     documents,
+    fileAssets,
     subcategories,
+    versions,
 } from '@/lib/db/pg-schema';
 import { emitChatEvent } from '../events';
 import { emitProjectEvent } from '../project-events';
@@ -37,6 +39,8 @@ interface SelectProjectDocumentsInput {
     categoryName?: string;
     subcategoryName?: string;
     disciplineOrTrade?: string;
+    drawingNumber?: string;
+    documentName?: string;
     allProjectDocuments?: boolean;
 }
 
@@ -52,7 +56,7 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
     spec: {
         name: TOOL,
         description:
-            'Select or deselect documents in the open project document repository UI. Use this when the user asks you to select documents, select all documents, clear selected documents, or select documents by known IDs, category, subcategory, discipline, or trade. This changes only the user interface selection; it does not edit or delete documents.',
+            'Select or deselect documents in the open project document repository UI. Use this when the user asks you to select documents, select all documents, clear selected documents, or select documents by known IDs, drawing number, document/drawing title, category, subcategory, discipline, or trade. This changes only the user interface selection; it does not edit or delete documents.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -89,6 +93,16 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
                     description:
                         'Alias for subcategoryName. Use for requests like "select all mechanical documents" or "select all mech documents".',
                 },
+                drawingNumber: {
+                    type: 'string',
+                    description:
+                        'Optional drawing number filter. Use for requests like "select drawing CC-20" or "select drawing number A-101".',
+                },
+                documentName: {
+                    type: 'string',
+                    description:
+                        'Optional document or drawing title/name contains filter. Use for requests like "select all section drawings" or "select basement floor plan drawings". Matches extracted drawing names and original filenames.',
+                },
                 allProjectDocuments: {
                     type: 'boolean',
                     description:
@@ -123,6 +137,12 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
         const disciplineOrTrade = optionalString(obj, 'disciplineOrTrade', TOOL);
         if (disciplineOrTrade) out.disciplineOrTrade = disciplineOrTrade;
 
+        const drawingNumber = optionalString(obj, 'drawingNumber', TOOL);
+        if (drawingNumber) out.drawingNumber = drawingNumber;
+
+        const documentName = optionalString(obj, 'documentName', TOOL);
+        if (documentName) out.documentName = documentName;
+
         const allProjectDocuments = optionalBoolean(obj, 'allProjectDocuments', TOOL);
         if (allProjectDocuments !== undefined) out.allProjectDocuments = allProjectDocuments;
 
@@ -134,10 +154,12 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
             Boolean(out.categoryName) ||
             Boolean(out.subcategoryName) ||
             Boolean(out.disciplineOrTrade) ||
+            Boolean(out.drawingNumber) ||
+            Boolean(out.documentName) ||
             out.allProjectDocuments === true;
         if (resolvedMode !== 'clear' && !hasSelector) {
             throw new Error(
-                `${TOOL}: provide documentIds, categoryId/subcategoryId/categoryName/subcategoryName/disciplineOrTrade, allProjectDocuments=true, or mode="clear"`
+                `${TOOL}: provide documentIds, categoryId/subcategoryId/categoryName/subcategoryName/disciplineOrTrade/drawingNumber/documentName, allProjectDocuments=true, or mode="clear"`
             );
         }
 
@@ -165,10 +187,30 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
                     sql`COALESCE(${subcategories.name}, ${consultantDisciplines.disciplineName}, ${contractorTrades.tradeName}) ILIKE ${`%${subcategoryName}%`}`
                 );
             }
+            if (input.drawingNumber) {
+                conditions.push(
+                    sql`(
+                        ${fileAssets.drawingNumber} ILIKE ${input.drawingNumber}
+                        OR regexp_replace(lower(coalesce(${fileAssets.drawingNumber}, '')), '[^a-z0-9]', '', 'g') =
+                            ${normaliseDrawingNumber(input.drawingNumber)}
+                    )`
+                );
+            }
+            if (input.documentName) {
+                const pattern = `%${input.documentName}%`;
+                conditions.push(
+                    sql`(
+                        ${fileAssets.drawingName} ILIKE ${pattern}
+                        OR ${fileAssets.originalName} ILIKE ${pattern}
+                    )`
+                );
+            }
 
             const rows = await db
                 .select({ id: documents.id })
                 .from(documents)
+                .leftJoin(versions, eq(documents.latestVersionId, versions.id))
+                .leftJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
                 .leftJoin(categories, eq(documents.categoryId, categories.id))
                 .leftJoin(subcategories, eq(documents.subcategoryId, subcategories.id))
                 .leftJoin(
@@ -208,5 +250,9 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
 };
 
 registerTool(definition);
+
+function normaliseDrawingNumber(value: string): string {
+    return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 export { definition as selectProjectDocumentsTool };

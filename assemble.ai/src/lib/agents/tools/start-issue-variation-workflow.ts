@@ -68,9 +68,9 @@ const definition: AgentToolDefinition<
                         description: { type: 'string' },
                         status: {
                             type: 'string',
-                            enum: ['Forecast', 'Submitted', 'Approved', 'Rejected', 'Withdrawn'],
+                            enum: ['Forecast', 'Approved', 'Rejected', 'Withdrawn'],
                             description:
-                                'Variation status. Defaults to Submitted for issue-variation workflows.',
+                                'Variation status. Defaults to Forecast. Use Approved only when the user says the variation is approved.',
                         },
                         costLineId: { type: 'string' },
                         costLineReference: { type: 'string' },
@@ -87,7 +87,7 @@ const definition: AgentToolDefinition<
                 costLineUpdate: {
                     type: 'object',
                     description:
-                        'Optional cost-plan update. Include only when the workflow should change cost-line fields such as budget or approved contract. If the cost line is only being linked to the variation, put the id on variation.costLineId and omit this object.',
+                        'Optional cost-plan update. Include only when the user explicitly asks to change cost-line fields such as budget or approved contract/contract sum. Do not copy a variation amount into approvedContractCents just because the variation is approved. If the cost line is only being linked to the variation, put the id on variation.costLineId and omit this object.',
                     properties: {
                         id: { type: 'string' },
                         activity: { type: 'string' },
@@ -239,6 +239,23 @@ async function createApprovalCardsWithoutWorkflowState(
     const steps: CreatedIssueVariationWorkflow['steps'] = [];
 
     for (const planStep of plan.steps) {
+        if (planStep.dependencyStepKeys.length > 0) {
+            steps.push({
+                id: `fallback:${ctx.runId}:${planStep.stepKey}`,
+                stepKey: planStep.stepKey,
+                title: planStep.title,
+                actionId: planStep.actionId,
+                state: 'pending',
+                approvalId: null,
+                invocationId: null,
+                risk: planStep.risk ?? 'propose',
+                dependencyStepIds: planStep.dependencyStepKeys,
+                summary:
+                    'Waiting for an earlier approval. Durable workflow state is unavailable, so this step was not shown yet.',
+                preview: null,
+            });
+            continue;
+        }
         steps.push(await proposePlanStepWithoutWorkflowState(ctx, planStep));
     }
 
@@ -295,6 +312,7 @@ async function proposePlanStepWithoutWorkflowState(
             ctx: actionCtx,
             input: parsedInput,
             toolUseId: `workflow-fallback:${ctx.runId}:${planStep.stepKey}`,
+            emit: planStep.dependencyStepKeys.length === 0,
         });
         return {
             id: stepId,

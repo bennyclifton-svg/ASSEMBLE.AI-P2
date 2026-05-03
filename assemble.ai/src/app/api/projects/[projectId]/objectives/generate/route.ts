@@ -20,6 +20,9 @@ import profileTemplates from '@/lib/data/profile-templates.json';
 import { evaluateRules, formatRulesForPrompt, type ProjectData } from '@/lib/services/inference-engine';
 import { retrieve, retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
 import { resolveProfileDomainTags, buildProfileSearchQuery } from '@/lib/constants/knowledge-domains';
+import { isAdvisory } from '@/lib/constants/objective-section-config';
+import { buildInferencePrompt, buildExtractionPrompt } from './prompt-builders';
+import type { ProjectType } from '@/types/profiler';
 
 /**
  * Resolve work scope value IDs to human-readable labels
@@ -107,8 +110,10 @@ export async function POST(
         const profWorkScope = JSON.parse(profile.workScope || '[]');
         const profRegion = profile.region ?? 'AU';
 
-        const isWsApplicable = profProjectType === 'refurb' || profProjectType === 'remediation';
-        const wsLabels = isWsApplicable ? resolveWorkScopeLabels(profWorkScope, profProjectType) : [];
+        // Work scope flows for ALL project types — including advisory and new builds.
+        // The previous filter (refurb/remediation only) silently dropped scope from
+        // the prompt, breaking profile→prompt propagation for new and advisory work.
+        const wsLabels = resolveWorkScopeLabels(profWorkScope, profProjectType);
 
         const domainTags = resolveProfileDomainTags({
           buildingClass: profBuildingClass,
@@ -205,62 +210,17 @@ export async function POST(
       const functionalContext = formatChunks(functionalResults);
       const planningContext = formatChunks(planningResults);
 
-      const extractionPrompt = `You are an expert construction project manager in Australia.
-
-You have been given excerpts from project documents (briefs, Statements of Environmental Effects, client design objectives, etc.). Extract project objectives from these documents and sort them into four categories.
-
-${domainContextSection ? `${domainContextSection}\n` : ''}## Retrieved Content — Functional & Quality Related
-${functionalContext || '(No relevant content found)'}
-
-## Retrieved Content — Planning & Compliance Related
-${planningContext || '(No relevant content found)'}
-
-## Section Definitions — CRITICAL:
-
-FUNCTIONAL — What the building physically provides and how it operates:
-- Physical attributes (bedrooms, floors, spaces, areas)
-- Design features (open plan, layout, configuration)
-- Operational requirements (storage, parking, amenities)
-Headers to use: Design Requirements, Operational Requirements
-
-QUALITY — How well the building performs and materials/finish standards:
-- Quality/finish standards (premium finishes, materials, fixtures)
-- Performance requirements (acoustic, thermal, structural)
-- User experience (accessibility features, natural light)
-Headers to use: Quality Standards, Performance Requirements
-
-PLANNING — Planning approvals and regulatory compliance:
-- Regulatory approvals (DA, CDC, permits)
-- Environmental compliance (contamination, stormwater)
-- Council and authority requirements
-Headers to use: Regulatory Compliance, Authority Approvals
-
-COMPLIANCE — Building codes and certification requirements:
-- Building codes (NCC, BCA classification)
-- Australian Standards (AS 2419.1, AS 3959, etc.)
-- Certifications required (BASIX, NatHERS, fire engineering)
-Headers to use: Certification Requirements, Code Compliance
-
-## Instructions:
-1. Extract ONLY objectives/requirements that are explicitly stated or clearly implied in the source documents
-2. DO NOT invent or hallucinate any objectives not supported by the documents
-3. Sort each item into the correct section
-4. Format as SHORT bullet points (2-5 words each)
-5. Group by category using bold headers
-6. Output 4-8 bullets per section where the documents support it
-7. DO NOT duplicate items between sections
-8. OUTPUT FORMAT: JSON arrays of plain text bullet strings (no HTML)
-
-Respond in JSON format:
-{
-  "functional": ["bullet 1", "bullet 2"],
-  "quality": ["bullet 1", "bullet 2"],
-  "planning": ["bullet 1", "bullet 2"],
-  "compliance": ["bullet 1", "bullet 2"]
-}`;
+      const extractionPrompt = buildExtractionPrompt({
+        projectType: (profile?.projectType ?? 'new') as ProjectType,
+        buildingClass: profile?.buildingClass ?? 'residential',
+        domainContextSection,
+        retrievedFunctional: functionalContext,
+        retrievedPlanning: planningContext,
+        section,
+      });
 
       const result = await aiComplete({
-        featureGroup: 'objectives_generation',
+        featureGroup: 'generation',
         maxTokens: 2000,
         messages: [{ role: 'user', content: extractionPrompt }],
       });
@@ -277,125 +237,76 @@ Respond in JSON format:
 
       // Parse profile data
       const buildingClass = profile.buildingClass;
-      const projectType = profile.projectType;
+      const projectType = profile.projectType as ProjectType;
       const subclass = JSON.parse(profile.subclass || '[]');
       const scaleData = JSON.parse(profile.scaleData || '{}');
       const complexity = JSON.parse(profile.complexity || '{}');
       const workScope = JSON.parse(profile.workScope || '[]');
 
-      // Resolve work scope IDs to human-readable labels
-      const isWorkScopeApplicable = projectType === 'refurb' || projectType === 'remediation';
-      const workScopeLabels = isWorkScopeApplicable ? resolveWorkScopeLabels(workScope, projectType) : [];
-      const hasSpecificScope = workScopeLabels.length > 0;
+      // Resolve work scope IDs to human-readable labels for ALL project types.
+      // The previous filter (refurb/remediation only) silently dropped scope from
+      // the prompt for new and advisory work, breaking profile→prompt propagation.
+      const workScopeLabels = resolveWorkScopeLabels(workScope, projectType);
 
-      if (workScope.length > 0 && !isWorkScopeApplicable) {
-        console.log(`[objectives-generate] Ignoring work scope for ${projectType} project (work scope only applies to refurb/remediation)`);
+      // Skip the inference rule corpus for advisory engagements.
+      // The existing 175 rules are all build-shaped (no project_type conditions),
+      // so running them for advisory contaminates output with build-flavoured
+      // suggestions. Advisory generation in the no-documents path relies on the
+      // profile + workScope (Scope of Advice) selections instead.
+      let functionalRulesFormatted = '';
+      let planningRulesFormatted = '';
+
+      if (isAdvisory(projectType)) {
+        console.log('[objectives-generate] Skipping inference rules for advisory project');
+      } else {
+        const projectData: ProjectData = {
+          projectDetails: {
+            projectName: 'Project',
+            jurisdiction: undefined,
+          },
+          profiler: {
+            buildingClass,
+            subclass,
+            projectType,
+            scaleData,
+            complexity,
+            workScope,
+          }
+        };
+
+        const functionalRules = evaluateRules('objectives_functional_quality', projectData);
+        const planningRules = evaluateRules('objectives_planning_compliance', projectData);
+
+        functionalRulesFormatted = formatRulesForPrompt(functionalRules, { includeConfidence: true, groupBySource: false });
+        planningRulesFormatted = formatRulesForPrompt(planningRules, { includeConfidence: true, groupBySource: false });
+
+        console.log(`[objectives-generate] Matched ${functionalRules.length} functional rules, ${planningRules.length} planning rules`);
       }
 
-      // Build ProjectData for inference engine
-      const projectData: ProjectData = {
-        projectDetails: {
-          projectName: 'Project',
-          jurisdiction: undefined,
-        },
-        profiler: {
-          buildingClass,
-          subclass,
-          projectType,
-          scaleData,
-          complexity,
-          workScope,
-        }
-      };
+      // Drop suggested-items blocks for sections we're not generating.
+      const generateFunctional = !section || section === 'functional';
+      const generateQuality = !section || section === 'quality';
+      const generatePlanning = !section || section === 'planning';
+      const generateCompliance = !section || section === 'compliance';
 
-      // Evaluate inference rules — functional+quality share one rule set, planning+compliance share another
-      const functionalRules = evaluateRules('objectives_functional_quality', projectData);
-      const planningRules = evaluateRules('objectives_planning_compliance', projectData);
+      if (!generateFunctional && !generateQuality) functionalRulesFormatted = '';
+      if (!generatePlanning && !generateCompliance) planningRulesFormatted = '';
 
-      const functionalRulesFormatted = formatRulesForPrompt(functionalRules, { includeConfidence: true, groupBySource: false });
-      const planningRulesFormatted = formatRulesForPrompt(planningRules, { includeConfidence: true, groupBySource: false });
-
-      console.log(`[objectives-generate] Matched ${functionalRules.length} functional rules, ${planningRules.length} planning rules`);
-
-      // Determine which sections to generate
-      const generateBoth = !section;
-      const generateFunctional = generateBoth || section === 'functional';
-      const generateQuality = generateBoth || section === 'quality';
-      const generatePlanning = generateBoth || section === 'planning';
-      const generateCompliance = generateBoth || section === 'compliance';
-
-      const workScopeConstraint = hasSpecificScope
-        ? `
-CRITICAL SCOPE CONSTRAINT:
-The client has specifically selected: ${workScopeLabels.join(', ')}.
-Your objectives MUST focus EXCLUSIVELY on these selected items.
-`
-        : '';
-
-      const suggestedItemsSection = [];
-      if ((generateFunctional || generateQuality) && functionalRulesFormatted) {
-        suggestedItemsSection.push(`## Functional & Quality\n${functionalRulesFormatted}`);
-      }
-      if ((generatePlanning || generateCompliance) && planningRulesFormatted) {
-        suggestedItemsSection.push(`## Planning & Compliance\n${planningRulesFormatted}`);
-      }
-
-      const prompt = `You are an expert construction project manager in Australia.
-
-PROJECT PROFILE:
-- Building Class: ${buildingClass}
-- Project Type: ${projectType}
-- Subclass: ${subclass.join(', ') || 'Not specified'}
-- Scale: ${Object.entries(scaleData).map(([k, v]) => `${k}: ${v}`).join(', ') || 'Not specified'}
-- Complexity: ${Object.entries(complexity).map(([k, v]) => `${k}: ${v}`).join(', ') || 'Not specified'}
-${hasSpecificScope ? `- Work Scope: ${workScopeLabels.join(', ')}` : ''}
-${workScopeConstraint}
-${domainContextSection ? `${domainContextSection}\n` : ''}SECTION DEFINITIONS - CRITICAL:
-The four sections have DIFFERENT purposes. DO NOT mix content between them:
-
-FUNCTIONAL - What the building physically provides and how it operates:
-- Physical attributes (bedrooms, floors, spaces, areas)
-- Design features (open plan, layout, configuration)
-- Operational requirements (storage, parking, amenities)
-
-QUALITY - How well the building performs and materials/finish standards:
-- Quality/finish standards (premium finishes, materials, fixtures)
-- Performance requirements (acoustic, thermal, structural)
-- User experience (accessibility features, natural light)
-
-PLANNING - Planning approvals and regulatory compliance:
-- Regulatory approvals (DA, CDC, permits)
-- Environmental compliance (contamination, stormwater)
-- Council and authority requirements
-
-COMPLIANCE - Building codes and certification requirements:
-- Building codes (NCC, BCA classification)
-- Australian Standards (AS 2419.1, AS 3959, etc.)
-- Certifications required (BASIX, NatHERS, fire engineering)
-
-SUGGESTED ITEMS FROM PROJECT ANALYSIS:
-${suggestedItemsSection.length > 0 ? suggestedItemsSection.join('\n\n') : '(No specific rules matched - generate based on project profile)'}
-
-INSTRUCTIONS:
-Generate SHORT bullet points only (2-5 words each).
-1. Include suggested items ONLY in their correct section
-2. Add other relevant objectives for this ${buildingClass} ${projectType} project
-3. Each bullet: 2-5 words MAXIMUM (e.g., "Premium material selection", "NCC 2022 compliance")
-4. NO prose, NO sentences, NO detailed explanations
-5. Output 4-8 bullets per section
-6. DO NOT duplicate items between sections
-7. OUTPUT FORMAT: plain text arrays in JSON (no HTML)
-
-Respond in JSON format with only the sections requested:
-{
-${generateFunctional ? '  "functional": ["bullet 1", "bullet 2"],' : ''}
-${generateQuality ? '  "quality": ["bullet 1", "bullet 2"],' : ''}
-${generatePlanning ? '  "planning": ["bullet 1", "bullet 2"],' : ''}
-${generateCompliance ? '  "compliance": ["bullet 1", "bullet 2"]' : ''}
-}`;
+      const prompt = buildInferencePrompt({
+        projectType,
+        buildingClass,
+        subclass,
+        scaleData,
+        complexity,
+        workScopeLabels,
+        functionalRulesFormatted,
+        planningRulesFormatted,
+        domainContextSection,
+        section,
+      });
 
       const result = await aiComplete({
-        featureGroup: 'objectives_generation',
+        featureGroup: 'generation',
         maxTokens: 2000,
         messages: [{ role: 'user', content: prompt }],
       });

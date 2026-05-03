@@ -20,6 +20,8 @@ const STALE_WORKFLOW_FAILURE_PATTERNS = [
     /would you prefer to handle it directly/i,
     /i routed this to finance agent/i,
 ];
+const ISSUE_VARIATION_WORKFLOW_RE =
+    /\b(issue|raise|submit|prepare|draft|create|add|record|log)\b[\s\S]{0,120}\bvariations?\b[\s\S]{0,240}\b(cost[-\s]?plan|cost lines?|programme|program|schedule|activities?|project notes?|notes?|link it|linked)\b|\bvariations?\b[\s\S]{0,120}\b(issue|raise|submit|prepare|draft|create|add|record|log)\b[\s\S]{0,240}\b(cost[-\s]?plan|cost lines?|programme|program|schedule|activities?|project notes?|notes?|link it|linked)\b/i;
 
 function normalizeContent(value: string): string {
     return value.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -57,7 +59,15 @@ export function buildVisibleChatRows<T extends ChatHistoryRow>(rows: T[]): T[] {
 }
 
 export function buildAgentHistoryFromRows(rows: ChatHistoryRow[]): AgentMessage[] {
-    return compactChatRows(rows, MAX_AGENT_HISTORY_MESSAGES).map((row) => ({
+    const compactRows = compactChatRows(rows, MAX_AGENT_HISTORY_MESSAGES);
+    const latestUserIndex = compactRows.map((row) => row.role).lastIndexOf('user');
+    const latestUser = latestUserIndex >= 0 ? compactRows[latestUserIndex] : null;
+    const modelRows =
+        latestUser && ISSUE_VARIATION_WORKFLOW_RE.test(latestUser.content)
+            ? [latestUser]
+            : compactRows;
+
+    return modelRows.map((row) => ({
         role: row.role as 'user' | 'assistant',
         content: row.content,
     }));

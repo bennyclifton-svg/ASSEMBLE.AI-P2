@@ -14,6 +14,32 @@ export interface ChatViewContext {
     selectedEntityIds?: Record<string, string[]>;
 }
 
+function normaliseSelectionKind(kind: string): string {
+    return kind.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function isDocumentSelectionKind(kind: string): boolean {
+    return ['document', 'documents', 'doc', 'docs', 'projectdocument', 'projectdocuments'].includes(
+        normaliseSelectionKind(kind)
+    );
+}
+
+export function selectedDocumentIdsFromViewContext(
+    context: ChatViewContext | null | undefined
+): string[] {
+    const selected = context?.selectedEntityIds;
+    if (!selected) return [];
+
+    const ids: string[] = [];
+    for (const [kind, kindIds] of Object.entries(selected)) {
+        if (!isDocumentSelectionKind(kind)) continue;
+        for (const id of kindIds) {
+            if (!ids.includes(id)) ids.push(id);
+        }
+    }
+    return ids;
+}
+
 function cleanString(value: unknown, maxLength = 200): string | undefined {
     if (typeof value !== 'string') return undefined;
     const trimmed = value.trim();
@@ -39,7 +65,7 @@ function cleanSelectedEntityIds(value: unknown): Record<string, string[]> | unde
     for (const [rawKind, rawIds] of Object.entries(value as Record<string, unknown>)) {
         const kind = cleanString(rawKind, 80);
         if (!kind) continue;
-        const ids = cleanStringArray(rawIds);
+        const ids = cleanStringArray(rawIds, isDocumentSelectionKind(kind) ? 500 : 25);
         if (ids.length > 0) out[kind] = ids;
     }
     return Object.keys(out).length > 0 ? out : undefined;
@@ -91,8 +117,15 @@ export function formatChatViewContextForPrompt(context: ChatViewContext | null |
     if (context.recentlyViewedIds.length > 0) {
         lines.push(`Recently viewed ids: ${context.recentlyViewedIds.join(', ')}`);
     }
+    const selectedDocumentIds = selectedDocumentIdsFromViewContext(context);
+    if (selectedDocumentIds.length > 0) {
+        lines.push(
+            `Current selected document ids (authoritative for "selection", "selected set", or "selected documents"; use these before older chat context): ${selectedDocumentIds.join(', ')}`
+        );
+    }
     if (context.selectedEntityIds) {
         for (const [kind, ids] of Object.entries(context.selectedEntityIds)) {
+            if (isDocumentSelectionKind(kind)) continue;
             lines.push(`Selected ${kind} ids: ${ids.join(', ')}`);
         }
     }

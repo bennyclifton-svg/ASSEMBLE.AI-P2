@@ -100,6 +100,41 @@ function emitActionEvents(
     return true;
 }
 
+function stringArrayFromOutput(record: Record<string, unknown>, key: string): string[] {
+    const value = record[key];
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+function emitCreateTransmittalProjectEvents(projectId: string, output: unknown): void {
+    const record =
+        output && typeof output === 'object' && !Array.isArray(output)
+            ? (output as Record<string, unknown>)
+            : {};
+    const id = typeof record.id === 'string' ? record.id : null;
+    const documentIds = [
+        ...stringArrayFromOutput(record, 'attachedDocumentIds'),
+        ...stringArrayFromOutput(record, 'documentIds'),
+    ].filter((documentId, index, all) => all.indexOf(documentId) === index);
+
+    if (record.transmittalTarget === 'note' && id) {
+        emitProjectEvent(projectId, {
+            type: 'entity_updated',
+            entity: 'note',
+            op: 'created',
+            id,
+        });
+    }
+
+    if (documentIds.length > 0) {
+        emitProjectEvent(projectId, {
+            type: 'document_selection_changed',
+            mode: 'replace',
+            documentIds,
+        });
+    }
+}
+
 interface RouteParams {
     params: Promise<{ id: string }>;
 }
@@ -330,7 +365,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             }
 
             const action = getActionByToolName(approval.toolName);
-            if (!emitActionEvents(approval.projectId, action, result.output)) {
+            if (approval.toolName === 'create_transmittal') {
+                emitCreateTransmittalProjectEvents(approval.projectId, result.output);
+            } else if (!emitActionEvents(approval.projectId, action, result.output)) {
                 const event = eventForTool(approval.toolName);
                 const appliedId = (result.output as { id?: unknown })?.id;
                 if (event && typeof appliedId === 'string') {

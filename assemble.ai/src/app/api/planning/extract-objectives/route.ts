@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
 
     // Send to AI for extraction
     const { text: aiResponse } = await aiComplete({
-      featureGroup: 'text_extraction',
+      featureGroup: 'extraction',
       maxTokens: 2048,
       system: EXTRACTION_PROMPT,
       messages: [

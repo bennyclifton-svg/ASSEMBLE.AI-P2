@@ -10,7 +10,27 @@ import { db } from '@/lib/db';
 import { agentRuns, chatMessages } from '@/lib/db/pg-schema';
 import { eq } from 'drizzle-orm';
 import { emitChatEvent } from './events';
-import { isIssueVariationWorkflowRequest, isVariationWriteRequest } from './intent';
+import {
+    hasDesignContext,
+    hasFinanceContext,
+    hasProgramContext,
+    isConsultantAddendumRequest,
+    isCostValueWriteRequest,
+    isDesignWriteRequest,
+    isDocumentSelectionRequest,
+    isFinanceNoteRequest,
+    isFinanceWriteRequest,
+    isInvoiceWriteRequest,
+    isIssueVariationWorkflowRequest,
+    isNoteWriteRequest,
+    isProgrammeDateWriteRequest,
+    isProgramNoteRequest,
+    isProgramWriteRequest,
+    isProjectStatusRequest,
+    isRftWriteRequest,
+    isTransmittalWriteRequest,
+    isVariationWriteRequest,
+} from './intent';
 import { runAgent } from './runner';
 import type { AgentMessage } from './completion';
 import type { ChatViewContext } from '@/lib/chat/view-context';
@@ -203,81 +223,61 @@ export function formatOrchestratorFinalText(sections: OrchestratorResponseSectio
 }
 
 export function routeAgents(text: string): SpecialistName[] {
-    const lower = text.toLowerCase();
-
-    const wantsBriefing =
-        /\b(status|briefing|where are we|how are we tracking|overall|summary|health check)\b/.test(lower);
-    const wantsReadiness = /\b(ready|readiness|soft gate|gate|go to tender|tender-ready)\b/.test(lower);
-    if (wantsBriefing || wantsReadiness) {
+    if (isProjectStatusRequest(text)) {
         return ['finance', 'program', 'design'];
     }
 
-    const consultantAddendum =
-        /\b(addendum|addenda)\b/.test(lower) &&
-        /\b(consultants?|architects?|engineers?|mechanical|electrical|hydraulic|structural|civil|bca|planners?|town planners?)\b/.test(lower);
-    if (consultantAddendum) {
+    if (isConsultantAddendumRequest(text)) {
         return ['design'];
     }
 
-    const documentSelection =
-        /\b(select|tick|check|choose|highlight)\b[\s\S]{0,140}\b(documents?|docs?|drawings?|files?)\b/.test(lower) ||
-        /\b(documents?|docs?|drawings?|files?)\b[\s\S]{0,140}\b(select|tick|checked|highlighted|chosen)\b/.test(lower);
-    if (documentSelection) {
+    if (isDocumentSelectionRequest(text)) {
         return ['design'];
     }
 
-    const rftWrite =
-        /\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,140}\b(rft|request for tender|tender package|tender document|tender documents|brief|services brief|deliverables)\b/.test(lower) &&
-        /\b(rft|request for tender|tender package|tender document|tender documents)\b/.test(lower);
-    if (rftWrite) {
+    if (isTransmittalWriteRequest(text)) {
         return ['design'];
     }
 
-    const noteWrite =
-        /\b(add|record|create|enter|post|log|update|change|set)\b[\s\S]{0,140}\b(notes?|decision record)\b/.test(lower);
-    const financeNote =
-        noteWrite &&
-        /\b(finance|financial|commercial|cost|budget|variation|invoice|claim|progress claim|qs)\b/.test(lower);
-    const programNote =
-        noteWrite &&
-        /\b(programme|program|schedule|milestone|activity|eot|completion)\b/.test(lower);
+    if (isRftWriteRequest(text)) {
+        return ['design'];
+    }
+
     if (isIssueVariationWorkflowRequest(text) || isVariationWriteRequest(text)) {
         return ['finance'];
     }
-    if (noteWrite && !financeNote && !programNote) {
+    if (isNoteWriteRequest(text) && !isFinanceNoteRequest(text) && !isProgramNoteRequest(text)) {
         return ['design'];
     }
 
-    const financeWrite =
-        /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set)\b[\s\S]{0,140}\b(invoices?|progress claims?|claims?|fees?|cost lines?|variations?|commercial risks?|finance notes?)\b/.test(lower);
-    if (financeWrite) {
+    if (isCostValueWriteRequest(text)) {
         return ['finance'];
     }
 
-    if (programNote) {
+    if (isFinanceWriteRequest(text)) {
+        return ['finance'];
+    }
+
+    if (isProgramNoteRequest(text)) {
         return ['program'];
     }
 
-    const programWrite =
-        /\b(add|record|create|enter|post|log|update|change|set|move)\b[\s\S]{0,140}\b(programme|program|schedule|activities?|milestones?|programme risks?|schedule risks?)\b/.test(lower);
-    if (programWrite) {
+    if (isProgramWriteRequest(text)) {
         return ['program'];
     }
 
-    const designWrite =
-        /\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,140}\b(objectives?|project objectives?|brief|project brief|profile|stakeholders?|consultants?|contractors?|authorities?|contacts?|design notes?|meetings?|pre-da|da meetings?|design meetings?|addendum|addenda)\b/.test(lower);
-    if (designWrite) {
+    if (isProgrammeDateWriteRequest(text)) {
+        return ['program'];
+    }
+
+    if (isDesignWriteRequest(text)) {
         return ['design'];
     }
 
-    const finance = /\b(cost|budget|forecast|variance|cashflow|invoices?|claims?|contingency|variation|financial|fees?|contract sum|qs|commercial risk)\b/.test(lower);
-    const program = /\b(programme|program|schedule|milestone|delay|eot|extension of time|critical path|float|completion|duration|risk register|schedule risk)\b/.test(lower);
-    const design = /\b(design|drawing|documents?|architect|engineer|consultant|stakeholder|contractor|authority|brief|objectives?|profile|da\b|development application|planning|ncc|bca|condition|specification|meeting|addendum|addenda)\b/.test(lower);
-
     const matches: SpecialistName[] = [];
-    if (finance) matches.push('finance');
-    if (program) matches.push('program');
-    if (design) matches.push('design');
+    if (hasFinanceContext(text)) matches.push('finance');
+    if (hasProgramContext(text)) matches.push('program');
+    if (hasDesignContext(text)) matches.push('design');
 
     return matches.length > 0 ? matches : ['finance'];
 }
@@ -312,6 +312,13 @@ function specialistRoutingHint(agentName: SpecialistName, latestUserMessage: str
             'Do not satisfy this with create_note, create_variation, update_cost_line, or update_program_activity directly.'
         );
     }
+    if (agentName === 'finance' && isInvoiceWriteRequest(latestUserMessage)) {
+        return (
+            'Routing note: this is an invoice ledger request. ' +
+            'Resolve allocation wording against the cost plan, treating slash-separated text like "Developer Expenses / Long Service Levy" as costCategory plus costLineReference. ' +
+            'Use record_invoice only; do not create notes or programme milestones unless the user explicitly asks for a separate artefact.'
+        );
+    }
     if (
         agentName === 'design' &&
         /\b(rft|request for tender|tender package|tender document|tender documents)\b/.test(lower) &&
@@ -325,12 +332,12 @@ function specialistRoutingHint(agentName: SpecialistName, latestUserMessage: str
     }
     if (
         agentName === 'design' &&
-        /\b(addendum|addenda)\b/.test(lower) &&
-        /\b(consultants?|architects?|engineers?|mechanical|electrical|hydraulic|structural|civil|bca|planners?)\b/.test(lower)
+        isConsultantAddendumRequest(latestUserMessage)
     ) {
         return (
             'Routing note: consultant addenda are in Design scope. Do not hand this to a Document Controller/Admin Agent. ' +
             'If earlier conversation turns said otherwise, treat that as superseded by the current toolset. ' +
+            'If the request uses the current selection or selected set, use the Current selected document ids from the app view exactly. ' +
             'Resolve the consultant and documents, then use create_addendum if possible.'
         );
     }

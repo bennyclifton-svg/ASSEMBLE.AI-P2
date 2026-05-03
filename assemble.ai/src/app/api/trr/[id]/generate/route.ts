@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import {
@@ -371,13 +371,11 @@ export async function POST(
             userMessage += orchestratorContext;
         }
 
-        // Call Claude with TRR system prompt
-        const anthropic = new Anthropic();
         const systemPrompt = buildSystemPrompt('trr');
 
-        const message = await anthropic.messages.create({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2000,
+        const { text } = await aiComplete({
+            featureGroup: 'generation',
+            maxTokens: 2000,
             system: systemPrompt,
             messages: [{
                 role: 'user',
@@ -385,14 +383,8 @@ export async function POST(
             }],
         });
 
-        // Extract text response
-        const textContent = message.content.find(c => c.type === 'text');
-        if (!textContent || textContent.type !== 'text') {
-            throw new Error('No text response from AI');
-        }
-
         // Clean up formatting
-        const content = textContent.text
+        const content = text
             .split('\n')
             .map(line => line.trim())
             .filter(line => {

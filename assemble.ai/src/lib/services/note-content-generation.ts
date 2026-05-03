@@ -12,7 +12,7 @@
  * 2. Content mode: Note text is content to enhance
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { retrieve, type RetrievalResult } from '@/lib/rag/retrieval';
 import type {
     GenerateNoteContentRequest,
@@ -175,11 +175,11 @@ First, analyze the note content to determine the user's intent:
 
 Output only the generated content with no headers or meta-commentary.`;
 
-    // Call Claude API with system prompt separation
-    const anthropic = new Anthropic();
-    const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+    // Route through provider-agnostic client so the user's model selection
+    // (Anthropic / OpenAI / OpenRouter) in /admin/models is honoured.
+    const { text } = await aiComplete({
+        featureGroup: 'generation',
+        maxTokens: 2000,
         system: systemPrompt,
         messages: [{
             role: 'user',
@@ -187,16 +187,10 @@ Output only the generated content with no headers or meta-commentary.`;
         }],
     });
 
-    // Extract text response
-    const textContent = message.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-        throw new Error('No text response from AI');
-    }
-
     console.log(`[note-content-generation] Generated content successfully`);
 
     // Clean up formatting (remove excessive blank lines)
-    const cleanedContent = cleanupFormatting(textContent.text);
+    const cleanedContent = cleanupFormatting(text);
 
     return {
         content: cleanedContent,

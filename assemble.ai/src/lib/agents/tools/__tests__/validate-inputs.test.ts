@@ -11,6 +11,7 @@ jest.mock('@/lib/rag/retrieval', () => ({ retrieve: jest.fn(), retrieveFromDomai
 jest.mock('../../events', () => ({ emitChatEvent: jest.fn() }));
 jest.mock('../../approvals', () => ({ proposeApproval: jest.fn() }));
 jest.mock('../../project-events', () => ({ emitProjectEvent: jest.fn() }));
+jest.mock('uuid', () => ({ v4: () => 'test-id' }));
 
 // The tools register themselves on import via their module's top-level
 // `registerTool(definition)` call, so these tests just import them.
@@ -21,6 +22,9 @@ import { listProjectDocumentsTool } from '../list-project-documents';
 import { listProjectObjectivesTool } from '../list-project-objectives';
 import { selectProjectDocumentsTool } from '../select-project-documents';
 import { setProjectObjectivesTool } from '../set-project-objectives';
+import { getTool } from '../index';
+
+const createTransmittalTool = getTool('create_transmittal')!;
 
 describe('search_rag.validate', () => {
     it('accepts a query string', () => {
@@ -103,8 +107,18 @@ describe('list_cost_lines.validate', () => {
         });
     });
 
+    it('accepts and trims a fuzzy query', () => {
+        expect(listCostLinesTool.validate({ query: '  Fire Servcies  ' })).toEqual({
+            query: 'Fire Servcies',
+        });
+    });
+
     it('rejects an invalid masterStage', () => {
         expect(() => listCostLinesTool.validate({ masterStage: 'not-a-stage' })).toThrow();
+    });
+
+    it('rejects a malformed query', () => {
+        expect(() => listCostLinesTool.validate({ query: 123 })).toThrow();
     });
 
     it('clamps limit to the hard cap', () => {
@@ -161,6 +175,8 @@ describe('list_project_documents.validate', () => {
                 categoryId: 'design',
                 subcategoryId: 'architect',
                 disciplineOrTrade: 'mechanical',
+                drawingNumber: 'CC-20',
+                documentName: 'section',
                 includeDocuments: true,
                 limit: 999,
             })
@@ -168,6 +184,8 @@ describe('list_project_documents.validate', () => {
             categoryId: 'design',
             subcategoryId: 'architect',
             disciplineOrTrade: 'mechanical',
+            drawingNumber: 'CC-20',
+            documentName: 'section',
             includeDocuments: true,
             limit: 100,
         });
@@ -204,6 +222,30 @@ describe('select_project_documents.validate', () => {
         });
     });
 
+    it('accepts drawing number filters for selection requests', () => {
+        expect(
+            selectProjectDocumentsTool.validate({
+                mode: 'replace',
+                drawingNumber: 'CC-20',
+            })
+        ).toEqual({
+            mode: 'replace',
+            drawingNumber: 'CC-20',
+        });
+    });
+
+    it('accepts document name filters for selection requests', () => {
+        expect(
+            selectProjectDocumentsTool.validate({
+                mode: 'replace',
+                documentName: 'section',
+            })
+        ).toEqual({
+            mode: 'replace',
+            documentName: 'section',
+        });
+    });
+
     it('accepts clearing the current selection without document IDs', () => {
         expect(selectProjectDocumentsTool.validate({ mode: 'clear' })).toEqual({
             mode: 'clear',
@@ -212,6 +254,47 @@ describe('select_project_documents.validate', () => {
 
     it('requires a selector unless clearing selection', () => {
         expect(() => selectProjectDocumentsTool.validate({ mode: 'replace' })).toThrow();
+    });
+});
+
+describe('create_transmittal.validate', () => {
+    it('accepts explicit document ids for a draft transmittal', () => {
+        expect(
+            createTransmittalTool.validate({
+                name: 'Basement Drawings Transmittal',
+                destination: 'note',
+                documentIds: ['doc-1', 'doc-2'],
+            })
+        ).toEqual({
+            name: 'Basement Drawings Transmittal',
+            destination: 'note',
+            documentIds: ['doc-1', 'doc-2'],
+        });
+    });
+
+    it('accepts document name filters for transmittal requests', () => {
+        expect(
+            createTransmittalTool.validate({
+                documentName: 'basement',
+                limit: 999,
+            })
+        ).toEqual({
+            documentName: 'basement',
+            limit: 500,
+        });
+    });
+
+    it('requires a document source', () => {
+        expect(() => createTransmittalTool.validate({ name: 'Empty Transmittal' })).toThrow();
+    });
+
+    it('rejects unknown transmittal destinations', () => {
+        expect(() =>
+            createTransmittalTool.validate({
+                destination: 'archive',
+                documentIds: ['doc-1'],
+            })
+        ).toThrow();
     });
 });
 

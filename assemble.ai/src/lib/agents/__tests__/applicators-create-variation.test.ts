@@ -106,4 +106,23 @@ describe('applyApproval - create_variation cost line handling', () => {
         });
         expect(mockInsertValues).not.toHaveBeenCalled();
     });
+
+    it('rejects variation statuses outside the register vocabulary', async () => {
+        const result = await applyApproval({
+            toolName: 'create_variation',
+            input: {
+                category: 'Principal',
+                description: 'Additional fire hydrants',
+                status: 'Submitted',
+            },
+            expectedRowVersion: null,
+            ctx: { organizationId: 'org-1', projectId: 'project-1' },
+        });
+
+        expect(result).toEqual({
+            kind: 'gone',
+            reason: 'Invalid variation status. Use Forecast, Approved, Rejected, or Withdrawn.',
+        });
+        expect(mockInsertValues).not.toHaveBeenCalled();
+    });
 });

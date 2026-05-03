@@ -179,6 +179,51 @@ export const faqContent = {
     ],
 };
 
+export const aboutAuthorContent = {
+    label: 'About the author',
+    headline: "Built by someone who's delivered the work.",
+    bio: [
+        "I'm the developer of this application — drawing on 20+ years across the full development lifecycle: early planning advisory, feasibility, design, procurement and commercial delivery, on commercial, residential, hotel, health and education projects. I've worked under the procurement frameworks of Health Infrastructure NSW, Schools Infrastructure NSW and other state agencies; against international brand design guidelines such as Holiday Inn Express; and on high-quality residential developments for property developers including CBUS Property — all built on an early career in tier 1 head contracting.",
+        "That breadth and depth — across building classifications, procurement frameworks, contract systems, and every phase of a project's life — is what I've engineered into this platform. Purpose-built for the NSW construction industry: the workflows, the standards, and the realities of how projects actually get delivered.",
+        "AEC knowledge is built into its DNA. The terminology, architecture and database schema are aligned from the ground up with how the industry actually thinks and works — not a generic productivity tool with a construction skin, but a system that speaks the language of the work.",
+    ],
+    qualifications: [
+        'Bachelor of Civil Engineering — UNSW',
+        'Master of Construction Management (Hons) — Deakin University',
+    ],
+    headshot: {
+        src: '/images/author-headshot.jpg',
+        alt: 'Author headshot',
+    },
+    logosCaption: "Trusted partners I've delivered for",
+    institutions: [
+        // State agencies
+        { name: 'Health Infrastructure NSW', src: '/images/trust-logos/health-infrastructure-nsw.jpg' },
+        { name: 'Schools Infrastructure NSW', src: '/images/trust-logos/schools-infrastructure-nsw.png' },
+        { name: 'TAFE NSW', src: '/images/trust-logos/tafe-nsw.png' },
+        // Property developers / investors
+        { name: 'CBUS', src: '/images/trust-logos/cbus.png' },
+        { name: 'Stockland', src: '/images/trust-logos/stockland.png' },
+        { name: 'DOMA', src: '/images/trust-logos/doma.png' },
+        { name: 'PGIM', src: '/images/trust-logos/pgim.jpg' },
+        { name: 'ProInvest', src: '/images/trust-logos/proinvest.png' },
+        // Standards & codes
+        { name: 'NCC', src: '/images/trust-logos/ncc.jpg' },
+        { name: 'AS', src: '/images/trust-logos/as.png' },
+        // Industry bodies
+        { name: 'AIQS', src: '/images/trust-logos/aiqs.png' },
+        { name: 'MBA', src: '/images/trust-logos/mba.png' },
+        { name: 'RICS', src: '/images/trust-logos/rics.png' },
+        // Consultancies
+        { name: 'J+CG', src: '/images/trust-logos/j-cg.png' },
+        { name: 'SJA', src: '/images/trust-logos/sja.png' },
+        { name: 'Bloc', src: '/images/trust-logos/bloc.png' },
+        { name: 'CPM', src: '/images/trust-logos/cpm.jpg' },
+        { name: 'ENVR', src: '/images/trust-logos/envr.png' },
+        { name: 'WL', src: '/images/trust-logos/wl.png' },
+    ],
+};
+
 export const finalCtaContent = {
     headline: {
         gray: 'Ready to',

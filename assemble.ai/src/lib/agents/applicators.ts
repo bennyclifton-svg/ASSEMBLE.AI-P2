@@ -24,9 +24,11 @@ import {
     notes,
     noteTransmittals,
     programActivities,
-    programMilestones,
     projectStakeholders,
     risks,
+    subcategories,
+    transmittalItems,
+    transmittals,
     variations,
 } from '@/lib/db/pg-schema';
 import {
@@ -37,11 +39,10 @@ import {
 } from '@/lib/db/objectives-schema';
 import { generateVariationNumber } from '@/lib/calculations/cost-plan-formulas';
 import { STANDARD_AGENDA_SECTIONS } from '@/lib/constants/sections';
-import { and, desc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, max, or, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { getActionByToolName } from '@/lib/actions/registry';
 import type { ActionContext } from '@/lib/actions/types';
-import '@/lib/actions/definitions/create-note';
 
 export interface ApplyContext {
     organizationId: string;
@@ -57,6 +58,34 @@ export type ApplyResult =
     | { kind: 'gone'; reason: string };
 
 type DbClient = Pick<typeof db, 'select' | 'insert' | 'update'>;
+const VALID_VARIATION_STATUSES = ['Forecast', 'Approved', 'Rejected', 'Withdrawn'] as const;
+type ValidVariationStatus = (typeof VALID_VARIATION_STATUSES)[number];
+let actionsLoaded = false;
+
+async function ensureActionsRegistered(): Promise<void> {
+    if (actionsLoaded) return;
+    await Promise.all([
+        import('@/lib/actions/definitions/create-note'),
+        import('@/lib/actions/definitions/create-program-activity'),
+        import('@/lib/actions/definitions/create-program-milestone'),
+        import('@/lib/actions/definitions/create-transmittal'),
+        import('@/lib/actions/definitions/create-variation'),
+        import('@/lib/actions/definitions/attach-documents-to-note'),
+        import('@/lib/actions/definitions/set-project-objectives'),
+        import('@/lib/actions/definitions/update-cost-line'),
+        import('@/lib/actions/definitions/update-note'),
+        import('@/lib/actions/definitions/update-program-activity'),
+        import('@/lib/actions/definitions/update-program-milestone'),
+    ]);
+    actionsLoaded = true;
+}
+
+function inputVariationStatus(input: Record<string, unknown>): ValidVariationStatus | null {
+    const status = inputString(input, 'status') || 'Forecast';
+    return VALID_VARIATION_STATUSES.includes(status as ValidVariationStatus)
+        ? (status as ValidVariationStatus)
+        : null;
+}
 
 export async function applyApproval(args: {
     toolName: string;
@@ -64,14 +93,23 @@ export async function applyApproval(args: {
     expectedRowVersion: number | null;
     ctx: ApplyContext;
 }): Promise<ApplyResult> {
-    const action = getActionByToolName(args.toolName);
+    let action = getActionByToolName(args.toolName);
+    if (!action) {
+        await ensureActionsRegistered();
+        action = getActionByToolName(args.toolName);
+    }
     if (action) {
         if (!action.apply && !action.applyResult) {
             throw new Error(`Action-backed approval "${action.id}" has no apply handler`);
         }
         const parsed = action.inputSchema.safeParse(args.input);
         if (!parsed.success) {
-            throw new Error(`Invalid input for action "${action.id}": ${parsed.error.message}`);
+            const compatibleResult = legacyCompatibleInvalidActionInput(action.id, args.input);
+            if (compatibleResult) return compatibleResult;
+            return {
+                kind: 'gone',
+                reason: `Invalid input for action "${action.id}": ${parsed.error.message}`,
+            };
         }
         const actionCtx: ActionContext = {
             userId: args.ctx.userId ?? 'approval',
@@ -103,43 +141,39 @@ export async function applyApproval(args: {
     }
 
     switch (args.toolName) {
-        case 'update_cost_line':
-            return applyUpdateCostLine(args.input, args.expectedRowVersion, args.ctx);
         case 'create_cost_line':
             return applyCreateCostLine(args.input, args.ctx);
         case 'record_invoice':
             return applyRecordInvoice(args.input, args.ctx);
         case 'create_addendum':
             return applyCreateAddendum(args.input, args.ctx);
-        case 'create_note':
-            return applyCreateNote(args.input, args.ctx);
-        case 'update_note':
-            return applyUpdateNote(args.input, args.expectedRowVersion, args.ctx);
-        case 'attach_documents_to_note':
-            return applyUpdateNote(args.input, args.expectedRowVersion, args.ctx);
         case 'create_risk':
             return applyCreateRisk(args.input, args.ctx);
         case 'update_risk':
             return applyUpdateRisk(args.input, args.expectedRowVersion, args.ctx);
-        case 'create_variation':
-            return applyCreateVariation(args.input, args.ctx);
         case 'update_variation':
             return applyUpdateVariation(args.input, args.expectedRowVersion, args.ctx);
-        case 'update_program_activity':
-            return applyUpdateProgramActivity(args.input, args.expectedRowVersion, args.ctx);
-        case 'create_program_milestone':
-            return applyCreateProgramMilestone(args.input, args.ctx);
-        case 'update_program_milestone':
-            return applyUpdateProgramMilestone(args.input, args.expectedRowVersion, args.ctx);
         case 'create_meeting':
             return applyCreateMeeting(args.input, args.ctx);
         case 'update_stakeholder':
             return applyUpdateStakeholder(args.input, args.expectedRowVersion, args.ctx);
-        case 'set_project_objectives':
-            return applySetProjectObjectives(args.input, args.ctx);
         default:
             throw new Error(`No applicator registered for tool "${args.toolName}"`);
     }
+}
+
+function legacyCompatibleInvalidActionInput(actionId: string, rawInput: unknown): ApplyResult | null {
+    const input = asInput(rawInput);
+    if (actionId === 'finance.variations.create' && input.status !== undefined) {
+        return {
+            kind: 'gone',
+            reason: 'Invalid variation status. Use Forecast, Approved, Rejected, or Withdrawn.',
+        };
+    }
+    if (actionId === 'planning.objectives.set') {
+        return { kind: 'gone', reason: 'No objective sections were supplied.' };
+    }
+    return null;
 }
 
 /**
@@ -456,6 +490,164 @@ async function applyCreateAddendum(rawInput: unknown, ctx: ApplyContext): Promis
     return { kind: 'applied', output };
 }
 
+export async function applyCreateTransmittal(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
+    const input = asInput(rawInput);
+    const name = inputString(input, 'name');
+    if (!name) return { kind: 'gone', reason: 'Missing transmittal name.' };
+
+    const stakeholderId = inputOptionalString(input, 'stakeholderId') ?? null;
+    const subcategoryId = inputOptionalString(input, 'subcategoryId') ?? null;
+    const rawDestination = inputOptionalString(input, 'destination') ?? null;
+    if (rawDestination && rawDestination !== 'note' && rawDestination !== 'project') {
+        return { kind: 'gone', reason: 'Unknown transmittal destination.' };
+    }
+    const destination = rawDestination ?? (stakeholderId || subcategoryId ? 'project' : 'note');
+
+    if (stakeholderId) {
+        const [stakeholder] = await db
+            .select({ id: projectStakeholders.id })
+            .from(projectStakeholders)
+            .where(
+                and(
+                    eq(projectStakeholders.id, stakeholderId),
+                    eq(projectStakeholders.projectId, ctx.projectId),
+                    isNull(projectStakeholders.deletedAt)
+                )
+            )
+            .limit(1);
+        if (!stakeholder) {
+            return { kind: 'gone', reason: 'Stakeholder no longer exists in this project.' };
+        }
+    }
+
+    if (subcategoryId) {
+        const [subcategory] = await db
+            .select({ id: subcategories.id })
+            .from(subcategories)
+            .where(
+                and(
+                    eq(subcategories.id, subcategoryId),
+                    or(eq(subcategories.projectId, ctx.projectId), isNull(subcategories.projectId))
+                )
+            )
+            .limit(1);
+        if (!subcategory) {
+            return { kind: 'gone', reason: 'Subcategory no longer exists in this project.' };
+        }
+    }
+
+    if (destination === 'project' && !stakeholderId && !subcategoryId) {
+        return {
+            kind: 'gone',
+            reason:
+                'Project transmittals require a stakeholder or subcategory target. Use a Notes section transmittal for untargeted drawing sets.',
+        };
+    }
+
+    const documentIds = inputStringArray(input, 'documentIds');
+    if (documentIds.length === 0) {
+        return { kind: 'gone', reason: 'No documents were supplied for the transmittal.' };
+    }
+
+    const rows = await db
+        .select({
+            id: documents.id,
+            latestVersionId: documents.latestVersionId,
+        })
+        .from(documents)
+        .where(and(eq(documents.projectId, ctx.projectId), inArray(documents.id, documentIds)));
+
+    const byId = new Map(rows.map((row) => [row.id, row.latestVersionId]));
+    const missing = documentIds.filter((id) => !byId.has(id));
+    if (missing.length > 0) {
+        return {
+            kind: 'gone',
+            reason: `Document(s) not found in this project: ${missing.join(', ')}`,
+        };
+    }
+
+    const withoutVersion = documentIds.filter((id) => !byId.get(id));
+    if (withoutVersion.length > 0) {
+        return {
+            kind: 'gone',
+            reason: `Document(s) do not have a latest version: ${withoutVersion.join(', ')}`,
+        };
+    }
+
+    const id = uuidv4();
+    if (destination === 'note') {
+        const now = new Date().toISOString();
+        const output = await db.transaction(async (tx) => {
+            const values = {
+                id,
+                projectId: ctx.projectId,
+                organizationId: ctx.organizationId,
+                title: name,
+                content: null,
+                isStarred: false,
+                color: 'green',
+                type: 'transmittal',
+                status: 'open',
+                noteDate: null,
+                rowVersion: 1,
+                createdAt: now,
+                updatedAt: now,
+            };
+
+            await tx.insert(notes).values(values);
+            await tx.insert(noteTransmittals).values(
+                documentIds.map((documentId) => ({
+                    id: uuidv4(),
+                    noteId: id,
+                    documentId,
+                    addedAt: now,
+                }))
+            );
+
+            return {
+                ...values,
+                transmittalTarget: 'note',
+                attachedDocumentIds: documentIds,
+                documentCount: documentIds.length,
+            } as unknown as Record<string, unknown>;
+        });
+
+        return { kind: 'applied', output };
+    }
+
+    const now = new Date();
+    const output = await db.transaction(async (tx) => {
+        const values = {
+            id,
+            projectId: ctx.projectId,
+            stakeholderId,
+            subcategoryId,
+            name,
+            status: 'DRAFT',
+            createdAt: now,
+            updatedAt: now,
+        };
+
+        await tx.insert(transmittals).values(values);
+        await tx.insert(transmittalItems).values(
+            documentIds.map((documentId) => ({
+                id: uuidv4(),
+                transmittalId: id,
+                versionId: byId.get(documentId)!,
+            }))
+        );
+
+        return {
+            ...values,
+            transmittalTarget: 'project',
+            documentIds,
+            documentCount: documentIds.length,
+        } as unknown as Record<string, unknown>;
+    });
+
+    return { kind: 'applied', output };
+}
+
 async function validateProjectCostLineId(
     costLineId: string,
     ctx: ApplyContext,
@@ -545,7 +737,7 @@ async function applyCreateNote(rawInput: unknown, ctx: ApplyContext): Promise<Ap
     return { kind: 'applied', output };
 }
 
-async function applyUpdateNote(
+export async function applyUpdateNote(
     rawInput: unknown,
     expectedRowVersion: number | null,
     ctx: ApplyContext
@@ -681,6 +873,13 @@ export async function applyCreateVariation(rawInput: unknown, ctx: ApplyContext)
         const costLineCheck = await validateProjectCostLineId(costLineId, ctx);
         if (costLineCheck.ok === false) return { kind: 'gone', reason: costLineCheck.reason };
     }
+    const status = inputVariationStatus(input);
+    if (!status) {
+        return {
+            kind: 'gone',
+            reason: 'Invalid variation status. Use Forecast, Approved, Rejected, or Withdrawn.',
+        };
+    }
 
     const existing = await db.select().from(variations).where(eq(variations.projectId, ctx.projectId));
     const id = uuidv4();
@@ -695,7 +894,7 @@ export async function applyCreateVariation(rawInput: unknown, ctx: ApplyContext)
         ),
         category,
         description,
-        status: inputString(input, 'status') || 'Forecast',
+        status,
         amountForecastCents: inputOptionalNumber(input, 'amountForecastCents') ?? 0,
         amountApprovedCents: inputOptionalNumber(input, 'amountApprovedCents') ?? 0,
         dateSubmitted: inputOptionalString(input, 'dateSubmitted') ?? null,
@@ -731,10 +930,19 @@ async function applyUpdateVariation(
         rowVersion: sql`${variations.rowVersion} + 1`,
     };
     if (input.costLineId !== undefined) updateData.costLineId = nextCostLineId ?? null;
+    if (input.status !== undefined) {
+        const status = inputVariationStatus(input);
+        if (!status) {
+            return {
+                kind: 'gone',
+                reason: 'Invalid variation status. Use Forecast, Approved, Rejected, or Withdrawn.',
+            };
+        }
+        updateData.status = status;
+    }
     for (const key of [
         'category',
         'description',
-        'status',
         'dateSubmitted',
         'dateApproved',
         'requestedBy',
@@ -805,96 +1013,6 @@ export async function applyUpdateProgramActivity(
     return {
         kind: 'conflict',
         reason: conflictReason('programme activity', stillThere.rowVersion, expectedRowVersion),
-    };
-}
-
-async function applyCreateProgramMilestone(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
-    const input = asInput(rawInput);
-    const activityId = inputString(input, 'activityId');
-    const name = inputString(input, 'name');
-    const date = inputString(input, 'date');
-    if (!activityId || !name || !date) {
-        return { kind: 'gone', reason: 'Missing milestone activity, name, or date on proposal.' };
-    }
-
-    const [activity] = await db
-        .select({ id: programActivities.id })
-        .from(programActivities)
-        .where(and(eq(programActivities.id, activityId), eq(programActivities.projectId, ctx.projectId)))
-        .limit(1);
-    if (!activity) return { kind: 'gone', reason: 'Programme activity no longer exists.' };
-
-    const [last] = await db
-        .select({ sortOrder: programMilestones.sortOrder })
-        .from(programMilestones)
-        .where(eq(programMilestones.activityId, activityId))
-        .orderBy(desc(programMilestones.sortOrder))
-        .limit(1);
-
-    const values = {
-        id: uuidv4(),
-        activityId,
-        name,
-        date,
-        sortOrder: inputOptionalNumber(input, 'sortOrder') ?? (last?.sortOrder ?? -1) + 1,
-        rowVersion: 1,
-        createdAt: new Date(),
-    };
-
-    await db.insert(programMilestones).values(values);
-    return { kind: 'applied', output: values as unknown as Record<string, unknown> };
-}
-
-async function applyUpdateProgramMilestone(
-    rawInput: unknown,
-    expectedRowVersion: number | null,
-    ctx: ApplyContext
-): Promise<ApplyResult> {
-    const input = asInput(rawInput);
-    const id = inputString(input, 'id');
-    if (!id) return { kind: 'gone', reason: 'Missing programme milestone id' };
-
-    const [current] = await db
-        .select({
-            id: programMilestones.id,
-            rowVersion: programMilestones.rowVersion,
-        })
-        .from(programMilestones)
-        .innerJoin(programActivities, eq(programMilestones.activityId, programActivities.id))
-        .where(and(eq(programMilestones.id, id), eq(programActivities.projectId, ctx.projectId)))
-        .limit(1);
-    if (!current) return { kind: 'gone', reason: 'Programme milestone no longer exists.' };
-
-    const updateData: Record<string, unknown> = {
-        rowVersion: sql`${programMilestones.rowVersion} + 1`,
-    };
-    for (const key of ['name', 'date'] as const) {
-        if (input[key] !== undefined) updateData[key] = inputNullableString(input, key);
-    }
-    const sortOrder = inputOptionalNumber(input, 'sortOrder');
-    if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
-
-    const conditions = [eq(programMilestones.id, id)];
-    if (expectedRowVersion !== null) conditions.push(eq(programMilestones.rowVersion, expectedRowVersion));
-
-    const updated = await db.update(programMilestones).set(updateData).where(and(...conditions)).returning();
-    if (updated.length === 1) {
-        return { kind: 'applied', output: updated[0] as Record<string, unknown> };
-    }
-
-    const [stillThere] = await db
-        .select({
-            id: programMilestones.id,
-            rowVersion: programMilestones.rowVersion,
-        })
-        .from(programMilestones)
-        .innerJoin(programActivities, eq(programMilestones.activityId, programActivities.id))
-        .where(and(eq(programMilestones.id, id), eq(programActivities.projectId, ctx.projectId)))
-        .limit(1);
-    if (!stillThere) return { kind: 'gone', reason: 'Programme milestone no longer exists.' };
-    return {
-        kind: 'conflict',
-        reason: conflictReason('programme milestone', stillThere.rowVersion, expectedRowVersion),
     };
 }
 

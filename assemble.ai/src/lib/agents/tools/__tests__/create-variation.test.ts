@@ -93,4 +93,61 @@ describe('create_variation execute', () => {
             })
         );
     });
+
+    it('resolves typoed partial cost-line labels before proposing', async () => {
+        mockWhere.mockResolvedValueOnce([
+            {
+                id: 'cl-fire',
+                section: 'SERVICES',
+                costCode: '4.20',
+                activity: 'Fire services + fire engineering',
+                reference: null,
+                stakeholderName: null,
+                disciplineOrTrade: 'Fire',
+            },
+            {
+                id: 'cl-mech',
+                section: 'SERVICES',
+                costCode: '4.10',
+                activity: 'Mechanical services',
+                reference: 'HVAC',
+                stakeholderName: null,
+                disciplineOrTrade: 'Mechanical',
+            },
+        ]);
+
+        await createVariationTool.execute(
+            {
+                userId: 'user-1',
+                organizationId: 'org-1',
+                projectId: 'project-1',
+                threadId: 'thread-1',
+                runId: 'run-1',
+            },
+            {
+                category: 'Principal',
+                description: '12 additional fire hydrants to computer rooms',
+                status: 'Approved',
+                costLineReference: 'Fire Servcies',
+                amountApprovedCents: 77700,
+            }
+        );
+
+        expect(mockProposeApproval).toHaveBeenCalledWith(
+            expect.objectContaining({
+                input: expect.objectContaining({
+                    costLineId: 'cl-fire',
+                    costLineReference: 'Fire Servcies',
+                }),
+                proposedDiff: expect.objectContaining({
+                    changes: expect.arrayContaining([
+                        expect.objectContaining({
+                            label: 'Cost line',
+                            after: 'Fire - 4.20 - Fire services + fire engineering',
+                        }),
+                    ]),
+                }),
+            })
+        );
+    });
 });

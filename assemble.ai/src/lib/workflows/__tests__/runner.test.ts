@@ -165,4 +165,52 @@ describe('createWorkflowFromPlan', () => {
             expect.objectContaining({ emit: false })
         );
     });
+
+    it('skips dependent approvals when an earlier dependency fails to propose', async () => {
+        mockProposeAction.mockRejectedValueOnce(new Error('Could not match cost line'));
+        const plan: WorkflowPlan = {
+            workflowKey: 'issue-variation',
+            userGoal: 'Issue variation',
+            summary: 'Issue variation',
+            executionBrief: 'Prepare issue variation workflow.',
+            evidence: [],
+            assumptions: [],
+            steps: [
+                {
+                    stepKey: 'create_variation',
+                    title: 'Create variation',
+                    actionId: 'finance.variations.create',
+                    input: { description: 'Extra fire hydrants' },
+                    dependencyStepKeys: [],
+                    failurePolicy: 'abort_workflow',
+                    risk: 'sensitive',
+                },
+                {
+                    stepKey: 'create_note',
+                    title: 'Create note',
+                    actionId: 'correspondence.note.create',
+                    input: { title: 'Variation note' },
+                    dependencyStepKeys: ['create_variation'],
+                    failurePolicy: 'continue',
+                    risk: 'confirm',
+                },
+            ],
+        };
+
+        const result = await createWorkflowFromPlan({
+            plan,
+            userId: 'user-1',
+            organizationId: 'org-1',
+            projectId: 'project-1',
+            threadId: 'thread-1',
+            agentRunId: 'run-1',
+        });
+
+        expect(result.status).toBe('failed');
+        expect(result.steps.map((step) => step.state)).toEqual(['failed', 'skipped']);
+        expect(result.steps[1].summary).toBe(
+            'Skipped because dependency "create_variation" did not produce an applied step.'
+        );
+        expect(mockProposeAction).toHaveBeenCalledTimes(1);
+    });
 });

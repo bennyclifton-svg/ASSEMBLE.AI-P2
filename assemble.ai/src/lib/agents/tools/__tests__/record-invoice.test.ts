@@ -5,8 +5,35 @@
  * exercised through the approval response API tests.
  */
 
-jest.mock('@/lib/db', () => ({ db: {} }));
+const mockWhere = jest.fn();
+const mockLeftJoin = jest.fn(() => ({ where: mockWhere }));
+const mockFrom = jest.fn(() => ({ leftJoin: mockLeftJoin }));
+const mockSelect = jest.fn(() => ({ from: mockFrom }));
+const mockProposeApproval = jest.fn();
+const mockAssertProjectOrg = jest.fn();
+
+jest.mock('@/lib/db', () => ({
+    db: {
+        select: () => mockSelect(),
+    },
+}));
 jest.mock('@/lib/agents/events', () => ({ emitChatEvent: jest.fn() }));
+jest.mock('../_context', () => ({
+    assertProjectOrg: (...args: unknown[]) => mockAssertProjectOrg(...args),
+    CrossTenantAccessError: class CrossTenantAccessError extends Error {},
+}));
+jest.mock('../../approvals', () => ({
+    proposeApproval: (...args: unknown[]) => mockProposeApproval(...args),
+    moneyDiffLabel: (before: number, after: number) => {
+        const format = (cents: number) =>
+            new Intl.NumberFormat('en-AU', {
+                style: 'currency',
+                currency: 'AUD',
+                maximumFractionDigits: 0,
+            }).format(cents / 100);
+        return `${format(before)} -> ${format(after)}`;
+    },
+}));
 
 import { recordInvoiceTool } from '../record-invoice';
 
@@ -142,12 +169,16 @@ describe('record_invoice.validate', () => {
             description: 'Progress Claim #1',
             gstCents: 18000000,
             costLineId: 'cl-abc',
+            costCategory: 'Developer Expenses',
+            costLineReference: 'Long Service Levy',
             paidStatus: 'paid',
             paidDate: '2025-11-30',
         });
         expect(out.description).toBe('Progress Claim #1');
         expect(out.gstCents).toBe(18000000);
         expect(out.costLineId).toBe('cl-abc');
+        expect(out.costCategory).toBe('Developer Expenses');
+        expect(out.costLineReference).toBe('Long Service Levy');
         expect(out.paidStatus).toBe('paid');
         expect(out.paidDate).toBe('2025-11-30');
     });
@@ -164,5 +195,91 @@ describe('record_invoice.validate', () => {
 
     it('marks itself as mutating', () => {
         expect(recordInvoiceTool.mutating).toBe(true);
+    });
+});
+
+describe('record_invoice execute', () => {
+    beforeEach(() => {
+        mockWhere.mockReset();
+        mockLeftJoin.mockClear();
+        mockFrom.mockClear();
+        mockSelect.mockClear();
+        mockProposeApproval.mockReset();
+        mockAssertProjectOrg.mockReset();
+        mockProposeApproval.mockResolvedValue({
+            toolResult: {
+                status: 'awaiting_approval',
+                approvalId: 'approval-1',
+                toolName: 'record_invoice',
+                summary: 'Record invoice 123 - $30,000',
+            },
+        });
+    });
+
+    it('resolves developer expense plus long service levy labels to a cost line before proposing', async () => {
+        mockWhere.mockResolvedValueOnce([
+            {
+                id: 'cl-lsl',
+                section: 'FEES',
+                costCode: '1.04',
+                activity: 'Long Service Levy',
+                reference: null,
+                stakeholderName: null,
+                disciplineOrTrade: null,
+            },
+            {
+                id: 'cl-da',
+                section: 'FEES',
+                costCode: '1.01',
+                activity: 'DA application fees',
+                reference: null,
+                stakeholderName: null,
+                disciplineOrTrade: null,
+            },
+        ]);
+
+        const input = recordInvoiceTool.validate({
+            invoiceNumber: '123',
+            invoiceDate: '2026-05-03',
+            amountCents: 3000000,
+            costCategory: 'Developer Expenses',
+            costLineReference: 'Long Service Levy',
+            paidStatus: 'paid',
+        });
+
+        await recordInvoiceTool.execute(
+            {
+                userId: 'user-1',
+                organizationId: 'org-1',
+                projectId: 'project-1',
+                threadId: 'thread-1',
+                runId: 'run-1',
+            },
+            input
+        );
+
+        expect(mockProposeApproval).toHaveBeenCalledWith(
+            expect.objectContaining({
+                input: expect.objectContaining({
+                    costLineId: 'cl-lsl',
+                    costCategory: 'Developer Expenses',
+                    costLineReference: 'Long Service Levy',
+                    paidStatus: 'paid',
+                }),
+                proposedDiff: expect.objectContaining({
+                    entity: 'invoice',
+                    changes: expect.arrayContaining([
+                        expect.objectContaining({
+                            label: 'Cost line',
+                            after: 'Developer - 1.04 - Long Service Levy',
+                        }),
+                        expect.objectContaining({
+                            label: 'Paid status',
+                            after: 'paid',
+                        }),
+                    ]),
+                }),
+            })
+        );
     });
 });

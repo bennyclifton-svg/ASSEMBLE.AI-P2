@@ -10,9 +10,17 @@
  * cost plan stays current — see docs/plans/2026-04-29-agent-integration.md.
  */
 
+import { and, eq, isNull } from 'drizzle-orm';
+import { db } from '@/lib/db';
+import { costLines, projectStakeholders } from '@/lib/db/pg-schema';
+import {
+    COST_LINE_AMBIGUITY_GAP,
+    formatCostLineLabel,
+    rankCostLineMatches,
+} from '@/lib/agents/cost-line-matching';
 import { registerTool, type AgentToolDefinition } from './catalog';
 import { assertProjectOrg, type ToolContext } from './_context';
-import { proposeApproval, moneyDiffLabel, type ProposedDiff } from '../approvals';
+import { proposeApproval, type ProposedDiff } from '../approvals';
 
 interface RecordInvoiceInput {
     invoiceNumber: string;
@@ -23,6 +31,12 @@ interface RecordInvoiceInput {
     gstCents?: number;
     /** Optional link to an existing cost line so the invoice claims against it. */
     costLineId?: string;
+    /** Human category/section label, for example "Developer Expenses" or "Authorities". */
+    costCategory?: string;
+    /** Human cost-line item label, for example "Long Service Levy". */
+    costLineReference?: string;
+    /** Optional owner/discipline label, for example "Developer" or "Mechanical". */
+    disciplineOrTrade?: string;
     paidStatus?: 'paid' | 'unpaid';
     paidDate?: string;
     /** Derived from invoiceDate at validate time. */
@@ -81,6 +95,14 @@ const FIELD_LABELS: Record<string, string> = {
     period: 'Period',
 };
 
+function moneyValue(cents: number): string {
+    return new Intl.NumberFormat('en-AU', {
+        style: 'currency',
+        currency: 'AUD',
+        maximumFractionDigits: 0,
+    }).format(cents / 100);
+}
+
 function isValidDate(year: number, month: number, day: number): boolean {
     const date = new Date(Date.UTC(year, month - 1, day));
     return (
@@ -122,7 +144,9 @@ const definition: AgentToolDefinition<RecordInvoiceInput, RecordInvoiceOutput> =
             'invoiceNumber (e.g., "ADCO-PC-001"), invoiceDate (YYYY-MM-DD), and ' +
             'amountCents (integer cents — pass 180000000 for $1,800,000). Optional: ' +
             'description, gstCents, costLineId (link to an existing cost line — call ' +
-            'list_cost_lines first to find it), paidStatus ("paid" or "unpaid"), ' +
+            'list_cost_lines first to find it), or costCategory plus costLineReference ' +
+            'when the user gives labels like "Developer Expenses / Long Service Levy"; ' +
+            'paidStatus ("paid" or "unpaid"), ' +
             'paidDate (YYYY-MM-DD). The invoice is NOT inserted immediately; it is ' +
             'presented to the user for approval as an inline card in the chat.',
         inputSchema: {
@@ -147,6 +171,21 @@ const definition: AgentToolDefinition<RecordInvoiceInput, RecordInvoiceOutput> =
                     type: 'string',
                     description:
                         'Optional. Cost line id to claim against — get from list_cost_lines.',
+                },
+                costCategory: {
+                    type: 'string',
+                    description:
+                        'Optional human cost category/section label, e.g. "Developer Expenses", "Authority Costs", "FEES". Used only to resolve costLineId.',
+                },
+                costLineReference: {
+                    type: 'string',
+                    description:
+                        'Optional human cost-line item/activity/reference, e.g. "Long Service Levy". Used to resolve costLineId.',
+                },
+                disciplineOrTrade: {
+                    type: 'string',
+                    description:
+                        'Optional owner/discipline/trade label, e.g. "Developer", "Mechanical". Used to resolve costLineId.',
                 },
                 paidStatus: { type: 'string', enum: [...VALID_PAID_STATUS] },
                 paidDate: { type: 'string', description: 'YYYY-MM-DD if paid.' },
@@ -211,6 +250,27 @@ const definition: AgentToolDefinition<RecordInvoiceInput, RecordInvoiceOutput> =
             }
             out.costLineId = obj.costLineId.trim();
         }
+        if (obj.costCategory !== undefined) {
+            if (typeof obj.costCategory !== 'string') {
+                throw new Error('record_invoice: "costCategory" must be a string');
+            }
+            const value = obj.costCategory.trim();
+            if (value) out.costCategory = value;
+        }
+        if (obj.costLineReference !== undefined) {
+            if (typeof obj.costLineReference !== 'string') {
+                throw new Error('record_invoice: "costLineReference" must be a string');
+            }
+            const value = obj.costLineReference.trim();
+            if (value) out.costLineReference = value;
+        }
+        if (obj.disciplineOrTrade !== undefined) {
+            if (typeof obj.disciplineOrTrade !== 'string') {
+                throw new Error('record_invoice: "disciplineOrTrade" must be a string');
+            }
+            const value = obj.disciplineOrTrade.trim();
+            if (value) out.disciplineOrTrade = value;
+        }
         if (obj.paidStatus !== undefined) {
             if (
                 typeof obj.paidStatus !== 'string' ||
@@ -238,6 +298,9 @@ const definition: AgentToolDefinition<RecordInvoiceInput, RecordInvoiceOutput> =
     },
     async execute(ctx: ToolContext, input: RecordInvoiceInput): Promise<RecordInvoiceOutput> {
         await assertProjectOrg(ctx);
+        const resolvedCostLine = await resolveCostLineForInvoice(ctx.projectId, input);
+        const proposalInput: RecordInvoiceInput = { ...input };
+        if (resolvedCostLine) proposalInput.costLineId = resolvedCostLine.id;
 
         // Build the diff — "before" is empty (new invoice), "after" is the proposal.
         const changes: ProposedDiff['changes'] = [];
@@ -251,18 +314,20 @@ const definition: AgentToolDefinition<RecordInvoiceInput, RecordInvoiceOutput> =
             });
         };
 
-        push('invoiceNumber', input.invoiceNumber);
-        push('invoiceDate', input.invoiceDate);
-        if (input.description) push('description', input.description);
-        push('amountCents', moneyDiffLabel(0, input.amountCents).split(' → ')[1]);
-        if (input.gstCents !== undefined) {
-            push('gstCents', moneyDiffLabel(0, input.gstCents).split(' → ')[1]);
+        push('invoiceNumber', proposalInput.invoiceNumber);
+        push('invoiceDate', proposalInput.invoiceDate);
+        if (proposalInput.description) push('description', proposalInput.description);
+        push('amountCents', moneyValue(proposalInput.amountCents));
+        if (proposalInput.gstCents !== undefined) {
+            push('gstCents', moneyValue(proposalInput.gstCents));
         }
-        if (input.costLineId) push('costLineId', input.costLineId);
-        if (input.paidStatus) push('paidStatus', input.paidStatus);
-        if (input.paidDate) push('paidDate', input.paidDate);
+        if (proposalInput.costLineId) {
+            push('costLineId', resolvedCostLine?.label ?? proposalInput.costLineId);
+        }
+        if (proposalInput.paidStatus) push('paidStatus', proposalInput.paidStatus);
+        if (proposalInput.paidDate) push('paidDate', proposalInput.paidDate);
 
-        const summary = `Record invoice ${input.invoiceNumber} — ${moneyDiffLabel(0, input.amountCents).split(' → ')[1]}`;
+        const summary = `Record invoice ${proposalInput.invoiceNumber} - ${moneyValue(proposalInput.amountCents)}`;
         const diff: ProposedDiff = {
             entity: 'invoice',
             entityId: null,
@@ -273,8 +338,8 @@ const definition: AgentToolDefinition<RecordInvoiceInput, RecordInvoiceOutput> =
         const proposal = await proposeApproval({
             ctx,
             toolName: 'record_invoice',
-            toolUseId: input._toolUseId ?? '',
-            input,
+            toolUseId: proposalInput._toolUseId ?? '',
+            input: proposalInput,
             proposedDiff: diff,
             expectedRowVersion: null,
         });
@@ -286,3 +351,65 @@ const definition: AgentToolDefinition<RecordInvoiceInput, RecordInvoiceOutput> =
 registerTool(definition);
 
 export { definition as recordInvoiceTool };
+
+async function resolveCostLineForInvoice(
+    projectId: string,
+    input: RecordInvoiceInput
+): Promise<{ id: string; label: string } | null> {
+    if (
+        !input.costLineId &&
+        !input.costCategory &&
+        !input.costLineReference &&
+        !input.disciplineOrTrade
+    ) {
+        return null;
+    }
+
+    const rows = await db
+        .select({
+            id: costLines.id,
+            section: costLines.section,
+            costCode: costLines.costCode,
+            activity: costLines.activity,
+            reference: costLines.reference,
+            stakeholderName: projectStakeholders.name,
+            disciplineOrTrade: projectStakeholders.disciplineOrTrade,
+        })
+        .from(costLines)
+        .leftJoin(projectStakeholders, eq(costLines.stakeholderId, projectStakeholders.id))
+        .where(and(eq(costLines.projectId, projectId), isNull(costLines.deletedAt)));
+
+    if (input.costLineId) {
+        const row = rows.find((candidate) => candidate.id === input.costLineId);
+        if (!row) {
+            throw new Error(
+                `record_invoice: cost line "${input.costLineId}" was not found in this project.`
+            );
+        }
+        return { id: row.id, label: formatCostLineLabel(row) };
+    }
+
+    const scored = rankCostLineMatches(rows, {
+        reference: input.costLineReference,
+        discipline: input.disciplineOrTrade,
+        category: input.costCategory,
+    });
+    const best = scored[0];
+    if (!best) {
+        throw new Error(
+            'record_invoice: could not match that invoice to a project cost line. ' +
+                'Call list_cost_lines and retry with the exact costLineId, or ask one concise clarifying question.'
+        );
+    }
+
+    const next = scored[1];
+    if (next && Math.abs(best.score - next.score) < COST_LINE_AMBIGUITY_GAP) {
+        const options = scored.slice(0, 3).map((candidate) => formatCostLineLabel(candidate.row));
+        throw new Error(
+            `record_invoice: cost line match is ambiguous (${options.join('; ')}). ` +
+                'Call list_cost_lines and retry with the exact costLineId.'
+        );
+    }
+
+    return { id: best.row.id, label: formatCostLineLabel(best.row) };
+}

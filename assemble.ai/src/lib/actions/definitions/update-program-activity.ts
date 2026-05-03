@@ -79,6 +79,7 @@ export const updateProgramActivityAction = defineAction<
     Record<string, unknown>
 >({
     id: 'program.activity.update',
+    toolName: 'update_program_activity',
     domain: 'program',
     description: 'Update one programme activity.',
     inputSchema,

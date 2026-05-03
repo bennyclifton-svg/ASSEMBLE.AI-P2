@@ -35,6 +35,12 @@ interface InsertedStep {
     stepKey: string;
 }
 
+const NON_ACTIONABLE_DEPENDENCY_STATES = new Set<WorkflowStepState>([
+    'failed',
+    'rejected',
+    'skipped',
+]);
+
 export interface ActionableWorkflowApproval {
     id: string;
     runId: string;
@@ -95,13 +101,39 @@ export async function createWorkflowFromPlan(
     }
 
     const createdSteps: CreatedWorkflowStep[] = [];
+    const createdStepByKey = new Map<string, CreatedWorkflowStep>();
     for (const [index, planStep] of args.plan.steps.entries()) {
         const insertedStep = insertedSteps[index];
         const dependencyStepIds = stepIdsForKeys(insertedSteps, planStep.dependencyStepKeys);
+        const blockedDependencyKey = planStep.dependencyStepKeys.find((key) => {
+            const dependency = createdStepByKey.get(key);
+            return dependency ? NON_ACTIONABLE_DEPENDENCY_STATES.has(dependency.state) : false;
+        });
+        if (blockedDependencyKey) {
+            const message = `Skipped because dependency "${blockedDependencyKey}" did not produce an applied step.`;
+            await markWorkflowStepSkipped(insertedStep.id, dependencyStepIds, message);
+            const skippedStep: CreatedWorkflowStep = {
+                id: insertedStep.id,
+                stepKey: planStep.stepKey,
+                title: planStep.title,
+                actionId: planStep.actionId,
+                state: 'skipped',
+                approvalId: null,
+                invocationId: null,
+                risk: planStep.risk ?? 'propose',
+                dependencyStepIds,
+                summary: message,
+                preview: null,
+            };
+            createdSteps.push(skippedStep);
+            createdStepByKey.set(planStep.stepKey, skippedStep);
+            continue;
+        }
+
         const action = getAction(planStep.actionId);
         if (!action) {
             await markWorkflowStepFailed(insertedStep.id, `Action "${planStep.actionId}" is not registered.`);
-            createdSteps.push({
+            const failedStep: CreatedWorkflowStep = {
                 id: insertedStep.id,
                 stepKey: planStep.stepKey,
                 title: planStep.title,
@@ -113,7 +145,9 @@ export async function createWorkflowFromPlan(
                 dependencyStepIds,
                 summary: null,
                 preview: null,
-            });
+            };
+            createdSteps.push(failedStep);
+            createdStepByKey.set(planStep.stepKey, failedStep);
             continue;
         }
 
@@ -152,7 +186,7 @@ export async function createWorkflowFromPlan(
                 })
                 .where(eq(workflowSteps.id, insertedStep.id));
 
-            createdSteps.push({
+            const awaitingStep: CreatedWorkflowStep = {
                 id: insertedStep.id,
                 stepKey: planStep.stepKey,
                 title: planStep.title,
@@ -164,11 +198,13 @@ export async function createWorkflowFromPlan(
                 dependencyStepIds,
                 summary: proposal.summary,
                 preview: proposal.proposedDiff,
-            });
+            };
+            createdSteps.push(awaitingStep);
+            createdStepByKey.set(planStep.stepKey, awaitingStep);
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             await markWorkflowStepFailed(insertedStep.id, message);
-            createdSteps.push({
+            const failedStep: CreatedWorkflowStep = {
                 id: insertedStep.id,
                 stepKey: planStep.stepKey,
                 title: planStep.title,
@@ -180,7 +216,9 @@ export async function createWorkflowFromPlan(
                 dependencyStepIds,
                 summary: message,
                 preview: null,
-            });
+            };
+            createdSteps.push(failedStep);
+            createdStepByKey.set(planStep.stepKey, failedStep);
         }
     }
 
@@ -216,6 +254,22 @@ async function markWorkflowStepFailed(id: string, message: string): Promise<void
         .update(workflowSteps)
         .set({
             state: 'failed',
+            error: { message },
+            updatedAt: new Date(),
+        })
+        .where(eq(workflowSteps.id, id));
+}
+
+async function markWorkflowStepSkipped(
+    id: string,
+    dependencyIds: string[],
+    message: string
+): Promise<void> {
+    await db
+        .update(workflowSteps)
+        .set({
+            state: 'skipped',
+            dependencyIds,
             error: { message },
             updatedAt: new Date(),
         })

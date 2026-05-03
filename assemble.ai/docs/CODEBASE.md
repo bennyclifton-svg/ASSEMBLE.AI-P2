@@ -163,7 +163,7 @@ A persistent chat dock at the bottom of `/projects/[projectId]` lets the user co
 - **Entry**: `POST /api/chat/threads/[id]/messages` opens a tool-use loop in `src/lib/agents/runner.ts`.
 - **Specialists**: each is a persona (system prompt + allowed-tool whitelist + model assignment) under `src/lib/agents/specialists/`. Today: `orchestrator.ts`, `finance.ts`, `design.ts`, `program.ts`.
 - **Tools** live in `src/lib/agents/tools/`. Read tools execute freely; mutating tools must produce an approval record instead of writing.
-  - Read: `search_rag`, `list_cost_lines`, `list_program`
+  - Read: `search_rag`, `list_cost_lines`, `list_invoices`, `list_program`
   - Mutating (gated): `update_cost_line`, `create_cost_line`, `record_invoice`
 - **Approvals**: `src/lib/agents/approvals.ts` + `src/lib/agents/applicators.ts`. `POST /api/chat/approvals/[id]/respond` applies under optimistic locking against the target row's `row_version`, returns 409 on conflict.
 - **Streaming**: SSE from the runner via `src/lib/agents/events.ts`. Hook: `src/lib/hooks/use-chat-stream.ts`. The `connections` Map is pinned to `globalThis` so dev-mode hot reloads don't orphan controllers.

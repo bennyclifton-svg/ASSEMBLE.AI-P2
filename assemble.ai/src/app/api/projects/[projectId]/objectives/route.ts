@@ -5,9 +5,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, and, asc, max } from 'drizzle-orm';
+import { eq, and, asc, desc, max } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectObjectives, type ObjectiveType, VALID_OBJECTIVE_TYPES } from '@/lib/db/objectives-schema';
+import {
+  projectObjectives,
+  objectiveGenerationSessions,
+  type ObjectiveType,
+  VALID_OBJECTIVE_TYPES,
+} from '@/lib/db/objectives-schema';
+import { projectProfiles, profilerObjectives, objectivesTransmittals } from '@/lib/db/pg-schema';
 import { getCurrentUser } from '@/lib/auth/get-user';
 
 export async function GET(
@@ -47,7 +53,61 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ success: true, data: grouped });
+    // Pull the latest generation snapshot per section so the frontend can
+    // detect manual edits before showing the destructive-regenerate confirmation.
+    const sessions = await db
+      .select()
+      .from(objectiveGenerationSessions)
+      .where(eq(objectiveGenerationSessions.projectId, projectId))
+      .orderBy(desc(objectiveGenerationSessions.createdAt));
+
+    const snapshots: Record<ObjectiveType, string[] | null> = {
+      planning: null,
+      functional: null,
+      quality: null,
+      compliance: null,
+    };
+
+    for (const session of sessions) {
+      const sec = session.objectiveType as ObjectiveType;
+      if (snapshots[sec] !== null) continue;
+      const items =
+        (session.generatedItems as { explicit?: string[]; ai_added?: string[] } | null) || {};
+      snapshots[sec] = [...(items.explicit ?? []), ...(items.ai_added ?? [])];
+    }
+
+    // Surface projectType and hasAttachedDocuments so the UI can render
+    // per-project-type section labels and the advisory draft-mode banner
+    // without needing a separate profile fetch.
+    const [profileRow] = await db
+      .select({ projectType: projectProfiles.projectType })
+      .from(projectProfiles)
+      .where(eq(projectProfiles.projectId, projectId))
+      .limit(1);
+
+    const [objectivesAnchor] = await db
+      .select({ id: profilerObjectives.id })
+      .from(profilerObjectives)
+      .where(eq(profilerObjectives.projectId, projectId))
+      .limit(1);
+
+    let hasAttachedDocuments = false;
+    if (objectivesAnchor) {
+      const [transmittal] = await db
+        .select({ id: objectivesTransmittals.documentId })
+        .from(objectivesTransmittals)
+        .where(eq(objectivesTransmittals.objectivesId, objectivesAnchor.id))
+        .limit(1);
+      hasAttachedDocuments = Boolean(transmittal);
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: grouped,
+      snapshots,
+      projectType: profileRow?.projectType ?? null,
+      hasAttachedDocuments,
+    });
   } catch (error) {
     console.error('Failed to fetch objectives:', error);
     return NextResponse.json(

@@ -17,6 +17,7 @@ import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { CTABannerSection } from '@/components/landing/CTABannerSection';
 import { FAQSection } from '@/components/landing/FAQSection';
+import { AboutAuthorSection } from '@/components/landing/AboutAuthorSection';
 import { FinalCTASection } from '@/components/landing/FinalCTASection';
 import { FooterSection } from '@/components/landing/FooterSection';
 
@@ -37,6 +38,7 @@ export default function LandingPage() {
                 <PricingSection />
                 <CTABannerSection />
                 <FAQSection />
+                <AboutAuthorSection />
                 <FinalCTASection />
             </main>
             <FooterSection />

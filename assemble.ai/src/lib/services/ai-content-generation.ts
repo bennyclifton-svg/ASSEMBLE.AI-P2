@@ -6,7 +6,7 @@
  * and report sections. Uses starred notes and procurement documents as context.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { assembleContext } from '@/lib/context/orchestrator';
 import type {
     GenerateContentRequest,
@@ -111,11 +111,9 @@ ${contextString || 'No specific project data available. Generate content based o
 
 Generate only the section content. Do not include headers, titles, or meta-commentary.`;
 
-    // Call Claude API with system prompt separation
-    const anthropic = new Anthropic();
-    const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
+    const { text } = await aiComplete({
+        featureGroup: 'generation',
+        maxTokens: 1500,
         system: systemPrompt,
         messages: [{
             role: 'user',
@@ -123,14 +121,8 @@ Generate only the section content. Do not include headers, titles, or meta-comme
         }],
     });
 
-    // Extract text response
-    const textContent = message.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-        throw new Error('No text response from AI');
-    }
-
     return {
-        content: cleanupFormatting(textContent.text),
+        content: cleanupFormatting(text),
         sourcesUsed: {
             notes: assembled.metadata.modulesFetched.includes('starredNotes') ? 1 : 0,
             procurementDocs: assembled.metadata.modulesFetched.includes('procurementDocs') ? 1 : 0,
@@ -173,11 +165,9 @@ ${content}
 
 Return only the polished content. Do not include commentary or explanations.`;
 
-    // Call Claude API with system prompt separation
-    const anthropic = new Anthropic();
-    const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1500,
+    const { text } = await aiComplete({
+        featureGroup: 'generation',
+        maxTokens: 1500,
         system: systemPrompt,
         messages: [{
             role: 'user',
@@ -185,13 +175,7 @@ Return only the polished content. Do not include commentary or explanations.`;
         }],
     });
 
-    // Extract text response
-    const textContent = message.content.find(c => c.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-        throw new Error('No text response from AI');
-    }
-
     return {
-        content: cleanupFormatting(textContent.text),
+        content: cleanupFormatting(text),
     };
 }

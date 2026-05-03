@@ -235,7 +235,7 @@ export function ReportsPanel({
         <div className={cn(className)}>
             {/* Header - Segmented ribbon with numbered tabs */}
             <SectionHeader
-                title="Reports"
+                title={activeReport?.title || groupTitle || "Reports"}
                 icon={ClipboardList}
                 isExpanded={isExpanded}
                 onToggleExpand={handleExpandToggle}

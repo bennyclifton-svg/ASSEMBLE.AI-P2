@@ -6,7 +6,7 @@
  * via the Context Orchestrator and calling Claude for content generation.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { assembleContext } from '@/lib/context/orchestrator';
 import { buildSystemPrompt } from '@/lib/prompts/system-prompts';
 
@@ -103,22 +103,15 @@ ${contextString || 'No additional context available. Execute the instruction bas
 
 Execute the instruction above. Return ONLY the replacement content as HTML. Do not include the original "//" instruction in your output.`;
 
-  // Call Claude
-  const anthropic = new Anthropic();
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1500,
+  const { text } = await aiComplete({
+    featureGroup: 'generation',
+    maxTokens: 1500,
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
   });
 
-  const textContent = message.content.find(c => c.type === 'text');
-  if (!textContent || textContent.type !== 'text') {
-    throw new Error('No text response from AI');
-  }
-
   return {
-    content: cleanupFormatting(textContent.text),
+    content: cleanupFormatting(text),
     sourcesUsed: {
       ragChunks: assembled.metadata.modulesFetched.includes('ragDocuments') ? 1 : 0,
       knowledgeDomains: [],

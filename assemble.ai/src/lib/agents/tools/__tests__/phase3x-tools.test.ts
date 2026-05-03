@@ -4,7 +4,8 @@ jest.mock('@/lib/agents/events', () => ({ emitChatEvent: jest.fn() }));
 jest.mock('../../project-events', () => ({ emitProjectEvent: jest.fn() }));
 jest.mock('uuid', () => ({ v4: () => 'test-id' }));
 
-import { specsFor } from '../index';
+import { getTool, specsFor } from '../index';
+import { listInvoicesTool } from '../list-invoices';
 import { listNotesTool } from '../list-notes';
 import { listRisksTool } from '../list-risks';
 import { listVariationsTool } from '../list-variations';
@@ -13,24 +14,26 @@ import { listMeetingsTool } from '../list-meetings';
 import { listAddendaTool } from '../list-addenda';
 import { createMeetingTool } from '../create-meeting';
 import { createAddendumTool } from '../create-addendum';
-import { createNoteTool } from '../create-note';
-import { updateNoteTool } from '../update-note';
-import { attachDocumentsToNoteTool } from '../attach-documents-to-note';
 import { createRiskTool } from '../create-risk';
 import { updateRiskTool } from '../update-risk';
 import { createVariationTool } from '../create-variation';
 import { updateVariationTool } from '../update-variation';
 import { updateProgramActivityTool } from '../update-program-activity';
-import { createProgramMilestoneTool } from '../create-program-milestone';
-import { updateProgramMilestoneTool } from '../update-program-milestone';
 import { updateStakeholderTool } from '../update-stakeholder';
 import { startIssueVariationWorkflowTool } from '../start-issue-variation-workflow';
+
+const createProgramMilestoneTool = getTool('create_program_milestone')!;
+const updateProgramMilestoneTool = getTool('update_program_milestone')!;
+const createNoteTool = getTool('create_note')!;
+const updateNoteTool = getTool('update_note')!;
+const attachDocumentsToNoteTool = getTool('attach_documents_to_note')!;
 
 describe('Phase 3X read tools', () => {
     it('registers the new tools in the catalog', () => {
         const specs = specsFor([
             'search_knowledge_library',
             'list_notes',
+            'list_invoices',
             'list_risks',
             'list_variations',
             'list_stakeholders',
@@ -45,6 +48,7 @@ describe('Phase 3X read tools', () => {
             'update_risk',
             'create_variation',
             'update_variation',
+            'create_program_activity',
             'update_program_activity',
             'create_program_milestone',
             'update_program_milestone',
@@ -52,15 +56,21 @@ describe('Phase 3X read tools', () => {
             'start_issue_variation_workflow',
         ]);
         expect(specs.map((spec) => spec.name)).toContain('search_knowledge_library');
+        expect(specs.map((spec) => spec.name)).toContain('list_invoices');
         expect(specs.map((spec) => spec.name)).toContain('update_stakeholder');
         expect(specs.map((spec) => spec.name)).toContain('create_meeting');
         expect(specs.map((spec) => spec.name)).toContain('create_addendum');
         expect(specs.map((spec) => spec.name)).toContain('attach_documents_to_note');
+        expect(specs.map((spec) => spec.name)).toContain('create_program_activity');
         expect(specs.map((spec) => spec.name)).toContain('start_issue_variation_workflow');
     });
 
     it('accepts empty input and clamps limits', () => {
         expect(listNotesTool.validate(undefined)).toEqual({});
+        expect(listInvoicesTool.validate({ periodYear: 2026, periodMonth: 4 })).toEqual({
+            periodYear: 2026,
+            periodMonth: 4,
+        });
         expect(listRisksTool.validate({ limit: 9999 }).limit).toBeLessThanOrEqual(200);
         expect(listVariationsTool.validate({ status: 'Forecast' })).toEqual({ status: 'Forecast' });
         expect(listStakeholdersTool.validate({ stakeholderGroup: 'consultant' })).toEqual({
@@ -78,6 +88,7 @@ describe('Phase 3X read tools', () => {
     it('marks read tools as non-mutating', () => {
         for (const tool of [
             listNotesTool,
+            listInvoicesTool,
             listRisksTool,
             listVariationsTool,
             listStakeholdersTool,
@@ -210,7 +221,17 @@ describe('Phase 3X write tool validation', () => {
                 costLineId: '',
             })
         ).toThrow(/costLineReference/);
+        expect(() =>
+            createVariationTool.validate({
+                category: 'Principal',
+                description: 'Invalid submitted status',
+                status: 'Submitted',
+            })
+        ).toThrow(/status/);
         expect(updateVariationTool.validate({ id: 'var-1', amountApprovedCents: 250000 }).amountApprovedCents).toBe(250000);
+        expect(() =>
+            updateVariationTool.validate({ id: 'var-1', status: 'Submitted' })
+        ).toThrow(/status/);
         expect(() =>
             updateVariationTool.validate({ id: 'var-1', dateApproved: '2026-13-99' })
         ).toThrow();
@@ -233,7 +254,7 @@ describe('Phase 3X write tool validation', () => {
         expect(input.variation).toEqual(
             expect.objectContaining({
                 category: 'Principal',
-                status: 'Submitted',
+                status: 'Forecast',
                 description: 'Extra acoustic treatment to meeting rooms',
                 amountForecastCents: 1875000,
             })
@@ -249,9 +270,11 @@ describe('Phase 3X write tool validation', () => {
                 activityId: 'act-1',
                 name: 'DA lodgement',
                 date: '2026-06-01',
-            }).date
-        ).toBe('2026-06-01');
-        expect(updateProgramMilestoneTool.validate({ id: 'ms-1', sortOrder: 3 }).sortOrder).toBe(3);
+            })
+        ).toEqual(expect.objectContaining({ date: '2026-06-01' }));
+        expect(updateProgramMilestoneTool.validate({ id: 'ms-1', sortOrder: 3 })).toEqual(
+            expect.objectContaining({ sortOrder: 3 })
+        );
         expect(() =>
             updateProgramActivityTool.validate({
                 id: 'act-1',

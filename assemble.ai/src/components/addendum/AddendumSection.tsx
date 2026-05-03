@@ -12,6 +12,10 @@ import { useAddendumTransmittal } from '@/lib/hooks/use-addendum-transmittal';
 import { AddendumTabs } from './AddendumTabs';
 import { AddendumContent } from './AddendumContent';
 import { AddendumTransmittalSchedule } from './AddendumTransmittalSchedule';
+import {
+    ADDENDUM_CREATED_EVENT,
+    type AddendumCreatedDetail,
+} from '@/lib/chat/addendum-events';
 import { FileText, MoreHorizontal, MoreVertical } from 'lucide-react';
 import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
 import { Button } from '@/components/ui/button';
@@ -111,6 +115,29 @@ export function AddendumSection({
             setActiveAddendumId(addenda[0].id);
         }
     }, [activeAddendumId, addenda, setActiveAddendumId]);
+
+    useEffect(() => {
+        if (!stakeholderId) return;
+
+        const handleCreated = (event: Event) => {
+            const detail = (event as CustomEvent<AddendumCreatedDetail>).detail;
+            if (
+                !detail ||
+                detail.projectId !== projectId ||
+                detail.stakeholderId !== stakeholderId
+            ) {
+                return;
+            }
+            setActiveAddendumId(detail.addendumId);
+            setIsExpanded(true);
+            setIsMenuExpanded(true);
+        };
+
+        window.addEventListener(ADDENDUM_CREATED_EVENT, handleCreated);
+        return () => {
+            window.removeEventListener(ADDENDUM_CREATED_EVENT, handleCreated);
+        };
+    }, [projectId, setActiveAddendumId, setIsExpanded, stakeholderId]);
 
     const activeAddendum = addenda.find(a => a.id === activeAddendumId);
 

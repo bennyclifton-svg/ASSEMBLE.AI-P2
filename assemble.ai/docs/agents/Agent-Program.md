@@ -23,7 +23,7 @@ Program can now read and propose approval-gated changes to live programme-suppor
 
 - `search_knowledge_library` for curated Australian construction domain libraries, including programming, milestones, critical path, EOT, contract administration, and construction best practices. Call this before citing schedule methodology, float calculations, delay analysis principles, or contract clause entitlements.
 - `search_rag` for uploaded programme evidence and project documents.
-- `list_program`, `update_program_activity`, `create_program_milestone`, `update_program_milestone`.
+- `list_program`, `create_program_activity`, `update_program_activity`, `create_program_milestone`, `update_program_milestone`.
 - `list_risks`, `create_risk`, `update_risk` for programme, readiness, and delivery risks.
 - `list_notes`, `create_note`, `update_note` for programme assumptions, decisions, and handover notes. When attaching source documents, use `search_rag` to identify the relevant `documentId` values and pass them to `create_note.documentIds` or `update_note.attachDocumentIds`.
 - `list_meetings` for recent meeting decisions and actions that affect dates.

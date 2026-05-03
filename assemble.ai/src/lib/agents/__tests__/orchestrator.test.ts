@@ -19,10 +19,29 @@ describe('routeAgents', () => {
         expect(routeAgents('What is the current budget variance?')).toEqual(['finance']);
     });
 
+    test('routes cost value updates to finance even when the cost line has design words', () => {
+        expect(
+            routeAgents('update the Architecture Detail Design Budget and Contract value to 150000')
+        ).toEqual(['finance']);
+    });
+
     test('routes invoice creation to finance even when the cost line has design words', () => {
         expect(
             routeAgents('add 3 invoices, each value at 15000 to architect scheme design')
         ).toEqual(['finance']);
+    });
+
+    test('routes paid invoice creation to finance without treating status paid as a status briefing', () => {
+        expect(
+            routeAgents(
+                'add invoice number 123, for a sum of 30,000 allocated to developer/ long service levy, todays date, and status paid.'
+            )
+        ).toEqual(['finance']);
+    });
+
+    test('routes invoice period summaries and logs to finance', () => {
+        expect(routeAgents('summarise invoices for the period of April 2026')).toEqual(['finance']);
+        expect(routeAgents('I just want a log or record of all invoices for April 2026')).toEqual(['finance']);
     });
 
     test('routes issue-variation workflow requests to finance even when they mention programme and notes', () => {
@@ -52,6 +71,16 @@ describe('routeAgents', () => {
         expect(routeAgents('create a new meeting called Pre-DA Meeting')).toEqual(['design']);
     });
 
+    test('routes activity creation to program even when the activity is a Pre-DA meeting', () => {
+        expect(
+            routeAgents('add activity for Council Pre DA Meeting, taking place 4 days prior to DA submission.')
+        ).toEqual(['program']);
+    });
+
+    test('routes schedule date moves to program even when they mention DA submission', () => {
+        expect(routeAgents('Move the DA submission start date to 3/3/25')).toEqual(['program']);
+    });
+
     test('routes generic note creation to design instead of falling back to finance', () => {
         expect(routeAgents('create a new note titled Site access delay')).toEqual(['design']);
     });
@@ -68,6 +97,15 @@ describe('routeAgents', () => {
         ).toEqual(['design']);
     });
 
+    test('routes selected-set addendum typos to design', () => {
+        expect(
+            routeAgents('create an adenumd with the selected set, call it Structural Update')
+        ).toEqual(['design']);
+        expect(
+            routeAgents('create an addendum with the selected set, call it Structural Update')
+        ).toEqual(['design']);
+    });
+
     test('routes document selection to design', () => {
         expect(routeAgents('select all mech docs')).toEqual(['design']);
     });
@@ -81,6 +119,44 @@ describe('routeAgents', () => {
     test('routes project objective population to design', () => {
         expect(routeAgents('populate the objectives')).toEqual(['design']);
     });
+
+    test.each([
+        {
+            prompt: 'update the Architecture Detail Design Budget and Contract value to 150000',
+            expected: ['finance'],
+        },
+        {
+            prompt:
+                'add activity for Council Pre DA Meeting, taking place 4 days prior to DA submission.',
+            expected: ['program'],
+        },
+        {
+            prompt: 'Move the DA submission start date to 3/3/25',
+            expected: ['program'],
+        },
+        {
+            prompt: 'Create a note for mechanical spec review and attach all mechanical documents.',
+            expected: ['design'],
+        },
+        {
+            prompt: 'Create a transmittal from the selected drawings.',
+            expected: ['design'],
+        },
+        {
+            prompt: 'Create an addendum from the selected set, call it Structural Update.',
+            expected: ['design'],
+        },
+        {
+            prompt:
+                'Client asked for extra acoustic treatment. Please issue a variation, link it to the right cost line/programme activity, and add a short project note.',
+            expected: ['finance'],
+        },
+    ] satisfies Array<{ prompt: string; expected: string[] }>)(
+        'keeps routing contract for "$prompt"',
+        ({ prompt, expected }) => {
+            expect(routeAgents(prompt)).toEqual(expected);
+        }
+    );
 });
 
 describe('formatOrchestratorFinalText', () => {

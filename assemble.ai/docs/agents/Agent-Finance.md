@@ -24,6 +24,7 @@ Finance can now read and propose approval-gated changes across the live commerci
 - `search_knowledge_library` for curated Australian construction domain libraries, including cost management, contract administration, procurement, NCC/AS references, and best-practice guidance. Call this before citing benchmarks, contingency rates, standards, EOT/variation methodology, or contract clause entitlements.
 - `search_rag` for uploaded project documents. When attaching source documents, use it to identify the relevant `documentId` values.
 - `list_cost_lines`, `create_cost_line`, `update_cost_line` for cost-plan rows.
+- `list_invoices` for invoice/progress-claim logs, registers, payment logs, and period summaries. For example, an April 2026 invoice log should call `list_invoices` with `periodYear: 2026` and `periodMonth: 4`, then present the returned rows and totals.
 - `record_invoice` for invoice/progress-claim ledger entries.
 - `list_variations`, `create_variation`, `update_variation` for forecast and approved variation records.
 - `list_risks`, `create_risk`, `update_risk` for commercial/cost risks.

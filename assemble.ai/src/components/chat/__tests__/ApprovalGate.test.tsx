@@ -1,6 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ApprovalGate } from '../ApprovalGate';
 import type { PendingApprovalView } from '@/lib/hooks/use-chat-stream';
+import { ADDENDUM_CREATED_EVENT } from '@/lib/chat/addendum-events';
+
+const mockGlobalMutate = jest.fn();
+
+jest.mock('swr', () => ({
+    mutate: (...args: unknown[]) => mockGlobalMutate(...args),
+}));
 
 function approval(): PendingApprovalView {
     return {
@@ -44,6 +51,62 @@ describe('ApprovalGate', () => {
             expect(screen.getByText('Applied')).toBeInTheDocument();
         });
         expect(screen.queryByTestId('approve-approval-1')).not.toBeInTheDocument();
+    });
+
+    it('refreshes and focuses procurement addenda after applying create_addendum', async () => {
+        const onAddendumCreated = jest.fn();
+        window.addEventListener(ADDENDUM_CREATED_EVENT, onAddendumCreated);
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                status: 'applied',
+                output: {
+                    id: 'addendum-2',
+                    projectId: 'project-1',
+                    stakeholderId: 'stakeholder-structural',
+                },
+            }),
+        }) as jest.Mock;
+
+        try {
+            render(
+                <ApprovalGate
+                    approval={{
+                        ...approval(),
+                        toolName: 'create_addendum',
+                        proposedDiff: {
+                            entity: 'addendum',
+                            entityId: null,
+                            summary: 'Create addendum - Structural Update',
+                            changes: [],
+                        },
+                    }}
+                />
+            );
+
+            fireEvent.click(screen.getByTestId('approve-approval-1'));
+
+            await waitFor(() => {
+                expect(screen.getByText('Applied')).toBeInTheDocument();
+            });
+            expect(mockGlobalMutate).toHaveBeenCalledWith(
+                '/api/addenda?projectId=project-1&stakeholderId=stakeholder-structural'
+            );
+            expect(mockGlobalMutate).toHaveBeenCalledWith('/api/addenda/addendum-2');
+            expect(mockGlobalMutate).toHaveBeenCalledWith('/api/addenda/addendum-2/transmittal');
+            expect(onAddendumCreated).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    detail: {
+                        projectId: 'project-1',
+                        stakeholderId: 'stakeholder-structural',
+                        addendumId: 'addendum-2',
+                    },
+                })
+            );
+        } finally {
+            window.removeEventListener(ADDENDUM_CREATED_EVENT, onAddendumCreated);
+        }
     });
 
     it('shows a conflict message when the approval cannot be applied', async () => {

@@ -437,6 +437,52 @@ describe('POST /api/chat/approvals/[id]/respond', () => {
         });
     });
 
+    test('apply of create_transmittal note emits note created and selects attached documents', async () => {
+        mockGetCurrentUser.mockResolvedValue({
+            user: { id: 'user-A', organizationId: 'org-A' },
+        });
+        mockApprovalsLimit.mockResolvedValueOnce([
+            {
+                id: 'approval-8',
+                organizationId: 'org-A',
+                threadId: 'thread-1',
+                projectId: 'proj-99',
+                toolName: 'create_transmittal',
+                input: {
+                    name: 'Basement Drawings Transmittal',
+                    destination: 'note',
+                    documentIds: ['doc-1', 'doc-2'],
+                },
+                expectedRowVersion: null,
+                status: 'pending',
+            },
+        ]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: 'user-A' }]);
+        mockApply.mockResolvedValue({
+            kind: 'applied',
+            output: {
+                id: 'note-new',
+                transmittalTarget: 'note',
+                attachedDocumentIds: ['doc-1', 'doc-2'],
+            },
+        });
+
+        const res = await POST(makeRequest({ decision: 'approve' }), { params });
+        expect(res.status).toBe(200);
+
+        expect(mockEmitProject).toHaveBeenCalledWith('proj-99', {
+            type: 'entity_updated',
+            entity: 'note',
+            op: 'created',
+            id: 'note-new',
+        });
+        expect(mockEmitProject).toHaveBeenCalledWith('proj-99', {
+            type: 'document_selection_changed',
+            mode: 'replace',
+            documentIds: ['doc-1', 'doc-2'],
+        });
+    });
+
     test('reject does NOT emit entity_updated', async () => {
         mockGetCurrentUser.mockResolvedValue({
             user: { id: 'user-A', organizationId: 'org-A' },

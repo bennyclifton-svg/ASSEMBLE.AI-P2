@@ -2180,6 +2180,39 @@ textarea:-webkit-autofill:active {
   display: inline-block;
 }
 
+/* Logo marquee — continuous horizontal scroll for trust-logo strips */
+@keyframes marquee-rtl {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes marquee-ltr {
+  0% { transform: translateX(-50%); }
+  100% { transform: translateX(0); }
+}
+
+.animate-marquee-rtl {
+  animation: marquee-rtl 60s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-ltr {
+  animation: marquee-ltr 60s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-rtl,
+  .animate-marquee-ltr {
+    animation: none;
+  }
+}
+
+.marquee-fade {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, black 8%, black 92%, transparent 100%);
+}
+
 /* Animation Utilities */
 .animate-slide-in-up {
   animation: slideInUp 0.4s ease-out;

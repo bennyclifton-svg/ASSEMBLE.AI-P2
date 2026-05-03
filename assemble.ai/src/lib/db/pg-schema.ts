@@ -567,6 +567,7 @@ export const rftNew = pgTable('rft_new', {
     stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     rftNumber: integer('rft_number').notNull().default(1),
     rftDate: text('rft_date'),
+    objectivesVisible: boolean('objectives_visible').notNull().default(false),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });

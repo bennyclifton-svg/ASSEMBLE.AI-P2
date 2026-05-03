@@ -160,6 +160,8 @@ export function ProfilerMiddlePanel({
   const [complexityOverrides, setComplexityOverrides] = useState<Record<string, string>>({});
   const [scopeLevel, setScopeLevel] = useState(0);
   const [scopeOverrides, setScopeOverrides] = useState<Record<string, string[]>>({});
+  const [showAllClasses, setShowAllClasses] = useState(false);
+  const [showAllSubclasses, setShowAllSubclasses] = useState(false);
   const prevBuildingClassRef = useRef<BuildingClass | null>(buildingClass);
 
   useEffect(() => {
@@ -574,12 +576,13 @@ export function ProfilerMiddlePanel({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
+        <div className="grid grid-cols-1 xl:grid-cols-[5fr_5fr_2fr] gap-3">
+        <section className="flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
           <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
             Class Tree
           </span>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-1">
-            {BUILDING_CLASS_ORDER.map((key) => {
+          <div className="grid grid-cols-5 auto-rows-fr gap-1 flex-1">
+            {(showAllClasses ? BUILDING_CLASS_ORDER : BUILDING_CLASS_ORDER.slice(0, 4)).map((key) => {
               const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key];
               const selected = buildingClass === key;
               return (
@@ -598,11 +601,24 @@ export function ProfilerMiddlePanel({
                 </button>
               );
             })}
+            {BUILDING_CLASS_ORDER.length > 4 && (
+              <div className="flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowAllClasses((v) => !v)}
+                  aria-expanded={showAllClasses}
+                  title={showAllClasses ? 'Show fewer classes' : `Show ${BUILDING_CLASS_ORDER.length - 4} more classes`}
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-accent-copper)]/50 hover:text-[var(--color-accent-copper)]"
+                >
+                  <span className="-mt-1.5 text-base leading-none">…</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {classConfig && (
-            <div className="mt-2 flex flex-wrap gap-1 border-t border-[var(--color-border)] pt-2">
-              {classConfig.subclasses.map((sub: SubclassOption) => {
+            <div className="mt-2 flex flex-1 flex-wrap content-start items-start gap-1 border-t border-[var(--color-border)] pt-2">
+              {(showAllSubclasses ? classConfig.subclasses : classConfig.subclasses.slice(0, 4)).map((sub: SubclassOption) => {
                 const selected = selectedSubclasses.includes(sub.value);
                 return (
                   <button
@@ -619,6 +635,17 @@ export function ProfilerMiddlePanel({
                   </button>
                 );
               })}
+              {classConfig.subclasses.length > 4 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllSubclasses((v) => !v)}
+                  aria-expanded={showAllSubclasses}
+                  title={showAllSubclasses ? 'Show fewer subclasses' : `Show ${classConfig.subclasses.length - 4} more subclasses`}
+                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-accent-copper)]/50 hover:text-[var(--color-accent-copper)]"
+                >
+                  <span className="-mt-1.5 text-base leading-none">…</span>
+                </button>
+              )}
               {buildingClass === 'mixed' && (
                 <span className="self-center text-[10px] text-[var(--color-text-muted)]">
                   up to 4
@@ -628,12 +655,11 @@ export function ProfilerMiddlePanel({
           )}
         </section>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(420px,1fr)_minmax(300px,0.72fr)] gap-3">
-          <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-              Type
-            </span>
-            <div className="grid grid-cols-5 gap-1.5">
+        <section className="flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+            Type
+          </span>
+            <div className="grid grid-cols-5 auto-rows-fr gap-1.5 flex-1">
               {profileTemplates.projectTypes.map((type) => {
                 const selected = projectType === type.value;
                 return (
@@ -641,12 +667,12 @@ export function ProfilerMiddlePanel({
                     key={type.value}
                     type="button"
                     onClick={() => selectType(type.value as ProjectType)}
-                    className={`min-h-10 rounded-md border px-1.5 py-1.5 text-center text-[11px] font-semibold transition-all ${selected
+                    className={`flex flex-col items-center justify-center min-h-10 rounded-md border px-1.5 py-1.5 text-center text-[11px] font-semibold transition-all ${selected
                       ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
                       : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-copper)]/50'
                       }`}
                   >
-                    <span className="block h-1 rounded-full bg-current opacity-40 mb-1" />
+                    <span className="block h-1 w-6 rounded-full bg-current opacity-40 mb-1" />
                     <span className="block truncate">{type.label}</span>
                   </button>
                 );
@@ -655,22 +681,22 @@ export function ProfilerMiddlePanel({
           </section>
 
           <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
-            <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
               Scale
             </span>
             {scaleFields.length === 0 ? (
               <p className="text-xs text-[var(--color-text-muted)]">Select a class to configure scale.</p>
             ) : (
-              <div className="grid grid-cols-2 2xl:grid-cols-3 gap-1.5">
+              <div className="flex flex-col gap-1">
                 {scaleFields.map((field) => {
                   const range = fieldRange(field);
                   const value = scaleData[field.key] ?? '';
                   return (
-                    <div key={field.key} className="min-w-0">
-                      <label className="mb-0.5 block truncate text-[10px] font-semibold text-[var(--color-text-muted)]" title={field.label}>
+                    <div key={field.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                      <label className="min-w-0 truncate text-[10px] font-semibold text-[var(--color-text-muted)]" title={field.label}>
                         {field.label}
                       </label>
-                      <div className="grid grid-cols-[20px_minmax(0,1fr)_20px] overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)]">
+                      <div className="grid grid-cols-[20px_60px_20px] overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)]">
                         <button
                           type="button"
                           onClick={() => stepScaleField(field, -range.step)}
@@ -699,11 +725,6 @@ export function ProfilerMiddlePanel({
                           +
                         </button>
                       </div>
-                      {range.unit && (
-                        <span className="mt-0.5 block text-[9px] font-medium text-[var(--color-text-muted)]">
-                          {range.unit}
-                        </span>
-                      )}
                     </div>
                   );
                 })}
@@ -713,7 +734,6 @@ export function ProfilerMiddlePanel({
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-          <div className="min-w-0">
             <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <strong className="text-sm font-semibold text-[var(--color-text-primary)]">
@@ -789,7 +809,6 @@ export function ProfilerMiddlePanel({
                 </div>
               )}
             </section>
-          </div>
 
           <section className="min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
             <div className="mb-2 flex items-start justify-between gap-3">
@@ -854,8 +873,9 @@ export function ProfilerMiddlePanel({
               </div>
             )}
           </section>
+        </div>
 
-          <aside className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 min-w-0">
+          <aside className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 min-w-0">
             {selectedSubclasses.length > 0 && (
               <ContextChips
                 buildingClass={buildingClass}
@@ -902,7 +922,6 @@ export function ProfilerMiddlePanel({
               </>
             )}
           </aside>
-        </div>
       </div>
     </div>
   );

@@ -2459,6 +2459,36 @@
     { "value": "remediation", "label": "Remediation" },
     { "value": "advisory", "label": "Advisory" }
   ],
+  "advisoryComplexityOptions": {
+    "description": "Complexity dimensions specific to advisory engagements (services contracts, not building work). Stored under profile.complexity alongside building-class complexity dimensions.",
+    "cadence": {
+      "label": "Engagement Cadence",
+      "key": "cadence",
+      "type": "single",
+      "options": [
+        { "value": "one_off", "label": "One-off initial report" },
+        { "value": "milestone_gated", "label": "Milestone-gated reviews" },
+        { "value": "monthly_monitoring", "label": "Monthly monitoring" },
+        { "value": "continuous_pcg", "label": "Continuous PCG attendance" },
+        { "value": "on_demand", "label": "On-demand / ad-hoc" }
+      ]
+    },
+    "deliverable_form": {
+      "label": "Deliverable Form",
+      "key": "deliverable_form",
+      "type": "multi",
+      "options": [
+        { "value": "written_report", "label": "Written report" },
+        { "value": "pcg_attendance", "label": "PCG attendance" },
+        { "value": "monthly_status_update", "label": "Monthly status update" },
+        { "value": "ad_hoc_memos", "label": "Ad-hoc memos" },
+        { "value": "presentation", "label": "Presentation" },
+        { "value": "dashboard_updates", "label": "Dashboard updates" },
+        { "value": "sign_off_letters", "label": "Sign-off letters" },
+        { "value": "expert_witness_statement", "label": "Expert witness statement" }
+      ]
+    }
+  },
   "workScopeOptions": {
     "description": "Work scope items organized by project type with building class overrides",
     "applicableProjectTypes": ["refurb", "remediation", "extend", "new", "advisory"],

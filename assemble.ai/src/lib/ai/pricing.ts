@@ -63,6 +63,30 @@ export const MODEL_CATALOG: ModelInfo[] = [
     // Pricing approximate; confirm at https://openai.com/api/pricing/
     {
         provider: 'openai',
+        modelId: 'gpt-5-nano',
+        label: 'GPT-5 nano',
+        inputPer1M: 0.05,
+        outputPer1M: 0.40,
+        notes: 'Smallest GPT-5 variant. Cheapest OpenAI option for extraction.',
+    },
+    {
+        provider: 'openai',
+        modelId: 'gpt-5-mini',
+        label: 'GPT-5 mini',
+        inputPer1M: 0.25,
+        outputPer1M: 2.00,
+        notes: 'Mid-tier GPT-5. Strong reasoning at modest cost.',
+    },
+    {
+        provider: 'openai',
+        modelId: 'gpt-5',
+        label: 'GPT-5',
+        inputPer1M: 1.25,
+        outputPer1M: 10.00,
+        notes: 'Flagship GPT-5. Top-tier reasoning and generation.',
+    },
+    {
+        provider: 'openai',
         modelId: 'gpt-4o-mini',
         label: 'GPT-4o mini',
         inputPer1M: 0.15,

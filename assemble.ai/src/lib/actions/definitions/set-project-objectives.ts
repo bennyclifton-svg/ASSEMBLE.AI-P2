@@ -41,6 +41,7 @@ export const setProjectObjectivesAction = defineAction<
     Record<string, unknown>
 >({
     id: 'planning.objectives.set',
+    toolName: 'set_project_objectives',
     domain: 'planning',
     description: 'Replace or append project brief objectives.',
     inputSchema,

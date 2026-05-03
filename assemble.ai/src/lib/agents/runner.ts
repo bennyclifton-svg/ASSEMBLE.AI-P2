@@ -36,6 +36,7 @@ import {
 } from '@/lib/context/agent-context';
 import {
     formatChatViewContextForPrompt,
+    selectedDocumentIdsFromViewContext,
     type ChatViewContext,
 } from '@/lib/chat/view-context';
 import { isIssueVariationWorkflowRequest } from './intent';
@@ -73,11 +74,22 @@ const MAX_TURNS = 8;
 const APPROVAL_CLAIM_RE =
     /\b(awaiting (?:your )?approval|approval card|action the approval|submitted for approval|proposed (?:and )?(?:is )?(?:now )?awaiting approval|invoice proposed)\b/i;
 const WRITE_REFUSAL_RE =
-    /\b(cannot|can't|unable to|not able to|outside my domain|outside this domain|falls outside my domain|requires another|dependency|document controller|admin agent)\b/i;
+    /\b(cannot|can't|unable to|not able to|outside my domain|outside this domain|outside my [\w\s-]{0,60}scope|falls outside my domain|requires another|dependency|document controller|admin agent|coordinate with)\b/i;
+const DOCUMENT_SELECTION_REFUSAL_RE =
+    /\b(cannot|can't|unable to|not able to|not available|not found|couldn't find|could not find|outside my domain|outside this domain|falls outside my domain|requires another|dependency|document controller|admin agent)\b|\bno\b[\s\S]{0,80}\bavailable\b/i;
 const INVOICE_REQUEST_RE =
     /\b(add|record|create|enter|post|allocate|log)\b[\s\S]{0,80}\b(invoice|progress claim|claim)\b/i;
-const ADDENDUM_REQUEST_RE =
-    /\b(create|add|issue|prepare|draft|attach|generate)\b[\s\S]{0,180}\b(addendum|addenda)\b|\b(addendum|addenda)\b[\s\S]{0,180}\b(attach|documents?|transmittal|consultants?|contractors?|tenderers?)\b/i;
+const INVOICE_LOG_READ_REQUEST_RE =
+    /\b(summarise|summarize|summary|list|show|report|register|ledger)\b[\s\S]{0,120}\b(invoices?|progress claims?|claims?)\b|\b(invoices?|progress claims?|claims?)\b[\s\S]{0,120}\b(summary|summarise|summarize|list|report|register|ledger|log)\b|\b(log|record)\b[\s\S]{0,40}\b(of|for)\b[\s\S]{0,80}\b(?:all|existing|current)?\s*(invoices?|progress claims?|claims?)\b/i;
+const ADDENDUM_TERM = String.raw`(?:addendum|addenda|addendums?|addenumd|adenumd|adendum|addemdum)`;
+const ADDENDUM_REQUEST_RE = new RegExp(
+    String.raw`\b(create|add|issue|prepare|draft|attach|generate)\b[\s\S]{0,180}\b${ADDENDUM_TERM}\b|\b${ADDENDUM_TERM}\b[\s\S]{0,180}\b(attach|documents?|drawings?|files?|selection|selected set|transmittal|consultants?|contractors?|tenderers?)\b`,
+    'i'
+);
+const TRANSMITTAL_REQUEST_RE =
+    /\b(create|add|issue|prepare|draft|save|generate)\b[\s\S]{0,180}\b(transmittals?)\b|\b(transmittals?)\b[\s\S]{0,180}\b(create|add|issue|prepare|draft|save|generate|documents?|drawings?|files?)\b/i;
+const CURRENT_DOCUMENT_SELECTION_RE =
+    /\b(?:with|from|using|use|for|of)\s+(?:the\s+)?(?:current\s+)?(?:selection|selected set)\b|\b(?:current|selected|the selected|these selected|those selected)\s+(?:documents?|docs?|drawings?|files?|set)\b/i;
 const NOTE_REQUEST_RE =
     /\b(create|add|record|update|change|edit|attach)\b[\s\S]{0,180}\b(notes?|decision record)\b|\b(notes?|decision record)\b[\s\S]{0,180}\b(attach|documents?|drawings?|files?|update|change|edit)\b/i;
 const RFT_REQUEST_RE =
@@ -93,6 +105,7 @@ const MUTATING_TOOL_NAMES = new Set([
     'create_cost_line',
     'record_invoice',
     'create_addendum',
+    'create_transmittal',
     'create_note',
     'update_note',
     'attach_documents_to_note',
@@ -101,33 +114,64 @@ const MUTATING_TOOL_NAMES = new Set([
     'update_risk',
     'create_variation',
     'start_issue_variation_workflow',
-    'action_finance_variations_create',
     'update_variation',
+    'create_program_activity',
     'update_program_activity',
-    'action_program_activity_update',
     'create_program_milestone',
     'update_program_milestone',
     'update_stakeholder',
     'set_project_objectives',
-    'action_planning_objectives_set',
-    'action_finance_cost_plan_update_line',
 ]);
 const NOTE_TOOL_NAMES = new Set(['create_note', 'update_note', 'attach_documents_to_note']);
+const PROGRAM_TOOL_NAMES = new Set([
+    'create_program_activity',
+    'update_program_activity',
+    'create_program_milestone',
+    'update_program_milestone',
+]);
+const PROGRAM_CONTEXT_RE =
+    /\b(programme|program|schedule|activity|activities|milestone|milestones)\b/i;
 const ISSUE_VARIATION_DIRECT_WRITE_TOOL_NAMES = new Set([
     'create_variation',
-    'action_finance_variations_create',
     'update_variation',
     'update_cost_line',
-    'action_finance_cost_plan_update_line',
     'create_cost_line',
+    'create_program_activity',
     'update_program_activity',
-    'action_program_activity_update',
     'create_program_milestone',
     'update_program_milestone',
     'create_note',
     'update_note',
     'attach_documents_to_note',
 ]);
+const TRANSMITTAL_DOCUMENT_FILTER_FIELDS = [
+    'categoryId',
+    'subcategoryId',
+    'categoryName',
+    'subcategoryName',
+    'disciplineOrTrade',
+    'drawingNumber',
+    'documentName',
+    'allProjectDocuments',
+] as const;
+const DOCUMENT_DISCIPLINE_TERMS = [
+    'architectural',
+    'architecture',
+    'structural',
+    'electrical',
+    'hydraulic',
+    'mechanical',
+    'civil',
+    'fire',
+    'bca',
+    'town planner',
+    'town planning',
+    'surveyor',
+    'survey',
+    'landscape',
+    'acoustic',
+    'geotechnical',
+] as const;
 
 export function approvalCardCount(output: unknown): number {
     if (!output || typeof output !== 'object') return 0;
@@ -211,6 +255,7 @@ export function shouldRecoverMissingInvoiceApproval(args: {
     usedToolNames: string[];
 }): boolean {
     if (args.usedToolNames.includes('record_invoice')) return false;
+    if (INVOICE_LOG_READ_REQUEST_RE.test(args.latestUserMessage)) return false;
     if (!INVOICE_REQUEST_RE.test(args.latestUserMessage)) return false;
     return APPROVAL_CLAIM_RE.test(args.finalText);
 }
@@ -221,6 +266,7 @@ export function shouldRecoverMissingApproval(args: {
     usedToolNames: string[];
 }): boolean {
     if (args.usedToolNames.some((name) => MUTATING_TOOL_NAMES.has(name))) return false;
+    if (INVOICE_LOG_READ_REQUEST_RE.test(args.latestUserMessage)) return false;
     if (!WRITE_REQUEST_RE.test(args.latestUserMessage)) return false;
     return APPROVAL_CLAIM_RE.test(args.finalText);
 }
@@ -243,11 +289,23 @@ export function shouldRecoverWriteRefusal(args: {
     usedToolNames: string[];
     allowedToolNames: string[];
 }): boolean {
+    if (args.usedToolNames.includes('create_transmittal')) return false;
+    if (
+        TRANSMITTAL_REQUEST_RE.test(args.latestUserMessage) &&
+        args.allowedToolNames.includes('create_transmittal') &&
+        WRITE_REFUSAL_RE.test(args.finalText)
+    ) {
+        return true;
+    }
     if (args.usedToolNames.includes('select_project_documents')) return false;
     if (args.usedToolNames.some((name) => MUTATING_TOOL_NAMES.has(name))) return false;
-    if (!WRITE_REFUSAL_RE.test(args.finalText)) return false;
     if (DOCUMENT_SELECTION_REQUEST_RE.test(args.latestUserMessage)) {
+        if (!DOCUMENT_SELECTION_REFUSAL_RE.test(args.finalText)) return false;
         return args.allowedToolNames.includes('select_project_documents');
+    }
+    if (!WRITE_REFUSAL_RE.test(args.finalText)) return false;
+    if (INVOICE_LOG_READ_REQUEST_RE.test(args.latestUserMessage)) {
+        return args.allowedToolNames.includes('list_invoices');
     }
     if (ADDENDUM_REQUEST_RE.test(args.latestUserMessage)) {
         return args.allowedToolNames.includes('create_addendum');
@@ -261,6 +319,8 @@ function missingDocumentSelectionRecoveryPrompt(): string {
         'You told the user documents were selected, but select_project_documents was not called. ' +
         'Do not answer in prose. Call select_project_documents now. ' +
         'For "mech", "mechanical", "mechanical services", or "HVAC" documents, use disciplineOrTrade="Mechanical" and mode="replace" unless the user asked to add/remove. ' +
+        'For requests like "select drawing CC-20" or "select drawing number A-101", use drawingNumber set to that drawing number. ' +
+        'For requests like "select all section drawings", use documentName="section". ' +
         'If the tool returns zero selected documents, ask one concise clarifying question.'
     );
 }
@@ -269,26 +329,49 @@ function missingApprovalRecoveryPrompt(): string {
     return (
         'You told the user a change is awaiting approval, but no mutating approval-gated tool call was made. ' +
         'Do not answer in prose. Call the appropriate mutating tool now using the data already supplied or read in this run. ' +
-        'Use record_invoice for invoices/progress claims; start_issue_variation_workflow for variation requests that imply cost, programme, note, or correspondence follow-through; create_variation/action_finance_variations_create or update_variation for standalone variations; ' +
-        'for create_variation/action_finance_variations_create, use costLineReference and disciplineOrTrade when the user supplied labels instead of an id; ' +
+        'Use record_invoice only for invoices/progress claims; do not create notes or programme milestones for invoice dates, paid status, or allocation wording unless the user explicitly requested those separate artefacts; for record_invoice, use costCategory and costLineReference when the user supplied labels such as "Developer Expenses / Long Service Levy"; start_issue_variation_workflow for variation requests that imply cost, programme, note, or correspondence follow-through; create_variation or update_variation for standalone variations; ' +
+        'for create_variation, use costLineReference and disciplineOrTrade when the user supplied labels instead of an id, and use list_cost_lines query rather than section for fuzzy cost-line labels; variation statuses are only Forecast, Approved, Rejected, or Withdrawn; ' +
         'create_addendum for stakeholder addenda and attached transmittal documents; ' +
+        'create_transmittal for Notes-section transmittals from selected or filtered documents, or targeted project transmittals when a stakeholder/subcategory is supplied; ' +
         'create_risk or update_risk for risks; attach_documents_to_note, create_note, or update_note for notes; ' +
         'create_meeting for meeting records; ' +
-        'set_project_objectives/action_planning_objectives_set for project brief/objective rows; ' +
+        'set_project_objectives for project brief/objective rows; ' +
         'list_stakeholders then update_stakeholder for RFT brief content because the RFT Brief section is stored on the stakeholder briefServices/briefDeliverables fields; ' +
-        'create_cost_line or update_cost_line/action_finance_cost_plan_update_line for cost lines; update_program_activity/action_program_activity_update, create_program_milestone, or update_program_milestone for programme changes; ' +
+        'create_cost_line or update_cost_line for cost lines; create_program_activity, update_program_activity, create_program_milestone, or update_program_milestone for programme changes; ' +
         'update_stakeholder for stakeholder/contact changes. ' +
         'If you cannot call the right mutating tool because a required field is missing, ask one concise clarifying question and explicitly say no approval card has been created yet.'
     );
 }
 
-function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
+export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
+    if (INVOICE_LOG_READ_REQUEST_RE.test(latestUserMessage)) {
+        return (
+            'You refused an invoice register/log request, but this agent can read the project invoice ledger. ' +
+            'Do not call record_invoice for this request and do not send the user to accounts. ' +
+            'Call list_invoices now, using periodYear and periodMonth when the user supplied a period such as April 2026. ' +
+            'Then answer with a concise invoice log table and period totals. If no rows are returned, say there are no invoice records in this project workspace for that period.'
+        );
+    }
+
     if (isIssueVariationWorkflowRequest(latestUserMessage)) {
         return (
             'You refused or drifted from an issue-variation workflow request, but this agent can prepare it through start_issue_variation_workflow. ' +
-            'Do not use create_note, create_variation, update_cost_line, or update_program_activity directly for this request. ' +
-            'Do not answer in prose. Use read tools to resolve the cost line and programme activity if possible, then call start_issue_variation_workflow. ' +
+            'Do not use create_note, create_variation, update_cost_line, create_program_activity, or update_program_activity directly for this request. ' +
+            'Do not answer in prose. Use read tools to resolve the cost line and programme activity if possible; for cost-line labels, use list_cost_lines query so close labels and typos can match. Use only Forecast, Approved, Rejected, or Withdrawn for variation.status. Do not include costLineUpdate money fields unless the user explicitly asked to update the cost plan, approved contract, contract sum, or budget. Then call start_issue_variation_workflow. ' +
             'If a required mapping is genuinely ambiguous, ask one concise clarifying question and explicitly say no approval card has been created yet.'
+        );
+    }
+
+    if (TRANSMITTAL_REQUEST_RE.test(latestUserMessage)) {
+        return (
+            'You refused or handed off a transmittal request, but this agent can propose transmittals through create_transmittal. ' +
+            'Do not answer in prose and do not hand this to Document Control or Procurement. ' +
+            'For generic drawing-set transmittals, use destination="note" so the result appears in the Notes section. Use destination="project" only with a resolved stakeholderId or subcategoryId. ' +
+            'If the user says "the selection", "current selection", or "selected documents/drawings", use the Current selected document ids from the app view exactly and ignore older chat document filters or names. ' +
+            'If the user asked to select documents and create the transmittal, call select_project_documents first when it has not already been called, then use its returned documentIds for create_transmittal. ' +
+            'If select_project_documents already returned documentIds in this run, call create_transmittal with destination="note", those exact documentIds, and a concise name. ' +
+            'For requests like "create a transmittal for basement drawings", use destination="note" and documentName="basement" if explicit documentIds are not already available. ' +
+            'If no matching documents are found, ask one concise clarifying question and explicitly say no approval card has been created yet.'
         );
     }
 
@@ -297,6 +380,8 @@ function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
             'You refused a document-selection request, but this agent can select project documents in the current UI. ' +
             'Do not answer in prose and do not hand this to a Document Controller or Admin Agent. ' +
             'Call select_project_documents now. For "mech", "mechanical", "mechanical services", or "HVAC" documents, use disciplineOrTrade="Mechanical" and mode="replace" unless the user asked to add/remove. ' +
+            'For requests like "select drawing CC-20" or "select drawing number A-101", use drawingNumber set to that drawing number. ' +
+            'For requests like "select all section drawings", use documentName="section". ' +
             'If the tool returns zero selected documents, ask one concise clarifying question.'
         );
     }
@@ -325,7 +410,9 @@ function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
             'You refused or handed off an addendum request, but this agent has an approval-gated create_addendum tool. ' +
             'Do not answer in prose and do not hand this to a Document Controller or Admin Agent. ' +
             'Treat any earlier refusal or handoff in the conversation as outdated. ' +
-            'For consultant addenda, use list_stakeholders with stakeholderGroup="consultant" to resolve the recipient. ' +
+            'For consultant addenda, use list_stakeholders with stakeholderGroup="consultant" to resolve the recipient. If the request names a discipline such as Structural, Mechanical, Electrical, or Hydraulic, match the consultant by disciplineOrTrade/name/role. ' +
+            'If the user says "the selection", "selected set", or "selected documents/drawings", use the Current selected document ids from the app view exactly and ignore older chat document filters. ' +
+            'If the user says "call it X", put X in create_addendum.content. ' +
             'For "all mechanical documents" or similar, use list_project_documents with disciplineOrTrade set to the discipline and includeDocuments=true. ' +
             'Then call create_addendum with stakeholderId, content, and documentIds. ' +
             'If the stakeholder or documents cannot be found, ask one concise clarifying question and explicitly say no approval card has been created yet.'
@@ -343,6 +430,28 @@ export function guardToolAgainstLatestIntent(args: {
     latestUserMessage: string;
     toolName: string;
 }): void {
+    if (
+        INVOICE_REQUEST_RE.test(args.latestUserMessage) &&
+        NOTE_TOOL_NAMES.has(args.toolName) &&
+        !NOTE_REQUEST_RE.test(args.latestUserMessage)
+    ) {
+        throw new Error(
+            'This is an invoice request, not a note request. Use record_invoice for the ledger entry. ' +
+                'Do not create a note unless the user explicitly asks for a separate note.'
+        );
+    }
+
+    if (
+        INVOICE_REQUEST_RE.test(args.latestUserMessage) &&
+        PROGRAM_TOOL_NAMES.has(args.toolName) &&
+        !PROGRAM_CONTEXT_RE.test(args.latestUserMessage)
+    ) {
+        throw new Error(
+            'This is an invoice request, not a programme request. Use record_invoice for the ledger entry. ' +
+                'Do not create or update programme milestones from invoice dates or paid status unless the user explicitly asks for a programme change.'
+        );
+    }
+
     if (
         isIssueVariationWorkflowRequest(args.latestUserMessage) &&
         args.toolName !== 'start_issue_variation_workflow' &&
@@ -387,6 +496,115 @@ export function guardToolAgainstLatestIntent(args: {
     }
 }
 
+function asInputRecord(input: unknown): Record<string, unknown> {
+    return input && typeof input === 'object' && !Array.isArray(input)
+        ? (input as Record<string, unknown>)
+        : {};
+}
+
+function inputStringArray(input: Record<string, unknown>, field: string): string[] {
+    const value = input[field];
+    if (!Array.isArray(value)) return [];
+
+    const ids: string[] = [];
+    for (const item of value) {
+        if (typeof item !== 'string') continue;
+        const trimmed = item.trim();
+        if (trimmed && !ids.includes(trimmed)) ids.push(trimmed);
+    }
+    return ids;
+}
+
+function inputHasMeaningfulField(input: Record<string, unknown>, field: string): boolean {
+    const value = input[field];
+    if (typeof value === 'string') return value.trim().length > 0;
+    if (typeof value === 'boolean') return value;
+    if (Array.isArray(value)) return value.length > 0;
+    return value !== undefined && value !== null;
+}
+
+function sameStringSet(left: string[], right: string[]): boolean {
+    if (left.length !== right.length) return false;
+    const rightSet = new Set(right);
+    return left.every((value) => rightSet.has(value));
+}
+
+function disciplineTermsIn(value: string): string[] {
+    const lower = value.toLowerCase();
+    return DOCUMENT_DISCIPLINE_TERMS.filter((term) => lower.includes(term));
+}
+
+function currentSelectionTransmittalError(selectedDocumentIds: string[]): Error {
+    return new Error(
+        'The latest request refers to the current document selection. ' +
+            `Use exactly these current selected documentIds: ${selectedDocumentIds.join(', ')}. ` +
+            'Do not reuse document IDs, filters, or discipline-based names from earlier chat turns. ' +
+            'Call create_transmittal with destination="note", those documentIds, and omit document filters.'
+    );
+}
+
+function currentSelectionAddendumError(selectedDocumentIds: string[]): Error {
+    return new Error(
+        'The latest request refers to the current document selection. ' +
+            `Use exactly these current selected documentIds: ${selectedDocumentIds.join(', ')}. ` +
+            'Do not reuse document IDs from earlier chat turns. ' +
+            'Resolve the addendum stakeholder if needed, then call create_addendum with that stakeholderId, the user-supplied content/name, and those documentIds.'
+    );
+}
+
+export function guardToolAgainstViewContextIntent(args: {
+    latestUserMessage: string;
+    toolName: string;
+    input: unknown;
+    viewContext?: ChatViewContext | null;
+}): void {
+    if (!CURRENT_DOCUMENT_SELECTION_RE.test(args.latestUserMessage)) return;
+
+    const selectedDocumentIds = selectedDocumentIdsFromViewContext(args.viewContext);
+    const isSelectionAddendum =
+        args.toolName === 'create_addendum' && ADDENDUM_REQUEST_RE.test(args.latestUserMessage);
+    const isSelectionTransmittal =
+        args.toolName === 'create_transmittal' && TRANSMITTAL_REQUEST_RE.test(args.latestUserMessage);
+    if (selectedDocumentIds.length === 0) {
+        if (isSelectionAddendum || isSelectionTransmittal) {
+            throw new Error(
+                'The latest request refers to the current document selection, but no selected document ids are available in the current app view. Ask the user to select the documents again, and do not create an approval card yet.'
+            );
+        }
+        return;
+    }
+
+    const input = asInputRecord(args.input);
+    const documentIds = inputStringArray(input, 'documentIds');
+
+    if (isSelectionAddendum) {
+        if (!sameStringSet(documentIds, selectedDocumentIds)) {
+            throw currentSelectionAddendumError(selectedDocumentIds);
+        }
+        return;
+    }
+
+    if (!isSelectionTransmittal) return;
+
+    const hasStaleFilter = TRANSMITTAL_DOCUMENT_FILTER_FIELDS.some((field) =>
+        inputHasMeaningfulField(input, field)
+    );
+    if (hasStaleFilter || !sameStringSet(documentIds, selectedDocumentIds)) {
+        throw currentSelectionTransmittalError(selectedDocumentIds);
+    }
+
+    const name = typeof input.name === 'string' ? input.name.trim() : '';
+    if (!name) return;
+
+    const latestLower = args.latestUserMessage.toLowerCase();
+    const inferredDisciplineTerms = disciplineTermsIn(name).filter(
+        (term) => !latestLower.includes(term)
+    );
+    if (inferredDisciplineTerms.length > 0) {
+        throw currentSelectionTransmittalError(selectedDocumentIds);
+    }
+}
+
 export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
     const agent = getAgent(args.agentName);
     const startedAt = Date.now();
@@ -422,7 +640,7 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
         modules: agent.contextModules ?? DEFAULT_AGENT_CONTEXT_MODULES,
     });
     const viewContextPrompt = formatChatViewContextForPrompt(args.viewContext);
-    const system = [agent.buildSystemPrompt({ assembledContext }), viewContextPrompt]
+    const system = [agent.buildSystemPrompt({ assembledContext }), buildCurrentDatePrompt(), viewContextPrompt]
         .filter(Boolean)
         .join('\n\n');
 
@@ -561,6 +779,12 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
                     guardToolAgainstLatestIntent({
                         latestUserMessage: triggeringUserText,
                         toolName: tu.name,
+                    });
+                    guardToolAgainstViewContextIntent({
+                        latestUserMessage: triggeringUserText,
+                        toolName: tu.name,
+                        input: tu.input,
+                        viewContext: ctx.viewContext,
                     });
                     // Mutating tools need the Anthropic tool_use_id so the
                     // resulting approvals row can be correlated back to the
@@ -767,4 +991,21 @@ async function buildAgentContext(args: {
     modules: readonly ModuleName[];
 }): Promise<string> {
     return assembleAgentContext(args);
+}
+
+function buildCurrentDatePrompt(): string {
+    const timeZone = 'Australia/Sydney';
+    const parts = new Intl.DateTimeFormat('en-AU', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).formatToParts(new Date());
+    const value = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+    const today = `${value('year')}-${value('month')}-${value('day')}`;
+
+    return (
+        '## Current date\n' +
+        `Today is ${today} (${timeZone}). Resolve "today" or "today's date" to ${today} in tool inputs.`
+    );
 }

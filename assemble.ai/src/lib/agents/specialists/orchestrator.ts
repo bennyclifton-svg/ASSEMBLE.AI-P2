@@ -27,7 +27,7 @@ const orchestrator: AgentSpec = {
     name: 'orchestrator',
     displayName: 'Orchestrator',
     allowedTools: [],
-    featureGroup: 'agent_orchestrator',
+    featureGroup: 'chat',
     maxTokens: 1024,
     contextModules: [...AGENT_CONTEXT_MODULE_PRESETS.orchestrator],
     buildSystemPrompt({ projectMemory, assembledContext }) {

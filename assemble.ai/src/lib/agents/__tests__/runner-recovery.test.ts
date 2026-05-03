@@ -15,6 +15,8 @@ import {
     shouldRecoverMissingInvoiceApproval,
     shouldRecoverWriteRefusal,
     guardToolAgainstLatestIntent,
+    guardToolAgainstViewContextIntent,
+    writeRefusalRecoveryPrompt,
 } from '../runner';
 
 describe('approvalCardCount', () => {
@@ -105,6 +107,16 @@ describe('shouldRecoverMissingInvoiceApproval', () => {
                 latestUserMessage: 'update the DA fee budget',
                 finalText: 'Awaiting your approval.',
                 usedToolNames: ['list_cost_lines'],
+            })
+        ).toBe(false);
+    });
+
+    it('does not treat invoice log requests as new invoice approvals', () => {
+        expect(
+            shouldRecoverMissingInvoiceApproval({
+                latestUserMessage: 'I just want a log or record of all invoices for April 2026',
+                finalText: 'Invoice proposed and awaiting your approval.',
+                usedToolNames: ['list_invoices'],
             })
         ).toBe(false);
     });
@@ -223,6 +235,36 @@ describe('shouldRecoverWriteRefusal', () => {
         ).toBe(true);
     });
 
+    it('recovers selected-set addendum typo handoffs when create_addendum is available', () => {
+        const latestUserMessage =
+            'create an adenumd with the selected set, call it Structural Update';
+
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage,
+                finalText:
+                    'I am unable to create a document like an addendum, as this falls under a documentation specialist.',
+                usedToolNames: [],
+                allowedToolNames: ['list_stakeholders', 'create_addendum'],
+            })
+        ).toBe(true);
+        expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain(
+            'use the Current selected document ids'
+        );
+    });
+
+    it('recovers transmittal handoffs after document selection succeeds', () => {
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage: 'select all basement drawings and create a transmittal',
+                finalText:
+                    'I have successfully selected all 19 basement drawings. For the transmittal, please coordinate with document control as it is outside my design management scope.',
+                usedToolNames: ['select_project_documents'],
+                allowedToolNames: ['select_project_documents', 'create_transmittal'],
+            })
+        ).toBe(true);
+    });
+
     it('does not recover addendum handoffs when the tool is not available', () => {
         expect(
             shouldRecoverWriteRefusal({
@@ -258,6 +300,30 @@ describe('shouldRecoverWriteRefusal', () => {
         ).toBe(true);
     });
 
+    it('recovers drawing selection "not available" answers before a selection tool call', () => {
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage: 'select drawing CC-20 in the repo',
+                finalText:
+                    'It appears that drawing CC-20 is not available in the document repository.',
+                usedToolNames: ['list_project_documents'],
+                allowedToolNames: ['list_project_documents', 'select_project_documents'],
+            })
+        ).toBe(true);
+    });
+
+    it('recovers section drawing selection "not available" answers before a selection tool call', () => {
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage: 'select all the section drawings in the repo',
+                finalText:
+                    'It appears that there are no section drawings available in the document repository.',
+                usedToolNames: ['list_project_documents'],
+                allowedToolNames: ['list_project_documents', 'select_project_documents'],
+            })
+        ).toBe(true);
+    });
+
     it('does not recover document-selection refusals after the selection tool was called', () => {
         expect(
             shouldRecoverWriteRefusal({
@@ -278,6 +344,22 @@ describe('shouldRecoverWriteRefusal', () => {
                 allowedToolNames: ['list_stakeholders', 'update_stakeholder'],
             })
         ).toBe(true);
+    });
+
+    it('recovers invoice log refusals through the invoice read tool', () => {
+        const latestUserMessage = 'I just want a log or record of all invoices for April 2026';
+
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage,
+                finalText:
+                    'I cannot generate an invoice log directly. Please refer to the finance team.',
+                usedToolNames: [],
+                allowedToolNames: ['list_invoices', 'record_invoice'],
+            })
+        ).toBe(true);
+        expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('Call list_invoices now');
+        expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('Do not call record_invoice');
     });
 });
 
@@ -337,6 +419,16 @@ describe('guardToolAgainstLatestIntent', () => {
         ).not.toThrow();
     });
 
+    it('allows addendum creation for common addendum typos', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'Create an adenumd with the selected set, call it Structural Update.',
+                toolName: 'create_addendum',
+            })
+        ).not.toThrow();
+    });
+
     it('blocks note creation for RFT content requests', () => {
         expect(() =>
             guardToolAgainstLatestIntent({
@@ -364,6 +456,46 @@ describe('guardToolAgainstLatestIntent', () => {
         ).not.toThrow();
     });
 
+    it('blocks note creation for invoice-only requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'add invoice number 123, for a sum of 30,000 allocated to developer/ long service levy, todays date, and status paid.',
+                toolName: 'create_note',
+            })
+        ).toThrow(/invoice/);
+    });
+
+    it('blocks programme milestone creation for invoice-only requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'add invoice number 123, for a sum of 30,000 allocated to developer/ long service levy, todays date, and status paid.',
+                toolName: 'create_program_milestone',
+            })
+        ).toThrow(/invoice/);
+    });
+
+    it('blocks programme activity creation for invoice-only requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'add invoice number 123, for a sum of 30,000 allocated to developer/ long service levy, todays date, and status paid.',
+                toolName: 'create_program_activity',
+            })
+        ).toThrow(/invoice/);
+    });
+
+    it('allows invoice-only requests to use the invoice tool', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'add invoice number 123, for a sum of 30,000 allocated to developer/ long service levy, todays date, and status paid.',
+                toolName: 'record_invoice',
+            })
+        ).not.toThrow();
+    });
+
     it('blocks direct note creation for issue-variation workflow requests', () => {
         expect(() =>
             guardToolAgainstLatestIntent({
@@ -384,12 +516,159 @@ describe('guardToolAgainstLatestIntent', () => {
         ).toThrow(/issue-variation workflow/);
     });
 
+    it('blocks direct programme activity creation for issue-variation workflow requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'Client asked for extra acoustic treatment. Please issue a variation for about $18,750, link it to the right cost line/programme activity, and add a short project note.',
+                toolName: 'create_program_activity',
+            })
+        ).toThrow(/issue-variation workflow/);
+    });
+
     it('allows the issue-variation workflow tool for workflow requests', () => {
         expect(() =>
             guardToolAgainstLatestIntent({
                 latestUserMessage:
                     'Client asked for extra acoustic treatment. Please issue a variation for about $18,750, link it to the right cost line/programme activity, and add a short project note.',
                 toolName: 'start_issue_variation_workflow',
+            })
+        ).not.toThrow();
+    });
+});
+
+describe('guardToolAgainstViewContextIntent', () => {
+    const viewContext = {
+        projectId: 'project-1',
+        route: '/projects/project-1?tab=notes',
+        pendingApprovalIds: [],
+        recentlyViewedIds: [],
+        selectedEntityIds: {
+            document: ['hyd-1', 'hyd-2'],
+        },
+    };
+
+    it('blocks stale transmittal document ids when the latest request uses the current selection', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Create a transmittal with the selection.',
+                toolName: 'create_transmittal',
+                input: {
+                    name: 'Electrical Documents',
+                    destination: 'note',
+                    documentIds: ['elec-1', 'elec-2'],
+                },
+                viewContext,
+            })
+        ).toThrow(/hyd-1, hyd-2/);
+    });
+
+    it('blocks stale filters for current-selection transmittals', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Create a transmittal from the selected documents.',
+                toolName: 'create_transmittal',
+                input: {
+                    destination: 'note',
+                    disciplineOrTrade: 'Electrical',
+                },
+                viewContext,
+            })
+        ).toThrow(/current document selection/);
+    });
+
+    it('blocks inferred discipline names that were not in the latest selection request', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Create a transmittal with the selection.',
+                toolName: 'create_transmittal',
+                input: {
+                    name: 'Electrical Documents',
+                    destination: 'note',
+                    documentIds: ['hyd-1', 'hyd-2'],
+                },
+                viewContext,
+            })
+        ).toThrow(/Do not reuse document IDs, filters, or discipline-based names/);
+    });
+
+    it('allows exact selected document ids for current-selection transmittals', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Create a transmittal with the selection.',
+                toolName: 'create_transmittal',
+                input: {
+                    name: 'Selected Documents Transmittal',
+                    destination: 'note',
+                    documentIds: ['hyd-2', 'hyd-1'],
+                },
+                viewContext,
+            })
+        ).not.toThrow();
+    });
+
+    it('blocks missing document ids for selected-set addenda', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage:
+                    'Create an adenumd with the selected set, call it Structural Update.',
+                toolName: 'create_addendum',
+                input: {
+                    stakeholderId: 'stakeholder-structural',
+                    content: 'Structural Update',
+                },
+                viewContext,
+            })
+        ).toThrow(/hyd-1, hyd-2/);
+    });
+
+    it('blocks selected-set addenda when no current selection is available', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage:
+                    'Create an addendum with the selected set, call it Structural Update.',
+                toolName: 'create_addendum',
+                input: {
+                    stakeholderId: 'stakeholder-structural',
+                    content: 'Structural Update',
+                    documentIds: ['doc-1'],
+                },
+                viewContext: {
+                    projectId: 'project-1',
+                    route: '/projects/project-1?tab=notes',
+                    pendingApprovalIds: [],
+                    recentlyViewedIds: [],
+                },
+            })
+        ).toThrow(/no selected document ids/);
+    });
+
+    it('allows exact selected document ids for selected-set addenda', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage:
+                    'Create an addendum with the selected set, call it Structural Update.',
+                toolName: 'create_addendum',
+                input: {
+                    stakeholderId: 'stakeholder-structural',
+                    content: 'Structural Update',
+                    documentIds: ['hyd-2', 'hyd-1'],
+                },
+                viewContext,
+            })
+        ).not.toThrow();
+    });
+
+    it('does not affect explicit filtered transmittal requests', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Create a transmittal for the electrical documents.',
+                toolName: 'create_transmittal',
+                input: {
+                    destination: 'note',
+                    disciplineOrTrade: 'Electrical',
+                },
+                viewContext,
             })
         ).not.toThrow();
     });

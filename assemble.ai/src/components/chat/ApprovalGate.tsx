@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { mutate as globalMutate } from 'swr';
 import type { PendingApprovalView } from '@/lib/hooks/use-chat-stream';
+import { dispatchAddendumCreated } from '@/lib/chat/addendum-events';
 
 interface ApprovalGateProps {
     approval: PendingApprovalView;
@@ -77,6 +78,43 @@ function resolutionFromResponse(
 }
 
 function revalidateAppliedEntity(toolName: string, appliedOutput: unknown): void {
+    const output = asRecord(appliedOutput);
+    const projectId = typeof output.projectId === 'string' ? output.projectId : null;
+    const id = typeof output.id === 'string' ? output.id : null;
+
+    if (toolName === 'create_transmittal') {
+        void globalMutate('/api/transmittals');
+        const stakeholderId = typeof output.stakeholderId === 'string' ? output.stakeholderId : null;
+        if (projectId && stakeholderId) {
+            void globalMutate(`/api/transmittals?projectId=${projectId}&stakeholderId=${stakeholderId}`);
+        }
+        if (projectId && output.transmittalTarget === 'note') {
+            void globalMutate(`/api/notes?projectId=${projectId}`);
+            if (id) {
+                void globalMutate(`/api/notes/${id}`);
+                void globalMutate(`/api/notes/${id}/transmittal`);
+            }
+        }
+        return;
+    }
+
+    if (toolName === 'create_addendum') {
+        const stakeholderId = typeof output.stakeholderId === 'string' ? output.stakeholderId : null;
+        if (projectId && stakeholderId) {
+            void globalMutate(
+                `/api/addenda?projectId=${encodeURIComponent(projectId)}&stakeholderId=${encodeURIComponent(stakeholderId)}`
+            );
+        }
+        if (id) {
+            void globalMutate(`/api/addenda/${id}`);
+            void globalMutate(`/api/addenda/${id}/transmittal`);
+        }
+        if (projectId && stakeholderId && id) {
+            dispatchAddendumCreated({ projectId, stakeholderId, addendumId: id });
+        }
+        return;
+    }
+
     if (
         toolName !== 'create_note' &&
         toolName !== 'update_note' &&
@@ -85,9 +123,6 @@ function revalidateAppliedEntity(toolName: string, appliedOutput: unknown): void
         return;
     }
 
-    const output = asRecord(appliedOutput);
-    const projectId = typeof output.projectId === 'string' ? output.projectId : null;
-    const id = typeof output.id === 'string' ? output.id : null;
     if (!projectId) return;
 
     void globalMutate(`/api/notes?projectId=${projectId}`);

@@ -14,6 +14,7 @@ import { chatThreads, approvals } from '@/lib/db/pg-schema';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { and, eq, asc } from 'drizzle-orm';
 import { registerChatConnection, unregisterChatConnection } from '@/lib/agents/events';
+import { filterActionablePendingApprovals } from '@/lib/workflows';
 
 interface RouteParams {
     params: Promise<{ threadId: string }>;
@@ -92,10 +93,11 @@ async function replayPendingApprovals(
             .where(and(eq(approvals.threadId, threadId), eq(approvals.status, 'pending')))
             .orderBy(asc(approvals.createdAt));
 
-        if (rows.length === 0) return;
+        const actionableRows = await filterActionablePendingApprovals(rows);
+        if (actionableRows.length === 0) return;
 
         const encoder = new TextEncoder();
-        for (const r of rows) {
+        for (const r of actionableRows) {
             const event = {
                 type: 'awaiting_approval' as const,
                 runId: r.runId,

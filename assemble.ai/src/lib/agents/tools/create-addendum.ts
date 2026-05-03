@@ -37,7 +37,7 @@ const definition: AgentToolDefinition<CreateAddendumInput, AwaitingApprovalOutpu
     spec: {
         name: TOOL,
         description:
-            'Propose a new addendum for a project stakeholder and attach existing project documents. Use for consultant addenda (Design) and contractor/tender addenda (Procurement/Document Control). Resolve stakeholderId with list_stakeholders and documentIds with list_project_documents/search_rag before calling. The addendum is not created until the user approves the inline approval card.',
+            'Propose a new addendum for a project stakeholder and attach existing project documents. Use for consultant addenda (Design) and contractor/tender addenda (Procurement/Document Control). Resolve stakeholderId with list_stakeholders and documentIds with list_project_documents/search_rag before calling. When the user says "the selection" or "selected set", pass the current selected documentIds from the app view exactly. If the user says "call it X", use X as content. The addendum is not created until the user approves the inline approval card.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -48,7 +48,8 @@ const definition: AgentToolDefinition<CreateAddendumInput, AwaitingApprovalOutpu
                 },
                 content: {
                     type: 'string',
-                    description: 'Addendum content/details to record.',
+                    description:
+                        'Addendum content/details/title to record. If the user says "call it X", use X.',
                 },
                 documentIds: {
                     type: 'array',
@@ -141,7 +142,7 @@ const definition: AgentToolDefinition<CreateAddendumInput, AwaitingApprovalOutpu
         const diff: ProposedDiff = {
             entity: 'addendum',
             entityId: null,
-            summary: `Create addendum - ${stakeholderLabel(stakeholder)}`,
+            summary: `Create addendum - ${addendumSummaryLabel(input.content, stakeholder)}`,
             changes,
         };
 
@@ -187,6 +188,15 @@ function stakeholderLabel(stakeholder: {
 }): string {
     const discipline = stakeholder.disciplineOrTrade ? ` - ${stakeholder.disciplineOrTrade}` : '';
     return `${stakeholder.name} (${stakeholder.stakeholderGroup}${discipline})`;
+}
+
+function addendumSummaryLabel(
+    content: string,
+    stakeholder: { name: string; stakeholderGroup: string; disciplineOrTrade: string | null }
+): string {
+    const trimmed = content.trim().replace(/\s+/g, ' ');
+    if (trimmed && trimmed.length <= 80) return trimmed;
+    return stakeholderLabel(stakeholder);
 }
 
 registerTool(definition);

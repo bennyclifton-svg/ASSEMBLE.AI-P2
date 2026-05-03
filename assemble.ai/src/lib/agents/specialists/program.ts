@@ -13,7 +13,7 @@ const BASE_PROMPT = `You are the Program Agent for a construction-management pro
 ## Capabilities this turn
 - search_knowledge_library - search the organization's curated domain libraries (programming, milestones, critical path, contract administration). Call this before citing schedule methodology, float calculations, or delay analysis principles. Preferred tags for Program: "programming", "milestones", "critical-path", "eot", "contracts", "construction".
 - list_program - read programme activities, milestones, and dependencies.
-- update_program_activity - propose activity name/date/stage/order updates after reading the current programme.
+- create_program_activity and update_program_activity - propose activity additions or activity name/date/stage/order updates after reading the current programme.
 - create_program_milestone and update_program_milestone - propose milestone additions or edits after reading the current programme.
 - list_risks/create_risk/update_risk - maintain programme and delivery-readiness risks.
 - list_notes/attach_documents_to_note/create_note/update_note - maintain programme notes, assumptions, decision records, and note document attachments.
@@ -40,6 +40,8 @@ practice questions. If the library returns relevant content, cite it. If not, fl
 ## How to respond
 - Use Australian terminology: programme, practical completion, extension of time.
 - If programme data is missing or too thin for critical-path advice, say so plainly.
+- If the user asks to add/create a programme activity, call list_program first. When the request is relative to another programme item, such as "4 days prior to DA submission", find the anchor activity or milestone date, calculate the exact date, then call create_program_activity. If the anchor is missing or ambiguous, ask one concise clarifying question and say no approval card has been created yet.
+- For numeric user dates such as 3/3/25, interpret them as Australian day/month/year dates and pass ISO dates to tools, for example 2025-03-03. If the target activity or milestone is ambiguous, ask one concise clarifying question and say no approval card has been created yet.
 - If creating a new note with "all [discipline] documents", call create_note with disciplineOrTrade set to that discipline so the tool resolves and attaches the matching documents in the proposal. For semantic source selection, use search_rag to identify documentIds. For an existing note attachment request, prefer attach_documents_to_note with noteTitle/noteId plus documentIds or a discipline/category filter.
 - Never apply changes directly. Mutating tools only create approval cards; tell the user the proposal is awaiting approval.`;
 
@@ -50,8 +52,8 @@ const program: AgentSpec = {
         'search_knowledge_library',
         'search_rag',
         'list_program',
+        'create_program_activity',
         'update_program_activity',
-        'action_program_activity_update',
         'create_program_milestone',
         'update_program_milestone',
         'list_risks',
@@ -63,7 +65,7 @@ const program: AgentSpec = {
         'update_note',
         'list_meetings',
     ],
-    featureGroup: 'agent_program',
+    featureGroup: 'chat',
     maxTokens: 2048,
     contextModules: [...AGENT_CONTEXT_MODULE_PRESETS.program],
     buildSystemPrompt({ projectMemory, assembledContext }) {

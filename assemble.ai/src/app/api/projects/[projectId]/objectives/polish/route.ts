@@ -5,14 +5,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectObjectives } from '@/lib/db/objectives-schema';
+import { projectObjectives, VALID_OBJECTIVE_TYPES, type ObjectiveType } from '@/lib/db/objectives-schema';
 import { projectProfiles } from '@/lib/db/pg-schema';
 import { aiComplete } from '@/lib/ai/client';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
 import { resolveProfileDomainTags, buildProfileSearchQuery } from '@/lib/constants/knowledge-domains';
+import { buildPolishPrompt } from './prompt-builder';
+import { handleLongFresh } from './long-fresh-handler';
 
 export async function POST(
   request: NextRequest,
@@ -27,39 +29,61 @@ export async function POST(
     const { projectId } = await params;
     const body = await request.json();
 
-    const { ids } = body as { ids?: unknown };
+    const { ids, section } = body as { ids?: unknown; section?: unknown };
 
-    if (!Array.isArray(ids) || ids.length === 0) {
+    const hasIds = Array.isArray(ids) && ids.length > 0;
+    const hasSection = typeof section === 'string'
+      && VALID_OBJECTIVE_TYPES.includes(section as ObjectiveType);
+
+    if (!hasIds && !hasSection) {
       return NextResponse.json(
-        { success: false, error: { code: 'VALIDATION_ERROR', message: 'ids must be a non-empty array of objective row IDs' } },
+        { success: false, error: { code: 'VALIDATION_ERROR', message: 'Provide either ids[] or a valid section' } },
         { status: 400 }
       );
     }
 
-    const idStrings = ids.filter((id): id is string => typeof id === 'string');
-    if (idStrings.length === 0) {
-      return NextResponse.json(
-        { success: false, error: { code: 'VALIDATION_ERROR', message: 'ids must contain string values' } },
-        { status: 400 }
-      );
-    }
+    // Resolve the rows to polish — either explicit IDs or all rows in a section.
+    let validRows: typeof projectObjectives.$inferSelect[];
 
-    // Fetch the rows to polish — only rows belonging to this project
-    const rows = await db
-      .select()
-      .from(projectObjectives)
-      .where(
-        inArray(projectObjectives.id, idStrings)
-      );
+    if (hasSection) {
+      validRows = await db
+        .select()
+        .from(projectObjectives)
+        .where(
+          and(
+            eq(projectObjectives.projectId, projectId),
+            eq(projectObjectives.objectiveType, section as ObjectiveType),
+            eq(projectObjectives.isDeleted, false),
+          )
+        );
 
-    // Filter to only rows belonging to this project and not deleted
-    const validRows = rows.filter(r => r.projectId === projectId && !r.isDeleted);
+      // Empty section → branch to "Long fresh" path (single AI call producing both forms).
+      if (validRows.length === 0) {
+        return await handleLongFresh({ projectId, section: section as ObjectiveType });
+      }
+    } else {
+      const idStrings = (ids as unknown[]).filter((id): id is string => typeof id === 'string');
+      if (idStrings.length === 0) {
+        return NextResponse.json(
+          { success: false, error: { code: 'VALIDATION_ERROR', message: 'ids must contain string values' } },
+          { status: 400 }
+        );
+      }
 
-    if (validRows.length === 0) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NOT_FOUND', message: 'No valid objectives found for the provided IDs' } },
-        { status: 404 }
-      );
+      const rows = await db
+        .select()
+        .from(projectObjectives)
+        .where(inArray(projectObjectives.id, idStrings));
+
+      // Filter to only rows belonging to this project and not deleted
+      validRows = rows.filter(r => r.projectId === projectId && !r.isDeleted);
+
+      if (validRows.length === 0) {
+        return NextResponse.json(
+          { success: false, error: { code: 'NOT_FOUND', message: 'No valid objectives found for the provided IDs' } },
+          { status: 404 }
+        );
+      }
     }
 
     // Fetch profile for context
@@ -148,32 +172,17 @@ export async function POST(
       }
     }
 
-    // Build the list of bullets to polish (use existing textPolished if available, else text)
-    const bulletList = validRows
-      .map((r, i) => `${i + 1}. ${r.textPolished || r.text}`)
-      .join('\n');
-
-    const prompt = `You are an expert construction project manager and technical writer in Australia.
-
-${profileContext}
-${domainContextSection ? `${domainContextSection}\n` : ''}OBJECTIVES TO EXPAND:
-
-${bulletList}
-
-INSTRUCTIONS - ITERATION 2:
-Expand each bullet point to 10-15 words while preserving meaning.
-1. Use the KNOWLEDGE DOMAIN CONTEXT above to add accurate Australian standards references (NCC 2022, BCA, AS standards) — cite only references found in the domain context, do not invent standards
-2. Make objectives measurable where possible (quantities, percentages, ratings, timeframes)
-3. Keep language professional, formal, and concise - suitable for tender documentation
-4. Do NOT add new objectives not present in the input
-5. Do NOT remove any items - every input bullet must have a corresponding expanded output
-6. Maintain the same numbered order as the input
-
-Return a JSON array of expanded strings (same count and order as input):
-["expanded bullet 1", "expanded bullet 2", ...]`;
+    // Build the polish prompt. CRITICAL: always send the row's `text` (the
+    // canonical short form). Sending `textPolished` would mean the AI re-polishes
+    // its own output and the user's recent edits to Short would be invisible.
+    const prompt = buildPolishPrompt({
+      profileContext,
+      domainContextSection,
+      bullets: validRows.map((r) => ({ text: r.text })),
+    });
 
     const { text: aiText } = await aiComplete({
-      featureGroup: 'content_polishing',
+      featureGroup: 'generation',
       maxTokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     });
@@ -196,11 +205,20 @@ Return a JSON array of expanded strings (same count and order as input):
       polishedTexts = validRows.map(r => r.textPolished || r.text);
     }
 
-    // Update each row with its polished text
+    // Update each row with its polished text. Polish is NON-DESTRUCTIVE:
+    //   - Missing or empty AI response for a row → leave the row unchanged.
+    //     The AI is fallible; we never silently destroy user data on its say-so.
+    //   - Use the trash icon for actual deletion.
     const updatedRows = [];
     for (let i = 0; i < validRows.length; i++) {
       const row = validRows[i];
-      const polishedText = polishedTexts[i] ?? row.text;
+      const polishedText = polishedTexts[i];
+
+      if (typeof polishedText !== 'string' || polishedText.trim() === '') {
+        // No usable polished text for this row — preserve the row as-is.
+        updatedRows.push(row);
+        continue;
+      }
 
       const [updated] = await db
         .update(projectObjectives)

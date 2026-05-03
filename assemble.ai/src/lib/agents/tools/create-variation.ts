@@ -9,6 +9,11 @@ import { db } from '@/lib/db';
 import { costLines, projectStakeholders } from '@/lib/db/pg-schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import {
+    COST_LINE_AMBIGUITY_GAP,
+    formatCostLineLabel,
+    rankCostLineMatches,
+} from '@/lib/agents/cost-line-matching';
+import {
     asObject,
     copyToolUseId,
     createDiffChanges,
@@ -38,20 +43,10 @@ interface CreateVariationInput extends Record<string, unknown> {
 }
 
 const VARIATION_CATEGORIES = ['Principal', 'Contractor', 'Lessor Works'] as const;
-const VARIATION_STATUSES = ['Forecast', 'Submitted', 'Approved', 'Rejected', 'Withdrawn'] as const;
+const VARIATION_STATUSES = ['Forecast', 'Approved', 'Rejected', 'Withdrawn'] as const;
 type VariationCategory = (typeof VARIATION_CATEGORIES)[number];
 type VariationStatus = (typeof VARIATION_STATUSES)[number];
 const TOOL = 'create_variation';
-
-interface CostLineLookupRow {
-    id: string;
-    section: string;
-    costCode: string | null;
-    activity: string;
-    reference: string | null;
-    stakeholderName: string | null;
-    disciplineOrTrade: string | null;
-}
 
 const definition: AgentToolDefinition<CreateVariationInput, AwaitingApprovalOutput> = {
     spec: {
@@ -207,10 +202,7 @@ async function resolveCostLineForVariation(
 
     const reference = input.costLineReference;
     const discipline = input.disciplineOrTrade;
-    const scored = rows
-        .map((row) => ({ row, score: scoreCostLine(row, reference, discipline) }))
-        .filter((candidate) => candidate.score >= 0.68)
-        .sort((a, b) => b.score - a.score);
+    const scored = rankCostLineMatches(rows, { reference, discipline });
 
     const best = scored[0];
     if (!best) {
@@ -223,7 +215,7 @@ async function resolveCostLineForVariation(
     }
 
     const next = scored[1];
-    if (next && Math.abs(best.score - next.score) < 0.04) {
+    if (next && Math.abs(best.score - next.score) < COST_LINE_AMBIGUITY_GAP) {
         const options = scored.slice(0, 3).map((candidate) => formatCostLineLabel(candidate.row));
         throw new Error(
             `${TOOL}: cost line match is ambiguous (${options.join('; ')}). ` +
@@ -232,85 +224,4 @@ async function resolveCostLineForVariation(
     }
 
     return { id: best.row.id, label: formatCostLineLabel(best.row) };
-}
-
-function scoreCostLine(
-    row: CostLineLookupRow,
-    reference?: string,
-    discipline?: string
-): number {
-    const refScore = reference
-        ? bestTextScore(reference, [row.activity, row.costCode, row.reference, `${row.costCode ?? ''} ${row.activity}`])
-        : 1;
-    const disciplineScore = discipline
-        ? bestTextScore(discipline, [row.stakeholderName, row.disciplineOrTrade])
-        : 1;
-
-    if (reference && refScore < 0.62) return 0;
-    if (discipline && disciplineScore < 0.62) return 0;
-    if (reference && discipline) return refScore * 0.7 + disciplineScore * 0.3;
-    return reference ? refScore : disciplineScore;
-}
-
-function bestTextScore(query: string, candidates: Array<string | null | undefined>): number {
-    return Math.max(0, ...candidates.map((candidate) => textScore(query, candidate ?? '')));
-}
-
-function textScore(query: string, candidate: string): number {
-    const a = normalizeText(query);
-    const b = normalizeText(candidate);
-    if (!a || !b) return 0;
-    if (a === b) return 1;
-    if (a.includes(b) || b.includes(a)) return 0.92;
-
-    const wordsA = new Set(a.split(' ').filter((word) => word.length > 2));
-    const wordsB = new Set(b.split(' ').filter((word) => word.length > 2));
-    const commonWords = [...wordsA].filter((word) => wordsB.has(word));
-    const distance = levenshteinDistance(a, b);
-    const editScore = 1 - distance / Math.max(a.length, b.length);
-    if (commonWords.length > 0) {
-        const wordScore = Math.max(
-            0.65,
-            commonWords.length / Math.max(wordsA.size, wordsB.size)
-        );
-        return Math.max(wordScore, editScore);
-    }
-
-    return editScore;
-}
-
-function normalizeText(value: string): string {
-    return value
-        .toLowerCase()
-        .replace(/&/g, ' and ')
-        .replace(/[^a-z0-9]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function levenshteinDistance(a: string, b: string): number {
-    const matrix: number[][] = [];
-    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-
-    for (let i = 1; i <= b.length; i++) {
-        for (let j = 1; j <= a.length; j++) {
-            matrix[i][j] =
-                b.charAt(i - 1) === a.charAt(j - 1)
-                    ? matrix[i - 1][j - 1]
-                    : Math.min(
-                        matrix[i - 1][j - 1] + 1,
-                        matrix[i][j - 1] + 1,
-                        matrix[i - 1][j] + 1
-                    );
-        }
-    }
-
-    return matrix[b.length][a.length];
-}
-
-function formatCostLineLabel(row: CostLineLookupRow): string {
-    const owner = row.stakeholderName || row.disciplineOrTrade;
-    const line = row.costCode ? `${row.costCode} - ${row.activity}` : row.activity;
-    return owner ? `${owner} - ${line}` : line;
 }

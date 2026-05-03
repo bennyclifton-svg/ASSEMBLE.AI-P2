@@ -8,7 +8,7 @@
  * 3. Includes source citations for retrieved chunks
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { aiCompleteStream } from '@/lib/ai/client';
 import type {
     ReportStateType,
     GeneratedSection,
@@ -23,9 +23,6 @@ import { eq, and } from 'drizzle-orm';
 import { buildSystemPrompt } from '@/lib/prompts/system-prompts';
 import { retrieveFromDomains } from '@/lib/rag/retrieval';
 import { normalizeTag, isKnownTag } from '@/lib/constants/knowledge-domains';
-
-// Initialize Anthropic client
-const anthropic = new Anthropic();
 
 export interface GenerateSectionResult {
     sections: GeneratedSection[];
@@ -182,9 +179,9 @@ export async function generateSectionNode(
 
         let content = '';
         const rftSystemPrompt = buildSystemPrompt('rft');
-        const stream = anthropic.messages.stream({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: maxTokens,
+        const stream = aiCompleteStream({
+            featureGroup: 'generation',
+            maxTokens,
             system: rftSystemPrompt,
             messages: [
                 {
@@ -195,21 +192,17 @@ export async function generateSectionNode(
         });
 
         // Collect streamed content
-        for await (const event of stream) {
-            if (event.type === 'content_block_delta' &&
-                event.delta.type === 'text_delta') {
-                const chunk = event.delta.text;
-                content += chunk;
+        for await (const chunk of stream) {
+            content += chunk.text;
 
-                // Emit chunk event
-                if (progressEmitter && state.reportId) {
-                    progressEmitter({
-                        reportId: state.reportId,
-                        sectionIndex: state.currentSectionIndex,
-                        event: 'section_chunk',
-                        data: { content: chunk },
-                    });
-                }
+            // Emit chunk event
+            if (progressEmitter && state.reportId) {
+                progressEmitter({
+                    reportId: state.reportId,
+                    sectionIndex: state.currentSectionIndex,
+                    event: 'section_chunk',
+                    data: { content: chunk.text },
+                });
             }
         }
 
@@ -543,30 +536,26 @@ ${rawContent}
 
 Return the polished version:`;
 
-        // 4. Stream to Claude
+        // 4. Stream to provider
         let content = '';
         const rftSystemPrompt = buildSystemPrompt('rft');
-        const stream = anthropic.messages.stream({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 2000,
+        const stream = aiCompleteStream({
+            featureGroup: 'generation',
+            maxTokens: 2000,
             system: rftSystemPrompt,
             messages: [{ role: 'user', content: enhancePrompt }],
         });
 
-        for await (const event of stream) {
-            if (event.type === 'content_block_delta' &&
-                event.delta.type === 'text_delta') {
-                const chunk = event.delta.text;
-                content += chunk;
+        for await (const chunk of stream) {
+            content += chunk.text;
 
-                if (progressEmitter && state.reportId) {
-                    progressEmitter({
-                        reportId: state.reportId,
-                        sectionIndex: state.currentSectionIndex,
-                        event: 'section_chunk',
-                        data: { content: chunk },
-                    });
-                }
+            if (progressEmitter && state.reportId) {
+                progressEmitter({
+                    reportId: state.reportId,
+                    sectionIndex: state.currentSectionIndex,
+                    event: 'section_chunk',
+                    data: { content: chunk.text },
+                });
             }
         }
 
@@ -650,9 +639,9 @@ Return the polished version:`;
 
         let content = '';
         const rftSystemPrompt = buildSystemPrompt('rft');
-        const stream = anthropic.messages.stream({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 1500,
+        const stream = aiCompleteStream({
+            featureGroup: 'generation',
+            maxTokens: 1500,
             system: rftSystemPrompt,
             messages: [
                 {
@@ -663,21 +652,17 @@ Return the polished version:`;
         });
 
         // Collect streamed content
-        for await (const event of stream) {
-            if (event.type === 'content_block_delta' &&
-                event.delta.type === 'text_delta') {
-                const chunk = event.delta.text;
-                content += chunk;
+        for await (const chunk of stream) {
+            content += chunk.text;
 
-                // Emit chunk event
-                if (progressEmitter && state.reportId) {
-                    progressEmitter({
-                        reportId: state.reportId,
-                        sectionIndex: state.currentSectionIndex,
-                        event: 'section_chunk',
-                        data: { content: chunk },
-                    });
-                }
+            // Emit chunk event
+            if (progressEmitter && state.reportId) {
+                progressEmitter({
+                    reportId: state.reportId,
+                    sectionIndex: state.currentSectionIndex,
+                    event: 'section_chunk',
+                    data: { content: chunk.text },
+                });
             }
         }
 

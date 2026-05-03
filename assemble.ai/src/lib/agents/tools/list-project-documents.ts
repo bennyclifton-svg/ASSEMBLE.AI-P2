@@ -28,6 +28,8 @@ interface ListProjectDocumentsInput {
     categoryName?: string;
     subcategoryName?: string;
     disciplineOrTrade?: string;
+    drawingNumber?: string;
+    documentName?: string;
     includeDocuments?: boolean;
     limit?: number;
 }
@@ -40,11 +42,15 @@ interface ListProjectDocumentsOutput {
         categoryName: string | null;
         subcategoryName: string | null;
         disciplineOrTrade: string | null;
+        drawingNumber: string | null;
+        documentName: string | null;
     };
     documentsIncluded: boolean;
     documents: Array<{
         id: string;
         name: string | null;
+        drawingNumber: string | null;
+        drawingRevision: string | null;
         categoryName: string | null;
         subcategoryName: string | null;
         versionNumber: number | null;
@@ -60,7 +66,7 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
     spec: {
         name: TOOL,
         description:
-            'Count, browse, or list the project document repository. Use this for questions like "how many documents are in the document repo?", "list the latest uploaded documents", or "how many documents are in this category". Default behavior returns only the count.',
+            'Count, browse, or list the project document repository. Use this for questions like "how many documents are in the document repo?", "list the latest uploaded documents", "find drawing CC-20", "find section drawings", or "how many documents are in this category". Default behavior returns only the count.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -85,6 +91,16 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
                     type: 'string',
                     description:
                         'Alias for subcategoryName. Use for requests like "all mechanical documents".',
+                },
+                drawingNumber: {
+                    type: 'string',
+                    description:
+                        'Optional drawing number filter. Use for requests like "find drawing CC-20" or "look up drawing number A-101".',
+                },
+                documentName: {
+                    type: 'string',
+                    description:
+                        'Optional document or drawing title/name contains filter. Use for requests like "find section drawings" or "list basement floor plan drawings". Matches extracted drawing names and original filenames.',
                 },
                 includeDocuments: {
                     type: 'boolean',
@@ -120,6 +136,12 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
         const disciplineOrTrade = optionalString(obj, 'disciplineOrTrade', TOOL);
         if (disciplineOrTrade) out.disciplineOrTrade = disciplineOrTrade;
 
+        const drawingNumber = optionalString(obj, 'drawingNumber', TOOL);
+        if (drawingNumber) out.drawingNumber = drawingNumber;
+
+        const documentName = optionalString(obj, 'documentName', TOOL);
+        if (documentName) out.documentName = documentName;
+
         const includeDocuments = optionalBoolean(obj, 'includeDocuments', TOOL);
         if (includeDocuments !== undefined) out.includeDocuments = includeDocuments;
 
@@ -142,10 +164,30 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
                 sql`COALESCE(${subcategories.name}, ${consultantDisciplines.disciplineName}, ${contractorTrades.tradeName}) ILIKE ${`%${subcategoryName}%`}`
             );
         }
+        if (input.drawingNumber) {
+            conditions.push(
+                sql`(
+                    ${fileAssets.drawingNumber} ILIKE ${input.drawingNumber}
+                    OR regexp_replace(lower(coalesce(${fileAssets.drawingNumber}, '')), '[^a-z0-9]', '', 'g') =
+                        ${normaliseDrawingNumber(input.drawingNumber)}
+                )`
+            );
+        }
+        if (input.documentName) {
+            const pattern = `%${input.documentName}%`;
+            conditions.push(
+                sql`(
+                    ${fileAssets.drawingName} ILIKE ${pattern}
+                    OR ${fileAssets.originalName} ILIKE ${pattern}
+                )`
+            );
+        }
 
         const [countRow] = await db
             .select({ count: sql<number>`count(*)` })
             .from(documents)
+            .leftJoin(versions, eq(documents.latestVersionId, versions.id))
+            .leftJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
             .leftJoin(categories, eq(documents.categoryId, categories.id))
             .leftJoin(subcategories, eq(documents.subcategoryId, subcategories.id))
             .leftJoin(
@@ -166,7 +208,9 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
                     .select({
                         id: documents.id,
                         originalName: fileAssets.originalName,
+                        drawingNumber: fileAssets.drawingNumber,
                         drawingName: fileAssets.drawingName,
+                        drawingRevision: fileAssets.drawingRevision,
                         categoryName: categories.name,
                         subcategoryName: sql<string | null>`COALESCE(${subcategories.name}, ${consultantDisciplines.disciplineName}, ${contractorTrades.tradeName})`,
                         versionNumber: versions.versionNumber,
@@ -189,6 +233,8 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
                 documentRows = rows.map((row) => ({
                     id: row.id,
                     name: row.drawingName ?? row.originalName ?? null,
+                    drawingNumber: row.drawingNumber ?? null,
+                    drawingRevision: row.drawingRevision ?? null,
                     categoryName: row.categoryName ?? null,
                     subcategoryName: row.subcategoryName ?? null,
                     versionNumber: row.versionNumber ?? null,
@@ -205,6 +251,8 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
                 categoryName: input.categoryName ?? null,
                 subcategoryName: input.subcategoryName ?? null,
                 disciplineOrTrade: input.disciplineOrTrade ?? null,
+                drawingNumber: input.drawingNumber ?? null,
+                documentName: input.documentName ?? null,
             },
             documentsIncluded: includeDocuments,
             documents: documentRows,
@@ -213,5 +261,9 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
 };
 
 registerTool(definition);
+
+function normaliseDrawingNumber(value: string): string {
+    return value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 export { definition as listProjectDocumentsTool };
