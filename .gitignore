@@ -6,3 +6,7 @@ assemble.ai/NUL
 # (kept on disk but never committed — GitHub blocks files >100MB)
 foundry/
 assemble.ai test files/
+
+# Local-only debug dumps that may contain credentials
+svc_inspect.txt
+**/svc_inspect.txt
