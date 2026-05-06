@@ -23,11 +23,14 @@ import {
     isInvoiceWriteRequest,
     isIssueVariationWorkflowRequest,
     isNoteWriteRequest,
+    isProjectReportWriteRequest,
     isProgrammeDateWriteRequest,
     isProgramNoteRequest,
     isProgramWriteRequest,
     isProjectStatusRequest,
     isRftWriteRequest,
+    isTenderFirmWriteRequest,
+    isTechnicalServicesQuestion,
     isTransmittalWriteRequest,
     isVariationWriteRequest,
 } from './intent';
@@ -239,7 +242,15 @@ export function routeAgents(text: string): SpecialistName[] {
         return ['design'];
     }
 
+    if (isTenderFirmWriteRequest(text)) {
+        return ['design'];
+    }
+
     if (isRftWriteRequest(text)) {
+        return ['design'];
+    }
+
+    if (isTechnicalServicesQuestion(text) && !hasFinanceContext(text) && !hasProgramContext(text)) {
         return ['design'];
     }
 
@@ -247,6 +258,10 @@ export function routeAgents(text: string): SpecialistName[] {
         return ['finance'];
     }
     if (isNoteWriteRequest(text) && !isFinanceNoteRequest(text) && !isProgramNoteRequest(text)) {
+        return ['design'];
+    }
+
+    if (isProjectReportWriteRequest(text)) {
         return ['design'];
     }
 
@@ -317,6 +332,26 @@ function specialistRoutingHint(agentName: SpecialistName, latestUserMessage: str
             'Routing note: this is an invoice ledger request. ' +
             'Resolve allocation wording against the cost plan, treating slash-separated text like "Developer Expenses / Long Service Levy" as costCategory plus costLineReference. ' +
             'Use record_invoice only; do not create notes or programme milestones unless the user explicitly asks for a separate artefact.'
+        );
+    }
+    if (
+        agentName === 'design' &&
+        isTenderFirmWriteRequest(latestUserMessage)
+    ) {
+        return (
+            'Routing note: this is tender-panel firm work. ' +
+            'Use add_tender_firms if possible; do not hand this to Procurement, Delivery, or Finance. ' +
+            'If this message is only a follow-up firm contact list, use the prior tender-panel request in the chat history to determine firmType and disciplineOrTrade.'
+        );
+    }
+    if (
+        agentName === 'design' &&
+        isProjectReportWriteRequest(latestUserMessage)
+    ) {
+        return (
+            'Routing note: this is project-report work in the Notes/Meetings/Reports area. ' +
+            'If the user says PCG report, treat PCG as Project Control Group, not progress claim. ' +
+            'Use list_reports to inspect existing PCG reports when helpful, then use create_report if the user asked for a new report.'
         );
     }
     if (

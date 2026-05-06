@@ -1,5 +1,5 @@
 /**
- * @deprecated PostgreSQL is the only supported database for assemble.ai.
+ * @deprecated PostgreSQL is the only supported database for SiteWise.au.
  *
  * This file remains as a short compatibility shim while older imports are
  * migrated. Do not add table declarations here; import from `@/lib/db` or

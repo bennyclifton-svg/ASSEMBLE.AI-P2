@@ -624,6 +624,49 @@ h2,
 }
 
 /* ============================================
+   OBJECTIVES EDITOR — automated numbering
+   Numbers are rendered as ::before pseudo-content so they cannot be
+   selected, edited, or toggled. Continuous across sections via the
+   --objectives-start-index custom property set by the parent wrapper.
+   ============================================ */
+.objectives-editor.prose ul,
+.objectives-editor ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  counter-reset: objective-counter var(--objectives-start-index, 0);
+}
+
+.objectives-editor.prose ul > li,
+.objectives-editor ul > li {
+  position: relative;
+  padding-left: 1.75rem;
+  counter-increment: objective-counter;
+}
+
+.objectives-editor.prose ul > li::before,
+.objectives-editor ul > li::before {
+  content: counter(objective-counter);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  width: 1.25rem;
+  text-align: right;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  user-select: none;
+  pointer-events: none;
+}
+
+.objectives-editor.prose ul > li::marker,
+.objectives-editor ul > li::marker {
+  content: '';
+}
+
+/* ============================================
    FOCUS STYLES
    ============================================ */
 :focus-visible {
@@ -801,11 +844,6 @@ textarea:-webkit-autofill:active {
 
 [data-theme="precision"] .glow-aurora-intense {
   box-shadow: var(--shadow-aurora-intense);
-}
-
-/* Logo icon - no glow, clean vector renders well on dark */
-[data-theme="precision"] .logo-icon-glow {
-  filter: none;
 }
 
 /* Legacy copper glow alias */
@@ -1429,6 +1467,29 @@ textarea:-webkit-autofill:active {
   height: 3px;
   background: #0066CC;
   border-radius: 2px 2px 0 0;
+}
+
+/* Contractor procurement sub-tabs use the same underline motion as consultant tabs, in copper. */
+.tab-contractor-copper-hover {
+  --contractor-tab-accent: var(--color-accent-yellow);
+}
+
+.tab-aurora-sub.tab-contractor-copper-hover::before {
+  background: var(--contractor-tab-accent);
+}
+
+.tab-aurora-sub.tab-contractor-copper-hover[data-state="active"] {
+  color: var(--contractor-tab-accent);
+  background: transparent;
+}
+
+.tab-aurora-sub.tab-contractor-copper-hover[data-state="active"]::before {
+  display: none;
+}
+
+.tab-aurora-sub.tab-contractor-copper-hover[data-state="active"]::after {
+  background: var(--contractor-tab-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--contractor-tab-accent) 35%, transparent);
 }
 
 /* === LEGACY: tab-aurora-indicator (keep for backwards compatibility) === */
@@ -2559,4 +2620,48 @@ textarea:-webkit-autofill:active {
   letter-spacing: 0.05em;
   color: rgba(23, 118, 193, 0.95) !important;
   border-bottom: 2px solid rgba(23, 118, 193, 0.3) !important;
+}
+
+/* ============================================
+   BRIEF EDITOR — automated numbering
+   Mirrors the OBJECTIVES EDITOR styling above. Numbers are rendered as
+   absolute-positioned ::before pseudo-content so they stay on the same line
+   as their bullet text. Continuous across Services → Deliverables via the
+   --brief-start-index custom property set inline on each .brief-section.
+   ============================================ */
+.brief-section .prose ul,
+.brief-section ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  counter-reset: brief-counter var(--brief-start-index, 0);
+}
+
+.brief-section .prose ul > li,
+.brief-section ul > li {
+  position: relative;
+  padding-left: 1.75rem;
+  counter-increment: brief-counter;
+}
+
+.brief-section .prose ul > li::before,
+.brief-section ul > li::before {
+  content: counter(brief-counter);
+  position: absolute;
+  left: 0;
+  top: 0.05rem;
+  width: 1.25rem;
+  text-align: right;
+  color: var(--color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  user-select: none;
+  pointer-events: none;
+}
+
+.brief-section .prose ul > li::marker,
+.brief-section ul > li::marker {
+  content: '';
 }

@@ -1,7 +1,7 @@
 import type { AgentSpec } from '../types';
 import { AGENT_CONTEXT_MODULE_PRESETS } from '@/lib/context/agent-context';
 
-const BASE_PROMPT = `You are the Orchestrator Agent for assemble.ai. You are the Project Director layer: route user requests to specialist agents, combine their outputs, and keep the user moving.
+const BASE_PROMPT = `You are the Orchestrator Agent for SiteWise.au. You are the Project Director layer: route user requests to specialist agents, combine their outputs, and keep the user moving.
 
 In this implementation you do not answer specialist questions directly. Runtime code performs the routing and fan-out; this prompt documents your behaviour for audit consistency.
 

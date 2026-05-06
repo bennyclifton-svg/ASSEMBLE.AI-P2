@@ -37,21 +37,12 @@ export function ObjectivesReadOnlyList({ data }: ObjectivesReadOnlyListProps) {
         return (
           <div key={type}>
             {/* Section header */}
-            <div className="flex items-center gap-2 mb-1.5">
+            <div className="mb-1.5">
               <span
                 className="text-xs font-semibold uppercase tracking-wide"
                 style={{ color: 'var(--color-text-primary)' }}
               >
                 {SECTION_LABELS[type]}
-              </span>
-              <span
-                className="text-xs font-medium px-1.5 py-0.5 rounded-full"
-                style={{
-                  backgroundColor: 'var(--color-accent-copper-tint)',
-                  color: 'var(--color-accent-copper)',
-                }}
-              >
-                {rows.length}
               </span>
             </div>
 

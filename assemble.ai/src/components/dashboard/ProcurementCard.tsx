@@ -12,6 +12,7 @@ import { ProgramPanel } from '@/components/program/ProgramPanel';
 import { BriefPanel } from '@/components/brief/BriefPanel';
 import { StakeholderPanel } from '@/components/stakeholders/StakeholderPanel';
 import { KnowledgePanel } from '@/components/knowledge/KnowledgePanel';
+import { CorrespondencePanel } from '@/components/correspondence/CorrespondencePanel';
 import { MeetingsReportsContainer } from '@/components/notes-meetings-reports/MeetingsReportsContainer';
 import { NotesPanel } from '@/components/notes-meetings-reports/NotesPanel';
 import { AlertCircle } from 'lucide-react';
@@ -306,6 +307,9 @@ export function ProcurementCard({
                     <TabsTrigger value="notes" className={tabClassName}>
                         Notes
                     </TabsTrigger>
+                    <TabsTrigger value="correspondence" className={tabClassName}>
+                        Correspondence
+                    </TabsTrigger>
                     <TabsTrigger value="meetings-reports" className={tabClassName}>
                         Meet & Report
                     </TabsTrigger>
@@ -371,7 +375,7 @@ export function ProcurementCard({
                                     <TabsTrigger
                                         key={`contractor-${s.id}`}
                                         value={`contractor-${s.id}`}
-                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] bg-transparent data-[state=active]:bg-transparent"
+                                        className="tab-aurora-sub tab-contractor-copper-hover rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] bg-transparent data-[state=active]:bg-transparent"
                                     >
                                         {s.disciplineOrTrade || s.name}
                                     </TabsTrigger>
@@ -452,6 +456,10 @@ export function ProcurementCard({
                         onSaveTransmittal={handleSaveNoteTransmittal}
                         onLoadTransmittal={handleLoadNoteTransmittal}
                     />
+                </TabsContent>
+
+                <TabsContent value="correspondence" className="flex-1 mt-0 min-h-0 overflow-hidden">
+                    <CorrespondencePanel projectId={projectId} />
                 </TabsContent>
 
                 {/* Meetings/Reports Tab Content - T096, T099 */}

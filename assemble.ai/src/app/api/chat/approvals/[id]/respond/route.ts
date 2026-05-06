@@ -59,6 +59,8 @@ function eventForTool(toolName: string): { entity: ProjectEntity; op: 'created' 
             return { entity: 'variation', op: 'updated' };
         case 'create_meeting':
             return { entity: 'meeting', op: 'created' };
+        case 'create_report':
+            return { entity: 'report', op: 'created' };
         case 'update_program_activity':
             return { entity: 'program_activity', op: 'updated' };
         case 'create_program_milestone':

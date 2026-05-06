@@ -13,6 +13,8 @@ export interface RFTExportData {
     address: string;
     documentLabel: string;
     issuedDate: string;
+    objectivesVisible: boolean;
+    programVisible: boolean;
     objectives: {
         planning: string[];
         functional: string[];

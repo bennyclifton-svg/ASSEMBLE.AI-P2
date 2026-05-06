@@ -11,9 +11,9 @@ import { listRisksTool } from '../list-risks';
 import { listVariationsTool } from '../list-variations';
 import { listStakeholdersTool } from '../list-stakeholders';
 import { listMeetingsTool } from '../list-meetings';
+import { listReportsTool } from '../list-reports';
 import { listAddendaTool } from '../list-addenda';
 import { createMeetingTool } from '../create-meeting';
-import { createAddendumTool } from '../create-addendum';
 import { createRiskTool } from '../create-risk';
 import { updateRiskTool } from '../update-risk';
 import { createVariationTool } from '../create-variation';
@@ -25,8 +25,11 @@ import { startIssueVariationWorkflowTool } from '../start-issue-variation-workfl
 const createProgramMilestoneTool = getTool('create_program_milestone')!;
 const updateProgramMilestoneTool = getTool('update_program_milestone')!;
 const createNoteTool = getTool('create_note')!;
+const createReportTool = getTool('create_report')!;
 const updateNoteTool = getTool('update_note')!;
 const attachDocumentsToNoteTool = getTool('attach_documents_to_note')!;
+const createAddendumTool = getTool('create_addendum')!;
+const addTenderFirmsTool = getTool('add_tender_firms')!;
 
 describe('Phase 3X read tools', () => {
     it('registers the new tools in the catalog', () => {
@@ -38,9 +41,12 @@ describe('Phase 3X read tools', () => {
             'list_variations',
             'list_stakeholders',
             'list_meetings',
+            'list_reports',
             'list_addenda',
             'create_meeting',
+            'create_report',
             'create_addendum',
+            'add_tender_firms',
             'create_note',
             'update_note',
             'attach_documents_to_note',
@@ -59,7 +65,9 @@ describe('Phase 3X read tools', () => {
         expect(specs.map((spec) => spec.name)).toContain('list_invoices');
         expect(specs.map((spec) => spec.name)).toContain('update_stakeholder');
         expect(specs.map((spec) => spec.name)).toContain('create_meeting');
+        expect(specs.map((spec) => spec.name)).toContain('create_report');
         expect(specs.map((spec) => spec.name)).toContain('create_addendum');
+        expect(specs.map((spec) => spec.name)).toContain('add_tender_firms');
         expect(specs.map((spec) => spec.name)).toContain('attach_documents_to_note');
         expect(specs.map((spec) => spec.name)).toContain('create_program_activity');
         expect(specs.map((spec) => spec.name)).toContain('start_issue_variation_workflow');
@@ -79,6 +87,10 @@ describe('Phase 3X read tools', () => {
         expect(listMeetingsTool.validate({ includeSections: false })).toEqual({
             includeSections: false,
         });
+        expect(listReportsTool.validate({ query: 'PCG', includeSections: false })).toEqual({
+            query: 'PCG',
+            includeSections: false,
+        });
         expect(listAddendaTool.validate({ stakeholderId: 'stk-1', includeDocuments: true })).toEqual({
             stakeholderId: 'stk-1',
             includeDocuments: true,
@@ -93,6 +105,7 @@ describe('Phase 3X read tools', () => {
             listVariationsTool,
             listStakeholdersTool,
             listMeetingsTool,
+            listReportsTool,
             listAddendaTool,
         ]) {
             expect(tool.mutating).toBe(false);
@@ -111,8 +124,12 @@ describe('Phase 3X write tool validation', () => {
             color: 'blue',
             documentIds: ['doc-1', 'doc-2'],
         });
-        expect(updateNoteTool.validate({ id: 'note-1', isStarred: true }).isStarred).toBe(true);
-        expect(updateNoteTool.validate({ id: 'note-1', attachDocumentIds: ['doc-3'] }).attachDocumentIds).toEqual(['doc-3']);
+        expect((updateNoteTool.validate({ id: 'note-1', isStarred: true }) as { isStarred?: boolean }).isStarred).toBe(true);
+        expect(
+            (updateNoteTool.validate({ id: 'note-1', attachDocumentIds: ['doc-3'] }) as {
+                attachDocumentIds?: string[];
+            }).attachDocumentIds
+        ).toEqual(['doc-3']);
         expect(() => updateNoteTool.validate({ id: 'note-1' })).toThrow(/at least one/i);
         expect(() => createNoteTool.validate({ title: 'Bad', documentIds: [''] })).toThrow();
         expect(() =>
@@ -285,8 +302,12 @@ describe('Phase 3X write tool validation', () => {
     });
 
     it('validates stakeholder updates', () => {
-        expect(updateStakeholderTool.validate({ id: 'stk-1', briefServices: 'DA coordination' }).briefServices).toBe('DA coordination');
-        expect(updateStakeholderTool.validate({ id: 'stk-1', isEnabled: false }).isEnabled).toBe(false);
+        expect(
+            (updateStakeholderTool.validate({ id: 'stk-1', briefServices: 'DA coordination' }) as {
+                briefServices?: string;
+            }).briefServices
+        ).toBe('DA coordination');
+        expect((updateStakeholderTool.validate({ id: 'stk-1', isEnabled: false }) as { isEnabled?: boolean }).isEnabled).toBe(false);
         expect(() => updateStakeholderTool.validate({ id: 'stk-1', name: 'New name' })).toThrow(/user-managed/i);
         expect(() => updateStakeholderTool.validate({ id: 'stk-1' })).toThrow(/at least one/i);
     });
@@ -325,13 +346,79 @@ describe('Phase 3X write tool validation', () => {
         ).toThrow(/addendumDate/);
     });
 
+    it('validates report creates', () => {
+        expect(
+            createReportTool.validate({
+                title: 'Monthly PCG Report - May 2026',
+                reportDate: '2026-05-06',
+                contentsType: 'standard',
+            })
+        ).toEqual(
+            expect.objectContaining({
+                title: 'Monthly PCG Report - May 2026',
+                reportDate: '2026-05-06',
+                contentsType: 'standard',
+            })
+        );
+        expect(() =>
+            createReportTool.validate({
+                title: 'Bad date',
+                reportDate: '06/05/2026',
+            })
+        ).toThrow(/reportDate/);
+    });
+
+    it('validates tender firm additions', () => {
+        expect(
+            addTenderFirmsTool.validate({
+                firmType: 'contractor',
+                disciplineOrTrade: 'Mechanical',
+                firms: [
+                    {
+                        companyName: 'Harbour Mechanical Services',
+                        address: 'Level 3, 18 Kent Street, Sydney NSW 2000',
+                        phone: '02 9188 4720',
+                        email: 'tenders@harbourmechanical.com.au',
+                    },
+                ],
+            })
+        ).toEqual({
+            firmType: 'contractor',
+            disciplineOrTrade: 'Mechanical',
+            firms: [
+                {
+                    companyName: 'Harbour Mechanical Services',
+                    address: 'Level 3, 18 Kent Street, Sydney NSW 2000',
+                    phone: '02 9188 4720',
+                    email: 'tenders@harbourmechanical.com.au',
+                },
+            ],
+        });
+        expect(() =>
+            addTenderFirmsTool.validate({
+                firmType: 'supplier',
+                disciplineOrTrade: 'Mechanical',
+                firms: [{ companyName: 'Bad Firm' }],
+            })
+        ).toThrow(/firmType/);
+        expect(() =>
+            addTenderFirmsTool.validate({
+                firmType: 'contractor',
+                disciplineOrTrade: 'Mechanical',
+                firms: [],
+            })
+        ).toThrow(/firms/);
+    });
+
     it('marks write tools as mutating', () => {
         for (const tool of [
             createNoteTool,
             updateNoteTool,
             attachDocumentsToNoteTool,
             createMeetingTool,
+            createReportTool,
             createAddendumTool,
+            addTenderFirmsTool,
             createRiskTool,
             updateRiskTool,
             createVariationTool,

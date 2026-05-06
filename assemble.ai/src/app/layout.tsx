@@ -25,11 +25,8 @@ const exo2 = Exo_2({
 });
 
 export const metadata: Metadata = {
-  title: "Foundry",
+  title: "SiteWise",
   description: "Architectural Precision in Procurement - AI-powered tender management platform",
-  icons: {
-    icon: "/logo-foundry.svg",
-  },
 };
 
 // Theme initialization script - runs before React hydration to prevent flash

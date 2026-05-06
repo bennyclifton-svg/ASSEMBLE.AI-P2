@@ -10,7 +10,6 @@ import {
     Database,
     ChevronsRight,
 } from 'lucide-react';
-import Image from 'next/image';
 
 // --- CONFIGURATION ---
 
@@ -120,20 +119,12 @@ export function CircuitBoardGraphic() {
                 }
             `}</style>
 
-            {/* Background Watermark - Increased Size */}
-            <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none">
-                <div className="w-[80%] h-[80%] text-slate-200 opacity-30">
-                    <img src="/logo-foundry.svg" alt="" className="w-full h-full object-contain grayscale opacity-20" />
-                </div>
-            </div>
-
             {/* --- UI LAYER --- */}
 
             {/* Left Sidebar */}
             <div className={`absolute top-0 bottom-0 left-0 w-[${SIDEBAR_W}%] bg-white border-r border-slate-200 flex flex-col z-20`} style={{ width: `${SIDEBAR_W}%` }}>
                 <div className="h-[14%] flex items-center px-4 gap-2 border-b border-transparent">
-                    <Image src="/logo-foundry.svg" alt="logo" width={24} height={24} className="w-6 h-6" />
-                    <span className="font-bold italic text-slate-900 text-sm hidden lg:inline">Foundry</span>
+                    <span className="font-bold italic text-slate-900 text-sm hidden lg:inline">SiteWise</span>
                 </div>
                 <div className="flex-1 py-6 space-y-4">
                     {LEFT_ITEMS.map(item => (

@@ -608,7 +608,7 @@ export async function exportProgramToPDF(data: ProgramData): Promise<ArrayBuffer
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
     doc.text(
-        `Generated: ${new Date().toLocaleDateString('en-AU')} | Assemble.ai`,
+        `Generated: ${new Date().toLocaleDateString('en-AU')} | SiteWise`,
         pageWidth - margin,
         pageHeight - 5,
         { align: 'right' }

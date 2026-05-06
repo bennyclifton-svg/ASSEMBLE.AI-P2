@@ -9,6 +9,7 @@
 
 import useSWR, { mutate as globalMutate } from 'swr';
 import { useCallback } from 'react';
+import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import type {
     Report,
     ReportWithDetails,
@@ -145,6 +146,17 @@ export function useReports({ projectId, groupId }: UseReportsOptions): UseReport
             revalidateOnFocus: false,
             dedupingInterval: 5000,
         }
+    );
+
+    useProjectEvents(
+        projectId || null,
+        useCallback(
+            (event) => {
+                if (event.type !== 'entity_updated' || event.entity !== 'report') return;
+                mutate();
+            },
+            [mutate]
+        )
     );
 
     const refetch = useCallback(() => {

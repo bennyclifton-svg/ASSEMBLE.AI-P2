@@ -93,6 +93,75 @@ describe('buildAgentHistoryFromRows', () => {
 
         expect(history).toEqual([{ role: 'user', content: latest }]);
     });
+
+    it('uses only the latest standalone variation prompt so prior invoice details cannot bleed in', () => {
+        const invoicePrompt =
+            'Add invoice number INV-123 for $30,000 allocated to Developer Expenses / Long Service Levy, today, status paid.';
+        const latest =
+            'Add a Principal variation for upgraded lobby finishes with forecast amount $5,000.';
+
+        const history = buildAgentHistoryFromRows([
+            { role: 'user', content: invoicePrompt },
+            {
+                role: 'assistant',
+                content: "I've put the proposed change in the approval card above.",
+            },
+            { role: 'user', content: latest },
+        ]);
+
+        expect(history).toEqual([{ role: 'user', content: latest }]);
+    });
+
+    it('uses only the latest terse variation prompt after the exact paid-invoice chain', () => {
+        const invoicePrompt =
+            'add invoice of $888 to consultant acoustic design, dated 28/04/2026, noting paid.';
+        const latest =
+            'add variation of $1111 to architecture, detail design, approved.';
+
+        const history = buildAgentHistoryFromRows([
+            { role: 'user', content: invoicePrompt },
+            {
+                role: 'assistant',
+                content: "I've put the proposed change in the approval card above.",
+            },
+            { role: 'assistant', content: 'Applied' },
+            { role: 'user', content: latest },
+        ]);
+
+        expect(history).toEqual([{ role: 'user', content: latest }]);
+    });
+
+    it('uses only the latest invoice entry prompt so prior variation details cannot bleed in', () => {
+        const variationPrompt =
+            'Add a Principal variation for upgraded lobby finishes with forecast amount $5,000.';
+        const latest =
+            'Add invoice number INV-124 for $12,000 allocated to Developer Expenses / Long Service Levy.';
+
+        const history = buildAgentHistoryFromRows([
+            { role: 'user', content: variationPrompt },
+            { role: 'assistant', content: 'There is one open variation.' },
+            { role: 'user', content: latest },
+        ]);
+
+        expect(history).toEqual([{ role: 'user', content: latest }]);
+    });
+
+    it('keeps invoice register summaries as ordinary context-bearing read requests', () => {
+        const previous = 'Add a Principal variation for upgraded lobby finishes.';
+        const latest = 'I just want a log or record of all invoices for April 2026';
+
+        const history = buildAgentHistoryFromRows([
+            { role: 'user', content: previous },
+            { role: 'assistant', content: 'Variation noted.' },
+            { role: 'user', content: latest },
+        ]);
+
+        expect(history.map((row) => row.content)).toEqual([
+            previous,
+            'Variation noted.',
+            latest,
+        ]);
+    });
 });
 
 describe('buildVisibleChatRows', () => {

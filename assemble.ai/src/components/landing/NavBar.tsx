@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Button } from './shared/Button';
 import { TypingLogo } from '@/components/brand/TypingLogo';
@@ -32,15 +31,7 @@ export function NavBar() {
         >
             <div className="max-w-[1280px] mx-auto px-8 py-4 flex items-center justify-between">
                 {/* Logo */}
-                <Link href="/" className="flex items-center gap-2 hover:scale-[1.02] transition-transform duration-200">
-                    <Image
-                        src="/logo-foundry.svg"
-                        alt="Foundry Logo"
-                        width={29}
-                        height={29}
-                        className="flex-shrink-0 logo-icon-glow"
-                        priority
-                    />
+                <Link href="/" className="flex items-center hover:scale-[1.02] transition-transform duration-200">
                     <TypingLogo className="text-white font-bold text-[18px] italic" />
                 </Link>
 

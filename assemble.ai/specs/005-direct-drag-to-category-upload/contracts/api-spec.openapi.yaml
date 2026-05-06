@@ -4,12 +4,12 @@ info:
   description: API endpoints for uploading and categorizing documents via drag-and-drop tiles
   version: 1.0.0
   contact:
-    name: assemble.ai Development Team
+    name: SiteWise.au Development Team
 
 servers:
   - url: http://localhost:3000/api
     description: Local development server
-  - url: https://app.assemble.ai/api
+  - url: https://sitewise.au/api
     description: Production server
 
 tags:

@@ -36,12 +36,12 @@ export const aiSectionContent = {
     label: 'Built-in construction intelligence',
     headline: 'Your expertise. AI that speaks construction.',
     description: 'Australian standards, regulations and best practices — built in from day one. What took hours now takes clicks.',
-    cta: 'Learn more about ASSEMBLE AI',
+    cta: 'Learn more about SiteWise',
 };
 
 export const problemContent = {
     headline: 'Construction management is hard.',
-    description: 'Constant pushing to deadlines, dealing with scope creep, variations and EOT. Knowledge scattered across spreadsheets, inboxes and shared drives. Foundry forges forward — information flows, knowledge compounds, teams iterate faster.',
+    description: 'Constant pushing to deadlines, dealing with scope creep, variations and EOT. Knowledge scattered across spreadsheets, inboxes and shared drives. SiteWise moves forward — information flows, knowledge compounds, teams iterate faster.',
     problems: [
         'Document intelligence',
         'Tender automation',
@@ -89,7 +89,7 @@ export const featuresContent = {
 };
 
 export const benefitsContent = {
-    headline: 'Why teams switch to Foundry',
+    headline: 'Why teams switch to SiteWise',
     benefits: [
         'Save 10+ hours per week on document handling and bid reviews',
         'Fewer costly mistakes with AI-powered data extraction',

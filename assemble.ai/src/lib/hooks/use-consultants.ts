@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { TENDER_FIRMS_ADDED_EVENT, type TenderFirmsAddedDetail } from '@/lib/chat/tender-firms-events';
 
 export interface Consultant {
   id: string;
@@ -64,6 +65,18 @@ export function useConsultants(projectId: string, discipline?: string) {
   useEffect(() => {
     fetchConsultants();
   }, [fetchConsultants]);
+
+  useEffect(() => {
+    const handleTenderFirmsAdded = (event: Event) => {
+      const detail = (event as CustomEvent<TenderFirmsAddedDetail>).detail;
+      if (!detail || detail.projectId !== projectId || detail.firmType !== 'consultant') return;
+      if (discipline && detail.disciplineOrTrade !== discipline) return;
+      void fetchConsultants();
+    };
+
+    window.addEventListener(TENDER_FIRMS_ADDED_EVENT, handleTenderFirmsAdded);
+    return () => window.removeEventListener(TENDER_FIRMS_ADDED_EVENT, handleTenderFirmsAdded);
+  }, [discipline, fetchConsultants, projectId]);
 
   const addConsultant = async (data: ConsultantFormData) => {
     try {

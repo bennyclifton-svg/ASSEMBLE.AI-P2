@@ -1,6 +1,6 @@
 /**
  * Test Document Generator
- * Generates comprehensive test PDFs for the assemble.ai application
+ * Generates comprehensive test PDFs for the SiteWise.au application
  */
 
 const { jsPDF } = require('jspdf');

@@ -65,7 +65,9 @@ let actionsLoaded = false;
 async function ensureActionsRegistered(): Promise<void> {
     if (actionsLoaded) return;
     await Promise.all([
+        import('@/lib/actions/definitions/add-tender-firms'),
         import('@/lib/actions/definitions/create-note'),
+        import('@/lib/actions/definitions/create-report'),
         import('@/lib/actions/definitions/create-program-activity'),
         import('@/lib/actions/definitions/create-program-milestone'),
         import('@/lib/actions/definitions/create-transmittal'),
@@ -76,6 +78,7 @@ async function ensureActionsRegistered(): Promise<void> {
         import('@/lib/actions/definitions/update-note'),
         import('@/lib/actions/definitions/update-program-activity'),
         import('@/lib/actions/definitions/update-program-milestone'),
+        import('@/lib/actions/definitions/update-stakeholder'),
     ]);
     actionsLoaded = true;
 }
@@ -145,8 +148,6 @@ export async function applyApproval(args: {
             return applyCreateCostLine(args.input, args.ctx);
         case 'record_invoice':
             return applyRecordInvoice(args.input, args.ctx);
-        case 'create_addendum':
-            return applyCreateAddendum(args.input, args.ctx);
         case 'create_risk':
             return applyCreateRisk(args.input, args.ctx);
         case 'update_risk':
@@ -155,8 +156,6 @@ export async function applyApproval(args: {
             return applyUpdateVariation(args.input, args.expectedRowVersion, args.ctx);
         case 'create_meeting':
             return applyCreateMeeting(args.input, args.ctx);
-        case 'update_stakeholder':
-            return applyUpdateStakeholder(args.input, args.expectedRowVersion, args.ctx);
         default:
             throw new Error(`No applicator registered for tool "${args.toolName}"`);
     }
@@ -417,7 +416,7 @@ async function validateProjectDocuments(
     return { ok: true, ids };
 }
 
-async function applyCreateAddendum(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
+export async function applyCreateAddendum(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
     const input = asInput(rawInput);
     const stakeholderId = inputString(input, 'stakeholderId');
     const content = inputString(input, 'content');
@@ -697,44 +696,6 @@ async function attachDocumentsToNote(
             addedAt: now,
         });
     }
-}
-
-async function applyCreateNote(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
-    const input = asInput(rawInput);
-    const title = inputString(input, 'title');
-    if (!title) return { kind: 'gone', reason: 'Missing note title on proposal.' };
-
-    const documentCheck = await validateProjectDocuments(inputStringArray(input, 'documentIds'), ctx);
-    if (documentCheck.ok === false) return { kind: 'gone', reason: documentCheck.reason };
-
-    const id = uuidv4();
-    const now = new Date().toISOString();
-    const values = {
-        id,
-        projectId: ctx.projectId,
-        organizationId: ctx.organizationId,
-        title,
-        content: inputOptionalString(input, 'content') ?? null,
-        isStarred: inputOptionalBoolean(input, 'isStarred') ?? false,
-        color: inputString(input, 'color') || 'yellow',
-        type: inputString(input, 'type') || 'note',
-        status: inputString(input, 'status') || 'open',
-        noteDate: inputOptionalString(input, 'noteDate') ?? null,
-        rowVersion: 1,
-        createdAt: now,
-        updatedAt: now,
-    };
-
-    const output = await db.transaction(async (tx) => {
-        await tx.insert(notes).values(values);
-        await attachDocumentsToNote(id, documentCheck.ids, tx);
-        return {
-            ...values,
-            attachedDocumentIds: documentCheck.ids,
-        } as unknown as Record<string, unknown>;
-    });
-
-    return { kind: 'applied', output };
 }
 
 export async function applyUpdateNote(
@@ -1079,61 +1040,6 @@ async function applyCreateMeeting(rawInput: unknown, ctx: ApplyContext): Promise
     });
 
     return { kind: 'applied', output };
-}
-
-async function applyUpdateStakeholder(
-    rawInput: unknown,
-    expectedRowVersion: number | null,
-    ctx: ApplyContext
-): Promise<ApplyResult> {
-    const input = asInput(rawInput);
-    const id = inputString(input, 'id');
-    if (!id) return { kind: 'gone', reason: 'Missing stakeholder id' };
-
-    const updateData: Record<string, unknown> = {
-        updatedAt: new Date(),
-        rowVersion: sql`${projectStakeholders.rowVersion} + 1`,
-    };
-    for (const key of [
-        'briefServices',
-        'briefDeliverables',
-        'briefFee',
-        'briefProgram',
-        'scopeWorks',
-        'scopePrice',
-        'scopeProgram',
-        'notes',
-    ] as const) {
-        if (input[key] !== undefined) updateData[key] = inputNullableString(input, key);
-    }
-    const isEnabled = inputOptionalBoolean(input, 'isEnabled');
-    if (isEnabled !== undefined) updateData.isEnabled = isEnabled;
-
-    const conditions = [
-        eq(projectStakeholders.id, id),
-        eq(projectStakeholders.projectId, ctx.projectId),
-        isNull(projectStakeholders.deletedAt),
-    ];
-    if (expectedRowVersion !== null) {
-        conditions.push(eq(projectStakeholders.rowVersion, expectedRowVersion));
-    }
-
-    const updated = await db.update(projectStakeholders).set(updateData).where(and(...conditions)).returning();
-    if (updated.length === 1) return { kind: 'applied', output: updated[0] as Record<string, unknown> };
-
-    const [stillThere] = await db
-        .select({ id: projectStakeholders.id, rowVersion: projectStakeholders.rowVersion })
-        .from(projectStakeholders)
-        .where(
-            and(
-                eq(projectStakeholders.id, id),
-                eq(projectStakeholders.projectId, ctx.projectId),
-                isNull(projectStakeholders.deletedAt)
-            )
-        )
-        .limit(1);
-    if (!stillThere) return { kind: 'gone', reason: 'Stakeholder no longer exists.' };
-    return { kind: 'conflict', reason: conflictReason('stakeholder', stillThere.rowVersion, expectedRowVersion) };
 }
 
 export async function applySetProjectObjectives(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {

@@ -76,6 +76,13 @@ export const DOCUMENT_CATEGORIES = {
         subcategorySource: 'knowledge' as const,
         row: 2,
     },
+    CORRESPONDENCE: {
+        id: 'correspondence',
+        name: 'Correspondence',
+        color: '#4F8A8B', // Muted teal
+        hasSubcategories: false,
+        row: 2,
+    },
     INGEST: {
         id: 'knowledge',
         name: 'Ingest',

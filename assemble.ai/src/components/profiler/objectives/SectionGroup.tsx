@@ -22,6 +22,8 @@ interface SectionGroupProps {
   isGenerating?: boolean;
   isAnyGenerating?: boolean;
   isLastSection?: boolean;
+  /** 1-based starting number for this section's items in the global sequence. */
+  startIndex?: number;
 }
 
 function itemsKey(items: EditorItem[]): string {
@@ -41,6 +43,7 @@ export function SectionGroup({
   isGenerating = false,
   isAnyGenerating = false,
   isLastSection = false,
+  startIndex = 1,
 }: SectionGroupProps) {
   const [isSaving, setIsSaving] = useState(false);
 
@@ -237,6 +240,7 @@ export function SectionGroup({
           onChange={handleEditorChange}
           onBlur={handleEditorBlur}
           placeholder={`Type ${label.toLowerCase()} objectives — one per line`}
+          startIndex={startIndex}
         />
       </div>
     </div>

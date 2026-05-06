@@ -10,14 +10,17 @@ import {
     approvalCardCount,
     compactApprovalGatedFinalText,
     formatMissingWorkflowApprovalText,
+    shouldRecoverEvidenceMismatchNonAnswer,
     shouldRecoverMissingApproval,
     shouldRecoverMissingDocumentSelection,
+    shouldRecoverMissingEvidenceSearch,
     shouldRecoverMissingInvoiceApproval,
     shouldRecoverWriteRefusal,
     guardToolAgainstLatestIntent,
     guardToolAgainstViewContextIntent,
     writeRefusalRecoveryPrompt,
 } from '../runner';
+import { guardProjectObjectivesAgainstLatestRequest } from '../objective-intent-guard';
 
 describe('approvalCardCount', () => {
     it('does not count workflow plans without real approval ids as cards', () => {
@@ -58,7 +61,9 @@ describe('compactApprovalGatedFinalText', () => {
                 finalText:
                     '**Finance Agent:**\nThe variation has been successfully added:\n\n**Variation Details:**\n- **Discipline**: Mechanical\n- **Approved Amount**: $7,777\n\nThis variation is now awaiting your approval.',
             })
-        ).toBe("I've put the proposed change in the approval card above.");
+        ).toBe(
+            "I've put the proposed change in the approval card above. Use Approve & apply to create it, or Edit/Reject if it needs changing."
+        );
     });
 
     it('uses plural wording when multiple approval cards were created', () => {
@@ -67,7 +72,9 @@ describe('compactApprovalGatedFinalText', () => {
                 approvalToolNames: ['record_invoice', 'record_invoice'],
                 finalText: 'Two invoices are awaiting your approval.',
             })
-        ).toBe("I've put the proposed changes in the approval cards above.");
+        ).toBe(
+            "I've put the proposed changes in the approval cards above. Use the buttons on those cards to approve, edit, or reject them."
+        );
     });
 
     it('leaves ordinary non-approval answers unchanged', () => {
@@ -324,6 +331,35 @@ describe('shouldRecoverWriteRefusal', () => {
         ).toBe(true);
     });
 
+    it('recovers PCG report requests that claim approval without create_report', () => {
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage: 'a new monthly PCG report',
+                finalText: 'PCG report proposed and awaiting your approval.',
+                usedToolNames: ['list_reports'],
+            })
+        ).toBe(true);
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage: 'a new monthly PCG report',
+                finalText: 'PCG report proposed and awaiting your approval.',
+                usedToolNames: ['create_report'],
+            })
+        ).toBe(false);
+    });
+
+    it('recovers topic document selection "found no documents" answers before a selection tool call', () => {
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage: 'select all documents about stairs',
+                finalText:
+                    'I found no documents matching stairs currently in the repository.',
+                usedToolNames: ['list_project_documents'],
+                allowedToolNames: ['list_project_documents', 'select_project_documents'],
+            })
+        ).toBe(true);
+    });
+
     it('does not recover document-selection refusals after the selection tool was called', () => {
         expect(
             shouldRecoverWriteRefusal({
@@ -346,6 +382,33 @@ describe('shouldRecoverWriteRefusal', () => {
         ).toBe(true);
     });
 
+    it('recovers tender-panel firm handoffs when add_tender_firms is available', () => {
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage: 'add 3 firms to the Mechanical consultant tender.',
+                finalText:
+                    'Adding new firms to a Mechanical consultant tender list is generally a task for the Procurement or Delivery Agent.',
+                usedToolNames: ['list_stakeholders'],
+                allowedToolNames: ['list_stakeholders', 'add_tender_firms'],
+            })
+        ).toBe(true);
+    });
+
+    it('recovers follow-up firm contact lists for tender panels', () => {
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage: `1. Harbour Mechanical Services
+Address: Level 3, 18 Kent Street, Sydney NSW 2000
+Phone: 02 9188 4720
+Email: tenders@harbourmechanical.com.au`,
+                finalText:
+                    'Please forward this request to the Procurement Agent to update the tender list.',
+                usedToolNames: [],
+                allowedToolNames: ['add_tender_firms'],
+            })
+        ).toBe(true);
+    });
+
     it('recovers invoice log refusals through the invoice read tool', () => {
         const latestUserMessage = 'I just want a log or record of all invoices for April 2026';
 
@@ -360,6 +423,70 @@ describe('shouldRecoverWriteRefusal', () => {
         ).toBe(true);
         expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('Call list_invoices now');
         expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('Do not call record_invoice');
+    });
+
+    it('recovers PCG report handoffs when create_report is available', () => {
+        const latestUserMessage = 'a new monthly PCG report';
+
+        expect(
+            shouldRecoverWriteRefusal({
+                latestUserMessage,
+                finalText:
+                    'I cannot create a PCG report here; please ask Finance or Document Control.',
+                usedToolNames: ['list_reports'],
+                allowedToolNames: ['list_reports', 'create_report'],
+            })
+        ).toBe(true);
+        expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('Project Control Group');
+    });
+});
+
+describe('shouldRecoverMissingEvidenceSearch', () => {
+    it('recovers technical services answers that did not search project evidence', () => {
+        expect(
+            shouldRecoverMissingEvidenceSearch({
+                latestUserMessage: 'what mechanical systems are specified in the appartments',
+                finalText:
+                    'From the cost plan, the mechanical services specified for the apartments include HVAC budget allowances.',
+                usedToolNames: [],
+                allowedToolNames: ['search_rag', 'list_notes'],
+            })
+        ).toBe(true);
+    });
+
+    it('does not recover once project evidence has been searched', () => {
+        expect(
+            shouldRecoverMissingEvidenceSearch({
+                latestUserMessage: 'Is CO monitoring required in the carpark?',
+                finalText: 'The mechanical specification says CO monitoring is required.',
+                usedToolNames: ['search_rag'],
+                allowedToolNames: ['search_rag', 'list_notes'],
+            })
+        ).toBe(false);
+    });
+});
+
+describe('shouldRecoverEvidenceMismatchNonAnswer', () => {
+    it('recovers when relevant spec evidence is treated as a stop sign because of a project mismatch', () => {
+        expect(
+            shouldRecoverEvidenceMismatchNonAnswer({
+                latestUserMessage: 'what mechanical systems are specified in the apartments',
+                finalText:
+                    'I found a relevant mechanical specification document, but it appears to be for a different project at 74-76 Kitchener Parade, Bankstown, not Lighthouse Residences. There is no direct extract in the Lighthouse Residences project documents specifying the mechanical systems installed in the apartments. To answer your question precisely, the Mechanical consultant should provide details.',
+                usedToolNames: ['search_rag'],
+            })
+        ).toBe(true);
+    });
+
+    it('does not recover when the answer gives the caveated evidence summary', () => {
+        expect(
+            shouldRecoverEvidenceMismatchNonAnswer({
+                latestUserMessage: 'what mechanical systems are specified in the apartments',
+                finalText:
+                    'The source appears to be for another project, so treat this as reference evidence. It specifies split-unit air conditioning systems for apartment cooling/heating and toilet/laundry exhaust systems. The Mechanical consultant should confirm whether this applies to Lighthouse.',
+                usedToolNames: ['search_rag'],
+            })
+        ).toBe(false);
     });
 });
 
@@ -400,6 +527,40 @@ describe('shouldRecoverMissingDocumentSelection', () => {
 });
 
 describe('guardToolAgainstLatestIntent', () => {
+    it('requires the AI ingestion filter for ingested document inventory questions', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'can you list all ingested documents',
+                toolName: 'list_project_documents',
+                input: { includeDocuments: true, limit: 30 },
+            })
+        ).toThrow(/ai\/rag knowledge/i);
+
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'can you list all ingested documents',
+                toolName: 'list_project_documents',
+                input: { includeDocuments: true, aiIngestionStatus: 'synced', limit: 500 },
+            })
+        ).not.toThrow();
+    });
+
+    it('blocks stale objective text that does not appear in the latest explicit objectives request', () => {
+        expect(() =>
+            guardProjectObjectivesAgainstLatestRequest({
+                latestUserMessage:
+                    'Specify induction cooktops, engineered timber flooring, full height tiles to wet areas, and curtains to the objectives.',
+                toolName: 'set_project_objectives',
+                input: {
+                    mode: 'append',
+                    functional: [
+                        'Incorporate air conditioning systems to ensure thermal comfort and energy efficiency in accordance with NCC requirements.',
+                    ],
+                },
+            })
+        ).toThrow(/earlier chat turns/);
+    });
+
     it('blocks addendum creation for note attachment requests', () => {
         expect(() =>
             guardToolAgainstLatestIntent({
@@ -494,6 +655,52 @@ describe('guardToolAgainstLatestIntent', () => {
                 toolName: 'record_invoice',
             })
         ).not.toThrow();
+    });
+
+    it('blocks stale invoice tool calls when the latest request is a variation', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'The Orchestrator routed this request to you as the Finance Agent.\nOriginal user request:\nAdd a Principal variation for upgraded lobby finishes with forecast amount $5,000.',
+                toolName: 'record_invoice',
+                input: {
+                    invoiceNumber: 'INV-123',
+                    amountCents: 3000000,
+                    costLineReference: 'Long Service Levy',
+                },
+            })
+        ).toThrow(/Do not reuse invoice details from earlier chat turns/);
+    });
+
+    it('blocks the exact paid-invoice payload from being reused for a terse variation request', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'The Orchestrator routed this request to you as the Finance Agent.\nOriginal user request:\nadd variation of $1111 to architecture, detail design, approved.',
+                toolName: 'record_invoice',
+                input: {
+                    invoiceNumber: 'INV-ACOUSTIC-042826',
+                    invoiceDate: '2026-04-28',
+                    description: 'Consultant Acoustic Design Invoice',
+                    amountCents: 88800,
+                    costLineReference: 'Acoustic design + site testing',
+                    paidStatus: 'paid',
+                },
+            })
+        ).toThrow(/Do not reuse invoice details from earlier chat turns/);
+    });
+
+    it('blocks invoice creation for invoice register read requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'I just want a log or record of all invoices for April 2026',
+                toolName: 'record_invoice',
+                input: {
+                    invoiceNumber: 'April 2026 invoice log',
+                    amountCents: 0,
+                },
+            })
+        ).toThrow(/not an invoice\/progress-claim entry/);
     });
 
     it('blocks direct note creation for issue-variation workflow requests', () => {
@@ -653,6 +860,106 @@ describe('guardToolAgainstViewContextIntent', () => {
                     stakeholderId: 'stakeholder-structural',
                     content: 'Structural Update',
                     documentIds: ['hyd-2', 'hyd-1'],
+                },
+                viewContext,
+            })
+        ).not.toThrow();
+    });
+
+    it('blocks stale addendum content for a new selected-set recipient request', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage:
+                    'Create an addendum to the general contractor, and attach the selected documents.',
+                toolName: 'create_addendum',
+                input: {
+                    stakeholderId: 'stakeholder-structural',
+                    content: 'Structural Update',
+                    documentIds: ['hyd-2', 'hyd-1'],
+                },
+                viewContext,
+            })
+        ).toThrow(/discipline-based names/);
+    });
+
+    it('blocks stale filters for notes created from the current selection', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Create a note with the selected documents called Structural Review.',
+                toolName: 'create_note',
+                input: {
+                    title: 'Structural Review',
+                    disciplineOrTrade: 'Electrical',
+                },
+                viewContext,
+            })
+        ).toThrow(/hyd-1, hyd-2/);
+    });
+
+    it('allows exact selected document ids for notes created from the current selection', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Create a note with the selected documents called Structural Review.',
+                toolName: 'create_note',
+                input: {
+                    title: 'Structural Review',
+                    documentIds: ['hyd-2', 'hyd-1'],
+                },
+                viewContext,
+            })
+        ).not.toThrow();
+    });
+
+    it('blocks stale filters for note attachments from the current selection', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Attach the selected set to the Structural Review note.',
+                toolName: 'attach_documents_to_note',
+                input: {
+                    noteTitle: 'Structural Review',
+                    disciplineOrTrade: 'Electrical',
+                },
+                viewContext,
+            })
+        ).toThrow(/Call attach_documents_to_note/);
+    });
+
+    it('allows exact selected document ids for note attachments', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Attach the selected set to the Structural Review note.',
+                toolName: 'attach_documents_to_note',
+                input: {
+                    noteTitle: 'Structural Review',
+                    documentIds: ['hyd-1', 'hyd-2'],
+                },
+                viewContext,
+            })
+        ).not.toThrow();
+    });
+
+    it('blocks stale update_note attachment ids for the current selection', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Update the note and attach the selected documents.',
+                toolName: 'update_note',
+                input: {
+                    id: 'note-1',
+                    attachDocumentIds: ['elec-1', 'elec-2'],
+                },
+                viewContext,
+            })
+        ).toThrow(/Call update_note/);
+    });
+
+    it('allows exact selected document ids for update_note attachments', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'Update the note and attach the selected documents.',
+                toolName: 'update_note',
+                input: {
+                    id: 'note-1',
+                    attachDocumentIds: ['hyd-2', 'hyd-1'],
                 },
                 viewContext,
             })

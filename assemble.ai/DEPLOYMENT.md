@@ -6,7 +6,8 @@
 - **Server IP**: `45.151.153.218`
 - **OS**: Ubuntu 24.04 LTS
 - **Hostname**: `assemblep2`
-- **App URL**: `http://foundry-45-151-153-218.traefik.me`
+- **App URL**: `https://sitewise.au` (also `https://www.sitewise.au`)
+- **Domain registrar**: CrazyDomains (DNS managed there — A records for `sitewise.au` and `www.sitewise.au` both point at `45.151.153.218`)
 - **Orchestration**: Docker Swarm (managed by Dokploy)
 
 ## Architecture on VPS
@@ -44,7 +45,7 @@ ssh root@45.151.153.218
 cd /tmp/ASSEMBLE.AI-P2 && git pull origin master
 cd assemble.ai && docker build -t assembleai-new \
   --build-arg DATABASE_URL='postgresql://postgres.bhiuvwofowmfrzjfkqlt:Minpin2026!@aws-1-ap-southeast-2.pooler.supabase.com:6543/postgres' \
-  --build-arg NEXT_PUBLIC_APP_URL='http://foundry-45-151-153-218.traefik.me' \
+  --build-arg NEXT_PUBLIC_APP_URL='https://sitewise.au' \
   --build-arg NEXT_PUBLIC_SENTRY_DSN='https://YOUR_KEY@oXXXX.ingest.sentry.io/YYYY' \
   .
 ```
@@ -71,6 +72,57 @@ docker logs -f $(docker ps -q -f name=assembleai-assembleai)
 ```
 
 Then visit the app URL to confirm it's working.
+
+## Domain Setup (sitewise.au)
+
+The app is reached at `https://sitewise.au`. Traefik (running on the VPS) terminates TLS via Let's Encrypt and routes the hostname to the app container.
+
+### One-time DNS
+
+At CrazyDomains → DNS Settings, two A records point at the server:
+
+| Sub Domain    | Type | Value             |
+|---------------|------|-------------------|
+| `sitewise.au` | A    | `45.151.153.218`  |
+| `www.sitewise.au` | A | `45.151.153.218`  |
+
+Verify from any machine: `nslookup sitewise.au` should return `45.151.153.218`.
+
+### Traefik routing on the swarm service
+
+Traefik is configured by labels on the swarm service. To switch the routing hostname from the old `foundry-45-151-153-218.traefik.me` to `sitewise.au`, update the labels in Dokploy (Service → Domains) **or** via CLI:
+
+```bash
+docker service update \
+  --label-add 'traefik.http.routers.assembleai.rule=Host(`sitewise.au`) || Host(`www.sitewise.au`)' \
+  --label-add 'traefik.http.routers.assembleai.entrypoints=websecure' \
+  --label-add 'traefik.http.routers.assembleai.tls.certresolver=letsencrypt' \
+  --label-add 'traefik.http.routers.assembleai.tls=true' \
+  --label-add 'traefik.http.services.assembleai.loadbalancer.server.port=3000' \
+  assembleai-assembleai-bxojdu
+```
+
+Replace `assembleai` (router/service name) with whatever name is already in use on this swarm if different — check existing labels with:
+
+```bash
+docker service inspect assembleai-assembleai-bxojdu --format '{{json .Spec.Labels}}'
+```
+
+The cert is issued automatically the first time Traefik sees a request for `sitewise.au`. If the cert fails to issue, check Traefik logs:
+
+```bash
+docker logs -f $(docker ps -q -f name=traefik)
+```
+
+### Polar webhook URL
+
+After DNS + Traefik are live, update the Polar webhook endpoint at https://polar.sh → Webhooks from the old Traefik URL to:
+
+```
+https://sitewise.au/api/auth/polar/webhooks
+```
+
+(Sandbox environment: same path on the sandbox dashboard.)
 
 ## Dokploy Dashboard
 

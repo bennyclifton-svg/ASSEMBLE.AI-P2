@@ -367,6 +367,39 @@ describe('POST /api/chat/approvals/[id]/respond', () => {
         });
     });
 
+    test('apply of create_report emits report created', async () => {
+        mockGetCurrentUser.mockResolvedValue({
+            user: { id: 'user-A', organizationId: 'org-A' },
+        });
+        mockApprovalsLimit.mockResolvedValueOnce([
+            {
+                id: 'approval-report',
+                organizationId: 'org-A',
+                threadId: 'thread-1',
+                projectId: 'proj-99',
+                toolName: 'create_report',
+                input: { title: 'Monthly PCG Report - May 2026' },
+                expectedRowVersion: null,
+                status: 'pending',
+            },
+        ]);
+        mockThreadsLimit.mockResolvedValueOnce([{ userId: 'user-A' }]);
+        mockApply.mockResolvedValue({
+            kind: 'applied',
+            output: { id: 'report-new', title: 'Monthly PCG Report - May 2026' },
+        });
+
+        const res = await POST(makeRequest({ decision: 'approve' }), { params });
+        expect(res.status).toBe(200);
+
+        expect(mockEmitProject).toHaveBeenCalledWith('proj-99', {
+            type: 'entity_updated',
+            entity: 'report',
+            op: 'created',
+            id: 'report-new',
+        });
+    });
+
     test('apply of create_addendum emits addendum created', async () => {
         mockGetCurrentUser.mockResolvedValue({
             user: { id: 'user-A', organizationId: 'org-A' },

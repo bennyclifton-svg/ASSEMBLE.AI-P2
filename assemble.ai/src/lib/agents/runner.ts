@@ -36,10 +36,13 @@ import {
 } from '@/lib/context/agent-context';
 import {
     formatChatViewContextForPrompt,
-    selectedDocumentIdsFromViewContext,
     type ChatViewContext,
 } from '@/lib/chat/view-context';
-import { isIssueVariationWorkflowRequest } from './intent';
+import { isIssueVariationWorkflowRequest, isTechnicalServicesQuestion } from './intent';
+import { guardProjectObjectivesAgainstLatestRequest } from './objective-intent-guard';
+import { guardToolAgainstCurrentDocumentSelection } from './selected-document-guard';
+import { guardAddendumStakeholderAgainstLatestRequest } from './stakeholder-intent-guard';
+import { guardTenderFirmAgainstLatestRequest } from './tender-firm-intent-guard';
 
 export interface RunAgentArgs {
     agentName: string;
@@ -76,7 +79,7 @@ const APPROVAL_CLAIM_RE =
 const WRITE_REFUSAL_RE =
     /\b(cannot|can't|unable to|not able to|outside my domain|outside this domain|outside my [\w\s-]{0,60}scope|falls outside my domain|requires another|dependency|document controller|admin agent|coordinate with)\b/i;
 const DOCUMENT_SELECTION_REFUSAL_RE =
-    /\b(cannot|can't|unable to|not able to|not available|not found|couldn't find|could not find|outside my domain|outside this domain|falls outside my domain|requires another|dependency|document controller|admin agent)\b|\bno\b[\s\S]{0,80}\bavailable\b/i;
+    /\b(cannot|can't|unable to|not able to|not available|not found|couldn't find|could not find|outside my domain|outside this domain|falls outside my domain|requires another|dependency|document controller|admin agent)\b|\bfound\s+no\b|\bno\b[\s\S]{0,80}\b(available|matching|found)\b/i;
 const INVOICE_REQUEST_RE =
     /\b(add|record|create|enter|post|allocate|log)\b[\s\S]{0,80}\b(invoice|progress claim|claim)\b/i;
 const INVOICE_LOG_READ_REQUEST_RE =
@@ -88,18 +91,22 @@ const ADDENDUM_REQUEST_RE = new RegExp(
 );
 const TRANSMITTAL_REQUEST_RE =
     /\b(create|add|issue|prepare|draft|save|generate)\b[\s\S]{0,180}\b(transmittals?)\b|\b(transmittals?)\b[\s\S]{0,180}\b(create|add|issue|prepare|draft|save|generate|documents?|drawings?|files?)\b/i;
-const CURRENT_DOCUMENT_SELECTION_RE =
-    /\b(?:with|from|using|use|for|of)\s+(?:the\s+)?(?:current\s+)?(?:selection|selected set)\b|\b(?:current|selected|the selected|these selected|those selected)\s+(?:documents?|docs?|drawings?|files?|set)\b/i;
 const NOTE_REQUEST_RE =
     /\b(create|add|record|update|change|edit|attach)\b[\s\S]{0,180}\b(notes?|decision record)\b|\b(notes?|decision record)\b[\s\S]{0,180}\b(attach|documents?|drawings?|files?|update|change|edit)\b/i;
+const PROJECT_REPORT_REQUEST_RE =
+    /\b(?:pcg|project control group)\b[\s\S]{0,140}\breports?\b|\breports?\b[\s\S]{0,140}\b(?:pcg|project control group)\b|\b(add|create|draft|generate|new|prepare)\b[\s\S]{0,140}\b(?:monthly\s+|project\s+)?reports?\b|\b(?:monthly\s+|project\s+)?reports?\b[\s\S]{0,140}\b(add|create|draft|generate|new|prepare)\b/i;
 const RFT_REQUEST_RE =
     /\b(rft|request for tender|tender package|tender document|tender documents)\b/i;
 const DOCUMENT_SELECTION_REQUEST_RE =
     /\b(select|tick|check|choose|highlight)\b[\s\S]{0,160}\b(documents?|docs?|drawings?|files?)\b|\b(documents?|docs?|drawings?|files?)\b[\s\S]{0,160}\b(select|tick|checked|highlighted|chosen)\b/i;
 const DOCUMENT_SELECTION_CLAIM_RE =
     /\b(selected|selection updated|now selected|successfully selected|have been selected|has been selected|ticked|checked|highlighted)\b/i;
+const TENDER_FIRM_REQUEST_RE =
+    /\b(add|record|create|enter|post|log|update|change|set|populate|append)\b[\s\S]{0,180}\b(firms?|companies|tenderers?|builders?|contractors?|consultants?)\b[\s\S]{0,180}\b(tender|panel|list)\b|\b(tender|panel|list)\b[\s\S]{0,180}\b(add|record|create|enter|post|log|update|change|set|populate|append|firms?|companies|tenderers?|builders?|contractors?|consultants?)\b/i;
+const FIRM_CONTACT_LIST_RE =
+    /(?=[\s\S]*\b(?:email|e-mail)\b)(?=[\s\S]*\bphone\b)(?=[\s\S]*\baddress\b)(?=[\s\S]*(?:^\s*\d+\.|\b(?:services|contractors|consultants|mechanical|hvac|builders|pty|ltd)\b))/im;
 const WRITE_REQUEST_RE =
-    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set|move|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,160}\b(invoice|progress claim|claim|cost line|cost lines|variation|variations|risk|risks|note|notes|meeting|meetings|programme|program|schedule|activity|activities|milestone|milestones|stakeholder|stakeholders|contact|contacts|objective|objectives|project objective|project objectives|brief|project brief|rft|request for tender|tender package|tender document|tender documents|addendum|addenda|transmittal|transmittals|document|documents)\b/i;
+    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|new|update|change|set|move|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,160}\b(invoice|progress claim|claim|cost line|cost lines|variation|variations|risk|risks|note|notes|meeting|meetings|report|reports|programme|program|schedule|activity|activities|milestone|milestones|stakeholder|stakeholders|contact|contacts|objective|objectives|project objective|project objectives|brief|project brief|rft|request for tender|tender package|tender document|tender documents|addendum|addenda|transmittal|transmittals|document|documents|firms?|companies|tenderers?|builders?|contractors?|consultants?|tender panel|tender list)\b/i;
 const MUTATING_TOOL_NAMES = new Set([
     'update_cost_line',
     'create_cost_line',
@@ -110,6 +117,7 @@ const MUTATING_TOOL_NAMES = new Set([
     'update_note',
     'attach_documents_to_note',
     'create_meeting',
+    'create_report',
     'create_risk',
     'update_risk',
     'create_variation',
@@ -121,6 +129,7 @@ const MUTATING_TOOL_NAMES = new Set([
     'update_program_milestone',
     'update_stakeholder',
     'set_project_objectives',
+    'add_tender_firms',
 ]);
 const NOTE_TOOL_NAMES = new Set(['create_note', 'update_note', 'attach_documents_to_note']);
 const PROGRAM_TOOL_NAMES = new Set([
@@ -144,35 +153,15 @@ const ISSUE_VARIATION_DIRECT_WRITE_TOOL_NAMES = new Set([
     'update_note',
     'attach_documents_to_note',
 ]);
-const TRANSMITTAL_DOCUMENT_FILTER_FIELDS = [
-    'categoryId',
-    'subcategoryId',
-    'categoryName',
-    'subcategoryName',
-    'disciplineOrTrade',
-    'drawingNumber',
-    'documentName',
-    'allProjectDocuments',
-] as const;
-const DOCUMENT_DISCIPLINE_TERMS = [
-    'architectural',
-    'architecture',
-    'structural',
-    'electrical',
-    'hydraulic',
-    'mechanical',
-    'civil',
-    'fire',
-    'bca',
-    'town planner',
-    'town planning',
-    'surveyor',
-    'survey',
-    'landscape',
-    'acoustic',
-    'geotechnical',
-] as const;
-
+const PROJECT_EVIDENCE_TOOL_NAMES = new Set(['list_notes', 'search_rag']);
+const DOCUMENT_INGESTION_QUERY_RE =
+    /\b(ingested|ingestion|synced|sync(?:ed|ing)?|rag|ai knowledge|knowledge base|searchable by ai)\b/i;
+const UNSUPPORTED_EVIDENCE_ANSWER_RE =
+    /\b(cost plan|would be detailed in|refer to the .*consultant|refer this question|no specific information|no relevant references|not found|couldn't find|could not find|uploaded documents|knowledge libraries|technical documentation)\b/i;
+const PROJECT_MISMATCH_EVIDENCE_RE =
+    /\b(found a relevant|relevant .*specification|different project|project mismatch|appears to be for .*different project|not for .*current project|not for .*lighthouse)\b/i;
+const PROJECT_MISMATCH_NON_ANSWER_RE =
+    /\b(no direct extract|to answer .*precisely|should provide details|would you like me to search|assist by checking|cannot (?:confirm|determine|answer)|not enough (?:project )?evidence)\b/i;
 export function approvalCardCount(output: unknown): number {
     if (!output || typeof output !== 'object') return 0;
     const record = output as { status?: unknown; steps?: unknown };
@@ -218,7 +207,9 @@ export function compactApprovalGatedFinalText(args: {
     if (args.approvalToolNames.length === 0) return args.finalText;
 
     const plural = args.approvalToolNames.length > 1;
-    return `I've put the proposed ${plural ? 'changes' : 'change'} in the approval ${plural ? 'cards' : 'card'} above.`;
+    return plural
+        ? "I've put the proposed changes in the approval cards above. Use the buttons on those cards to approve, edit, or reject them."
+        : "I've put the proposed change in the approval card above. Use Approve & apply to create it, or Edit/Reject if it needs changing.";
 }
 
 export function userSafeToolErrorMessage(message: string): string {
@@ -249,6 +240,19 @@ function latestUserText(history: AgentMessage[]): string {
     return '';
 }
 
+function asInputRecord(input: unknown): Record<string, unknown> {
+    return input && typeof input === 'object' && !Array.isArray(input)
+        ? (input as Record<string, unknown>)
+        : {};
+}
+
+function originalUserRequest(text: string): string {
+    const marker = 'Original user request:';
+    const index = text.lastIndexOf(marker);
+    if (index === -1) return text;
+    return text.slice(index + marker.length).trim();
+}
+
 export function shouldRecoverMissingInvoiceApproval(args: {
     latestUserMessage: string;
     finalText: string;
@@ -267,7 +271,13 @@ export function shouldRecoverMissingApproval(args: {
 }): boolean {
     if (args.usedToolNames.some((name) => MUTATING_TOOL_NAMES.has(name))) return false;
     if (INVOICE_LOG_READ_REQUEST_RE.test(args.latestUserMessage)) return false;
-    if (!WRITE_REQUEST_RE.test(args.latestUserMessage)) return false;
+    if (
+        !WRITE_REQUEST_RE.test(args.latestUserMessage) &&
+        !FIRM_CONTACT_LIST_RE.test(args.latestUserMessage) &&
+        !PROJECT_REPORT_REQUEST_RE.test(args.latestUserMessage)
+    ) {
+        return false;
+    }
     return APPROVAL_CLAIM_RE.test(args.finalText);
 }
 
@@ -299,6 +309,15 @@ export function shouldRecoverWriteRefusal(args: {
     }
     if (args.usedToolNames.includes('select_project_documents')) return false;
     if (args.usedToolNames.some((name) => MUTATING_TOOL_NAMES.has(name))) return false;
+    if (
+        (TENDER_FIRM_REQUEST_RE.test(args.latestUserMessage) ||
+            FIRM_CONTACT_LIST_RE.test(args.latestUserMessage)) &&
+        args.allowedToolNames.includes('add_tender_firms') &&
+        (WRITE_REFUSAL_RE.test(args.finalText) ||
+            /\b(procurement|delivery agent|forward(?:ing)? this request|task for)\b/i.test(args.finalText))
+    ) {
+        return true;
+    }
     if (DOCUMENT_SELECTION_REQUEST_RE.test(args.latestUserMessage)) {
         if (!DOCUMENT_SELECTION_REFUSAL_RE.test(args.finalText)) return false;
         return args.allowedToolNames.includes('select_project_documents');
@@ -310,8 +329,61 @@ export function shouldRecoverWriteRefusal(args: {
     if (ADDENDUM_REQUEST_RE.test(args.latestUserMessage)) {
         return args.allowedToolNames.includes('create_addendum');
     }
-    if (!WRITE_REQUEST_RE.test(args.latestUserMessage)) return false;
+    if (PROJECT_REPORT_REQUEST_RE.test(args.latestUserMessage)) {
+        return args.allowedToolNames.includes('create_report');
+    }
+    if (
+        !WRITE_REQUEST_RE.test(args.latestUserMessage) &&
+        !FIRM_CONTACT_LIST_RE.test(args.latestUserMessage)
+    ) {
+        return false;
+    }
     return args.allowedToolNames.some((name) => MUTATING_TOOL_NAMES.has(name));
+}
+
+export function shouldRecoverMissingEvidenceSearch(args: {
+    latestUserMessage: string;
+    finalText: string;
+    usedToolNames: string[];
+    allowedToolNames: string[];
+}): boolean {
+    if (!isTechnicalServicesQuestion(args.latestUserMessage)) return false;
+    if (!args.allowedToolNames.includes('search_rag')) return false;
+    if (args.usedToolNames.some((name) => PROJECT_EVIDENCE_TOOL_NAMES.has(name))) return false;
+    return args.usedToolNames.length === 0 || UNSUPPORTED_EVIDENCE_ANSWER_RE.test(args.finalText);
+}
+
+export function shouldRecoverEvidenceMismatchNonAnswer(args: {
+    latestUserMessage: string;
+    finalText: string;
+    usedToolNames: string[];
+}): boolean {
+    if (!isTechnicalServicesQuestion(args.latestUserMessage)) return false;
+    if (!args.usedToolNames.some((name) => PROJECT_EVIDENCE_TOOL_NAMES.has(name))) return false;
+    return (
+        PROJECT_MISMATCH_EVIDENCE_RE.test(args.finalText) &&
+        PROJECT_MISMATCH_NON_ANSWER_RE.test(args.finalText)
+    );
+}
+
+function missingEvidenceSearchRecoveryPrompt(): string {
+    return (
+        'You answered a technical services/specification question without searching project evidence. ' +
+        'Do not answer from the cost plan, general project context, or training knowledge alone. ' +
+        'If the user names a note or review, call list_notes first with includeContent=true and a focused query for that note title. ' +
+        'Then call search_rag with a focused query for the technical issue, such as mechanical systems, apartment HVAC, car park exhaust, or CO monitoring. ' +
+        'Answer from the returned note content or document excerpts and cite the note title or document name. ' +
+        'If neither source returns relevant evidence, say that project evidence was not found and name the search limitation.'
+    );
+}
+
+function evidenceMismatchAnswerRecoveryPrompt(): string {
+    return (
+        'You found relevant project evidence, but it appears to be from a specification or review for a different project. ' +
+        'Do not stop at the mismatch and do not ask to search again unless no evidence was returned. ' +
+        'Answer the user in two parts: first call out that the source project/name/address appears to differ from the current project and should be treated as reference evidence, not confirmed current-project scope; then answer the technical question directly from the returned evidence. ' +
+        'Use specific systems or requirements from the retrieved excerpts, and state that the current Mechanical consultant should confirm whether those same requirements apply to Lighthouse.'
+    );
 }
 
 function missingDocumentSelectionRecoveryPrompt(): string {
@@ -321,6 +393,7 @@ function missingDocumentSelectionRecoveryPrompt(): string {
         'For "mech", "mechanical", "mechanical services", or "HVAC" documents, use disciplineOrTrade="Mechanical" and mode="replace" unless the user asked to add/remove. ' +
         'For requests like "select drawing CC-20" or "select drawing number A-101", use drawingNumber set to that drawing number. ' +
         'For requests like "select all section drawings", use documentName="section". ' +
+        'For topic/title requests like "select all documents about stairs", use documentName set to the topic, such as "stairs". ' +
         'If the tool returns zero selected documents, ask one concise clarifying question.'
     );
 }
@@ -333,9 +406,11 @@ function missingApprovalRecoveryPrompt(): string {
         'for create_variation, use costLineReference and disciplineOrTrade when the user supplied labels instead of an id, and use list_cost_lines query rather than section for fuzzy cost-line labels; variation statuses are only Forecast, Approved, Rejected, or Withdrawn; ' +
         'create_addendum for stakeholder addenda and attached transmittal documents; ' +
         'create_transmittal for Notes-section transmittals from selected or filtered documents, or targeted project transmittals when a stakeholder/subcategory is supplied; ' +
+        'create_report for project reports, monthly reports, and PCG (Project Control Group) reports; use list_reports first if the existing report naming/cadence matters; do not treat PCG report as progress claim unless the user explicitly writes "progress claim"; ' +
         'create_risk or update_risk for risks; attach_documents_to_note, create_note, or update_note for notes; ' +
         'create_meeting for meeting records; ' +
-        'set_project_objectives for project brief/objective rows; ' +
+        'set_project_objectives for project brief/objective rows, using only the latest explicit objective wording when the user supplies a specific list; ' +
+        'add_tender_firms for adding consultant, contractor, builder, or tenderer firms to tender panels/lists; ' +
         'list_stakeholders then update_stakeholder for RFT brief content because the RFT Brief section is stored on the stakeholder briefServices/briefDeliverables fields; ' +
         'create_cost_line or update_cost_line for cost lines; create_program_activity, update_program_activity, create_program_milestone, or update_program_milestone for programme changes; ' +
         'update_stakeholder for stakeholder/contact changes. ' +
@@ -382,7 +457,18 @@ export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
             'Call select_project_documents now. For "mech", "mechanical", "mechanical services", or "HVAC" documents, use disciplineOrTrade="Mechanical" and mode="replace" unless the user asked to add/remove. ' +
             'For requests like "select drawing CC-20" or "select drawing number A-101", use drawingNumber set to that drawing number. ' +
             'For requests like "select all section drawings", use documentName="section". ' +
+            'For topic/title requests like "select all documents about stairs", use documentName set to the topic, such as "stairs". ' +
             'If the tool returns zero selected documents, ask one concise clarifying question.'
+        );
+    }
+
+    if (PROJECT_REPORT_REQUEST_RE.test(latestUserMessage)) {
+        return (
+            'You refused or drifted from a project-report request, but this agent can propose project reports through create_report. ' +
+            'Do not answer in prose and do not hand this to Finance or Document Control. ' +
+            'If the user says PCG report, treat PCG as Project Control Group, not progress claim. ' +
+            'Call list_reports with query="PCG" if existing PCG naming or cadence is relevant, then call create_report with a concise title, contentsType="standard" unless the user asks for detailed/custom contents, and any supplied report/reporting-period dates. ' +
+            'If a required title or date is genuinely ambiguous, ask one concise clarifying question and explicitly say no approval card has been created yet.'
         );
     }
 
@@ -409,13 +495,25 @@ export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
         return (
             'You refused or handed off an addendum request, but this agent has an approval-gated create_addendum tool. ' +
             'Do not answer in prose and do not hand this to a Document Controller or Admin Agent. ' +
-            'Treat any earlier refusal or handoff in the conversation as outdated. ' +
+            'Treat any earlier refusal, handoff, addendum recipient, or addendum name in the conversation as outdated unless the latest request repeats it. ' +
             'For consultant addenda, use list_stakeholders with stakeholderGroup="consultant" to resolve the recipient. If the request names a discipline such as Structural, Mechanical, Electrical, or Hydraulic, match the consultant by disciplineOrTrade/name/role. ' +
+            'For contractor, general contractor, builder, or tenderer addenda, use list_stakeholders with stakeholderGroup="contractor" and match the latest contractor recipient. ' +
             'If the user says "the selection", "selected set", or "selected documents/drawings", use the Current selected document ids from the app view exactly and ignore older chat document filters. ' +
             'If the user says "call it X", put X in create_addendum.content. ' +
             'For "all mechanical documents" or similar, use list_project_documents with disciplineOrTrade set to the discipline and includeDocuments=true. ' +
             'Then call create_addendum with stakeholderId, content, and documentIds. ' +
             'If the stakeholder or documents cannot be found, ask one concise clarifying question and explicitly say no approval card has been created yet.'
+        );
+    }
+
+    if (TENDER_FIRM_REQUEST_RE.test(latestUserMessage) || FIRM_CONTACT_LIST_RE.test(latestUserMessage)) {
+        return (
+            'You refused or handed off a tender-panel firm request, but this agent can propose tender-panel firms through add_tender_firms. ' +
+            'Do not answer in prose and do not hand this to Procurement, Delivery, or Finance. ' +
+            'If the latest message is only a list of firm names, addresses, phone numbers, and emails, use the prior tender-panel request in this chat to determine firmType and disciplineOrTrade. ' +
+            'Use firmType="consultant" for consultant tender panels and firmType="contractor" for contractor, trade, builder, or tenderer panels. ' +
+            'Create one firm object per named company, preserving companyName, address, phone, email, and contactPerson when supplied. ' +
+            'If the tender panel cannot be resolved, ask one concise clarifying question and explicitly say no approval card has been created yet.'
         );
     }
 
@@ -429,7 +527,28 @@ export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
 export function guardToolAgainstLatestIntent(args: {
     latestUserMessage: string;
     toolName: string;
+    input?: unknown;
 }): void {
+    const latestRequest = originalUserRequest(args.latestUserMessage);
+
+    if (
+        args.toolName === 'record_invoice' &&
+        (INVOICE_LOG_READ_REQUEST_RE.test(latestRequest) || !INVOICE_REQUEST_RE.test(latestRequest))
+    ) {
+        throw new Error(
+            'The latest request is not an invoice/progress-claim entry. Do not reuse invoice details from earlier chat turns. Use the tool for the current request instead, or ask one concise clarifying question before creating an approval card.'
+        );
+    }
+
+    if (args.toolName === 'list_project_documents' && DOCUMENT_INGESTION_QUERY_RE.test(args.latestUserMessage)) {
+        const input = asInputRecord(args.input);
+        if (typeof input.aiIngestionStatus !== 'string' || input.aiIngestionStatus !== 'synced') {
+            throw new Error(
+                'The user asked about ingested documents, which means documents synced to AI/RAG knowledge, not merely uploaded to the document repository. Call list_project_documents with aiIngestionStatus="synced"; includeDocuments=true when the user asks to list names.'
+            );
+        }
+    }
+
     if (
         INVOICE_REQUEST_RE.test(args.latestUserMessage) &&
         NOTE_TOOL_NAMES.has(args.toolName) &&
@@ -496,113 +615,13 @@ export function guardToolAgainstLatestIntent(args: {
     }
 }
 
-function asInputRecord(input: unknown): Record<string, unknown> {
-    return input && typeof input === 'object' && !Array.isArray(input)
-        ? (input as Record<string, unknown>)
-        : {};
-}
-
-function inputStringArray(input: Record<string, unknown>, field: string): string[] {
-    const value = input[field];
-    if (!Array.isArray(value)) return [];
-
-    const ids: string[] = [];
-    for (const item of value) {
-        if (typeof item !== 'string') continue;
-        const trimmed = item.trim();
-        if (trimmed && !ids.includes(trimmed)) ids.push(trimmed);
-    }
-    return ids;
-}
-
-function inputHasMeaningfulField(input: Record<string, unknown>, field: string): boolean {
-    const value = input[field];
-    if (typeof value === 'string') return value.trim().length > 0;
-    if (typeof value === 'boolean') return value;
-    if (Array.isArray(value)) return value.length > 0;
-    return value !== undefined && value !== null;
-}
-
-function sameStringSet(left: string[], right: string[]): boolean {
-    if (left.length !== right.length) return false;
-    const rightSet = new Set(right);
-    return left.every((value) => rightSet.has(value));
-}
-
-function disciplineTermsIn(value: string): string[] {
-    const lower = value.toLowerCase();
-    return DOCUMENT_DISCIPLINE_TERMS.filter((term) => lower.includes(term));
-}
-
-function currentSelectionTransmittalError(selectedDocumentIds: string[]): Error {
-    return new Error(
-        'The latest request refers to the current document selection. ' +
-            `Use exactly these current selected documentIds: ${selectedDocumentIds.join(', ')}. ` +
-            'Do not reuse document IDs, filters, or discipline-based names from earlier chat turns. ' +
-            'Call create_transmittal with destination="note", those documentIds, and omit document filters.'
-    );
-}
-
-function currentSelectionAddendumError(selectedDocumentIds: string[]): Error {
-    return new Error(
-        'The latest request refers to the current document selection. ' +
-            `Use exactly these current selected documentIds: ${selectedDocumentIds.join(', ')}. ` +
-            'Do not reuse document IDs from earlier chat turns. ' +
-            'Resolve the addendum stakeholder if needed, then call create_addendum with that stakeholderId, the user-supplied content/name, and those documentIds.'
-    );
-}
-
 export function guardToolAgainstViewContextIntent(args: {
     latestUserMessage: string;
     toolName: string;
     input: unknown;
     viewContext?: ChatViewContext | null;
 }): void {
-    if (!CURRENT_DOCUMENT_SELECTION_RE.test(args.latestUserMessage)) return;
-
-    const selectedDocumentIds = selectedDocumentIdsFromViewContext(args.viewContext);
-    const isSelectionAddendum =
-        args.toolName === 'create_addendum' && ADDENDUM_REQUEST_RE.test(args.latestUserMessage);
-    const isSelectionTransmittal =
-        args.toolName === 'create_transmittal' && TRANSMITTAL_REQUEST_RE.test(args.latestUserMessage);
-    if (selectedDocumentIds.length === 0) {
-        if (isSelectionAddendum || isSelectionTransmittal) {
-            throw new Error(
-                'The latest request refers to the current document selection, but no selected document ids are available in the current app view. Ask the user to select the documents again, and do not create an approval card yet.'
-            );
-        }
-        return;
-    }
-
-    const input = asInputRecord(args.input);
-    const documentIds = inputStringArray(input, 'documentIds');
-
-    if (isSelectionAddendum) {
-        if (!sameStringSet(documentIds, selectedDocumentIds)) {
-            throw currentSelectionAddendumError(selectedDocumentIds);
-        }
-        return;
-    }
-
-    if (!isSelectionTransmittal) return;
-
-    const hasStaleFilter = TRANSMITTAL_DOCUMENT_FILTER_FIELDS.some((field) =>
-        inputHasMeaningfulField(input, field)
-    );
-    if (hasStaleFilter || !sameStringSet(documentIds, selectedDocumentIds)) {
-        throw currentSelectionTransmittalError(selectedDocumentIds);
-    }
-
-    const name = typeof input.name === 'string' ? input.name.trim() : '';
-    if (!name) return;
-
-    const latestLower = args.latestUserMessage.toLowerCase();
-    const inferredDisciplineTerms = disciplineTermsIn(name).filter(
-        (term) => !latestLower.includes(term)
-    );
-    if (inferredDisciplineTerms.length > 0) {
-        throw currentSelectionTransmittalError(selectedDocumentIds);
-    }
+    guardToolAgainstCurrentDocumentSelection(args);
 }
 
 export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
@@ -710,11 +729,35 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
                             finalText,
                             usedToolNames,
                             allowedToolNames: agent.allowedTools,
+                        }) ||
+                        shouldRecoverMissingEvidenceSearch({
+                            latestUserMessage: triggeringUserText,
+                            finalText,
+                            usedToolNames,
+                            allowedToolNames: agent.allowedTools,
+                        }) ||
+                        shouldRecoverEvidenceMismatchNonAnswer({
+                            latestUserMessage: triggeringUserText,
+                            finalText,
+                            usedToolNames,
                         })) &&
                     turn < MAX_TURNS
                 ) {
                     let recoveryPrompt = missingApprovalRecoveryPrompt();
-                    if (shouldRecoverWriteRefusal({
+                    if (shouldRecoverEvidenceMismatchNonAnswer({
+                        latestUserMessage: triggeringUserText,
+                        finalText,
+                        usedToolNames,
+                    })) {
+                        recoveryPrompt = evidenceMismatchAnswerRecoveryPrompt();
+                    } else if (shouldRecoverMissingEvidenceSearch({
+                        latestUserMessage: triggeringUserText,
+                        finalText,
+                        usedToolNames,
+                        allowedToolNames: agent.allowedTools,
+                    })) {
+                        recoveryPrompt = missingEvidenceSearchRecoveryPrompt();
+                    } else if (shouldRecoverWriteRefusal({
                         latestUserMessage: triggeringUserText,
                         finalText,
                         usedToolNames,
@@ -779,12 +822,30 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
                     guardToolAgainstLatestIntent({
                         latestUserMessage: triggeringUserText,
                         toolName: tu.name,
+                        input: tu.input,
+                    });
+                    guardProjectObjectivesAgainstLatestRequest({
+                        latestUserMessage: triggeringUserText,
+                        toolName: tu.name,
+                        input: tu.input,
                     });
                     guardToolAgainstViewContextIntent({
                         latestUserMessage: triggeringUserText,
                         toolName: tu.name,
                         input: tu.input,
                         viewContext: ctx.viewContext,
+                    });
+                    await guardAddendumStakeholderAgainstLatestRequest({
+                        latestUserMessage: triggeringUserText,
+                        toolName: tu.name,
+                        input: tu.input,
+                        projectId: ctx.projectId,
+                    });
+                    guardTenderFirmAgainstLatestRequest({
+                        latestUserMessage: triggeringUserText,
+                        toolName: tu.name,
+                        input: tu.input,
+                        history: args.history,
                     });
                     // Mutating tools need the Anthropic tool_use_id so the
                     // resulting approvals row can be correlated back to the

@@ -45,7 +45,7 @@ export function getOpenRouter(): OpenAI {
             baseURL: OPENROUTER_BASE_URL,
             defaultHeaders: {
                 'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-                'X-Title': 'Foundry',
+                'X-Title': 'SiteWise',
             },
         });
     }

@@ -16,7 +16,11 @@
       "Bash(grep -v \"\\\\.md$\")",
       "Bash(npx jest *)",
       "Bash(git reset *)",
-      "Bash(grep -E \"Bin [0-9]+ -> [1-9][0-9]{6,}\")"
+      "Bash(grep -E \"Bin [0-9]+ -> [1-9][0-9]{6,}\")",
+      "PowerShell($root = \"d:\\\\AI Projects\\\\assemble.ai P2\\\\assemble.ai\\\\scripts\"; $tmp = \"$root\\\\hidden-extract\"; if \\(Test-Path $tmp\\) { Remove-Item -Recurse -Force $tmp }; Expand-Archive -Path \"$root\\\\debug-hidden.docx\" -DestinationPath $tmp; Get-Content \"$tmp\\\\word\\\\document.xml\" -Raw | Select-Object -First 3000)",
+      "PowerShell($root = \"d:\\\\AI Projects\\\\assemble.ai P2\\\\assemble.ai\\\\scripts\"; $xml = Get-Content \"$root\\\\hidden-extract\\\\word\\\\document.xml\" -Raw; \"Length: $\\($xml.Length\\)\"; \"Last 500 chars:\"; $xml.Substring\\([Math]::Max\\(0, $xml.Length - 500\\)\\))",
+      "PowerShell($root = \"d:\\\\AI Projects\\\\assemble.ai P2\\\\assemble.ai\\\\scripts\"; Copy-Item \"$root\\\\debug-visible.docx\" \"$root\\\\debug-visible.zip\" -Force; $tmp = \"$root\\\\visible-extract\"; if \\(Test-Path $tmp\\) { Remove-Item -Recurse -Force $tmp }; Expand-Archive -Path \"$root\\\\debug-visible.zip\" -DestinationPath $tmp; \"Visible doc XML length:\"; \\(Get-Content \"$tmp\\\\word\\\\document.xml\" -Raw\\).Length)",
+      "PowerShell($root = \"d:\\\\AI Projects\\\\assemble.ai P2\\\\assemble.ai\\\\scripts\"; foreach \\($v in @\\(\"hidden\",\"visible\"\\)\\) { Copy-Item \"$root\\\\debug-$v.docx\" \"$root\\\\debug-$v.zip\" -Force; $tmp = \"$root\\\\$v-extract\"; if \\(Test-Path $tmp\\) { Remove-Item -Recurse -Force $tmp }; Expand-Archive -Path \"$root\\\\debug-$v.zip\" -DestinationPath $tmp }; \"Extracted both.\")"
     ],
     "defaultMode": "bypassPermissions"
   }

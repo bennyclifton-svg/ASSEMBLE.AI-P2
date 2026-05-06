@@ -208,7 +208,7 @@ export function BillingPanel() {
                 {/* Help text */}
                 <p className="mt-8 text-center text-sm text-[var(--color-text-muted)]">
                     Questions about billing?{' '}
-                    <a href="mailto:support@assemble.ai" className="text-[var(--color-accent-primary)] hover:underline">
+                    <a href="mailto:support@sitewise.au" className="text-[var(--color-accent-primary)] hover:underline">
                         Contact support
                     </a>
                 </p>

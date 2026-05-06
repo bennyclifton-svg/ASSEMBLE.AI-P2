@@ -43,7 +43,8 @@ export const setProjectObjectivesAction = defineAction<
     id: 'planning.objectives.set',
     toolName: 'set_project_objectives',
     domain: 'planning',
-    description: 'Replace or append project brief objectives.',
+    description:
+        'Replace or append project brief objectives. For explicit user wording such as "specify X, Y, and Z", include only items from the latest user request and do not reuse earlier objective text unless repeated.',
     inputSchema,
     actorPolicies: {
         user: 'run',

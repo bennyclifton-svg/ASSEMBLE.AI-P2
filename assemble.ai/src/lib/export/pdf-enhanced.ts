@@ -965,44 +965,46 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
   });
   y = ((d as any).lastAutoTable?.finalY ?? y + 17) + 8;
 
-  // 2. OBJECTIVES
-  cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
-  d.text('OBJECTIVES', mg, y); y += 5;
+  // 2. OBJECTIVES (skipped when objectivesVisible is false)
+  if (data.objectivesVisible) {
+    cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+    d.text('OBJECTIVES', mg, y); y += 5;
 
-  const objectiveCategories: { label: string; items: string[] }[] = [
-    { label: 'Planning', items: data.objectives.planning },
-    { label: 'Functional', items: data.objectives.functional },
-    { label: 'Quality', items: data.objectives.quality },
-    { label: 'Compliance', items: data.objectives.compliance },
-  ];
-  const hasAnyObjective = objectiveCategories.some(c => c.items.length > 0);
+    const objectiveCategories: { label: string; items: string[] }[] = [
+      { label: 'Planning', items: data.objectives.planning },
+      { label: 'Functional', items: data.objectives.functional },
+      { label: 'Quality', items: data.objectives.quality },
+      { label: 'Compliance', items: data.objectives.compliance },
+    ];
+    const hasAnyObjective = objectiveCategories.some(c => c.items.length > 0);
 
-  if (hasAnyObjective) {
-    let counter = 1;
-    for (const cat of objectiveCategories) {
-      if (cat.items.length === 0) continue;
-      cpb(10);
-      // Subsection heading
-      d.setFontSize(9); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.blue);
-      d.text(cat.label, mg, y); y += 4.5;
-      // Numbered items
-      d.setFontSize(9); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.body);
-      const indentX = mg + 8;
-      const wrapWidth = cw - 8;
-      for (const item of cat.items) {
-        const prefix = `${counter}.`;
-        const lines = d.splitTextToSize(item, wrapWidth);
-        cpb(lines.length * 4 + 1);
-        d.text(prefix, mg + 2, y);
-        d.text(lines, indentX, y);
-        y += lines.length * 4 + 1;
-        counter++;
+    if (hasAnyObjective) {
+      let counter = 1;
+      for (const cat of objectiveCategories) {
+        if (cat.items.length === 0) continue;
+        cpb(10);
+        // Subsection heading
+        d.setFontSize(9); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.blue);
+        d.text(cat.label, mg, y); y += 4.5;
+        // Numbered items
+        d.setFontSize(9); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.body);
+        const indentX = mg + 8;
+        const wrapWidth = cw - 8;
+        for (const item of cat.items) {
+          const prefix = `${counter}.`;
+          const lines = d.splitTextToSize(item, wrapWidth);
+          cpb(lines.length * 4 + 1);
+          d.text(prefix, mg + 2, y);
+          d.text(lines, indentX, y);
+          y += lines.length * 4 + 1;
+          counter++;
+        }
+        y += 2;
       }
-      y += 2;
+      y += 3;
+    } else {
+      d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No objectives defined.', mg, y); y += 8;
     }
-    y += 3;
-  } else {
-    d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No objectives defined.', mg, y); y += 8;
   }
 
   // 3. BRIEF
@@ -1019,52 +1021,54 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
     d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No brief content.', mg, y); y += 8;
   }
 
-  // 4. PROGRAM
-  cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
-  d.text('PROGRAM', mg, y); y += 5;
-  const wd = data.activities.filter(a => a.startDate && a.endDate);
-  if (wd.length > 0) {
-    const allD = wd.flatMap(a => [new Date(a.startDate!), new Date(a.endDate!)]);
-    const mnD = new Date(Math.min(...allD.map(x => x.getTime())));
-    const mxD = new Date(Math.max(...allD.map(x => x.getTime())));
-    const wC = generateWeekColumns(mnD, mxD);
-    const mG = groupByMonth(wC);
-    const ord = buildOrderedActivities(data.activities);
+  // 4. PROGRAM (skipped when programVisible is false)
+  if (data.programVisible) {
+    cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+    d.text('PROGRAM', mg, y); y += 5;
+    const wd = data.activities.filter(a => a.startDate && a.endDate);
+    if (wd.length > 0) {
+      const allD = wd.flatMap(a => [new Date(a.startDate!), new Date(a.endDate!)]);
+      const mnD = new Date(Math.min(...allD.map(x => x.getTime())));
+      const mxD = new Date(Math.max(...allD.map(x => x.getTime())));
+      const wC = generateWeekColumns(mnD, mxD);
+      const mG = groupByMonth(wC);
+      const ord = buildOrderedActivities(data.activities);
 
-    const mRow: any[] = [
-      { content: 'Activity', rowSpan: 2, styles: { halign: 'left' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 8 } },
-      { content: 'Start', rowSpan: 2, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 7 } },
-      { content: 'End', rowSpan: 2, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 7 } },
-    ];
-    mG.forEach(g => mRow.push({ content: g.label, colSpan: g.count, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 7 } }));
-
-    const dRow: any[] = wC.map(c => ({ content: String(c.dayLabel), styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 6.5 } }));
-
-    const bRows = ord.map(a => {
-      const ch = !!a.parentId;
-      const aS = a.startDate ? new Date(a.startDate) : null;
-      const aE = a.endDate ? new Date(a.endDate) : null;
-      const r: any[] = [
-        { content: `${ch ? '    ' : '\u25B8 '}${a.name}`, styles: ch ? { fontStyle: 'normal' as const, textColor: RFT_COLORS.muted, fontSize: 7.5 } : { fontStyle: 'bold' as const, textColor: RFT_COLORS.dark, fontSize: 7.5 } },
-        { content: formatDateShort(a.startDate), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted, fontSize: 7 } },
-        { content: formatDateShort(a.endDate), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted, fontSize: 7 } },
+      const mRow: any[] = [
+        { content: 'Activity', rowSpan: 2, styles: { halign: 'left' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 8 } },
+        { content: 'Start', rowSpan: 2, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 7 } },
+        { content: 'End', rowSpan: 2, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 7 } },
       ];
-      wC.forEach(c => { r.push({ content: '', styles: { fillColor: aS && aE && isWeekInRange(c.start, aS, aE) ? RFT_COLORS.bar : RFT_COLORS.white } }); });
-      return r;
-    });
+      mG.forEach(g => mRow.push({ content: g.label, colSpan: g.count, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 7 } }));
 
-    const tlW = Math.min(7, (cw - 35 - 14 - 14) / wC.length);
-    const cs: Record<number, any> = { 0: { cellWidth: 35 }, 1: { cellWidth: 14 }, 2: { cellWidth: 14 } };
-    wC.forEach((_, i) => { cs[i + 3] = { cellWidth: tlW }; });
+      const dRow: any[] = wC.map(c => ({ content: String(c.dayLabel), styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 6.5 } }));
 
-    autoTable(d, {
-      startY: y, head: [mRow, dRow], body: bRows, theme: 'grid',
-      styles: { cellPadding: 1.5, lineColor: RFT_COLORS.border, lineWidth: 0.15, overflow: 'hidden' },
-      headStyles: { fillColor: RFT_COLORS.headerBg }, columnStyles: cs,
-      margin: { left: mg, right: mg }, tableWidth: cw,
-    });
-    y = ((d as any).lastAutoTable?.finalY ?? y + 32) + 8;
-  } else { d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No program activities with dates.', mg, y); y += 8; }
+      const bRows = ord.map(a => {
+        const ch = !!a.parentId;
+        const aS = a.startDate ? new Date(a.startDate) : null;
+        const aE = a.endDate ? new Date(a.endDate) : null;
+        const r: any[] = [
+          { content: `${ch ? '    ' : '\u25B8 '}${a.name}`, styles: ch ? { fontStyle: 'normal' as const, textColor: RFT_COLORS.muted, fontSize: 7.5 } : { fontStyle: 'bold' as const, textColor: RFT_COLORS.dark, fontSize: 7.5 } },
+          { content: formatDateShort(a.startDate), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted, fontSize: 7 } },
+          { content: formatDateShort(a.endDate), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted, fontSize: 7 } },
+        ];
+        wC.forEach(c => { r.push({ content: '', styles: { fillColor: aS && aE && isWeekInRange(c.start, aS, aE) ? RFT_COLORS.bar : RFT_COLORS.white } }); });
+        return r;
+      });
+
+      const tlW = Math.min(7, (cw - 35 - 14 - 14) / wC.length);
+      const cs: Record<number, any> = { 0: { cellWidth: 35 }, 1: { cellWidth: 14 }, 2: { cellWidth: 14 } };
+      wC.forEach((_, i) => { cs[i + 3] = { cellWidth: tlW }; });
+
+      autoTable(d, {
+        startY: y, head: [mRow, dRow], body: bRows, theme: 'grid',
+        styles: { cellPadding: 1.5, lineColor: RFT_COLORS.border, lineWidth: 0.15, overflow: 'hidden' },
+        headStyles: { fillColor: RFT_COLORS.headerBg }, columnStyles: cs,
+        margin: { left: mg, right: mg }, tableWidth: cw,
+      });
+      y = ((d as any).lastAutoTable?.finalY ?? y + 32) + 8;
+    } else { d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No program activities with dates.', mg, y); y += 8; }
+  }
 
   // 5. FEE
   cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);

@@ -26,6 +26,12 @@ export interface ObjectivesEditorProps {
   onFocus?: () => void;
   placeholder?: string;
   className?: string;
+  /**
+   * 1-based index of the first row in this editor within the global objectives
+   * list. Used to continue numbering across separate section editors. The
+   * number itself is rendered via CSS ::before — not editable text.
+   */
+  startIndex?: number;
 }
 
 const ID_ATTRIBUTE = 'data-row-id';
@@ -79,6 +85,7 @@ export function ObjectivesEditor({
   onFocus,
   placeholder = 'Type objectives — one per line',
   className,
+  startIndex = 1,
 }: ObjectivesEditorProps) {
   // Compute the initial HTML once on mount; afterwards the effect below syncs
   // external row changes that arrive while the editor is unfocused.
@@ -135,5 +142,16 @@ export function ObjectivesEditor({
     );
   }, [editor, externalRowsKey, rows]);
 
-  return <EditorContent editor={editor} />;
+  // Set the CSS counter base so numbers continue from the previous section.
+  // counter-increment runs on each <li>, so we reset to startIndex - 1 to make
+  // the first item display as `startIndex`.
+  const wrapperStyle = {
+    ['--objectives-start-index' as string]: Math.max(0, startIndex - 1),
+  } as React.CSSProperties;
+
+  return (
+    <div style={wrapperStyle}>
+      <EditorContent editor={editor} />
+    </div>
+  );
 }

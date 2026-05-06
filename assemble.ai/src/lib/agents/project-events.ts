@@ -30,6 +30,7 @@ export type ProjectEntity =
     | 'risk'
     | 'variation'
     | 'meeting'
+    | 'report'
     | 'objective'
     | 'program_activity'
     | 'program_milestone'

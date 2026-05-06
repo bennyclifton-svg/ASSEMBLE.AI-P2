@@ -6,10 +6,11 @@
 
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { type RftNew } from '@/lib/hooks/use-rft-new';
 import { RFTNewTransmittalSchedule } from './RFTNewTransmittalSchedule';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/use-toast';
 import { useFieldGeneration } from '@/lib/hooks/use-field-generation';
@@ -65,6 +66,8 @@ interface RFTNewShortTabProps {
     contextName: string;
     stakeholderId?: string | null;
     onDateChange?: (date: string) => void;
+    onToggleObjectivesVisible?: (visible: boolean) => void;
+    onToggleProgramVisible?: (visible: boolean) => void;
     onSaveTransmittal?: () => void;
     onLoadTransmittal?: () => void;
     onDownloadTransmittal?: () => void;
@@ -177,19 +180,60 @@ function formatDateDisplay(dateStr: string | null): string {
 }
 
 // Program Gantt Section Component - matches Program module appearance
-function ProgramGanttSection({ activities, zoomLevel }: { activities: ProgramActivity[]; zoomLevel: ZoomLevel }) {
+function ProgramGanttSection({
+    activities,
+    zoomLevel,
+    visible,
+    onToggleVisible,
+}: {
+    activities: ProgramActivity[];
+    zoomLevel: ZoomLevel;
+    visible: boolean;
+    onToggleVisible?: (v: boolean) => void;
+}) {
     // Filter visible activities based on collapsed state
     const visibleActivities = flattenVisibleActivities(activities);
 
     // Filter activities with dates and calculate date range
     const activitiesWithDates = visibleActivities.filter(a => a.startDate && a.endDate);
 
+    const headerRow = (
+        <div className="flex items-center gap-2">
+            <h3
+                className={cn(
+                    'text-sm font-semibold uppercase tracking-wide transition-colors',
+                    visible
+                        ? 'text-[var(--color-text-primary)]'
+                        : 'text-[var(--color-text-muted)]'
+                )}
+            >
+                Program
+            </h3>
+            <button
+                type="button"
+                onClick={() => onToggleVisible?.(!visible)}
+                aria-label={visible ? 'Hide program' : 'Show program'}
+                aria-expanded={visible}
+                title={
+                    visible
+                        ? 'Hide program (also excluded from PDF/Word export)'
+                        : 'Show program (also included in PDF/Word export)'
+                }
+                className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors p-1 -m-1"
+            >
+                {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+        </div>
+    );
+
+    if (!visible) {
+        return <div className="space-y-2">{headerRow}</div>;
+    }
+
     if (activitiesWithDates.length === 0) {
         return (
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                    Program
-                </h3>
+                {headerRow}
                 <div className="border border-[var(--color-border)] rounded overflow-hidden">
                     <div className="px-4 py-3 text-[var(--color-text-muted)] text-sm">
                         No program activities with dates.
@@ -252,9 +296,7 @@ function ProgramGanttSection({ activities, zoomLevel }: { activities: ProgramAct
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                Program
-            </h3>
+            {headerRow}
             <div className="border border-[var(--color-border)] rounded overflow-hidden bg-[var(--color-bg-primary)]">
                 <div className="overflow-x-auto">
                     <div style={{ minWidth: `${160 + 140 + timelineColumns.length * columnWidth}px` }}>
@@ -408,12 +450,145 @@ function ProgramGanttSection({ activities, zoomLevel }: { activities: ProgramAct
     );
 }
 
+// ─── Brief sub-section (Services / Deliverables) ──────────────────────────────
+//
+// Mirrors the Objectives SectionGroup pattern (header bar with segmented
+// Short/Long toggle + single DiamondIcon refresh, no trash). The .brief-section
+// class on the editor wrapper drives a CSS counter (see globals.css) that
+// renders list items as 1., 2., 3. … and continues across to deliverables.
+type BriefField = 'services' | 'deliverables';
+interface BriefSub {
+    short: string;
+    long: string;
+    viewMode: 'short' | 'long';
+}
+
+function BriefSubSection({
+    field, label, sub, isGenerating, isAnyGenerating, counterStart, isLast,
+    onChange, onSave, onRefresh, onToggle,
+}: {
+    field: BriefField;
+    label: string;
+    sub: BriefSub;
+    isGenerating: boolean;
+    isAnyGenerating: boolean;
+    counterStart: number;
+    isLast?: boolean;
+    onChange: (f: BriefField, v: string) => void;
+    onSave: (f: BriefField) => void | Promise<void>;
+    onRefresh: (f: BriefField) => void | Promise<void>;
+    onToggle: (f: BriefField, m: 'short' | 'long') => void | Promise<void>;
+}) {
+    const activeContent = sub.viewMode === 'short' ? sub.short : sub.long;
+    const longTextLength = sub.long.replace(/<[^>]*>/g, '').trim().length;
+    const hasShortText = sub.short.replace(/<[^>]*>/g, '').trim().length > 0;
+    const hasLongContent = longTextLength > 0;
+
+    return (
+        <div className={cn('flex flex-col', !isLast && 'border-b border-[var(--color-border)]/50')}>
+            {/* Header bar */}
+            <div
+                className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
+            >
+                <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
+                    {label}
+                </span>
+                <div className="flex items-center gap-2">
+                    {/* Segmented Short/Long toggle */}
+                    <div
+                        className="inline-flex items-center rounded border border-[var(--color-border)]/50 overflow-hidden text-xs font-medium"
+                        role="group"
+                        aria-label="View mode"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => onToggle(field, 'short')}
+                            className={cn(
+                                'px-2.5 py-1 transition-colors',
+                                sub.viewMode === 'short'
+                                    ? 'bg-[var(--color-accent-copper)]/20 text-[var(--color-accent-copper)]'
+                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]',
+                            )}
+                        >
+                            Short
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onToggle(field, 'long')}
+                            title={!hasLongContent && hasShortText ? 'Long view is empty — click the diamond to polish' : undefined}
+                            className={cn(
+                                'px-2.5 py-1 transition-colors',
+                                sub.viewMode === 'long'
+                                    ? 'bg-[var(--color-accent-copper)]/20 text-[var(--color-accent-copper)]'
+                                    : !hasLongContent && hasShortText
+                                        ? 'text-[var(--color-text-muted)]/60 hover:text-[var(--color-text-primary)] italic'
+                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]',
+                            )}
+                        >
+                            Long
+                        </button>
+                    </div>
+
+                    {/* Refresh — DiamondIcon with spin animation while generating */}
+                    <button
+                        type="button"
+                        onClick={() => onRefresh(field)}
+                        disabled={isAnyGenerating}
+                        title={`Regenerate ${sub.viewMode} content`}
+                        className={cn(
+                            'p-1 rounded transition-colors',
+                            isAnyGenerating
+                                ? 'text-[var(--color-text-muted)]/40 cursor-not-allowed'
+                                : 'text-[var(--color-accent-copper)] hover:bg-[var(--color-bg-tertiary)]',
+                        )}
+                    >
+                        <DiamondIcon
+                            variant="empty"
+                            className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
+                        />
+                    </button>
+                </div>
+            </div>
+
+            {/* Editor body — wrapped in .brief-section so the CSS counter applies.
+                --brief-start-index is the seed value for the brief-counter (the
+                actual ::before increments by 1 per <li>, so we set it to the
+                count of preceding items). Mirrors the objectives editor's
+                --objectives-start-index pattern. */}
+            <div
+                className="brief-section backdrop-blur-md"
+                data-field={field}
+                style={{
+                    backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)',
+                    ['--brief-start-index' as string]: counterStart,
+                } as React.CSSProperties}
+            >
+                <RichTextEditor
+                    content={activeContent}
+                    onChange={(c) => onChange(field, c)}
+                    onBlur={() => onSave(field)}
+                    placeholder={`Enter ${label.toLowerCase()}...`}
+                    disabled={isAnyGenerating}
+                    variant="mini"
+                    toolbarVariant="mini"
+                    transparentBg
+                    className="border-0 rounded-none"
+                    editorClassName="bg-transparent hover:bg-[var(--color-bg-primary)]/40 transition-colors [&_strong]:text-black [&_strong]:font-semibold"
+                />
+            </div>
+        </div>
+    );
+}
+
 export function RFTNewShortTab({
     projectId,
     rftNew,
     contextName,
     stakeholderId,
     onDateChange,
+    onToggleObjectivesVisible,
+    onToggleProgramVisible,
     onSaveTransmittal,
     onLoadTransmittal,
     onDownloadTransmittal,
@@ -425,7 +600,13 @@ export function RFTNewShortTab({
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
     const [objectives, setObjectives] = useState<ProfilerObjectives>({ planning: [], functional: [], quality: [], compliance: [] });
     const [programActivities, setProgramActivities] = useState<ProgramActivity[]>([]);
-    const [briefData, setBriefData] = useState({ service: '', deliverables: '' });
+    const [briefData, setBriefData] = useState<{
+        services:     { short: string; long: string; viewMode: 'short' | 'long' };
+        deliverables: { short: string; long: string; viewMode: 'short' | 'long' };
+    }>({
+        services:     { short: '', long: '', viewMode: 'short' },
+        deliverables: { short: '', long: '', viewMode: 'short' },
+    });
     const [isSavingBrief, setIsSavingBrief] = useState(false);
     const [costLines, setCostLines] = useState<CostLine[]>([]);
 
@@ -459,9 +640,6 @@ export function RFTNewShortTab({
         stakeholderId: stakeholderId || undefined,
     });
 
-    // Polish loading states (using same API but with existing content)
-    const [isPolishingService, setIsPolishingService] = useState(false);
-    const [isPolishingDeliverables, setIsPolishingDeliverables] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [rftDate, setRftDate] = useState(rftNew.rftDate || new Date().toISOString().split('T')[0]);
     const dateInputRef = useRef<HTMLInputElement>(null);
@@ -549,8 +727,16 @@ export function RFTNewShortTab({
                 if (stakeholderRes.ok) {
                     const stakeholderData = await stakeholderRes.json();
                     setBriefData({
-                        service: stakeholderData.briefServices || stakeholderData.scopeWorks || '',
-                        deliverables: stakeholderData.briefDeliverables || stakeholderData.scopeDeliverables || '',
+                        services: {
+                            short:    stakeholderData.briefServices ?? stakeholderData.scopeWorks ?? '',
+                            long:     stakeholderData.briefServicesPolished ?? '',
+                            viewMode: stakeholderData.briefServicesViewMode === 'long' ? 'long' : 'short',
+                        },
+                        deliverables: {
+                            short:    stakeholderData.briefDeliverables ?? stakeholderData.scopeDeliverables ?? '',
+                            long:     stakeholderData.briefDeliverablesPolished ?? '',
+                            viewMode: stakeholderData.briefDeliverablesViewMode === 'long' ? 'long' : 'short',
+                        },
                     });
                 }
             }
@@ -607,155 +793,88 @@ export function RFTNewShortTab({
         return parts.length > 0 ? `Generated using: ${parts.join(', ')}` : 'Generated using project context';
     };
 
-    /**
-     * Generate Service field from scratch using Unified Field Generation
-     */
-    const handleGenerateService = useCallback(async () => {
-        try {
-            const result = await generateServiceApi('');
-            setBriefData(prev => ({
-                ...prev,
-                service: result.content,
-            }));
-            // Persist generated content to database
-            if (stakeholderId) {
-                await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ briefServices: result.content }),
-                });
-            }
-            toast({
-                title: 'Service Generated',
-                description: buildSourceDescription(result.metadata, result.sources.length),
-                variant: 'success',
-            });
-        } catch (error) {
-            toast({
-                title: 'Generation Failed',
-                description: error instanceof Error ? error.message : 'Failed to generate',
-                variant: 'destructive',
-            });
-        }
-    }, [generateServiceApi, toast, stakeholderId, projectId]);
+    // Single refresh handler — replaces the previous Generate/Polish quartet.
+    // Short mode: empty input regenerates short bullets and saves to brief_services /
+    // brief_deliverables. Long mode: passes the current short content as input to
+    // produce polished long-form text and saves to brief_services_polished /
+    // brief_deliverables_polished. The opposite mode's content is preserved.
+    const handleRefresh = useCallback(async (field: 'services' | 'deliverables') => {
+        const sub = briefData[field];
+        const generateApi = field === 'services' ? generateServiceApi : generateDeliverablesApi;
 
-    /**
-     * Polish Service field by enhancing existing content
-     */
-    const handlePolishService = useCallback(async () => {
-        if (!hasContent(briefData.service)) {
+        if (sub.viewMode === 'long' && sub.short.replace(/<[^>]*>/g, '').trim().length === 0) {
             toast({
-                title: 'Nothing to Polish',
-                description: 'Enter some content first, then polish it',
+                title: 'Nothing to polish',
+                description: 'Generate the short version first, then switch to Long.',
                 variant: 'destructive',
             });
             return;
         }
-        setIsPolishingService(true);
-        try {
-            const result = await generateServiceApi(briefData.service);
-            setBriefData(prev => ({
-                ...prev,
-                service: result.content,
-            }));
-            // Persist polished content to database
-            if (stakeholderId) {
-                await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ briefServices: result.content }),
-                });
-            }
-            toast({
-                title: 'Service Polished',
-                description: buildSourceDescription(result.metadata, result.sources.length),
-                variant: 'success',
-            });
-        } catch (error) {
-            toast({
-                title: 'Polish Failed',
-                description: error instanceof Error ? error.message : 'Failed to polish',
-                variant: 'destructive',
-            });
-        } finally {
-            setIsPolishingService(false);
-        }
-    }, [generateServiceApi, briefData.service, toast, stakeholderId, projectId]);
 
-    /**
-     * Generate Deliverables field from scratch using Unified Field Generation
-     */
-    const handleGenerateDeliverables = useCallback(async () => {
         try {
-            const result = await generateDeliverablesApi('');
-            setBriefData(prev => ({
-                ...prev,
-                deliverables: result.content,
-            }));
-            // Persist generated content to database
-            if (stakeholderId) {
-                await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ briefDeliverables: result.content }),
-                });
-            }
-            toast({
-                title: 'Deliverables Generated',
-                description: buildSourceDescription(result.metadata, result.sources.length),
-                variant: 'success',
-            });
-        } catch (error) {
-            toast({
-                title: 'Generation Failed',
-                description: error instanceof Error ? error.message : 'Failed to generate',
-                variant: 'destructive',
-            });
-        }
-    }, [generateDeliverablesApi, toast, stakeholderId, projectId]);
+            const input = sub.viewMode === 'short' ? '' : sub.short;
+            const result = await generateApi(input);
 
-    /**
-     * Polish Deliverables field by enhancing existing content
-     */
-    const handlePolishDeliverables = useCallback(async () => {
-        if (!hasContent(briefData.deliverables)) {
-            toast({
-                title: 'Nothing to Polish',
-                description: 'Enter some content first, then polish it',
-                variant: 'destructive',
-            });
-            return;
-        }
-        setIsPolishingDeliverables(true);
-        try {
-            const result = await generateDeliverablesApi(briefData.deliverables);
             setBriefData(prev => ({
                 ...prev,
-                deliverables: result.content,
+                [field]: {
+                    ...prev[field],
+                    ...(sub.viewMode === 'short' ? { short: result.content } : { long: result.content }),
+                },
             }));
-            // Persist polished content to database
+
             if (stakeholderId) {
+                const patchKey =
+                    field === 'services'
+                        ? (sub.viewMode === 'short' ? 'briefServices' : 'briefServicesPolished')
+                        : (sub.viewMode === 'short' ? 'briefDeliverables' : 'briefDeliverablesPolished');
                 await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ briefDeliverables: result.content }),
+                    body: JSON.stringify({ [patchKey]: result.content }),
                 });
             }
+
             toast({
-                title: 'Deliverables Polished',
+                title: `${field === 'services' ? 'Services' : 'Deliverables'} ${sub.viewMode === 'short' ? 'generated' : 'polished'}`,
                 description: buildSourceDescription(result.metadata, result.sources.length),
                 variant: 'success',
             });
         } catch (error) {
             toast({
-                title: 'Polish Failed',
-                description: error instanceof Error ? error.message : 'Failed to polish',
+                title: sub.viewMode === 'short' ? 'Generation Failed' : 'Polish Failed',
+                description: error instanceof Error ? error.message : 'Unknown error',
                 variant: 'destructive',
             });
-        } finally {
-            setIsPolishingDeliverables(false);
         }
-    }, [generateDeliverablesApi, briefData.deliverables, toast, stakeholderId, projectId]);
+    }, [briefData, generateServiceApi, generateDeliverablesApi, stakeholderId, projectId, toast]);
+
+    // Persist the per-sub-section view mode so the toggle is sticky across reloads
+    // and the export honours what the user is looking at.
+    const handleViewToggle = useCallback(async (field: 'services' | 'deliverables', mode: 'short' | 'long') => {
+        setBriefData(prev => ({ ...prev, [field]: { ...prev[field], viewMode: mode } }));
+        if (!stakeholderId) return;
+        const patchKey = field === 'services' ? 'briefServicesViewMode' : 'briefDeliverablesViewMode';
+        await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [patchKey]: mode }),
+        });
+    }, [stakeholderId, projectId]);
+
+    // Continuous numbering across Services → Deliverables. Counts <li> elements
+    // in whichever services view is currently visible (short or long); the
+    // deliverables container starts its CSS counter at this value.
+    // Must live above the early return below so the hook order is stable.
+    const servicesActiveHtml = briefData.services.viewMode === 'short'
+        ? briefData.services.short
+        : briefData.services.long;
+    const servicesItemCount = useMemo(() => {
+        if (typeof document === 'undefined' || !servicesActiveHtml) return 0;
+        const div = document.createElement('div');
+        div.innerHTML = servicesActiveHtml;
+        return div.querySelectorAll('li').length;
+    }, [servicesActiveHtml]);
 
     if (isLoading) {
         return (
@@ -768,27 +887,32 @@ export function RFTNewShortTab({
     const rftNum = String(rftNew.rftNumber).padStart(2, '0');
     const rftLabel = `Request For Tender, ${contextName} ${rftNum}`;
 
-    // Helper to check if HTML content has actual text (not just empty tags)
-    const hasContent = (html: string) => {
-        const textContent = html.replace(/<[^>]*>/g, '').trim();
-        return textContent.length > 0;
+    // Edits route to the currently-visible version (short or long) so toggling
+    // does not clobber the off-screen variant.
+    const handleBriefChange = (field: 'services' | 'deliverables', value: string) => {
+        setBriefData(prev => ({
+            ...prev,
+            [field]: {
+                ...prev[field],
+                ...(prev[field].viewMode === 'short' ? { short: value } : { long: value }),
+            },
+        }));
     };
 
-    const handleBriefChange = (field: 'service' | 'deliverables', value: string) => {
-        setBriefData(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleSaveBrief = async (field: 'service' | 'deliverables') => {
+    const handleSaveBrief = async (field: 'services' | 'deliverables') => {
         if (!stakeholderId) return;
         setIsSavingBrief(true);
         try {
-            const payload: Record<string, string> = {};
-            if (field === 'service') payload.briefServices = briefData.service;
-            if (field === 'deliverables') payload.briefDeliverables = briefData.deliverables;
+            const sub = briefData[field];
+            const value = sub.viewMode === 'short' ? sub.short : sub.long;
+            const patchKey =
+                field === 'services'
+                    ? (sub.viewMode === 'short' ? 'briefServices' : 'briefServicesPolished')
+                    : (sub.viewMode === 'short' ? 'briefDeliverables' : 'briefDeliverablesPolished');
             await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+                body: JSON.stringify({ [patchKey]: value }),
             });
         } catch (error) {
             console.error('Failed to save brief', error);
@@ -847,126 +971,74 @@ export function RFTNewShortTab({
 
             {/* 2. Objectives Section */}
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                    Objectives
-                </h3>
-                <ObjectivesReadOnlyList data={objectives} />
+                <div className="flex items-center gap-2">
+                    <h3
+                        className={cn(
+                            'text-sm font-semibold uppercase tracking-wide transition-colors',
+                            rftNew.objectivesVisible
+                                ? 'text-[var(--color-text-primary)]'
+                                : 'text-[var(--color-text-muted)]'
+                        )}
+                    >
+                        Objectives
+                    </h3>
+                    <button
+                        type="button"
+                        onClick={() => onToggleObjectivesVisible?.(!rftNew.objectivesVisible)}
+                        aria-label={rftNew.objectivesVisible ? 'Hide objectives' : 'Show objectives'}
+                        aria-expanded={rftNew.objectivesVisible}
+                        title={
+                            rftNew.objectivesVisible
+                                ? 'Hide objectives (also excluded from PDF/Word export)'
+                                : 'Show objectives (also included in PDF/Word export)'
+                        }
+                        className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors p-1 -m-1"
+                    >
+                        {rftNew.objectivesVisible
+                            ? <EyeOff className="w-4 h-4" />
+                            : <Eye className="w-4 h-4" />
+                        }
+                    </button>
+                </div>
+                {rftNew.objectivesVisible && (
+                    <ObjectivesReadOnlyList data={objectives} />
+                )}
             </div>
 
-            {/* 3. Brief Section - Service & Deliverables side by side */}
+            {/* 3. Brief Section — services stacked above deliverables, single
+                outer card with continuous numbering across both. Mirrors the
+                Objectives SectionGroup pattern: segmented Short/Long toggle +
+                single DiamondIcon refresh in each sub-section header. */}
             <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
                     Brief
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
-                    {/* Left: Service */}
-                    <div className="overflow-hidden rounded-lg">
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--color-border)]">
-                            <span className="text-[var(--color-document-header)] font-medium text-sm">Service</span>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleGenerateService}
-                                    disabled={isGeneratingService || isPolishingService}
-                                    className={`
-                                        flex items-center gap-1.5 text-sm font-medium transition-all
-                                        ${isGeneratingService
-                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                            : isPolishingService
-                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
-                                        }
-                                    `}
-                                    title="Generate short bullet points (2-5 words each)"
-                                >
-                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingService && 'animate-diamond-spin')} variant="empty" />
-                                    <span className={isGeneratingService ? 'animate-text-aurora' : ''}>{isGeneratingService ? 'Generating...' : 'Generate'}</span>
-                                </button>
-                                <button
-                                    onClick={handlePolishService}
-                                    disabled={isGeneratingService || isPolishingService || !hasContent(briefData.service)}
-                                    className={`
-                                        flex items-center gap-1.5 text-sm font-medium transition-all
-                                        ${isPolishingService
-                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                            : (isGeneratingService || !hasContent(briefData.service))
-                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
-                                        }
-                                    `}
-                                    title="Expand bullets to full descriptions (10-15 words)"
-                                >
-                                    <DiamondIcon className={cn('w-4 h-4', isPolishingService && 'animate-diamond-spin')} variant="filled" />
-                                    <span className={isPolishingService ? 'animate-text-aurora' : ''}>{isPolishingService ? 'Polishing...' : 'Polish'}</span>
-                                </button>
-                            </div>
-                        </div>
-                        <RichTextEditor
-                            content={briefData.service}
-                            onChange={(content) => handleBriefChange('service', content)}
-                            onBlur={() => handleSaveBrief('service')}
-                            placeholder="Enter service details..."
-                            disabled={isGeneratingService || isPolishingService}
-                            variant="mini"
-                            toolbarVariant="mini"
-                            transparentBg
-                            className="border-0 rounded-none"
-                            editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors [&_strong]:text-black [&_strong]:font-semibold"
-                        />
-                    </div>
-                    {/* Right: Deliverables */}
-                    <div className="overflow-hidden rounded-lg">
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--color-border)]">
-                            <span className="text-[var(--color-document-header)] font-medium text-sm">Deliverables</span>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={handleGenerateDeliverables}
-                                    disabled={isGeneratingDeliverables || isPolishingDeliverables}
-                                    className={`
-                                        flex items-center gap-1.5 text-sm font-medium transition-all
-                                        ${isGeneratingDeliverables
-                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                            : isPolishingDeliverables
-                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
-                                        }
-                                    `}
-                                    title="Generate short bullet points (2-5 words each)"
-                                >
-                                    <DiamondIcon className={cn('w-4 h-4', isGeneratingDeliverables && 'animate-diamond-spin')} variant="empty" />
-                                    <span className={isGeneratingDeliverables ? 'animate-text-aurora' : ''}>{isGeneratingDeliverables ? 'Generating...' : 'Generate'}</span>
-                                </button>
-                                <button
-                                    onClick={handlePolishDeliverables}
-                                    disabled={isGeneratingDeliverables || isPolishingDeliverables || !hasContent(briefData.deliverables)}
-                                    className={`
-                                        flex items-center gap-1.5 text-sm font-medium transition-all
-                                        ${isPolishingDeliverables
-                                            ? 'text-[var(--color-accent-copper)] cursor-wait'
-                                            : (isGeneratingDeliverables || !hasContent(briefData.deliverables))
-                                                ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                                : 'text-[var(--color-accent-copper)] hover:opacity-80'
-                                        }
-                                    `}
-                                    title="Expand bullets to full descriptions (10-15 words)"
-                                >
-                                    <DiamondIcon className={cn('w-4 h-4', isPolishingDeliverables && 'animate-diamond-spin')} variant="filled" />
-                                    <span className={isPolishingDeliverables ? 'animate-text-aurora' : ''}>{isPolishingDeliverables ? 'Polishing...' : 'Polish'}</span>
-                                </button>
-                            </div>
-                        </div>
-                        <RichTextEditor
-                            content={briefData.deliverables}
-                            onChange={(content) => handleBriefChange('deliverables', content)}
-                            onBlur={() => handleSaveBrief('deliverables')}
-                            placeholder="Enter deliverables..."
-                            disabled={isGeneratingDeliverables || isPolishingDeliverables}
-                            variant="mini"
-                            toolbarVariant="mini"
-                            transparentBg
-                            className="border-0 rounded-none"
-                            editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors [&_strong]:text-black [&_strong]:font-semibold"
-                        />
-                    </div>
+                <div className="rounded border border-[var(--color-border)]/50 overflow-hidden">
+                    <BriefSubSection
+                        field="services"
+                        label="Services"
+                        sub={briefData.services}
+                        isGenerating={isGeneratingService}
+                        isAnyGenerating={isGeneratingService || isGeneratingDeliverables}
+                        counterStart={0}
+                        onChange={handleBriefChange}
+                        onSave={handleSaveBrief}
+                        onRefresh={handleRefresh}
+                        onToggle={handleViewToggle}
+                    />
+                    <BriefSubSection
+                        field="deliverables"
+                        label="Deliverables"
+                        sub={briefData.deliverables}
+                        isGenerating={isGeneratingDeliverables}
+                        isAnyGenerating={isGeneratingService || isGeneratingDeliverables}
+                        counterStart={servicesItemCount}
+                        isLast
+                        onChange={handleBriefChange}
+                        onSave={handleSaveBrief}
+                        onRefresh={handleRefresh}
+                        onToggle={handleViewToggle}
+                    />
                 </div>
                 {isSavingBrief && (
                     <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
@@ -974,7 +1046,12 @@ export function RFTNewShortTab({
             </div>
 
             {/* 4. Program Section - Visual Gantt */}
-            <ProgramGanttSection activities={programActivities} zoomLevel={zoomLevel} />
+            <ProgramGanttSection
+                activities={programActivities}
+                zoomLevel={zoomLevel}
+                visible={rftNew.programVisible}
+                onToggleVisible={onToggleProgramVisible}
+            />
 
             {/* 5. Fee Section */}
             <div className="space-y-2">

@@ -17,6 +17,8 @@ export interface ProgramActivity {
     // Computed/joined fields
     children?: ProgramActivity[];
     milestones?: ProgramMilestone[];
+    expectedOutputs?: ProgramActivityExpectedOutput[];
+    evidenceLinks?: ProgramActivityEvidenceLink[];
 }
 
 export interface ProgramDependency {
@@ -35,6 +37,38 @@ export interface ProgramMilestone {
     date: string;
     sortOrder: number;
     createdAt: string;
+}
+
+export type ProgramEvidenceType = 'document' | 'correspondence' | 'database_record';
+export type ProgramEvidenceLinkStatus = 'candidate' | 'confirmed' | 'rejected';
+
+export interface ProgramActivityExpectedOutput {
+    id: string;
+    projectId: string;
+    activityId: string;
+    label: string;
+    description: string | null;
+    evidenceType: ProgramEvidenceType | null;
+    isRequired: boolean;
+    sortOrder: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ProgramActivityEvidenceLink {
+    id: string;
+    projectId: string;
+    activityId: string;
+    expectedOutputId: string | null;
+    evidenceType: ProgramEvidenceType;
+    evidenceId: string;
+    databaseEntityType: string | null;
+    status: ProgramEvidenceLinkStatus;
+    confidence: number | null;
+    note: string | null;
+    linkedBy: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 // API Request/Response Types

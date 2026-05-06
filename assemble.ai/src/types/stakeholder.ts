@@ -13,6 +13,7 @@
 export type StakeholderGroup = 'client' | 'authority' | 'consultant' | 'contractor';
 export type TenderStatusType = 'brief' | 'tender' | 'rec' | 'award';
 export type SubmissionStatus = 'pending' | 'submitted' | 'approved' | 'rejected' | 'withdrawn';
+export type BriefViewMode = 'short' | 'long';
 
 export const STAKEHOLDER_GROUPS: StakeholderGroup[] = ['client', 'authority', 'consultant', 'contractor'];
 export const TENDER_STATUS_TYPES: TenderStatusType[] = ['brief', 'tender', 'rec', 'award'];
@@ -134,6 +135,10 @@ export interface Stakeholder {
   isEnabled: boolean;
   briefServices?: string;
   briefDeliverables?: string;
+  briefServicesPolished?: string;
+  briefDeliverablesPolished?: string;
+  briefServicesViewMode?: BriefViewMode;
+  briefDeliverablesViewMode?: BriefViewMode;
   briefFee?: string;
   briefProgram?: string;
   scopeWorks?: string;
@@ -232,6 +237,10 @@ export interface UpdateStakeholderRequest {
   isEnabled?: boolean;
   briefServices?: string;
   briefDeliverables?: string;
+  briefServicesPolished?: string;
+  briefDeliverablesPolished?: string;
+  briefServicesViewMode?: BriefViewMode;
+  briefDeliverablesViewMode?: BriefViewMode;
   briefFee?: string;
   briefProgram?: string;
   scopeWorks?: string;

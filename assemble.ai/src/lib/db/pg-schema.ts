@@ -90,6 +90,90 @@ export const transmittalItems = pgTable('transmittal_items', {
 });
 
 // ============================================================================
+// CORRESPONDENCE
+// ============================================================================
+
+export type CorrespondenceDirection = 'inbound' | 'outbound';
+export type CorrespondenceType =
+    | 'rfi_response'
+    | 'tender_submission'
+    | 'consultant_query'
+    | 'council_correspondence'
+    | 'contractor_correspondence'
+    | 'client_correspondence'
+    | 'general';
+export type CorrespondenceClassificationStatus = 'unclassified' | 'suggested' | 'confirmed';
+
+export const projectInboxes = pgTable('project_inboxes', {
+    projectId: text('project_id').primaryKey().references(() => projects.id, { onDelete: 'cascade' }),
+    localPart: text('local_part').notNull().unique(),
+    emailAddress: text('email_address').notNull().unique(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_project_inboxes_email').on(table.emailAddress),
+]);
+
+export const correspondenceThreads = pgTable('correspondence_threads', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    subject: text('subject').notNull(),
+    normalizedSubject: text('normalized_subject').notNull(),
+    lastMessageAt: timestamp('last_message_at').defaultNow(),
+    messageCount: integer('message_count').notNull().default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_correspondence_threads_project').on(table.projectId),
+    index('idx_correspondence_threads_subject').on(table.projectId, table.normalizedSubject),
+]);
+
+export const correspondence = pgTable('correspondence', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    threadId: text('thread_id').references(() => correspondenceThreads.id, { onDelete: 'cascade' }).notNull(),
+    direction: text('direction').notNull().$type<CorrespondenceDirection>().default('inbound'),
+    correspondenceType: text('correspondence_type').notNull().$type<CorrespondenceType>().default('general'),
+    classificationStatus: text('classification_status').notNull().$type<CorrespondenceClassificationStatus>().default('unclassified'),
+    providerMessageId: text('provider_message_id'),
+    fromName: text('from_name'),
+    fromEmail: text('from_email').notNull(),
+    toEmails: jsonb('to_emails').$type<string[]>().default([]),
+    ccEmails: jsonb('cc_emails').$type<string[]>().default([]),
+    subject: text('subject').notNull(),
+    bodyText: text('body_text'),
+    bodyHtml: text('body_html'),
+    sentAt: timestamp('sent_at'),
+    receivedAt: timestamp('received_at').defaultNow(),
+    inReplyTo: text('in_reply_to'),
+    referencesMessageIds: jsonb('references_message_ids').$type<string[]>().default([]),
+    rawHeaders: jsonb('raw_headers').$type<Record<string, string | string[]>>(),
+    rawPayload: jsonb('raw_payload').$type<Record<string, unknown>>(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_correspondence_project').on(table.projectId),
+    index('idx_correspondence_thread').on(table.threadId),
+    index('idx_correspondence_message_id').on(table.projectId, table.providerMessageId),
+    index('idx_correspondence_received').on(table.projectId, table.receivedAt),
+]);
+
+export const correspondenceAttachments = pgTable('correspondence_attachments', {
+    id: text('id').primaryKey(),
+    correspondenceId: text('correspondence_id').references(() => correspondence.id, { onDelete: 'cascade' }).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'set null' }),
+    fileAssetId: text('file_asset_id').references(() => fileAssets.id, { onDelete: 'set null' }),
+    originalName: text('original_name').notNull(),
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    contentId: text('content_id'),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    index('idx_correspondence_attachments_correspondence').on(table.correspondenceId),
+    index('idx_correspondence_attachments_document').on(table.documentId),
+]);
+
+// ============================================================================
 // PLANNING CARD SCHEMA
 // ============================================================================
 
@@ -568,6 +652,7 @@ export const rftNew = pgTable('rft_new', {
     rftNumber: integer('rft_number').notNull().default(1),
     rftDate: text('rft_date'),
     objectivesVisible: boolean('objectives_visible').notNull().default(false),
+    programVisible: boolean('program_visible').notNull().default(false),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -742,6 +827,46 @@ export const programMilestones = pgTable('program_milestones', {
     createdAt: timestamp('created_at').defaultNow(),
 });
 
+export type ProgramEvidenceType = 'document' | 'correspondence' | 'database_record';
+export type ProgramEvidenceLinkStatus = 'candidate' | 'confirmed' | 'rejected';
+
+export const programActivityExpectedOutputs = pgTable('program_activity_expected_outputs', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    activityId: text('activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
+    label: text('label').notNull(),
+    description: text('description'),
+    evidenceType: text('evidence_type').$type<ProgramEvidenceType>(),
+    isRequired: boolean('is_required').notNull().default(true),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_program_expected_outputs_activity').on(table.activityId),
+    index('idx_program_expected_outputs_project').on(table.projectId),
+]);
+
+export const programActivityEvidenceLinks = pgTable('program_activity_evidence_links', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    activityId: text('activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
+    expectedOutputId: text('expected_output_id').references(() => programActivityExpectedOutputs.id, { onDelete: 'set null' }),
+    evidenceType: text('evidence_type').notNull().$type<ProgramEvidenceType>(),
+    evidenceId: text('evidence_id').notNull(),
+    databaseEntityType: text('database_entity_type'),
+    status: text('status').notNull().$type<ProgramEvidenceLinkStatus>().default('candidate'),
+    confidence: integer('confidence'),
+    note: text('note'),
+    linkedBy: text('linked_by').notNull().default('system'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_program_evidence_links_activity').on(table.activityId),
+    index('idx_program_evidence_links_project').on(table.projectId),
+    index('idx_program_evidence_links_evidence').on(table.evidenceType, table.evidenceId),
+    index('idx_program_evidence_links_expected_output').on(table.expectedOutputId),
+]);
+
 // ============================================================================
 // RELATIONS (maintaining the same structure as SQLite schema)
 // ============================================================================
@@ -871,10 +996,55 @@ export const organizationsRelations = relations(organizations, ({ many }) => ({
     projects: many(projects),
 }));
 
-export const projectsRelations = relations(projects, ({ one }) => ({
+export const projectsRelations = relations(projects, ({ one, many }) => ({
     organization: one(organizations, {
         fields: [projects.organizationId],
         references: [organizations.id],
+    }),
+    inbox: one(projectInboxes),
+    correspondenceThreads: many(correspondenceThreads),
+    correspondence: many(correspondence),
+}));
+
+export const projectInboxesRelations = relations(projectInboxes, ({ one }) => ({
+    project: one(projects, {
+        fields: [projectInboxes.projectId],
+        references: [projects.id],
+    }),
+}));
+
+export const correspondenceThreadsRelations = relations(correspondenceThreads, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [correspondenceThreads.projectId],
+        references: [projects.id],
+    }),
+    correspondence: many(correspondence),
+}));
+
+export const correspondenceRelations = relations(correspondence, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [correspondence.projectId],
+        references: [projects.id],
+    }),
+    thread: one(correspondenceThreads, {
+        fields: [correspondence.threadId],
+        references: [correspondenceThreads.id],
+    }),
+    attachments: many(correspondenceAttachments),
+}));
+
+export const correspondenceAttachmentsRelations = relations(correspondenceAttachments, ({ one }) => ({
+    correspondence: one(correspondence, {
+        fields: [correspondenceAttachments.correspondenceId],
+        references: [correspondence.id],
+    }),
+    document: one(documents, {
+        fields: [correspondenceAttachments.documentId],
+        references: [documents.id],
+    }),
+    fileAsset: one(fileAssets, {
+        fields: [correspondenceAttachments.fileAssetId],
+        references: [fileAssets.id],
     }),
 }));
 
@@ -1089,6 +1259,8 @@ export const programActivitiesRelations = relations(programActivities, ({ one, m
     milestones: many(programMilestones),
     dependenciesFrom: many(programDependencies, { relationName: 'fromActivity' }),
     dependenciesTo: many(programDependencies, { relationName: 'toActivity' }),
+    expectedOutputs: many(programActivityExpectedOutputs),
+    evidenceLinks: many(programActivityEvidenceLinks),
 }));
 
 export const programDependenciesRelations = relations(programDependencies, ({ one }) => ({
@@ -1112,6 +1284,33 @@ export const programMilestonesRelations = relations(programMilestones, ({ one })
     activity: one(programActivities, {
         fields: [programMilestones.activityId],
         references: [programActivities.id],
+    }),
+}));
+
+export const programActivityExpectedOutputsRelations = relations(programActivityExpectedOutputs, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [programActivityExpectedOutputs.projectId],
+        references: [projects.id],
+    }),
+    activity: one(programActivities, {
+        fields: [programActivityExpectedOutputs.activityId],
+        references: [programActivities.id],
+    }),
+    evidenceLinks: many(programActivityEvidenceLinks),
+}));
+
+export const programActivityEvidenceLinksRelations = relations(programActivityEvidenceLinks, ({ one }) => ({
+    project: one(projects, {
+        fields: [programActivityEvidenceLinks.projectId],
+        references: [projects.id],
+    }),
+    activity: one(programActivities, {
+        fields: [programActivityEvidenceLinks.activityId],
+        references: [programActivities.id],
+    }),
+    expectedOutput: one(programActivityExpectedOutputs, {
+        fields: [programActivityEvidenceLinks.expectedOutputId],
+        references: [programActivityExpectedOutputs.id],
     }),
 }));
 
@@ -1236,6 +1435,10 @@ export const projectStakeholders = pgTable('project_stakeholders', {
     isEnabled: boolean('is_enabled').default(true),
     briefServices: text('brief_services'),
     briefDeliverables: text('brief_deliverables'),
+    briefServicesPolished: text('brief_services_polished'),
+    briefDeliverablesPolished: text('brief_deliverables_polished'),
+    briefServicesViewMode: text('brief_services_view_mode').default('short'),
+    briefDeliverablesViewMode: text('brief_deliverables_view_mode').default('short'),
     briefFee: text('brief_fee'),
     briefProgram: text('brief_program'),
     scopeWorks: text('scope_works'),

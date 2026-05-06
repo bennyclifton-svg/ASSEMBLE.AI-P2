@@ -23,6 +23,12 @@ const TRACER_TOOLS = [
         agents: [finance, program, design],
     },
     {
+        friendly: 'create_report',
+        alias: 'action_correspondence_report_create',
+        actionId: 'correspondence.report.create',
+        agents: [design],
+    },
+    {
         friendly: 'update_note',
         alias: 'action_correspondence_note_update',
         actionId: 'correspondence.note.update',
@@ -38,6 +44,12 @@ const TRACER_TOOLS = [
         friendly: 'create_transmittal',
         alias: 'action_correspondence_transmittal_create',
         actionId: 'correspondence.transmittal.create',
+        agents: [design],
+    },
+    {
+        friendly: 'create_addendum',
+        alias: 'action_correspondence_addendum_create',
+        actionId: 'correspondence.addendum.create',
         agents: [design],
     },
     {
@@ -80,6 +92,18 @@ const TRACER_TOOLS = [
         friendly: 'set_project_objectives',
         alias: 'action_planning_objectives_set',
         actionId: 'planning.objectives.set',
+        agents: [design],
+    },
+    {
+        friendly: 'add_tender_firms',
+        alias: 'action_procurement_tender_firms_add',
+        actionId: 'procurement.tender_firms.add',
+        agents: [design],
+    },
+    {
+        friendly: 'update_stakeholder',
+        alias: 'action_procurement_stakeholder_update',
+        actionId: 'procurement.stakeholder.update',
         agents: [design],
     },
 ] as const;

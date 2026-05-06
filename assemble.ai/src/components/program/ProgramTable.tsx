@@ -379,6 +379,21 @@ export function ProgramTable({
         return () => timelineArea.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Center the timeline on today's date when the panel first loads.
+    // Guarded so a manual scroll afterwards is never overridden.
+    const hasCenteredOnTodayRef = useRef(false);
+    useEffect(() => {
+        if (hasCenteredOnTodayRef.current) return;
+        if (todayIndex < 0 || columns.length === 0) return;
+        const el = timelineAreaRef.current;
+        if (!el || el.clientWidth === 0) return;
+
+        const todayX = todayIndex * columnWidth + columnWidth / 2;
+        const maxScroll = Math.max(0, columns.length * columnWidth - el.clientWidth);
+        el.scrollLeft = Math.min(maxScroll, Math.max(0, todayX - el.clientWidth / 2));
+        hasCenteredOnTodayRef.current = true;
+    }, [todayIndex, columnWidth, columns.length]);
+
     // Keyboard handler for delete and deselect
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {

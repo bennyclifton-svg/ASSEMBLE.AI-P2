@@ -27,8 +27,18 @@ const TRANSMITTAL_WRITE_RE =
     /\b(create|add|issue|prepare|draft|save|generate)\b[\s\S]{0,140}\b(transmittals?)\b|\b(transmittals?)\b[\s\S]{0,140}\b(create|add|issue|prepare|draft|save|generate|documents?|drawings?|files?)\b/i;
 const RFT_WRITE_RE =
     /\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,140}\b(rft|request for tender|tender package|tender document|tender documents|brief|services brief|deliverables)\b[\s\S]{0,140}\b(rft|request for tender|tender package|tender document|tender documents)?\b|\b(rft|request for tender|tender package|tender document|tender documents)\b[\s\S]{0,140}\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach|brief|services brief|deliverables)\b/i;
+const TENDER_FIRM_WRITE_RE =
+    /\b(add|record|create|enter|post|log|update|change|set|populate|append)\b[\s\S]{0,180}\b(firms?|companies|tenderers?|builders?|contractors?|consultants?)\b[\s\S]{0,180}\b(tender|panel|list)\b|\b(tender|panel|list)\b[\s\S]{0,180}\b(add|record|create|enter|post|log|update|change|set|populate|append|firms?|companies|tenderers?|builders?|contractors?|consultants?)\b/i;
+const FIRM_CONTACT_LIST_RE =
+    /(?=[\s\S]*\b(?:email|e-mail)\b)(?=[\s\S]*\bphone\b)(?=[\s\S]*\baddress\b)(?=[\s\S]*(?:^\s*\d+\.|\b(?:services|contractors|consultants|mechanical|hvac|builders|pty|ltd)\b))/im;
 const NOTE_WRITE_RE =
     /\b(add|record|create|enter|post|log|update|change|set)\b[\s\S]{0,140}\b(notes?|decision record)\b/i;
+const PROJECT_CONTROL_GROUP_REPORT_RE =
+    /\b(?:pcg|project control group)\b[\s\S]{0,100}\breports?\b|\breports?\b[\s\S]{0,100}\b(?:pcg|project control group)\b/i;
+const PROJECT_REPORT_WRITE_RE =
+    /\b(add|create|draft|generate|new|prepare)\b[\s\S]{0,140}\b(?:monthly\s+|project\s+)?reports?\b|\b(?:monthly\s+|project\s+)?reports?\b[\s\S]{0,140}\b(add|create|draft|generate|new|prepare)\b/i;
+const FINANCE_REPORT_CONTEXT_RE =
+    /\b(progress claims?|payment claims?|invoices?|invoice register|ledger|cost plan|budget variance|cashflow)\b/i;
 const FINANCE_NOTE_CONTEXT_RE =
     /\b(finance|financial|commercial|cost|budget|variation|invoice|claim|progress claim|qs)\b/i;
 const PROGRAM_NOTE_CONTEXT_RE =
@@ -44,7 +54,7 @@ const PROGRAMME_DATE_WRITE_RE =
 const PROGRAMME_DATE_CONTEXT_RE =
     /\b(da\b|development application|lodgement|submission|programme|program|schedule|activit(?:y|ies)|milestones?|practical completion|pc\b|completion|tender)\b/i;
 const DESIGN_WRITE_RE = new RegExp(
-    String.raw`\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach|save|issue|prepare|draft)\b[\s\S]{0,140}\b(objectives?|project objectives?|brief|project brief|profile|stakeholders?|consultants?|contractors?|authorities?|contacts?|design notes?|meetings?|pre-da|da meetings?|design meetings?|${ADDENDUM_TERM}|transmittals?)\b`,
+    String.raw`\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach|save|issue|prepare|draft)\b[\s\S]{0,140}\b(objectives?|project objectives?|brief|project brief|profile|stakeholders?|consultants?|contractors?|firms?|companies|tenderers?|tender panels?|tender lists?|authorities?|contacts?|design notes?|meetings?|pre-da|da meetings?|design meetings?|${ADDENDUM_TERM}|transmittals?)\b`,
     'i'
 );
 const INVOICE_WRITE_RE =
@@ -57,6 +67,10 @@ const DESIGN_CONTEXT_RE = new RegExp(
     String.raw`\b(design|drawing|documents?|architect|engineer|consultant|stakeholder|contractor|authority|brief|objectives?|profile|da\b|development application|planning|ncc|bca|condition|specification|meeting|${ADDENDUM_TERM}|transmittals?)\b`,
     'i'
 );
+const TECHNICAL_SERVICES_CONTEXT_RE =
+    /\b(mechanical|electrical|hydraulic|fire services?|fire engineering|hvac|air[-\s]?conditioning|airconditioning|ventilation|exhaust|smoke control|co monitoring|carbon monoxide|car\s*park|carpark|ductwork|fan|fans|split units?|plant room)\b/i;
+const TECHNICAL_SERVICES_QUESTION_RE =
+    /\b(what|which|is|are|does|do|required|requirement|requirements|specified|specifies|specification|spec|systems?|services?|equipment|ventilation|cooling|heating)\b/i;
 
 export function hasWriteIntent(text: string): boolean {
     return WRITE_INTENT_RE.test(text);
@@ -82,8 +96,18 @@ export function isRftWriteRequest(text: string): boolean {
     return RFT_WRITE_RE.test(text);
 }
 
+export function isTenderFirmWriteRequest(text: string): boolean {
+    return TENDER_FIRM_WRITE_RE.test(text) || FIRM_CONTACT_LIST_RE.test(text);
+}
+
 export function isNoteWriteRequest(text: string): boolean {
     return NOTE_WRITE_RE.test(text);
+}
+
+export function isProjectReportWriteRequest(text: string): boolean {
+    if (PROJECT_CONTROL_GROUP_REPORT_RE.test(text)) return true;
+    if (FINANCE_REPORT_CONTEXT_RE.test(text)) return false;
+    return PROJECT_REPORT_WRITE_RE.test(text);
 }
 
 export function isFinanceNoteRequest(text: string): boolean {
@@ -127,7 +151,11 @@ export function hasProgramContext(text: string): boolean {
 }
 
 export function hasDesignContext(text: string): boolean {
-    return DESIGN_CONTEXT_RE.test(text);
+    return DESIGN_CONTEXT_RE.test(text) || isTechnicalServicesQuestion(text);
+}
+
+export function isTechnicalServicesQuestion(text: string): boolean {
+    return TECHNICAL_SERVICES_CONTEXT_RE.test(text) && TECHNICAL_SERVICES_QUESTION_RE.test(text);
 }
 
 export function isVariationWriteRequest(text: string): boolean {

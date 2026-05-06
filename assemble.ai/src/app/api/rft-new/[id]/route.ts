@@ -29,7 +29,7 @@ export async function GET(
 }
 
 /**
- * PUT /api/rft-new/[id] - Update RFT NEW report (e.g., rftDate)
+ * PUT /api/rft-new/[id] - Update RFT NEW report (e.g., rftDate, objectivesVisible)
  */
 export async function PUT(
     request: NextRequest,
@@ -38,7 +38,7 @@ export async function PUT(
     return handleApiError(async () => {
         const { id } = await params;
         const body = await request.json();
-        const { rftDate } = body;
+        const { rftDate, objectivesVisible, programVisible } = body;
 
         const [existing] = await db
             .select()
@@ -50,12 +50,16 @@ export async function PUT(
             return NextResponse.json({ error: 'RFT NEW not found' }, { status: 404 });
         }
 
+        const updates: { rftDate?: string; objectivesVisible?: boolean; programVisible?: boolean; updatedAt: Date } = {
+            updatedAt: new Date(),
+        };
+        if (typeof rftDate === 'string') updates.rftDate = rftDate;
+        if (typeof objectivesVisible === 'boolean') updates.objectivesVisible = objectivesVisible;
+        if (typeof programVisible === 'boolean') updates.programVisible = programVisible;
+
         await db
             .update(rftNew)
-            .set({
-                rftDate,
-                updatedAt: new Date(),
-            })
+            .set(updates)
             .where(eq(rftNew.id, id));
 
         const [updated] = await db

@@ -22,6 +22,12 @@ const STALE_WORKFLOW_FAILURE_PATTERNS = [
 ];
 const ISSUE_VARIATION_WORKFLOW_RE =
     /\b(issue|raise|submit|prepare|draft|create|add|record|log)\b[\s\S]{0,120}\bvariations?\b[\s\S]{0,240}\b(cost[-\s]?plan|cost lines?|programme|program|schedule|activities?|project notes?|notes?|link it|linked)\b|\bvariations?\b[\s\S]{0,120}\b(issue|raise|submit|prepare|draft|create|add|record|log)\b[\s\S]{0,240}\b(cost[-\s]?plan|cost lines?|programme|program|schedule|activities?|project notes?|notes?|link it|linked)\b/i;
+const VARIATION_WRITE_RE =
+    /\b(issue|raise|submit|prepare|draft|create|add|record|log)\b[\s\S]{0,100}\bvariations?\b|\bvariations?\b[\s\S]{0,100}\b(issue|raise|submit|prepare|draft|create|add|record|log)\b/i;
+const INVOICE_WRITE_RE =
+    /\b(add|record|create|enter|post|allocate|log)\b[\s\S]{0,80}\b(invoice|progress claim|claim)\b/i;
+const INVOICE_LOG_READ_RE =
+    /\b(summarise|summarize|summary|list|show|report|register|ledger)\b[\s\S]{0,120}\b(invoices?|progress claims?|claims?)\b|\b(invoices?|progress claims?|claims?)\b[\s\S]{0,120}\b(summary|summarise|summarize|list|report|register|ledger|log)\b|\b(log|record)\b[\s\S]{0,40}\b(of|for)\b[\s\S]{0,80}\b(?:all|existing|current)?\s*(invoices?|progress claims?|claims?)\b/i;
 
 function normalizeContent(value: string): string {
     return value.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -62,8 +68,13 @@ export function buildAgentHistoryFromRows(rows: ChatHistoryRow[]): AgentMessage[
     const compactRows = compactChatRows(rows, MAX_AGENT_HISTORY_MESSAGES);
     const latestUserIndex = compactRows.map((row) => row.role).lastIndexOf('user');
     const latestUser = latestUserIndex >= 0 ? compactRows[latestUserIndex] : null;
+    const currentTurnOnly =
+        latestUser &&
+        (ISSUE_VARIATION_WORKFLOW_RE.test(latestUser.content) ||
+            VARIATION_WRITE_RE.test(latestUser.content) ||
+            (INVOICE_WRITE_RE.test(latestUser.content) && !INVOICE_LOG_READ_RE.test(latestUser.content)));
     const modelRows =
-        latestUser && ISSUE_VARIATION_WORKFLOW_RE.test(latestUser.content)
+        currentTurnOnly
             ? [latestUser]
             : compactRows;
 

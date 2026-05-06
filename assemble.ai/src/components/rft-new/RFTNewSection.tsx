@@ -51,6 +51,8 @@ export function RFTNewSection({
         isLoading,
         createRft,
         updateRftDate,
+        updateObjectivesVisible,
+        updateProgramVisible,
         deleteRft,
     } = useRftNew({
         projectId,
@@ -218,6 +220,18 @@ export function RFTNewSection({
         }
     }, [activeRft, updateRftDate]);
 
+    const handleToggleObjectivesVisible = useCallback(async (visible: boolean) => {
+        if (activeRft) {
+            await updateObjectivesVisible(activeRft.id, visible);
+        }
+    }, [activeRft, updateObjectivesVisible]);
+
+    const handleToggleProgramVisible = useCallback(async (visible: boolean) => {
+        if (activeRft) {
+            await updateProgramVisible(activeRft.id, visible);
+        }
+    }, [activeRft, updateProgramVisible]);
+
     const contextName = stakeholderName || 'Unknown';
 
     return (
@@ -321,6 +335,8 @@ export function RFTNewSection({
                                 stakeholderId={stakeholderId}
                                 contextName={contextName}
                                 onDateChange={handleDateChange}
+                                onToggleObjectivesVisible={handleToggleObjectivesVisible}
+                                onToggleProgramVisible={handleToggleProgramVisible}
                                 onSaveTransmittal={handleSaveTransmittal}
                                 onLoadTransmittal={handleLoadTransmittal}
                                 onDownloadTransmittal={handleDownloadTransmittal}

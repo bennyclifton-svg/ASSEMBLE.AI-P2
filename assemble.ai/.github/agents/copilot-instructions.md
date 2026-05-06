@@ -1,4 +1,4 @@
-﻿# assemble.ai Development Guidelines
+﻿# SiteWise.au Development Guidelines
 
 Auto-generated from all feature plans. Last updated: 2025-11-22
 

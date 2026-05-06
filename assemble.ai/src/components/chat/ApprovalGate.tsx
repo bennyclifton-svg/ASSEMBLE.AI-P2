@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { mutate as globalMutate } from 'swr';
 import type { PendingApprovalView } from '@/lib/hooks/use-chat-stream';
 import { dispatchAddendumCreated } from '@/lib/chat/addendum-events';
+import { dispatchTenderFirmsAdded } from '@/lib/chat/tender-firms-events';
 
 interface ApprovalGateProps {
     approval: PendingApprovalView;
@@ -45,7 +46,7 @@ function displayAfter(field: string, after: unknown): string {
 }
 
 function isEditableField(field: string): boolean {
-    return field !== 'documentIds' && field !== 'attachDocumentIds';
+    return field !== 'documentIds' && field !== 'attachDocumentIds' && field !== 'firms';
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -111,6 +112,40 @@ function revalidateAppliedEntity(toolName: string, appliedOutput: unknown): void
         }
         if (projectId && stakeholderId && id) {
             dispatchAddendumCreated({ projectId, stakeholderId, addendumId: id });
+        }
+        return;
+    }
+
+    if (toolName === 'add_tender_firms') {
+        const firmType = output.firmType === 'consultant' || output.firmType === 'contractor'
+            ? output.firmType
+            : null;
+        const disciplineOrTrade =
+            typeof output.disciplineOrTrade === 'string' ? output.disciplineOrTrade : null;
+        const firmIds = Array.isArray(output.firmIds)
+            ? output.firmIds.filter((firmId): firmId is string => typeof firmId === 'string')
+            : [];
+        if (projectId && firmType && disciplineOrTrade) {
+            const endpoint =
+                firmType === 'consultant'
+                    ? `/api/consultants/firms?projectId=${encodeURIComponent(projectId)}&discipline=${encodeURIComponent(disciplineOrTrade)}`
+                    : `/api/contractors/firms?projectId=${encodeURIComponent(projectId)}&trade=${encodeURIComponent(disciplineOrTrade)}`;
+            void globalMutate(endpoint);
+            dispatchTenderFirmsAdded({ projectId, firmType, disciplineOrTrade, firmIds });
+        }
+        return;
+    }
+
+    if (toolName === 'create_report') {
+        if (!projectId) return;
+        const groupId = typeof output.groupId === 'string' ? output.groupId : null;
+        const listKey = `/api/project-reports?projectId=${encodeURIComponent(projectId)}`;
+        void globalMutate(listKey);
+        if (groupId) {
+            void globalMutate(`${listKey}&groupId=${encodeURIComponent(groupId)}`);
+        }
+        if (id) {
+            void globalMutate(`/api/project-reports/${id}`);
         }
         return;
     }

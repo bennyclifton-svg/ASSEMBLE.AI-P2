@@ -23,18 +23,18 @@ const spectral = Spectral({
 });
 
 export const metadata: Metadata = {
-    title: 'Foundry - AI-Powered Construction Project Management',
-    description: 'Build faster. Save time. Stand out. Foundry is the AI platform that turns project chaos into an ongoing way of working for AEC firms.',
+    title: 'SiteWise - AI-Powered Construction Project Management',
+    description: 'Build faster. Save time. Stand out. SiteWise is the AI platform that turns project chaos into an ongoing way of working for AEC firms.',
     openGraph: {
-        title: 'Foundry - AI-Powered Construction Project Management',
+        title: 'SiteWise - AI-Powered Construction Project Management',
         description: 'Build faster. Save time. Stand out. The AI platform for architecture, engineering, and construction firms.',
         type: 'website',
         locale: 'en_AU',
-        siteName: 'Foundry',
+        siteName: 'SiteWise',
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Foundry',
+        title: 'SiteWise',
         description: 'AI-Powered Construction Project Management',
     },
     robots: {

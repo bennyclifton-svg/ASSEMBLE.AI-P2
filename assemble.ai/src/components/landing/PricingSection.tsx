@@ -256,7 +256,7 @@ export function PricingSection({
                     All prices in AUD. GST included where applicable.
                     <br />
                     Need a custom enterprise plan?{' '}
-                    <a href="mailto:sales@assemble.ai" className="text-blue-400 hover:text-blue-300">
+                    <a href="mailto:sales@sitewise.au" className="text-blue-400 hover:text-blue-300">
                         Contact us
                     </a>
                 </p>

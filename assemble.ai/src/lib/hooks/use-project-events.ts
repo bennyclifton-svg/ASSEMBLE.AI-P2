@@ -19,6 +19,7 @@ export type EntityUpdatedEvent = {
         | 'risk'
         | 'variation'
         | 'meeting'
+        | 'report'
         | 'objective'
         | 'program_activity'
         | 'program_milestone'

@@ -27,6 +27,7 @@ import {
     optionalStringArray,
     type AwaitingApprovalOutput,
 } from './_write-helpers';
+import { documentTitleSearchCondition } from './document-search';
 
 interface CreateTransmittalInput extends Record<string, unknown> {
     name?: string;
@@ -108,7 +109,7 @@ const definition: AgentToolDefinition<CreateTransmittalInput, AwaitingApprovalOu
                 documentName: {
                     type: 'string',
                     description:
-                        'Optional document or drawing title/name contains filter. Use for requests like "create a transmittal for basement drawings". Matches extracted drawing names and original filenames.',
+                        'Optional document or drawing title/name contains filter. Use for requests like "create a transmittal for basement drawings" or "create a transmittal for stair drawings". Matches extracted drawing names, drawing numbers combined with titles, and original filenames.',
                 },
                 stakeholderId: {
                     type: 'string',
@@ -319,15 +320,7 @@ async function resolveFilteredDocuments(
             )`
         );
     }
-    if (input.documentName) {
-        const pattern = `%${input.documentName}%`;
-        conditions.push(
-            sql`(
-                ${fileAssets.drawingName} ILIKE ${pattern}
-                OR ${fileAssets.originalName} ILIKE ${pattern}
-            )`
-        );
-    }
+    if (input.documentName) conditions.push(documentTitleSearchCondition(input.documentName));
 
     const limit = input.limit ?? DEFAULT_LIMIT;
     const rows = await baseDocumentQuery()

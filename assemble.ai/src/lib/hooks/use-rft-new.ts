@@ -17,6 +17,8 @@ export interface RftNew {
     stakeholderId: string | null;
     rftNumber: number;
     rftDate: string | null;
+    objectivesVisible: boolean;
+    programVisible: boolean;
     transmittalCount: number;
     createdAt: string;
     updatedAt: string;
@@ -33,6 +35,8 @@ interface UseRftNewReturn {
     error: Error | null;
     createRft: () => Promise<RftNew | null>;
     updateRftDate: (rftId: string, date: string) => Promise<boolean>;
+    updateObjectivesVisible: (rftId: string, visible: boolean) => Promise<boolean>;
+    updateProgramVisible: (rftId: string, visible: boolean) => Promise<boolean>;
     deleteRft: (rftId: string) => Promise<boolean>;
     refetch: () => void;
 }
@@ -163,6 +167,82 @@ export function useRftNew({
     }, [data, localMutate, toast]);
 
     /**
+     * Update RFT objectives visibility flag
+     */
+    const updateObjectivesVisible = useCallback(async (rftId: string, visible: boolean): Promise<boolean> => {
+        // Optimistic update first so the UI flips immediately
+        if (data) {
+            const optimistic = data.map(r =>
+                r.id === rftId ? { ...r, objectivesVisible: visible } : r
+            );
+            localMutate(optimistic, false);
+        }
+
+        try {
+            const response = await fetch(`/api/rft-new/${rftId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ objectivesVisible: visible }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save');
+            }
+
+            return true;
+        } catch (err) {
+            // Roll back optimistic update on failure
+            if (data) {
+                localMutate(data, false);
+            }
+            console.error('Failed to update objectives visibility:', err);
+            toast({
+                title: 'Save failed',
+                description: 'Failed to update objectives visibility',
+                variant: 'destructive',
+            });
+            return false;
+        }
+    }, [data, localMutate, toast]);
+
+    /**
+     * Update RFT program visibility flag
+     */
+    const updateProgramVisible = useCallback(async (rftId: string, visible: boolean): Promise<boolean> => {
+        if (data) {
+            const optimistic = data.map(r =>
+                r.id === rftId ? { ...r, programVisible: visible } : r
+            );
+            localMutate(optimistic, false);
+        }
+
+        try {
+            const response = await fetch(`/api/rft-new/${rftId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ programVisible: visible }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save');
+            }
+
+            return true;
+        } catch (err) {
+            if (data) {
+                localMutate(data, false);
+            }
+            console.error('Failed to update program visibility:', err);
+            toast({
+                title: 'Save failed',
+                description: 'Failed to update program visibility',
+                variant: 'destructive',
+            });
+            return false;
+        }
+    }, [data, localMutate, toast]);
+
+    /**
      * Delete an RFT
      */
     const deleteRft = useCallback(async (rftId: string): Promise<boolean> => {
@@ -210,6 +290,8 @@ export function useRftNew({
         error: error ?? null,
         createRft,
         updateRftDate,
+        updateObjectivesVisible,
+        updateProgramVisible,
         deleteRft,
         refetch,
     };

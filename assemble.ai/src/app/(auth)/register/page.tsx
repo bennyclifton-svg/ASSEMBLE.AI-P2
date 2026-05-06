@@ -4,7 +4,6 @@
  */
 
 import { RegisterForm } from '@/components/auth/RegisterForm';
-import Image from 'next/image';
 
 export default function RegisterPage() {
   return (
@@ -20,16 +19,8 @@ export default function RegisterPage() {
         {/* Logo/Header */}
         <div className="text-center mb-8 flex flex-col items-center">
           <div className="flex items-center gap-3 mb-3">
-            <Image
-              src="/logo-foundry.svg"
-              alt="Foundry Logo"
-              width={38}
-              height={38}
-              className="flex-shrink-0 logo-icon-glow"
-              priority
-            />
             <span className="text-2xl font-[family-name:var(--font-exo-2)] font-bold italic text-white">
-              Foundry
+              SiteWise
             </span>
           </div>
           <p className="text-[var(--color-text-muted)] mt-2">Create your account</p>

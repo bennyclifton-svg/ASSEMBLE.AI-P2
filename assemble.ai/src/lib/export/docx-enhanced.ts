@@ -1427,50 +1427,52 @@ export async function exportRFTNewToDOCX(data: RFTExportData): Promise<Buffer> {
 
   children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
 
-  // ===== 2. OBJECTIVES SECTION =====
-  children.push(new Paragraph({
-    children: [new TextRun({ text: 'OBJECTIVES', bold: true, size: 20, color: RFT_COLORS.darkHex })],
-    spacing: { before: 100, after: 100 },
-  }));
-
-  const objectiveCategories: { label: string; items: string[] }[] = [
-    { label: 'Planning', items: data.objectives.planning },
-    { label: 'Functional', items: data.objectives.functional },
-    { label: 'Quality', items: data.objectives.quality },
-    { label: 'Compliance', items: data.objectives.compliance },
-  ];
-  const hasAnyObjective = objectiveCategories.some(c => c.items.length > 0);
-
-  if (hasAnyObjective) {
-    let counter = 1;
-    for (const cat of objectiveCategories) {
-      if (cat.items.length === 0) continue;
-      // Subsection heading
-      children.push(new Paragraph({
-        children: [new TextRun({ text: cat.label, bold: true, size: 18, color: RFT_COLORS.blueHex })],
-        spacing: { before: 120, after: 60 },
-      }));
-      // Numbered items
-      for (const item of cat.items) {
-        children.push(new Paragraph({
-          children: [
-            new TextRun({ text: `${counter}.  `, bold: true, size: 17, color: RFT_COLORS.darkHex }),
-            new TextRun({ text: item, size: 17, color: RFT_COLORS.bodyHex }),
-          ],
-          spacing: { after: 40 },
-          indent: { left: 180, hanging: 180 },
-        }));
-        counter++;
-      }
-    }
-  } else {
+  // ===== 2. OBJECTIVES SECTION (skipped when objectivesVisible is false) =====
+  if (data.objectivesVisible) {
     children.push(new Paragraph({
-      children: [new TextRun({ text: 'No objectives defined.', size: 15, color: RFT_COLORS.mutedHex })],
-      spacing: { after: 100 },
+      children: [new TextRun({ text: 'OBJECTIVES', bold: true, size: 20, color: RFT_COLORS.darkHex })],
+      spacing: { before: 100, after: 100 },
     }));
-  }
 
-  children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+    const objectiveCategories: { label: string; items: string[] }[] = [
+      { label: 'Planning', items: data.objectives.planning },
+      { label: 'Functional', items: data.objectives.functional },
+      { label: 'Quality', items: data.objectives.quality },
+      { label: 'Compliance', items: data.objectives.compliance },
+    ];
+    const hasAnyObjective = objectiveCategories.some(c => c.items.length > 0);
+
+    if (hasAnyObjective) {
+      let counter = 1;
+      for (const cat of objectiveCategories) {
+        if (cat.items.length === 0) continue;
+        // Subsection heading
+        children.push(new Paragraph({
+          children: [new TextRun({ text: cat.label, bold: true, size: 18, color: RFT_COLORS.blueHex })],
+          spacing: { before: 120, after: 60 },
+        }));
+        // Numbered items
+        for (const item of cat.items) {
+          children.push(new Paragraph({
+            children: [
+              new TextRun({ text: `${counter}.  `, bold: true, size: 17, color: RFT_COLORS.darkHex }),
+              new TextRun({ text: item, size: 17, color: RFT_COLORS.bodyHex }),
+            ],
+            spacing: { after: 40 },
+            indent: { left: 180, hanging: 180 },
+          }));
+          counter++;
+        }
+      }
+    } else {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: 'No objectives defined.', size: 15, color: RFT_COLORS.mutedHex })],
+        spacing: { after: 100 },
+      }));
+    }
+
+    children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  }
 
   // ===== 3. BRIEF SECTION =====
   children.push(new Paragraph({
@@ -1496,7 +1498,8 @@ export async function exportRFTNewToDOCX(data: RFTExportData): Promise<Buffer> {
 
   children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
 
-  // ===== 4. PROGRAM SECTION =====
+  // ===== 4. PROGRAM SECTION (skipped when programVisible is false) =====
+  if (data.programVisible) {
   children.push(new Paragraph({
     children: [new TextRun({ text: 'PROGRAM', bold: true, size: 20, color: RFT_COLORS.darkHex })],
     spacing: { before: 100, after: 100 },
@@ -1612,6 +1615,7 @@ export async function exportRFTNewToDOCX(data: RFTExportData): Promise<Buffer> {
   }
 
   children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  } // end of programVisible block
 
   // ===== 5. FEE SECTION =====
   children.push(new Paragraph({

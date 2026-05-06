@@ -107,7 +107,7 @@ function useNominatimAutocomplete() {
         });
 
         const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
-            headers: { 'User-Agent': 'AssembleAI/1.0' },
+            headers: { 'User-Agent': 'SiteWise/1.0' },
         });
 
         if (!response.ok) return [];
@@ -130,7 +130,7 @@ function useNominatimAutocomplete() {
         });
 
         const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
-            headers: { 'User-Agent': 'AssembleAI/1.0' },
+            headers: { 'User-Agent': 'SiteWise/1.0' },
         });
 
         if (!response.ok) return null;

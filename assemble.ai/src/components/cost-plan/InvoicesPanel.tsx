@@ -54,6 +54,26 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
     const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; invoiceNo: string } | null>(null);
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+    // "all" = no filter; otherwise "YYYY-MM"
+    const [monthFilter, setMonthFilter] = useState<string>('all');
+
+    // 24-month rolling window of options up to and including the current month.
+    const monthFilterOptions = useMemo(() => {
+        const options: { value: string; label: string }[] = [];
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+        for (let i = 23; i >= 0; i--) {
+            const date = new Date(currentYear, currentMonth - 1 - i, 1);
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            options.push({
+                value: `${year}-${String(month).padStart(2, '0')}`,
+                label: date.toLocaleString('default', { month: 'short', year: 'numeric' }),
+            });
+        }
+        return options;
+    }, []);
 
     // Handle sort column click
     const handleSort = (column: SortColumn) => {
@@ -65,11 +85,24 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
         }
     };
 
-    // Sort invoices based on current sort state
+    // Filter then sort. Filter matches when the invoice's coded period
+    // OR its invoice date falls in the selected month.
     const sortedInvoices = useMemo(() => {
-        if (!sortColumn) return invoices;
+        let filtered = invoices;
+        if (monthFilter !== 'all') {
+            const [yearStr, monthStr] = monthFilter.split('-');
+            const filterYear = parseInt(yearStr, 10);
+            const filterMonth = parseInt(monthStr, 10);
+            filtered = invoices.filter((inv) => {
+                if (inv.periodYear === filterYear && inv.periodMonth === filterMonth) return true;
+                const d = new Date(inv.invoiceDate);
+                return d.getFullYear() === filterYear && d.getMonth() + 1 === filterMonth;
+            });
+        }
 
-        return [...invoices].sort((a, b) => {
+        if (!sortColumn) return filtered;
+
+        return [...filtered].sort((a, b) => {
             let aVal: string | number;
             let bVal: string | number;
 
@@ -110,7 +143,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
             if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
             return 0;
         });
-    }, [invoices, sortColumn, sortDirection]);
+    }, [invoices, sortColumn, sortDirection, monthFilter]);
 
     const handleAddInvoice = async (data: Omit<CreateInvoiceInput, 'projectId'>) => {
         await createInvoice(data);
@@ -139,11 +172,23 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
         <InvoiceDropZone projectId={projectId} onUploadComplete={() => refetch()}>
         <div className="h-full flex flex-col text-xs">
             {/* Toolbar */}
-            <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
-                <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
-                    <Upload className="h-3 w-3" />
-                    Drop Invoice
-                </span>
+            <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
+                <Upload className="h-3 w-3 text-[var(--color-text-muted)]" aria-label="Drop invoice" />
+                <select
+                    value={monthFilter}
+                    onChange={(e) => setMonthFilter(e.target.value)}
+                    className="text-xs text-[var(--primary-foreground)] bg-[var(--color-accent-green)] px-2.5 py-1.5 rounded font-medium hover:bg-[var(--primitive-green-dark)] focus:outline-none transition-colors cursor-pointer"
+                    title="Filter invoices by month (matches coded period or invoice date)"
+                >
+                    <option value="all" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                        All months
+                    </option>
+                    {monthFilterOptions.map((option) => (
+                        <option key={option.value} value={option.value} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* Table */}
@@ -251,7 +296,9 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                         ) : sortedInvoices.length === 0 && !showAddRow ? (
                             <tr>
                                 <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
-                                    No invoices yet. Click the + icon to add one.
+                                    {monthFilter === 'all'
+                                        ? 'No invoices yet. Click the + icon to add one.'
+                                        : 'No invoices match the selected month.'}
                                 </td>
                             </tr>
                         ) : (

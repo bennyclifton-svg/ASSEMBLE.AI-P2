@@ -113,8 +113,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 .limit(1);
 
             if (stakeholder) {
-                briefService = stakeholder.briefServices || '';
-                briefDeliverables = stakeholder.briefDeliverables || '';
+                // Honour the user's persisted view mode per sub-section. Long
+                // mode prefers the polished column but falls back to the short
+                // column if no polished content has been generated yet.
+                briefService = stakeholder.briefServicesViewMode === 'long'
+                    ? (stakeholder.briefServicesPolished || stakeholder.briefServices || '')
+                    : (stakeholder.briefServices || '');
+                briefDeliverables = stakeholder.briefDeliverablesViewMode === 'long'
+                    ? (stakeholder.briefDeliverablesPolished || stakeholder.briefDeliverables || '')
+                    : (stakeholder.briefDeliverables || '');
                 contextName = stakeholder.name;
             }
 
@@ -162,6 +169,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             address,
             documentLabel,
             issuedDate,
+            objectivesVisible: report.objectivesVisible,
+            programVisible: report.programVisible,
             objectives: objectivesByType,
             brief: {
                 service: briefService,

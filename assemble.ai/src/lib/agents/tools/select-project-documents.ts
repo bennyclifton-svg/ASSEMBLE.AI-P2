@@ -27,6 +27,7 @@ import {
     optionalString,
     optionalStringArray,
 } from './_write-helpers';
+import { documentTitleSearchCondition } from './document-search';
 
 const TOOL = 'select_project_documents';
 const MODES = ['replace', 'add', 'remove', 'clear'] as const;
@@ -101,7 +102,7 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
                 documentName: {
                     type: 'string',
                     description:
-                        'Optional document or drawing title/name contains filter. Use for requests like "select all section drawings" or "select basement floor plan drawings". Matches extracted drawing names and original filenames.',
+                        'Optional document or drawing title/name contains filter. Use for requests like "select all section drawings", "select basement floor plan drawings", or "select all documents about stairs". Matches extracted drawing names, drawing numbers combined with titles, and original filenames.',
                 },
                 allProjectDocuments: {
                     type: 'boolean',
@@ -196,15 +197,7 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
                     )`
                 );
             }
-            if (input.documentName) {
-                const pattern = `%${input.documentName}%`;
-                conditions.push(
-                    sql`(
-                        ${fileAssets.drawingName} ILIKE ${pattern}
-                        OR ${fileAssets.originalName} ILIKE ${pattern}
-                    )`
-                );
-            }
+            if (input.documentName) conditions.push(documentTitleSearchCondition(input.documentName));
 
             const rows = await db
                 .select({ id: documents.id })

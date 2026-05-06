@@ -713,23 +713,33 @@ export function ObjectivesWorkspace({ projectId, onUpdate }: ObjectivesWorkspace
             )}
             {/* Single outer card containing all four sections */}
             <div className="rounded border border-[var(--color-border)]/50 overflow-hidden">
-              {SECTION_ORDER.map((type, idx) => (
-                <SectionGroup
-                  key={type}
-                  type={type}
-                  label={sectionLabels[type]}
-                  rows={rows[type]}
-                  onSave={saveSection}
-                  onDeleteAll={setGroupToDelete}
-                  onRegenerate={handleRegenerate}
-                  viewMode={viewModes[type]}
-                  onViewModeChange={handleViewModeChange}
-                  hasLongContent={rows[type].some((r) => !!r.textPolished)}
-                  isGenerating={generatingSection === type}
-                  isAnyGenerating={generatingSection !== null}
-                  isLastSection={idx === SECTION_ORDER.length - 1}
-                />
-              ))}
+              {(() => {
+                // Continuous numbering across sections — each section's editor
+                // starts where the previous section ended.
+                let runningCounter = 1;
+                return SECTION_ORDER.map((type, idx) => {
+                  const sectionStart = runningCounter;
+                  runningCounter += rows[type].length;
+                  return (
+                    <SectionGroup
+                      key={type}
+                      type={type}
+                      label={sectionLabels[type]}
+                      rows={rows[type]}
+                      onSave={saveSection}
+                      onDeleteAll={setGroupToDelete}
+                      onRegenerate={handleRegenerate}
+                      viewMode={viewModes[type]}
+                      onViewModeChange={handleViewModeChange}
+                      hasLongContent={rows[type].some((r) => !!r.textPolished)}
+                      isGenerating={generatingSection === type}
+                      isAnyGenerating={generatingSection !== null}
+                      isLastSection={idx === SECTION_ORDER.length - 1}
+                      startIndex={sectionStart}
+                    />
+                  );
+                });
+              })()}
             </div>
           </div>
         )}

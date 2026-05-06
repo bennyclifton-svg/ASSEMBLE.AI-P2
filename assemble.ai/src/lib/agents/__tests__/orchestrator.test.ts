@@ -67,8 +67,22 @@ describe('routeAgents', () => {
         expect(routeAgents('Are the DA conditions reflected in the drawings?')).toEqual(['design']);
     });
 
+    test('routes technical services evidence questions to design', () => {
+        expect(routeAgents('what mechanical systems are specified in the appartments')).toEqual(['design']);
+        expect(routeAgents('Is CO monitoring required in the carpark?')).toEqual(['design']);
+    });
+
     test('routes meeting creation to design', () => {
         expect(routeAgents('create a new meeting called Pre-DA Meeting')).toEqual(['design']);
+    });
+
+    test('routes PCG project report creation to design', () => {
+        expect(routeAgents('a new monthly PCG report')).toEqual(['design']);
+        expect(routeAgents('create a new monthly PCG report')).toEqual(['design']);
+    });
+
+    test('keeps explicit progress-claim reports in finance', () => {
+        expect(routeAgents('create a progress claim report for April 2026')).toEqual(['finance']);
     });
 
     test('routes activity creation to program even when the activity is a Pre-DA meeting', () => {
@@ -120,6 +134,20 @@ describe('routeAgents', () => {
         expect(routeAgents('populate the objectives')).toEqual(['design']);
     });
 
+    test('routes tender panel firm additions to design', () => {
+        expect(routeAgents('add 3 firms to the Mechanical consultant tender')).toEqual(['design']);
+        expect(routeAgents('add 3 tenderers to the Mechanical contractor panel')).toEqual(['design']);
+    });
+
+    test('routes follow-up firm contact lists to design', () => {
+        expect(
+            routeAgents(`1. Harbour Mechanical Services
+Address: Level 3, 18 Kent Street, Sydney NSW 2000
+Phone: 02 9188 4720
+Email: tenders@harbourmechanical.com.au`)
+        ).toEqual(['design']);
+    });
+
     test.each([
         {
             prompt: 'update the Architecture Detail Design Budget and Contract value to 150000',
@@ -143,7 +171,15 @@ describe('routeAgents', () => {
             expected: ['design'],
         },
         {
+            prompt: 'a new monthly PCG report',
+            expected: ['design'],
+        },
+        {
             prompt: 'Create an addendum from the selected set, call it Structural Update.',
+            expected: ['design'],
+        },
+        {
+            prompt: 'add 3 firms to the Mechanical consultant tender.',
             expected: ['design'],
         },
         {
@@ -165,10 +201,13 @@ describe('formatOrchestratorFinalText', () => {
             formatOrchestratorFinalText([
                 {
                     agentName: 'finance',
-                    text: "I've put the proposed changes in the approval cards above.",
+                    text:
+                        "I've put the proposed changes in the approval cards above. Use the buttons on those cards to approve, edit, or reject them.",
                 },
             ])
-        ).toBe("I've put the proposed changes in the approval cards above.");
+        ).toBe(
+            "I've put the proposed changes in the approval cards above. Use the buttons on those cards to approve, edit, or reject them."
+        );
     });
 
     test('does not expose specialist routing on single specialist errors', () => {

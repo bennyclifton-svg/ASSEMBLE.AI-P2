@@ -177,6 +177,7 @@ describe('list_project_documents.validate', () => {
                 disciplineOrTrade: 'mechanical',
                 drawingNumber: 'CC-20',
                 documentName: 'section',
+                aiIngestionStatus: 'ingested',
                 includeDocuments: true,
                 limit: 999,
             })
@@ -186,14 +187,18 @@ describe('list_project_documents.validate', () => {
             disciplineOrTrade: 'mechanical',
             drawingNumber: 'CC-20',
             documentName: 'section',
+            aiIngestionStatus: 'synced',
             includeDocuments: true,
-            limit: 100,
+            limit: 500,
         });
     });
 
     it('rejects malformed document inventory options', () => {
         expect(() => listProjectDocumentsTool.validate({ includeDocuments: 'yes' })).toThrow();
         expect(() => listProjectDocumentsTool.validate({ limit: -1 })).toThrow();
+        expect(() =>
+            listProjectDocumentsTool.validate({ aiIngestionStatus: 'uploaded' })
+        ).toThrow(/aiIngestionStatus/);
     });
 });
 

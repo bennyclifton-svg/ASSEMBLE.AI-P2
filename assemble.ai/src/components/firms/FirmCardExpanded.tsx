@@ -21,7 +21,7 @@ interface FirmCardExpandedProps {
 
 interface InlineFieldProps {
   label: string;
-  value: string;
+  value: string | null | undefined;
   onSave: (value: string) => Promise<void>;
   placeholder?: string;
   required?: boolean;
@@ -29,17 +29,22 @@ interface InlineFieldProps {
   type?: 'text' | 'email' | 'tel';
 }
 
+export function toInputValue(value: string | null | undefined): string {
+  return value ?? '';
+}
+
 function InlineField({ label, value, onSave, placeholder, required, multiline, type = 'text' }: InlineFieldProps) {
-  const [editValue, setEditValue] = useState(value);
+  const normalizedValue = toInputValue(value);
+  const [editValue, setEditValue] = useState(normalizedValue);
   const [isFocused, setIsFocused] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!isFocused) {
-      setEditValue(value);
+      setEditValue(normalizedValue);
     }
-  }, [value, isFocused]);
+  }, [normalizedValue, isFocused]);
 
   useEffect(() => {
     return () => {
@@ -51,9 +56,9 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
 
   const handleBlur = async () => {
     setIsFocused(false);
-    if (editValue === value) return;
+    if (editValue === normalizedValue) return;
     if (required && !editValue.trim()) {
-      setEditValue(value);
+      setEditValue(normalizedValue);
       return;
     }
 
@@ -66,7 +71,7 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
       try {
         await onSave(editValue);
       } catch {
-        setEditValue(value);
+        setEditValue(normalizedValue);
       } finally {
         setIsSaving(false);
       }
@@ -78,7 +83,7 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
       e.preventDefault();
       (e.target as HTMLElement).blur();
     } else if (e.key === 'Escape') {
-      setEditValue(value);
+      setEditValue(normalizedValue);
       (e.target as HTMLElement).blur();
     }
   };
@@ -316,7 +321,7 @@ export function FirmCardExpanded({
         {type === 'consultant' && (
           <InlineField
             label="Mobile"
-            value={firm.mobile || ''}
+            value={firm.mobile}
             onSave={(v) => handleFieldSave('mobile', v)}
             placeholder="0412 345 678"
             type="tel"

@@ -12,6 +12,7 @@ jest.mock('@/lib/db', () => ({
 }));
 
 jest.mock('@/lib/agents/applicators', () => ({
+    applyCreateAddendum: jest.fn(),
     applyCreateTransmittal: jest.fn(),
     applyCreateVariation: jest.fn(),
     applySetProjectObjectives: jest.fn(),
@@ -28,11 +29,14 @@ import { getAction, listActions } from '../index';
 
 describe('action registry', () => {
     test('registers the stage-three breadth actions', () => {
+        expect(getAction('procurement.tender_firms.add')?.toolName).toBe('add_tender_firms');
         expect(getAction('correspondence.note.create')?.toolName).toBe('create_note');
+        expect(getAction('correspondence.report.create')?.toolName).toBe('create_report');
         expect(getAction('correspondence.note.update')?.toolName).toBe('update_note');
         expect(getAction('correspondence.note.attach_documents')?.toolName).toBe(
             'attach_documents_to_note'
         );
+        expect(getAction('correspondence.addendum.create')?.toolName).toBe('create_addendum');
         expect(getAction('correspondence.transmittal.create')?.toolName).toBe(
             'create_transmittal'
         );
@@ -43,10 +47,12 @@ describe('action registry', () => {
         expect(getAction('program.activity.update')?.toolName).toBe('update_program_activity');
         expect(getAction('program.milestone.create')?.toolName).toBe('create_program_milestone');
         expect(getAction('program.milestone.update')?.toolName).toBe('update_program_milestone');
+        expect(getAction('procurement.stakeholder.update')?.toolName).toBe('update_stakeholder');
     });
 
     test('filters actions by agent access', () => {
         const financeActionIds = listActions({ agentName: 'finance' }).map((action) => action.id);
+        const designActionIds = listActions({ agentName: 'design' }).map((action) => action.id);
 
         expect(financeActionIds).toEqual(
             expect.arrayContaining([
@@ -59,6 +65,11 @@ describe('action registry', () => {
         );
         expect(financeActionIds).not.toContain('program.activity.update');
         expect(financeActionIds).not.toContain('program.milestone.create');
+        expect(financeActionIds).not.toContain('procurement.tender_firms.add');
+        expect(financeActionIds).not.toContain('procurement.stakeholder.update');
+        expect(designActionIds).toContain('procurement.stakeholder.update');
+        expect(designActionIds).toContain('correspondence.report.create');
+        expect(financeActionIds).not.toContain('correspondence.report.create');
     });
 
     test('rejects note inputs that claim attachments without document ids', () => {
