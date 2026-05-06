@@ -1,3 +1,8 @@
 NUL
 assemble.ai/NUL
 .claude/worktrees/
+
+# Local-only screen recordings and reference videos
+# (kept on disk but never committed — GitHub blocks files >100MB)
+foundry/
+assemble.ai test files/
