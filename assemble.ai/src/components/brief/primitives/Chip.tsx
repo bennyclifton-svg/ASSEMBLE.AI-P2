@@ -12,9 +12,23 @@ export function Chip({
     onAccent?: string;
     onClick?: () => void;
 }) {
+    const interactive = Boolean(onClick);
     return (
         <span
             onClick={onClick}
+            role={interactive ? 'button' : undefined}
+            tabIndex={interactive ? 0 : undefined}
+            aria-pressed={interactive ? Boolean(selected) : undefined}
+            onKeyDown={
+                interactive
+                    ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onClick?.();
+                          }
+                      }
+                    : undefined
+            }
             style={{
                 fontFamily: 'var(--sw-font-mono)',
                 fontSize: 11,
@@ -25,7 +39,7 @@ export function Chip({
                 fontWeight: selected ? 600 : 400,
                 letterSpacing: '0.01em',
                 whiteSpace: 'nowrap',
-                cursor: onClick ? 'pointer' : undefined,
+                cursor: interactive ? 'pointer' : undefined,
             }}
         >
             {label}
