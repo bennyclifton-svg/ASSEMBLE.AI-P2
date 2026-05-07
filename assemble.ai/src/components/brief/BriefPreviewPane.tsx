@@ -25,10 +25,27 @@ const muted = 'var(--sw-muted)';
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Loose shape used by the preview. `buildingClass` / `projectType` may be
+ * `null` when the user has not yet selected them — `buildNarrative` renders
+ * `[—]` placeholders in that case rather than fabricating defaults like
+ * "residential" / "new". All other fields fall back to safe empties.
+ */
+export type BriefPreviewProfile = {
+    buildingClass: ProfileInput['buildingClass'] | null;
+    projectType: ProfileInput['projectType'] | null;
+    subclass: ProfileInput['subclass'];
+    subclassOther?: ProfileInput['subclassOther'];
+    scaleData: ProfileInput['scaleData'];
+    complexity: ProfileInput['complexity'];
+    workScope?: ProfileInput['workScope'];
+    region?: ProfileInput['region'];
+};
+
 interface BriefPreviewPaneProps {
     projectId: string;
     projectName: string;
-    profile: ProfileInput;
+    profile: BriefPreviewProfile;
 }
 
 interface NormalizedObjective {
@@ -62,7 +79,7 @@ interface ObjectivesResponse {
  * inline highlight spans. Missing fields render as `[—]` placeholders so the
  * narrative degrades gracefully.
  */
-function buildNarrative(profile: ProfileInput, projectName: string): React.ReactNode {
+function buildNarrative(profile: BriefPreviewProfile, projectName: string): React.ReactNode {
     const storeys = profile?.scaleData?.storeys;
     const units = profile?.scaleData?.units;
     const subclassRaw = profile?.subclass?.[0];

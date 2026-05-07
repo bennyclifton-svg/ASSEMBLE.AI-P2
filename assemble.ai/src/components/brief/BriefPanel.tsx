@@ -4,8 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
 import { ObjectivesWorkspace } from '@/components/profiler/objectives/ObjectivesWorkspace';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
-import { BriefPreviewPane } from './BriefPreviewPane';
-import type { BuildingClass, ProjectType, Region, ProfileInput } from '@/types/profiler';
+import { BriefPreviewPane, type BriefPreviewProfile } from './BriefPreviewPane';
+import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
 
 interface BriefPanelProps {
     projectId: string;
@@ -31,32 +31,39 @@ interface BriefPanelProps {
     };
     onProfileComplete?: () => void;
     onProfileLoad?: (buildingClass: BuildingClass, projectType: ProjectType) => void;
-    // Optional project display name for the BriefPreviewPane narrative.
-    // Optional for backwards compat — falls back to a sensible default.
-    projectName?: string;
+    // Project display name for the BriefPreviewPane narrative. Required —
+    // every caller (currently only ProcurementCard via ProjectWorkspace) has
+    // a non-null project name available before render (the workspace
+    // null-guards `project` before mounting ProcurementCard).
+    projectName: string;
 }
 
 /**
- * Build a `ProfileInput` for `BriefPreviewPane` from the partial profile data
- * threaded through `BriefPanel`. `BriefPanelProps.profileData` does not include
- * `buildingClass` / `projectType` (those live as separate props on the panel),
- * so we recombine them here. Any missing field falls back to a safe default —
- * `BriefPreviewPane.buildNarrative` already renders `[—]` placeholders for
- * empty values, so the preview degrades gracefully.
+ * Build a `BriefPreviewProfile` for `BriefPreviewPane` from the partial
+ * profile data threaded through `BriefPanel`. `BriefPanelProps.profileData`
+ * does not include `buildingClass` / `projectType` / `region` (those live as
+ * separate props on the panel), so we recombine them here.
+ *
+ * `buildingClass` and `projectType` are passed through verbatim — including
+ * `null`. `BriefPreviewPane.buildNarrative` renders `[—]` placeholders for
+ * `null` values rather than fabricating identity (e.g. defaulting to
+ * "residential" / "new" before the user has selected anything would mislead).
  */
 function buildProfileForPreview(args: {
     profileData?: BriefPanelProps['profileData'];
     buildingClass: BuildingClass | null;
     projectType: ProjectType | null;
-}): ProfileInput {
+    region?: Region;
+}): BriefPreviewProfile {
     return {
-        buildingClass: args.buildingClass ?? 'residential',
-        projectType: args.projectType ?? 'new',
+        buildingClass: args.buildingClass,
+        projectType: args.projectType,
         subclass: args.profileData?.subclass ?? [],
         subclassOther: args.profileData?.subclassOther ?? [],
         scaleData: args.profileData?.scaleData ?? {},
         complexity: args.profileData?.complexity ?? {},
         workScope: args.profileData?.workScope ?? [],
+        region: args.region,
     };
 }
 
@@ -114,31 +121,52 @@ export function BriefPanel({
                     />
                 </TabsContent>
 
-                <TabsContent value="building" className="flex-1 mt-0 min-h-0 overflow-hidden">
+                {/* Building - forceMount preserves BriefPreviewPane's GET-then-POST
+                    objectives fetch state across sub-tab switches, so revisiting
+                    Building does not re-run the fetch. */}
+                <TabsContent
+                    value="building"
+                    forceMount
+                    className="flex-1 mt-0 min-h-0 overflow-hidden data-[state=inactive]:hidden"
+                >
+                    {/*
+                      Sticky preview pane requires the OUTER wrapper to own the
+                      page-level scroll context. We pass `layout="natural"` to
+                      ProfilerMiddlePanel so it renders at its content height
+                      (no internal `h-full overflow-y-auto`) — otherwise this
+                      wrapper never overflows and `sticky top-5` is a no-op.
+                      The `min-h-0` wrapper around ProfilerMiddlePanel is a
+                      flex/grid escape hatch in case any descendant still
+                      claims `h-full`.
+                    */}
                     <div
                         className="grid gap-5 p-5 h-full overflow-y-auto"
                         style={{ gridTemplateColumns: '1.4fr 1fr' }}
                     >
-                        <ProfilerMiddlePanel
-                            projectId={projectId}
-                            buildingClass={buildingClass}
-                            projectType={projectType}
-                            onClassChange={onClassChange}
-                            onTypeChange={onTypeChange}
-                            region={region}
-                            onRegionChange={onRegionChange}
-                            initialData={profileData}
-                            onProfileComplete={onProfileComplete}
-                            onProfileLoad={onProfileLoad}
-                        />
+                        <div className="min-h-0">
+                            <ProfilerMiddlePanel
+                                projectId={projectId}
+                                buildingClass={buildingClass}
+                                projectType={projectType}
+                                onClassChange={onClassChange}
+                                onTypeChange={onTypeChange}
+                                region={region}
+                                onRegionChange={onRegionChange}
+                                initialData={profileData}
+                                onProfileComplete={onProfileComplete}
+                                onProfileLoad={onProfileLoad}
+                                layout="natural"
+                            />
+                        </div>
                         <aside className="self-start sticky top-5">
                             <BriefPreviewPane
                                 projectId={projectId}
-                                projectName={projectName ?? 'Project'}
+                                projectName={projectName}
                                 profile={buildProfileForPreview({
                                     profileData,
                                     buildingClass,
                                     projectType,
+                                    region,
                                 })}
                             />
                         </aside>

@@ -21,7 +21,7 @@ import type { StakeholderWithStatus } from '@/types/stakeholder';
 
 interface ProcurementCardProps {
     projectId: string;
-    projectName?: string;
+    projectName: string;
     selectedDocumentIds: string[];
     onSetSelectedDocumentIds?: (ids: string[]) => void;
     buildingClass?: BuildingClass | null;

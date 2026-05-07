@@ -51,6 +51,17 @@ interface ProfilerMiddlePanelProps {
   };
   onProfileComplete?: () => void;
   onProfileLoad?: (buildingClass: BuildingClass, projectType: ProjectType) => void;
+  /**
+   * Layout mode.
+   * - 'fixed' (default): panel claims `h-full` and owns its own internal scroll
+   *   via an inner `overflow-y-auto`. Use when this panel is the sole occupant
+   *   of a fixed-height container.
+   * - 'natural': panel renders at its natural content height with no internal
+   *   scroll, allowing an outer wrapper to own the scroll context. Required
+   *   when this panel is rendered alongside a `position: sticky` sibling
+   *   (e.g. BriefPanel's Building tab) so the sticky element actually pins.
+   */
+  layout?: 'fixed' | 'natural';
 }
 
 interface ScopeCategoryWithItems {
@@ -483,6 +494,7 @@ export function ProfilerMiddlePanel({
   initialData,
   onProfileComplete,
   onProfileLoad,
+  layout = 'fixed',
 }: ProfilerMiddlePanelProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -991,8 +1003,18 @@ export function ProfilerMiddlePanel({
     [buildingClass, selectedSubclasses, complexity, workScope, projectType],
   );
 
+  // In 'natural' layout, this panel renders at its content height with no
+  // internal scroll so the parent's outer wrapper can own the scroll context
+  // (required for `position: sticky` siblings to actually pin). In 'fixed'
+  // mode (default, backwards-compatible) the panel claims `h-full` and
+  // scrolls its inner content list internally.
+  const rootClassName =
+    layout === 'natural' ? 'flex flex-col' : 'h-full flex flex-col overflow-hidden';
+  const bodyClassName =
+    layout === 'natural' ? 'p-5' : 'flex-1 overflow-y-auto p-5';
+
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className={rootClassName}>
       {/* TODO(task-6): move Save/Load into BriefPanel chrome strip */}
       <div className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-5 py-2.5">
         <button
@@ -1016,7 +1038,7 @@ export function ProfilerMiddlePanel({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5">
+      <div className={bodyClassName}>
         <BuildingTabView
           buildingClass={buildingClass}
           projectType={projectType}
