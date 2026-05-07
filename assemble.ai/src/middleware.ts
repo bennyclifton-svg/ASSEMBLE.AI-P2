@@ -1,9 +1,7 @@
 /**
- * Authentication Proxy
+ * Authentication Middleware
  * Handles routing for public and authenticated pages.
  * Uses Better Auth for session management.
- *
- * Note: Renamed from middleware.ts to proxy.ts per Next.js 16 convention.
  *
  * Route structure:
  * - / (public landing page for unauthenticated, redirects to /dashboard for authenticated)
@@ -37,7 +35,7 @@ const SESSION_COOKIE_NAMES = [
   'better-auth.session_token',
 ];
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Check if route should bypass middleware
@@ -90,11 +88,17 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except:
+     * - api (API routes — they handle their own auth)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - public folder files
+     * - public asset extensions
+     *
+     * The bare `/` is included explicitly because the negative-lookahead
+     * pattern alone has been observed not to match the root path reliably
+     * across Next.js versions.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
