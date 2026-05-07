@@ -46,6 +46,15 @@ interface BriefPreviewPaneProps {
     projectId: string;
     projectName: string;
     profile: BriefPreviewProfile;
+    /**
+     * Bumping this number forces the objectives effect to re-run, re-fetching
+     * (or re-generating, when the project still has zero rows) the inferred
+     * objectives. The Brief panel bumps it after a user-triggered
+     * "Regenerate brief" POST so the right-pane reflects the fresh batch
+     * without remounting the whole component tree (which would also reset
+     * the narrative card's internal `generatedAt` timestamp).
+     */
+    refreshKey?: number;
 }
 
 interface NormalizedObjective {
@@ -252,7 +261,7 @@ function normalizeObjectives(payload: ObjectivesResponse): NormalizedObjective[]
 // Component
 // ---------------------------------------------------------------------------
 
-export function BriefPreviewPane({ projectId, projectName, profile }: BriefPreviewPaneProps) {
+export function BriefPreviewPane({ projectId, projectName, profile, refreshKey = 0 }: BriefPreviewPaneProps) {
     // Status strip values — frozen at mount so the timestamp doesn't tick.
     const { generatedAt, model, tokens } = useMemo(() => {
         return {
@@ -319,7 +328,7 @@ export function BriefPreviewPane({ projectId, projectName, profile }: BriefPrevi
         return () => {
             cancelled = true;
         };
-    }, [projectId, retryNonce]);
+    }, [projectId, retryNonce, refreshKey]);
 
     return (
         <div className="flex flex-col gap-3">
