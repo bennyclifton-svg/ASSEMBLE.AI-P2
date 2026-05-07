@@ -34,7 +34,7 @@ export default async function LoginPage({
 
         {/* Login Form Card - Aurora style */}
         <div className="card-aurora rounded-lg p-6">
-          <LoginForm redirectTo={params.redirect || '/'} />
+          <LoginForm redirectTo={params.redirect || '/dashboard'} />
         </div>
       </div>
     </div>

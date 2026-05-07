@@ -30,8 +30,12 @@ const BYPASS_PATTERNS = [
   '/.*\\.(svg|png|jpg|jpeg|gif|webp|ico)$',
 ];
 
-// Better Auth session cookie name
-const SESSION_COOKIE_NAME = 'better-auth.session_token';
+// Better Auth session cookie names. Better Auth uses the `__Secure-` prefix
+// in production (HTTPS) and the unprefixed name in dev (HTTP), so check both.
+const SESSION_COOKIE_NAMES = [
+  '__Secure-better-auth.session_token',
+  'better-auth.session_token',
+];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -48,9 +52,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for Better Auth session cookie
-  const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const isAuthenticated = !!sessionToken;
+  // Check for Better Auth session cookie (either prefixed or unprefixed name)
+  const isAuthenticated = SESSION_COOKIE_NAMES.some(
+    (name) => !!request.cookies.get(name)?.value,
+  );
 
   // Check route type
   const isAuthRoute = AUTH_ROUTES.some(route => pathname.startsWith(route));

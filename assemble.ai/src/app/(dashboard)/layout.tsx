@@ -12,9 +12,12 @@ export default async function DashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
-    // Check for Better Auth session cookie
+    // Check for Better Auth session cookie. Better Auth uses the `__Secure-`
+    // prefix in production HTTPS and the unprefixed name in dev HTTP.
     const cookieStore = await cookies();
-    const session = cookieStore.get('better-auth.session_token');
+    const session =
+        cookieStore.get('__Secure-better-auth.session_token') ||
+        cookieStore.get('better-auth.session_token');
 
     if (!session) {
         redirect('/login');

@@ -17,7 +17,9 @@ export default async function ProjectLayout({
     children: React.ReactNode;
 }) {
     const cookieStore = await cookies();
-    const session = cookieStore.get('better-auth.session_token');
+    const session =
+        cookieStore.get('__Secure-better-auth.session_token') ||
+        cookieStore.get('better-auth.session_token');
     if (!session) {
         redirect('/login');
     }
