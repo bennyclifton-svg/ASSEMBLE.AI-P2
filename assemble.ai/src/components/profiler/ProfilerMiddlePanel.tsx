@@ -1,24 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Building2,
-  Factory,
-  Home,
-  Landmark,
-  Layers,
-  Route,
-  Shield,
-  Tractor,
-} from 'lucide-react';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import { useToast } from '@/lib/hooks/use-toast';
+import { BuildingTabView, type BuildingTabTemplates } from '@/components/brief/BuildingTabView';
 import {
-  ConsultantPreview,
-  ContextChips,
-  ComplexityScore,
-  MarketContext,
-  RiskFlags,
+  ConsultantPreview as _ConsultantPreview,
+  ContextChips as _ContextChips,
+  ComplexityScore as _ComplexityScore,
+  MarketContext as _MarketContext,
+  RiskFlags as _RiskFlags,
 } from './PowerFeatures';
 import type {
   BuildingClass,
@@ -27,12 +18,20 @@ import type {
   ProjectType,
   Region,
   ScaleField,
-  SubclassOption,
   WorkScopeCategory,
   WorkScopeClassOverride,
   WorkScopeItem,
   WorkScopeOptions,
 } from '@/types/profiler';
+
+// Suppress unused warnings — these power-feature components remain importable
+// for downstream consumers but are no longer rendered inline (their data is
+// now surfaced via the inline cards in BuildingTabView).
+void _ConsultantPreview;
+void _ContextChips;
+void _ComplexityScore;
+void _MarketContext;
+void _RiskFlags;
 
 type ProfileTemplateData = typeof profileTemplates & {
   workScopeOptions?: WorkScopeOptions;
@@ -50,17 +49,6 @@ const BUILDING_CLASS_ORDER: BuildingClass[] = [
   'agricultural',
   'defense_secure',
 ];
-
-const BUILDING_CLASS_ICONS: Record<string, React.ReactNode> = {
-  residential: <Home className="h-3.5 w-3.5" />,
-  commercial: <Building2 className="h-3.5 w-3.5" />,
-  industrial: <Factory className="h-3.5 w-3.5" />,
-  institution: <Landmark className="h-3.5 w-3.5" />,
-  mixed: <Layers className="h-3.5 w-3.5" />,
-  infrastructure: <Route className="h-3.5 w-3.5" />,
-  agricultural: <Tractor className="h-3.5 w-3.5" />,
-  defense_secure: <Shield className="h-3.5 w-3.5" />,
-};
 
 interface ProfilerMiddlePanelProps {
   projectId: string;
@@ -93,42 +81,6 @@ function formatKey(value: string): string {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function fieldRange(field: ScaleField): { min: number; max: number; step: number; unit?: string } {
-  const min = typeof field.min === 'number' ? field.min : 0;
-  let max = typeof field.max === 'number' ? field.max : 1000;
-  let step = 1;
-
-  if (typeof field.max !== 'number') {
-    if (field.key === 'storeys') max = 60;
-    else if (field.key.endsWith('_sqm') || field.key === 'gfa_sqm') max = 50000;
-    else if (['units', 'beds', 'dwellings', 'sites', 'ilus'].includes(field.key)) max = 1000;
-    else if (field.key === 'bedrooms') max = 8;
-    else if (field.key === 'garage_spaces') max = 6;
-    else if (field.key.endsWith('_percent')) max = 100;
-    else if (field.key === 'site_area_ha') max = 100;
-  }
-
-  if (field.type === 'decimal') {
-    if (field.key.endsWith('_sqm') || field.key === 'gfa_sqm') step = 50;
-    else if (field.key.endsWith('_percent')) step = 5;
-  } else if (field.key.endsWith('_sqm') || field.key === 'gfa_sqm') {
-    step = 50;
-  }
-
-  const unit = field.key.endsWith('_sqm') || field.key === 'gfa_sqm'
-    ? 'm2'
-    : field.key.endsWith('_percent')
-      ? '%'
-      : undefined;
-
-  return { min, max, step, unit };
-}
-
-function clampToRange(value: number, min: number, max: number, step: number): number {
-  const clamped = Math.min(max, Math.max(min, value));
-  return Math.round(clamped / step) * step;
-}
-
 function arraysMatch(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
 }
@@ -137,6 +89,437 @@ function arraysMatch(a: string[], b: string[]): boolean {
 // site_conditions are not severity levels — they're independent characteristics
 // (greenfield, sloping, bushfire, etc.) that can co-exist on one site.
 const MULTI_SELECT_COMPLEXITY = new Set<string>(['site_conditions']);
+
+// ---- Per-dimension chip accent colours (matches the wireframe). ----
+const DIMENSION_ACCENT: Record<string, string> = {
+  quality_tier: 'var(--sw-peach)',
+  site_conditions: 'var(--sw-amber)',
+  heritage: 'var(--sw-amber)',
+  approval_pathway: 'var(--sw-cyan)',
+  contamination_level: 'var(--sw-amber)',
+  access_constraints: 'var(--sw-cyan)',
+  operational_constraints: 'var(--sw-cyan)',
+  procurement_route: 'var(--sw-lav)',
+  stakeholder_complexity: 'var(--sw-lav)',
+  environmental_sensitivity: 'var(--sw-amber)',
+};
+function dimensionAccent(key: string): string {
+  return DIMENSION_ACCENT[key] ?? 'var(--sw-ink)';
+}
+
+// ---- Project type labels ----
+const PROJECT_TYPE_OPTIONS: Array<{ value: ProjectType; label: string }> =
+  (profileTemplates.projectTypes as Array<{ value: string; label: string }>).map(
+    (t) => ({ value: t.value as ProjectType, label: t.label }),
+  );
+
+// ---- Building class labels in canonical order ----
+const BUILDING_CLASS_OPTIONS: Array<{ value: BuildingClass; label: string }> =
+  BUILDING_CLASS_ORDER.map((key) => ({
+    value: key,
+    label:
+      (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key]
+        ?.label ?? formatKey(key),
+  }));
+
+// ---- Derivation helpers (NCC, cost band, complexity band, contingency) ----
+
+function deriveComplexityBand(score: number | null | undefined): string | null {
+  if (score == null) return null;
+  if (score < 3) return 'low';
+  if (score < 6) return 'standard';
+  if (score < 8) return 'high';
+  if (score < 10) return 'very high';
+  return 'extreme';
+}
+
+function deriveContingencyBand(
+  band: string | null | undefined,
+): string | null {
+  switch (band) {
+    case 'low':
+      return '5-10%';
+    case 'standard':
+      return '10-15%';
+    case 'high':
+      return '15-25%';
+    case 'very high':
+      return '20-35%';
+    case 'extreme':
+      return '25-40%';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Best-effort NCC class derivation from building class + subclasses + storeys.
+ * Initial mapping; not exhaustive. Returns null if no confident mapping.
+ */
+function deriveNCCClass(
+  buildingClass: BuildingClass | null,
+  subclasses: string[],
+  storeys?: number,
+): { classCode: string; typeAndVolume?: string } | null {
+  if (!buildingClass) return null;
+
+  // Type A/B/C is determined primarily by rise in storeys / effective height.
+  // Simplified: storeys >= 4 (or unknown) → Type A · Vol 1
+  //             storeys 2-3 → Type B · Vol 1
+  //             storeys 1   → Type C · Vol 1
+  const tav = ((): string => {
+    if (storeys == null || storeys >= 4) return 'Type A . Vol 1';
+    if (storeys >= 2) return 'Type B . Vol 1';
+    return 'Type C . Vol 1';
+  })();
+
+  if (buildingClass === 'residential') {
+    if (subclasses.includes('house') || subclasses.includes('townhouses')) {
+      return { classCode: 'Class 1a', typeAndVolume: 'Vol 2' };
+    }
+    if (subclasses.includes('aged_care_9c')) {
+      return { classCode: 'Class 9c', typeAndVolume: tav };
+    }
+    if (
+      subclasses.includes('apartments') ||
+      subclasses.includes('btr') ||
+      subclasses.includes('student_housing') ||
+      subclasses.includes('social_affordable') ||
+      subclasses.includes('coliving') ||
+      subclasses.includes('heritage_conversion')
+    ) {
+      return { classCode: 'Class 2', typeAndVolume: tav };
+    }
+    return { classCode: 'Class 2', typeAndVolume: tav };
+  }
+
+  if (buildingClass === 'commercial') {
+    if (subclasses.includes('hotel')) {
+      return { classCode: 'Class 3', typeAndVolume: tav };
+    }
+    if (subclasses.includes('retail_shopping')) {
+      return { classCode: 'Class 6', typeAndVolume: tav };
+    }
+    return { classCode: 'Class 5', typeAndVolume: tav };
+  }
+
+  if (buildingClass === 'industrial') {
+    return { classCode: 'Class 7/8', typeAndVolume: tav };
+  }
+
+  if (buildingClass === 'institution') {
+    if (subclasses.includes('healthcare_hospital')) {
+      return { classCode: 'Class 9a', typeAndVolume: tav };
+    }
+    if (
+      subclasses.includes('education_school') ||
+      subclasses.includes('education_tertiary')
+    ) {
+      return { classCode: 'Class 9b', typeAndVolume: tav };
+    }
+    return { classCode: 'Class 9b', typeAndVolume: tav };
+  }
+
+  if (buildingClass === 'mixed') {
+    return { classCode: 'Mixed (Class 2 + 5/6)', typeAndVolume: tav };
+  }
+
+  return { classCode: '-' };
+}
+
+/**
+ * TODO(real-cost-derivation): hardcoded cost bands per project type for v1.
+ * Future: read from CostBenchmark + scaleData.gfa_sqm × per-sqm rates.
+ */
+function deriveEstCostBand(
+  projectType: ProjectType | null,
+  scaleData: Record<string, number>,
+): { lowAUD: number; highAUD: number } | null {
+  if (!projectType) return null;
+  const gfa = Number(scaleData.gfa_sqm) || 0;
+  if (gfa > 0) {
+    // Coarse rate ranges per project type (AUD/m2)
+    const ratesByType: Record<ProjectType, [number, number]> = {
+      new: [3000, 6500],
+      extend: [3500, 7000],
+      refurb: [1800, 4500],
+      remediation: [800, 2500],
+      advisory: [0, 0],
+    };
+    const [lowRate, highRate] = ratesByType[projectType] ?? [0, 0];
+    if (lowRate === 0 && highRate === 0) return null;
+    return { lowAUD: gfa * lowRate, highAUD: gfa * highRate };
+  }
+
+  // Fallback band per project type when GFA unknown
+  switch (projectType) {
+    case 'new':
+      return { lowAUD: 12_000_000, highAUD: 35_000_000 };
+    case 'extend':
+      return { lowAUD: 6_000_000, highAUD: 18_000_000 };
+    case 'refurb':
+      return { lowAUD: 3_000_000, highAUD: 12_000_000 };
+    case 'remediation':
+      return { lowAUD: 1_000_000, highAUD: 6_000_000 };
+    case 'advisory':
+      return null;
+    default:
+      return null;
+  }
+}
+
+// ---- RiskFlags translation: replicates the existing RiskFlags logic, but
+// returns the wireframe shape `{ label, description, tag }`. ----
+
+interface InlineRiskFlag {
+  label: string;
+  description: string;
+  tag: string;
+}
+
+function findWorkScopeItem(
+  scopeValue: string,
+  projectType: ProjectType | null,
+): WorkScopeItem | null {
+  if (!projectType) return null;
+  const workScopeOptions = templates.workScopeOptions;
+  const typeConfig =
+    (workScopeOptions as unknown as Record<string, Record<string, WorkScopeCategory>>)?.[
+      projectType
+    ];
+  if (!typeConfig) return null;
+  for (const category of Object.values(typeConfig) as WorkScopeCategory[]) {
+    const item = category.items.find((i) => i.value === scopeValue);
+    if (item) return item;
+  }
+  return null;
+}
+
+function deriveRiskFlags(args: {
+  buildingClass: BuildingClass | null;
+  projectType: ProjectType | null;
+  subclass: string[];
+  scaleData: Record<string, number>;
+  complexity: Record<string, string | string[]>;
+  workScope: string[];
+}): InlineRiskFlag[] {
+  const { buildingClass, projectType, subclass, scaleData, complexity, workScope } = args;
+  const result: InlineRiskFlag[] = [];
+  if (!buildingClass || subclass.length === 0) return result;
+
+  const workScopeOptions = templates.workScopeOptions;
+  const riskDefinitions =
+    (workScopeOptions as unknown as { riskDefinitions?: Record<string, { severity: string; title: string; description: string }> })
+      ?.riskDefinitions ?? {};
+  const seen = new Set<string>();
+
+  const siteConditionsValue = complexity.site_conditions;
+  const siteConditions: string[] = Array.isArray(siteConditionsValue)
+    ? siteConditionsValue
+    : siteConditionsValue
+      ? [siteConditionsValue as string]
+      : [];
+
+  workScope.forEach((scopeValue) => {
+    const item = findWorkScopeItem(scopeValue, projectType);
+    if (item?.riskFlag && !seen.has(item.riskFlag)) {
+      const def = riskDefinitions[item.riskFlag];
+      if (def) {
+        seen.add(item.riskFlag);
+        result.push({
+          label: def.title,
+          description: def.description,
+          tag: def.severity.toUpperCase(),
+        });
+      }
+    }
+  });
+
+  if (siteConditions.includes('bushfire') && subclass.includes('aged_care_9c')) {
+    result.push({
+      label: 'BAL-FZ + Class 9c Conflict',
+      description:
+        'Bushfire Flame Zone (BAL-FZ) creates evacuation challenges for non-ambulatory residents. Consider alternate site or enhanced fire engineering.',
+      tag: 'CRITICAL',
+    });
+  }
+  if (siteConditions.includes('bushfire')) {
+    result.push({
+      label: 'Bushfire Attack Level',
+      description:
+        'BAL ratings require compliant construction methods, materials certification, and may limit design options.',
+      tag: 'WARNING',
+    });
+  }
+  if (siteConditions.includes('flood')) {
+    result.push({
+      label: 'Flood Overlay Zone',
+      description:
+        'Flood planning controls may require elevated floor levels, flood-resistant materials, and stormwater management.',
+      tag: 'WARNING',
+    });
+  }
+  if (siteConditions.includes('coastal')) {
+    result.push({
+      label: 'Coastal Site',
+      description:
+        'Coastal areas require consideration of sea level rise, storm surge, and corrosive marine environment on materials.',
+      tag: 'WARNING',
+    });
+  }
+  if (siteConditions.includes('sloping')) {
+    result.push({
+      label: 'Sloping Site (>15%)',
+      description:
+        'Steep gradients may require retaining walls, specialized foundations, and additional excavation/fill.',
+      tag: 'INFO',
+    });
+  }
+  if (complexity.heritage === 'listed') {
+    result.push({
+      label: 'Heritage Listed Building',
+      description:
+        'Heritage listing adds 15-40% to costs. Requires heritage consultant, conservation management plan, and extended approvals.',
+      tag: 'WARNING',
+    });
+  }
+  if (complexity.approval_pathway === 'state_significant') {
+    result.push({
+      label: 'State Significant Development',
+      description:
+        'SSD pathway typically adds 40+ weeks to approval timeline. Early engagement with planning authority recommended.',
+      tag: 'WARNING',
+    });
+  }
+  const storeys = (scaleData.storeys || scaleData.total_storeys || 0) as number;
+  if (storeys > 25) {
+    result.push({
+      label: 'High-Rise Construction',
+      description:
+        'Buildings over 25 storeys require fire engineering, specialized construction methods, and longer programmes.',
+      tag: 'INFO',
+    });
+  }
+  return result;
+}
+
+// ---- Disciplines translation: replicates ConsultantPreview logic, returns
+// `{ required, suggested }` arrays of discipline names. ----
+
+const BASE_DISCIPLINES = [
+  'Architect',
+  'Structural',
+  'Civil',
+  'Mechanical',
+  'Electrical',
+  'Hydraulic',
+];
+
+const CLASS_DISCIPLINES: Record<string, string[]> = {
+  residential: ['Landscape', 'Acoustic'],
+  commercial: ['Facade', 'Acoustic', 'ESD'],
+  industrial: ['Fire Engineer', 'ESD'],
+  institution: ['Acoustic', 'Security'],
+  mixed: ['Facade', 'Traffic', 'Acoustic'],
+  infrastructure: ['Geotech', 'Environmental', 'Traffic'],
+  defense_secure: ['Security', 'SCIF Specialist', 'Fire Engineer'],
+  agricultural: ['Agricultural', 'Environmental', 'Civil'],
+};
+
+interface DisciplineHit {
+  name: string;
+  required: boolean;
+}
+
+const SUBCLASS_DISCIPLINES: Record<string, DisciplineHit[]> = {
+  aged_care_9c: [
+    { name: 'Fire Engineer', required: true },
+    { name: 'Access', required: true },
+    { name: 'Kitchen Consultant', required: false },
+  ],
+  healthcare_hospital: [
+    { name: 'Medical Planner', required: true },
+    { name: 'Fire Engineer', required: true },
+    { name: 'Acoustic', required: true },
+    { name: 'Infection Control Consultant', required: false },
+  ],
+  data_centre: [
+    { name: 'Data Centre Specialist', required: true },
+    { name: 'Fire Engineer', required: true },
+    { name: 'Security', required: true },
+  ],
+  hotel: [
+    { name: 'Interior', required: true },
+    { name: 'Kitchen Consultant', required: true },
+    { name: 'Acoustic', required: true },
+    { name: 'Lighting', required: false },
+  ],
+};
+
+const COMPLEXITY_DISCIPLINES: Record<string, DisciplineHit> = {
+  heritage: { name: 'Heritage', required: true },
+  listed: { name: 'Heritage Architect', required: true },
+  bushfire: { name: 'Bushfire', required: true },
+  flood: { name: 'Flood', required: true },
+  state_significant: { name: 'Planning', required: true },
+  complex_da: { name: 'Town Planning', required: true },
+  triple_cert: { name: 'ESD', required: true },
+  net_zero: { name: 'Net Zero Consultant', required: true },
+  tier_3: { name: 'Commissioning Agent', required: true },
+  tier_4: { name: 'Commissioning Agent', required: true },
+};
+
+function deriveDisciplines(args: {
+  buildingClass: BuildingClass | null;
+  subclass: string[];
+  complexity: Record<string, string | string[]>;
+  workScope: string[];
+  projectType: ProjectType | null;
+}): { required: string[]; suggested: string[] } {
+  const { buildingClass, subclass, complexity, workScope, projectType } = args;
+  if (!buildingClass || subclass.length === 0) {
+    return { required: [], suggested: [] };
+  }
+  const map = new Map<string, DisciplineHit>();
+  BASE_DISCIPLINES.forEach((name) =>
+    map.set(name, { name, required: true }),
+  );
+  (CLASS_DISCIPLINES[buildingClass] ?? []).forEach((name) => {
+    if (!map.has(name)) map.set(name, { name, required: false });
+  });
+  subclass.forEach((sub) => {
+    (SUBCLASS_DISCIPLINES[sub] ?? []).forEach((d) => {
+      if (!map.has(d.name) || d.required) map.set(d.name, d);
+    });
+  });
+  Object.values(complexity).forEach((value) => {
+    const values = Array.isArray(value) ? value : [value];
+    values.forEach((v) => {
+      const hit = COMPLEXITY_DISCIPLINES[v as string];
+      if (hit && !map.has(hit.name)) map.set(hit.name, hit);
+    });
+  });
+  workScope.forEach((scopeValue) => {
+    const item = findWorkScopeItem(scopeValue, projectType);
+    item?.consultants?.forEach((c) => {
+      if (!map.has(c)) map.set(c, { name: c, required: true });
+    });
+  });
+
+  const required: string[] = [];
+  const suggested: string[] = [];
+  Array.from(map.values())
+    .sort((a, b) => {
+      if (a.required !== b.required) return a.required ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    })
+    .forEach((d) => (d.required ? required.push(d.name) : suggested.push(d.name)));
+  return { required, suggested };
+}
+
+// ============================================================================
+// COMPONENT
+// ============================================================================
 
 export function ProfilerMiddlePanel({
   projectId,
@@ -156,12 +539,14 @@ export function ProfilerMiddlePanel({
   const [scaleData, setScaleData] = useState<Record<string, number>>(initialData?.scaleData || {});
   const [complexity, setComplexity] = useState<Record<string, string | string[]>>(initialData?.complexity || {});
   const [workScope, setWorkScope] = useState<string[]>(initialData?.workScope || []);
+  // Slider levels: kept in their original 0-N domain to preserve existing
+  // bucketing logic (`buildComplexityFromLevel`, `buildScopeFromLevel`).
   const [complexityLevel, setComplexityLevel] = useState(2);
   const [complexityOverrides, setComplexityOverrides] = useState<Record<string, string>>({});
   const [scopeLevel, setScopeLevel] = useState(0);
   const [scopeOverrides, setScopeOverrides] = useState<Record<string, string[]>>({});
-  const [showAllClasses, setShowAllClasses] = useState(false);
-  const [showAllSubclasses, setShowAllSubclasses] = useState(false);
+  // Composite complexity score from API (set on Save / Load).
+  const [complexityScore, setComplexityScore] = useState<number | null>(null);
   const prevBuildingClassRef = useRef<BuildingClass | null>(buildingClass);
 
   useEffect(() => {
@@ -250,6 +635,8 @@ export function ProfilerMiddlePanel({
     return categories;
   }, [buildingClass, projectType]);
 
+  // ---- Handlers (state-mutating logic preserved verbatim) ----
+
   const handleSubclassToggle = (subclass: string) => {
     const maxSubclasses = buildingClass === 'mixed' ? 4 : 1;
 
@@ -262,44 +649,6 @@ export function ProfilerMiddlePanel({
     setScaleData({});
     setComplexity({});
     setComplexityOverrides({});
-  };
-
-  const updateScaleField = (key: string, rawValue: string) => {
-    if (rawValue === '') {
-      setScaleData((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-      return;
-    }
-
-    const numeric = Number(rawValue);
-    if (Number.isNaN(numeric)) return;
-    setScaleData((prev) => ({ ...prev, [key]: numeric }));
-  };
-
-  const stepScaleField = (field: ScaleField, delta: number) => {
-    const range = fieldRange(field);
-    setScaleData((prev) => {
-      const current = typeof prev[field.key] === 'number' ? prev[field.key] : range.min;
-      return {
-        ...prev,
-        [field.key]: clampToRange(current + delta, range.min, range.max, range.step),
-      };
-    });
-  };
-
-  const normalizeScaleField = (field: ScaleField) => {
-    const range = fieldRange(field);
-    setScaleData((prev) => {
-      const value = prev[field.key];
-      if (typeof value !== 'number') return prev;
-      return {
-        ...prev,
-        [field.key]: clampToRange(value, range.min, range.max, range.step),
-      };
-    });
   };
 
   const selectType = (type: ProjectType) => {
@@ -432,7 +781,19 @@ export function ProfilerMiddlePanel({
     setWorkScope(buildScopeFromLevel(level, scopeOverrides));
   };
 
-  const selectScopeItem = (category: ScopeCategoryWithItems, item: WorkScopeItem) => {
+  /**
+   * Handles a click on any scope chip — finds the owning category, then applies
+   * the original `selectScopeItem` semantics (overrides + workScope mutation).
+   * Adapter shape so BuildingTabView only needs the value, not the category.
+   */
+  const handleScopeToggle = (scopeValue: string) => {
+    const category = scopeCategories.find((cat) =>
+      cat.items.some((item) => item.value === scopeValue),
+    );
+    if (!category) return;
+    const item = category.items.find((i) => i.value === scopeValue);
+    if (!item) return;
+
     const defaultValues = defaultScopeValues(category.items);
     const categoryValues = category.items.map((scopeItem) => scopeItem.value);
     const currentValues = category.items
@@ -454,6 +815,37 @@ export function ProfilerMiddlePanel({
       ...selectedValues,
     ]);
   };
+
+  /**
+   * Adapter for BuildingTabView's complexity chip click — resolves the option
+   * object from the (dimension, value) pair and delegates to the existing
+   * single/multi-select handler.
+   */
+  const handleComplexityChange = (dimension: string, value: string) => {
+    const options = complexityOptions[dimension] ?? [];
+    const option = options.find((o) => o.value === value);
+    if (!option) return;
+    selectComplexityOption(dimension, option);
+  };
+
+  // BuildingTabView's slider uses 0-100. Existing complexityLevel is 0-4
+  // (5 buckets) and scopeLevel is 0-3 (4 buckets). Scale on the way in/out.
+  const COMPLEXITY_BUCKETS = 4; // levels 0..4
+  const SCOPE_BUCKETS = 3; // levels 0..3
+
+  const complexitySliderValue = Math.round((complexityLevel / COMPLEXITY_BUCKETS) * 100);
+  const scopeSliderValue = Math.round((scopeLevel / SCOPE_BUCKETS) * 100);
+
+  const handleComplexitySliderChange = (sliderValue: number) => {
+    const level = Math.round((sliderValue / 100) * COMPLEXITY_BUCKETS);
+    applyComplexityLevel(level);
+  };
+  const handleScopeSliderChange = (sliderValue: number) => {
+    const level = Math.round((sliderValue / 100) * SCOPE_BUCKETS);
+    applyScopeLevel(level);
+  };
+
+  // ---- Persistence (verbatim) ----
 
   const handleSave = async () => {
     if (!buildingClass || !projectType) {
@@ -486,6 +878,11 @@ export function ProfilerMiddlePanel({
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error?.message || 'Failed to save profile');
+      }
+
+      const result = await response.json().catch(() => null);
+      if (result?.data?.complexityScore != null) {
+        setComplexityScore(Number(result.data.complexityScore));
       }
 
       toast({
@@ -528,6 +925,9 @@ export function ProfilerMiddlePanel({
       setWorkScope(loadedWorkScope);
       setScopeOverrides({});
       setScopeLevel(loadedWorkScope.length > 0 ? 2 : 0);
+      if (data.complexityScore != null) {
+        setComplexityScore(Number(data.complexityScore));
+      }
 
       if (data.buildingClass && data.projectType) {
         onProfileLoad?.(data.buildingClass as BuildingClass, data.projectType as ProjectType);
@@ -551,14 +951,102 @@ export function ProfilerMiddlePanel({
 
   const canSave = Boolean(buildingClass && projectType);
 
+  // ---- Derive BuildingTabTemplates (the BuildingTabView contract) ----
+
+  const derivedTemplates = useMemo<BuildingTabTemplates>(() => {
+    const subclassOptions = classConfig?.subclasses
+      ? classConfig.subclasses.map((s) => ({ value: s.value, label: s.label }))
+      : [];
+
+    const complexityDimensions = Object.entries(complexityOptions).map(
+      ([key, options]) => ({
+        key,
+        label: formatKey(key),
+        options,
+        accent: dimensionAccent(key),
+      }),
+    );
+
+    const scopeGroups = scopeCategories.map((cat) => ({
+      categoryLabel: cat.label,
+      items: cat.items,
+    }));
+
+    const scaleFieldsView = scaleFields.map((f) => {
+      const unit = f.key.endsWith('_sqm') || f.key === 'gfa_sqm'
+        ? 'm2'
+        : f.key.endsWith('_percent')
+          ? '%'
+          : undefined;
+      return {
+        key: f.key,
+        label: f.label,
+        unit,
+        note: f.placeholder ? `placeholder ${f.placeholder}` : undefined,
+      };
+    });
+
+    return {
+      buildingClasses: BUILDING_CLASS_OPTIONS,
+      projectTypes: PROJECT_TYPE_OPTIONS,
+      subclassOptions,
+      complexityDimensions,
+      scopeGroups,
+      scaleFields: scaleFieldsView,
+    };
+  }, [classConfig, complexityOptions, scopeCategories, scaleFields]);
+
+  // ---- Derive optional extras ----
+
+  const complexityBand = useMemo(
+    () => deriveComplexityBand(complexityScore),
+    [complexityScore],
+  );
+  const contingencyBand = useMemo(
+    () => deriveContingencyBand(complexityBand),
+    [complexityBand],
+  );
+  const nccClass = useMemo(
+    () => deriveNCCClass(buildingClass, selectedSubclasses, scaleData.storeys as number | undefined),
+    [buildingClass, selectedSubclasses, scaleData],
+  );
+  const estCostBand = useMemo(
+    () => deriveEstCostBand(projectType, scaleData),
+    [projectType, scaleData],
+  );
+  const riskFlags = useMemo(
+    () =>
+      deriveRiskFlags({
+        buildingClass,
+        projectType,
+        subclass: selectedSubclasses,
+        scaleData,
+        complexity,
+        workScope,
+      }),
+    [buildingClass, projectType, selectedSubclasses, scaleData, complexity, workScope],
+  );
+  const disciplines = useMemo(
+    () =>
+      deriveDisciplines({
+        buildingClass,
+        subclass: selectedSubclasses,
+        complexity,
+        workScope,
+        projectType,
+      }),
+    [buildingClass, selectedSubclasses, complexity, workScope, projectType],
+  );
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      {/* TODO(task-6): move Save/Load into BriefPanel chrome strip */}
       <div className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-5 py-2.5">
         <button
           type="button"
           onClick={handleLoad}
           disabled={isLoading}
-          className="rounded px-3 py-1.5 text-xs font-medium bg-[#1776c1] text-white hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          className="rounded px-3 py-1.5 text-xs font-medium bg-[var(--color-accent-primary)] text-white hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Loading...' : 'Load Profile'}
         </button>
@@ -575,353 +1063,32 @@ export function ProfilerMiddlePanel({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        <div className="grid grid-cols-1 xl:grid-cols-[5fr_5fr_2fr] gap-3">
-        <section className="flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
-          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-            Class Tree
-          </span>
-          <div className="grid grid-cols-5 auto-rows-fr gap-1 flex-1">
-            {(showAllClasses ? BUILDING_CLASS_ORDER : BUILDING_CLASS_ORDER.slice(0, 4)).map((key) => {
-              const config = (profileTemplates.buildingClasses as Record<string, BuildingClassConfig>)[key];
-              const selected = buildingClass === key;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => onClassChange?.(key)}
-                  title={config?.label ?? formatKey(key)}
-                  className={`flex min-w-0 items-center justify-center gap-1 rounded-md border px-1.5 py-1.5 text-[10px] font-semibold transition-all ${selected
-                    ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
-                    : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-copper)]/50'
-                    }`}
-                >
-                  {BUILDING_CLASS_ICONS[key]}
-                  <span className="truncate">{config?.label ?? formatKey(key)}</span>
-                </button>
-              );
-            })}
-            {BUILDING_CLASS_ORDER.length > 4 && (
-              <div className="flex items-center justify-center">
-                <button
-                  type="button"
-                  onClick={() => setShowAllClasses((v) => !v)}
-                  aria-expanded={showAllClasses}
-                  title={showAllClasses ? 'Show fewer classes' : `Show ${BUILDING_CLASS_ORDER.length - 4} more classes`}
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-accent-copper)]/50 hover:text-[var(--color-accent-copper)]"
-                >
-                  <span className="-mt-1.5 text-base leading-none">…</span>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {classConfig && (
-            <div className="mt-2 flex flex-1 flex-wrap content-start items-start gap-1 border-t border-[var(--color-border)] pt-2">
-              {(showAllSubclasses ? classConfig.subclasses : classConfig.subclasses.slice(0, 4)).map((sub: SubclassOption) => {
-                const selected = selectedSubclasses.includes(sub.value);
-                return (
-                  <button
-                    key={sub.value}
-                    type="button"
-                    onClick={() => handleSubclassToggle(sub.value)}
-                    className={`max-w-[150px] truncate rounded-md border px-2 py-1 text-[10px] font-medium transition-all ${selected
-                      ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
-                      : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-copper)]/50'
-                      }`}
-                    title={sub.label}
-                  >
-                    {sub.label}
-                  </button>
-                );
-              })}
-              {classConfig.subclasses.length > 4 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllSubclasses((v) => !v)}
-                  aria-expanded={showAllSubclasses}
-                  title={showAllSubclasses ? 'Show fewer subclasses' : `Show ${classConfig.subclasses.length - 4} more subclasses`}
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-border)] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-accent-copper)]/50 hover:text-[var(--color-accent-copper)]"
-                >
-                  <span className="-mt-1.5 text-base leading-none">…</span>
-                </button>
-              )}
-              {buildingClass === 'mixed' && (
-                <span className="self-center text-[10px] text-[var(--color-text-muted)]">
-                  up to 4
-                </span>
-              )}
-            </div>
-          )}
-        </section>
-
-        <section className="flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
-          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-            Type
-          </span>
-            <div className="grid grid-cols-5 auto-rows-fr gap-1.5 flex-1">
-              {profileTemplates.projectTypes.map((type) => {
-                const selected = projectType === type.value;
-                return (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => selectType(type.value as ProjectType)}
-                    className={`flex flex-col items-center justify-center min-h-10 rounded-md border px-1.5 py-1.5 text-center text-[11px] font-semibold transition-all ${selected
-                      ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] text-[var(--color-accent-copper)]'
-                      : 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent-copper)]/50'
-                      }`}
-                  >
-                    <span className="block h-1 w-6 rounded-full bg-current opacity-40 mb-1" />
-                    <span className="block truncate">{type.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-              Scale
-            </span>
-            {scaleFields.length === 0 ? (
-              <p className="text-xs text-[var(--color-text-muted)]">Select a class to configure scale.</p>
-            ) : (
-              <div className="flex flex-col gap-1">
-                {scaleFields.map((field) => {
-                  const range = fieldRange(field);
-                  const value = scaleData[field.key] ?? '';
-                  return (
-                    <div key={field.key} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-                      <label className="min-w-0 truncate text-[10px] font-semibold text-[var(--color-text-muted)]" title={field.label}>
-                        {field.label}
-                      </label>
-                      <div className="grid grid-cols-[20px_60px_20px] overflow-hidden rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)]">
-                        <button
-                          type="button"
-                          onClick={() => stepScaleField(field, -range.step)}
-                          className="h-6 text-xs font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-accent-copper-tint)] hover:text-[var(--color-accent-copper)]"
-                          aria-label={`Decrease ${field.label}`}
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={value}
-                          min={range.min}
-                          max={range.max}
-                          step={range.step}
-                          placeholder={field.placeholder}
-                          onChange={(event) => updateScaleField(field.key, event.target.value)}
-                          onBlur={() => normalizeScaleField(field)}
-                          className="h-6 min-w-0 border-x border-[var(--color-border)] bg-[var(--color-bg-primary)] px-1 text-center text-xs font-semibold text-[var(--color-text-primary)] outline-none focus:ring-1 focus:ring-[var(--color-accent-copper)]"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => stepScaleField(field, range.step)}
-                          className="h-6 text-xs font-bold text-[var(--color-text-muted)] hover:bg-[var(--color-accent-copper-tint)] hover:text-[var(--color-accent-copper)]"
-                          aria-label={`Increase ${field.label}`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <strong className="text-sm font-semibold text-[var(--color-text-primary)]">
-                  Complexity
-                </strong>
-              </div>
-
-              {selectedSubclasses.length === 0 ? (
-                <p className="text-xs text-[var(--color-text-muted)]">Select a subclass to configure complexity.</p>
-              ) : (
-                <div className="grid grid-cols-[30px_minmax(0,1fr)] gap-2">
-                  <input
-                    type="range"
-                    min={0}
-                    max={4}
-                    value={complexityLevel}
-                    onChange={(event) => applyComplexityLevel(Number(event.target.value))}
-                    className="[writing-mode:vertical-lr] [direction:rtl] h-[248px] w-7 accent-[var(--color-accent-yellow)]"
-                    aria-label="Complexity level"
-                  />
-                  <div className="space-y-1">
-                    {Object.entries(complexityOptions).map(([dimension, options]) => {
-                      const isMultiSelect = MULTI_SELECT_COMPLEXITY.has(dimension);
-                      const baselineIndex = !isMultiSelect && complexityLevel > 0
-                        ? Math.min(complexityLevel - 1, Math.max(options.length - 1, 0))
-                        : -1;
-                      const rawValue = complexity[dimension];
-                      const selectedIndex = options.findIndex((option) =>
-                        Array.isArray(rawValue) ? rawValue.includes(option.value) : rawValue === option.value
-                      );
-                      const activeIndex = selectedIndex >= 0 ? selectedIndex : baselineIndex;
-
-                      return (
-                        <div
-                          key={dimension}
-                          className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-1.5 py-1"
-                        >
-                          <div className="flex min-w-0 items-center gap-1">
-                            <span className="truncate text-[9px] font-semibold text-[var(--color-text-muted)]" title={formatKey(dimension)}>
-                              {formatKey(dimension)}
-                            </span>
-                          </div>
-                          <div
-                            className="grid gap-0.5 rounded-md bg-[var(--color-bg-primary)] p-0.5"
-                            style={{ gridTemplateColumns: `repeat(${Math.max(options.length, 1)}, minmax(0, 1fr))` }}
-                          >
-                            {options.map((option, index) => {
-                              const selected = isMultiSelect
-                                ? Array.isArray(rawValue)
-                                  ? rawValue.includes(option.value)
-                                  : rawValue === option.value
-                                : index === activeIndex;
-                              return (
-                                <button
-                                  key={option.value}
-                                  type="button"
-                                  onClick={() => selectComplexityOption(dimension, option)}
-                                  className={`truncate rounded px-1 py-0.5 text-[9px] font-semibold transition-all ${selected
-                                    ? 'bg-[var(--color-card-firm-selected)] text-[var(--color-text-primary)]'
-                                    : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]'
-                                    }`}
-                                  title={option.label}
-                                >
-                                  {option.label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </section>
-
-          <section className="min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]/70 p-2 shadow-sm">
-            <div className="mb-2 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <strong className="block text-sm font-semibold text-[var(--color-text-primary)]">
-                  Scope / Work
-                </strong>
-              </div>
-            </div>
-
-            {scopeCategories.length === 0 ? (
-              <p className="text-xs text-[var(--color-text-muted)]">Select a supported type and class to configure scope.</p>
-            ) : (
-              <div className="grid grid-cols-[30px_minmax(0,1fr)] gap-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={3}
-                  value={scopeLevel}
-                  onChange={(event) => applyScopeLevel(Number(event.target.value))}
-                  className="[writing-mode:vertical-lr] [direction:rtl] h-[248px] w-7 accent-[var(--color-accent-green)]"
-                  aria-label="Scope level"
-                />
-                <div className="space-y-1">
-                  {scopeCategories.map((category) => {
-                    return (
-                      <div
-                        key={category.key}
-                        className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-1.5 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] px-1.5 py-1"
-                      >
-                        <div className="flex min-w-0 items-center gap-1">
-                          <span className="truncate text-[9px] font-semibold text-[var(--color-text-muted)]" title={category.label}>
-                            {category.label}
-                          </span>
-                        </div>
-                        <div
-                          className="grid gap-0.5 rounded-md bg-[var(--color-bg-primary)] p-0.5"
-                          style={{ gridTemplateColumns: `repeat(${Math.max(category.items.length, 1)}, minmax(0, 1fr))` }}
-                        >
-                          {category.items.map((item) => {
-                            const selected = workScope.includes(item.value);
-                            return (
-                              <button
-                                key={item.value}
-                                type="button"
-                                onClick={() => selectScopeItem(category, item)}
-                                className={`truncate rounded px-1 py-0.5 text-[9px] font-semibold transition-all ${selected
-                                  ? 'bg-[var(--color-card-scope-selected)] text-[var(--color-text-primary)]'
-                                  : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]'
-                                  }`}
-                                title={item.label}
-                              >
-                                {item.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </section>
-        </div>
-
-          <aside className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 min-w-0">
-            {selectedSubclasses.length > 0 && (
-              <ContextChips
-                buildingClass={buildingClass}
-                projectType={projectType}
-                subclass={selectedSubclasses}
-                scaleData={scaleData}
-                complexity={complexity}
-              />
-            )}
-
-            {Object.keys(complexity).length > 0 && (
-              <>
-                <ComplexityScore
-                  buildingClass={buildingClass}
-                  projectType={projectType}
-                  subclass={selectedSubclasses}
-                  scaleData={scaleData}
-                  complexity={complexity}
-                  workScope={workScope}
-                />
-                <MarketContext
-                  buildingClass={buildingClass}
-                  projectType={projectType}
-                  subclass={selectedSubclasses}
-                  scaleData={scaleData}
-                  complexity={complexity}
-                />
-                <RiskFlags
-                  buildingClass={buildingClass}
-                  projectType={projectType}
-                  subclass={selectedSubclasses}
-                  scaleData={scaleData}
-                  complexity={complexity}
-                  workScope={workScope}
-                />
-                <ConsultantPreview
-                  buildingClass={buildingClass}
-                  projectType={projectType}
-                  subclass={selectedSubclasses}
-                  scaleData={scaleData}
-                  complexity={complexity}
-                  workScope={workScope}
-                />
-              </>
-            )}
-          </aside>
+      <div className="flex-1 overflow-y-auto p-5">
+        <BuildingTabView
+          buildingClass={buildingClass}
+          projectType={projectType}
+          subclasses={selectedSubclasses}
+          scaleData={scaleData}
+          complexity={complexity}
+          workScope={workScope}
+          complexityLevel={complexitySliderValue}
+          scopeLevel={scopeSliderValue}
+          onClassChange={(cls) => onClassChange?.(cls)}
+          onTypeChange={(type) => selectType(type)}
+          onSubclassToggle={handleSubclassToggle}
+          onComplexityChange={handleComplexityChange}
+          onScopeToggle={handleScopeToggle}
+          onComplexityLevelChange={handleComplexitySliderChange}
+          onScopeLevelChange={handleScopeSliderChange}
+          templates={derivedTemplates}
+          complexityScore={complexityScore}
+          complexityBand={complexityBand}
+          contingencyBand={contingencyBand}
+          nccClass={nccClass}
+          estCostBand={estCostBand}
+          riskFlags={riskFlags}
+          disciplines={disciplines}
+        />
       </div>
     </div>
   );
