@@ -4,13 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import profileTemplates from '@/lib/data/profile-templates.json';
 import { useToast } from '@/lib/hooks/use-toast';
 import { BuildingTabView, type BuildingTabTemplates } from '@/components/brief/BuildingTabView';
-import {
-  ConsultantPreview as _ConsultantPreview,
-  ContextChips as _ContextChips,
-  ComplexityScore as _ComplexityScore,
-  MarketContext as _MarketContext,
-  RiskFlags as _RiskFlags,
-} from './PowerFeatures';
 import type {
   BuildingClass,
   BuildingClassConfig,
@@ -23,15 +16,6 @@ import type {
   WorkScopeItem,
   WorkScopeOptions,
 } from '@/types/profiler';
-
-// Suppress unused warnings — these power-feature components remain importable
-// for downstream consumers but are no longer rendered inline (their data is
-// now surfaced via the inline cards in BuildingTabView).
-void _ConsultantPreview;
-void _ContextChips;
-void _ComplexityScore;
-void _MarketContext;
-void _RiskFlags;
 
 type ProfileTemplateData = typeof profileTemplates & {
   workScopeOptions?: WorkScopeOptions;
@@ -153,32 +137,24 @@ function deriveContingencyBand(
 }
 
 /**
- * Best-effort NCC class derivation from building class + subclasses + storeys.
- * Initial mapping; not exhaustive. Returns null if no confident mapping.
+ * Conservative NCC class derivation. Returns classCode for the common
+ * cases; omits typeAndVolume except for Class 1a (which is always Vol 2).
+ * Type A/B/C requires the full NCC C2D2 rise-in-storeys table (a function
+ * of class AND storeys, not storeys alone) — defer to a richer helper
+ * once we wire the full classification logic.
  */
 function deriveNCCClass(
   buildingClass: BuildingClass | null,
   subclasses: string[],
-  storeys?: number,
 ): { classCode: string; typeAndVolume?: string } | null {
   if (!buildingClass) return null;
-
-  // Type A/B/C is determined primarily by rise in storeys / effective height.
-  // Simplified: storeys >= 4 (or unknown) → Type A · Vol 1
-  //             storeys 2-3 → Type B · Vol 1
-  //             storeys 1   → Type C · Vol 1
-  const tav = ((): string => {
-    if (storeys == null || storeys >= 4) return 'Type A . Vol 1';
-    if (storeys >= 2) return 'Type B . Vol 1';
-    return 'Type C . Vol 1';
-  })();
 
   if (buildingClass === 'residential') {
     if (subclasses.includes('house') || subclasses.includes('townhouses')) {
       return { classCode: 'Class 1a', typeAndVolume: 'Vol 2' };
     }
     if (subclasses.includes('aged_care_9c')) {
-      return { classCode: 'Class 9c', typeAndVolume: tav };
+      return { classCode: 'Class 9c' };
     }
     if (
       subclasses.includes('apartments') ||
@@ -188,84 +164,61 @@ function deriveNCCClass(
       subclasses.includes('coliving') ||
       subclasses.includes('heritage_conversion')
     ) {
-      return { classCode: 'Class 2', typeAndVolume: tav };
+      return { classCode: 'Class 2' };
     }
-    return { classCode: 'Class 2', typeAndVolume: tav };
+    return { classCode: 'Class 2' };
   }
 
   if (buildingClass === 'commercial') {
     if (subclasses.includes('hotel')) {
-      return { classCode: 'Class 3', typeAndVolume: tav };
+      return { classCode: 'Class 3' };
     }
     if (subclasses.includes('retail_shopping')) {
-      return { classCode: 'Class 6', typeAndVolume: tav };
+      return { classCode: 'Class 6' };
     }
-    return { classCode: 'Class 5', typeAndVolume: tav };
+    return { classCode: 'Class 5' };
   }
 
   if (buildingClass === 'industrial') {
-    return { classCode: 'Class 7/8', typeAndVolume: tav };
+    return { classCode: 'Class 7/8' };
   }
 
   if (buildingClass === 'institution') {
     if (subclasses.includes('healthcare_hospital')) {
-      return { classCode: 'Class 9a', typeAndVolume: tav };
+      return { classCode: 'Class 9a' };
     }
     if (
       subclasses.includes('education_school') ||
       subclasses.includes('education_tertiary')
     ) {
-      return { classCode: 'Class 9b', typeAndVolume: tav };
+      return { classCode: 'Class 9b' };
     }
-    return { classCode: 'Class 9b', typeAndVolume: tav };
+    return { classCode: 'Class 9b' };
   }
 
   if (buildingClass === 'mixed') {
-    return { classCode: 'Mixed (Class 2 + 5/6)', typeAndVolume: tav };
+    return { classCode: 'Mixed (Class 2 + 5/6)' };
   }
 
-  return { classCode: '-' };
+  return null;
 }
 
 /**
- * TODO(real-cost-derivation): hardcoded cost bands per project type for v1.
- * Future: read from CostBenchmark + scaleData.gfa_sqm × per-sqm rates.
+ * Stub — returns null until cost-benchmark wiring lands.
+ *
+ * Was previously returning a coarse band keyed only on projectType,
+ * which produced visibly wrong figures for several building classes
+ * (e.g. warehouse rates too high, hospital too low). Falling back to
+ * null causes the UI to render '—' which is preferable to wrong.
+ *
+ * TODO(real-cost-derivation): wire to CostBenchmark per
+ * region/subclass/quality_tier when available.
  */
 function deriveEstCostBand(
-  projectType: ProjectType | null,
-  scaleData: Record<string, number>,
+  _projectType: ProjectType | null,
+  _scaleData: Record<string, number>,
 ): { lowAUD: number; highAUD: number } | null {
-  if (!projectType) return null;
-  const gfa = Number(scaleData.gfa_sqm) || 0;
-  if (gfa > 0) {
-    // Coarse rate ranges per project type (AUD/m2)
-    const ratesByType: Record<ProjectType, [number, number]> = {
-      new: [3000, 6500],
-      extend: [3500, 7000],
-      refurb: [1800, 4500],
-      remediation: [800, 2500],
-      advisory: [0, 0],
-    };
-    const [lowRate, highRate] = ratesByType[projectType] ?? [0, 0];
-    if (lowRate === 0 && highRate === 0) return null;
-    return { lowAUD: gfa * lowRate, highAUD: gfa * highRate };
-  }
-
-  // Fallback band per project type when GFA unknown
-  switch (projectType) {
-    case 'new':
-      return { lowAUD: 12_000_000, highAUD: 35_000_000 };
-    case 'extend':
-      return { lowAUD: 6_000_000, highAUD: 18_000_000 };
-    case 'refurb':
-      return { lowAUD: 3_000_000, highAUD: 12_000_000 };
-    case 'remediation':
-      return { lowAUD: 1_000_000, highAUD: 6_000_000 };
-    case 'advisory':
-      return null;
-    default:
-      return null;
-  }
+  return null;
 }
 
 // ---- RiskFlags translation: replicates the existing RiskFlags logic, but
@@ -1007,8 +960,8 @@ export function ProfilerMiddlePanel({
     [complexityBand],
   );
   const nccClass = useMemo(
-    () => deriveNCCClass(buildingClass, selectedSubclasses, scaleData.storeys as number | undefined),
-    [buildingClass, selectedSubclasses, scaleData],
+    () => deriveNCCClass(buildingClass, selectedSubclasses),
+    [buildingClass, selectedSubclasses],
   );
   const estCostBand = useMemo(
     () => deriveEstCostBand(projectType, scaleData),
