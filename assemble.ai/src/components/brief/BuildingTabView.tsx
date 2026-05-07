@@ -27,6 +27,30 @@ import type {
 
 const muted = 'var(--sw-muted)';
 
+export interface BuildingTabTemplates {
+    buildingClasses: Array<{ value: BuildingClass; label: string }>;
+    projectTypes: Array<{ value: ProjectType; label: string }>;
+    subclassOptions: Array<{ value: string; label: string }>;
+    complexityDimensions: Array<{
+        key: string;
+        label: string;
+        options: ComplexityOption[];
+        accent: string;
+    }>;
+    scopeGroups: Array<{
+        categoryLabel: string;
+        items: WorkScopeItem[];
+    }>;
+    scaleFields: Array<{
+        key: string;
+        label: string;
+        unit?: string;
+        note?: string;
+        noteAccent?: string;
+    }>;
+}
+
+// TODO(task-5): add onScaleChange when Scale rows become editable.
 export interface BuildingTabViewProps {
     // Identity
     buildingClass: BuildingClass | null;
@@ -46,41 +70,28 @@ export interface BuildingTabViewProps {
     onClassChange: (cls: BuildingClass) => void;
     onTypeChange: (type: ProjectType) => void;
     onSubclassToggle: (subclassValue: string) => void;
-    onScaleChange: (field: string, value: number | string) => void;
+    /**
+     * Called when a user clicks a complexity chip.
+     * For SINGLE-select dimensions (most), the parent should set
+     * `complexity[dimension] = value`. For MULTI-select dimensions
+     * (e.g. site_conditions), the parent should toggle membership in
+     * `complexity[dimension]: string[]`. The decision lives at the
+     * parent (typically ProfilerMiddlePanel) — this view does not
+     * track which dimensions are multi-select.
+     */
     onComplexityChange: (dimension: string, value: string) => void;
     onScopeToggle: (scopeValue: string) => void;
     onComplexityLevelChange: (level: number) => void;
     onScopeLevelChange: (level: number) => void;
 
     // Template-driven option lists — keep this component template-agnostic
-    templates: {
-        buildingClasses: Array<{ value: BuildingClass; label: string }>;
-        projectTypes: Array<{ value: ProjectType; label: string }>;
-        subclassOptions: Array<{ value: string; label: string }>;
-        complexityDimensions: Array<{
-            key: string;
-            label: string;
-            options: ComplexityOption[];
-            accent: string;
-        }>;
-        scopeGroups: Array<{
-            categoryLabel: string;
-            items: WorkScopeItem[];
-        }>;
-        scaleFields: Array<{
-            key: string;
-            label: string;
-            unit?: string;
-            note?: string;
-            noteAccent?: string;
-        }>;
-    };
+    templates: BuildingTabTemplates;
 
     // Optional derived values — defaults provided
     complexityScore?: number | null;
     complexityBand?: string | null;
     contingencyBand?: string | null;
-    nccClass?: string | null;
+    nccClass?: { classCode: string; typeAndVolume?: string } | null;
     estCostBand?: { lowAUD: number; highAUD: number } | null;
     riskFlags?: Array<{ label: string; description: string; tag: string }>;
     disciplines?: { required: string[]; suggested: string[] };
@@ -136,7 +147,6 @@ export function BuildingTabView({
     onClassChange,
     onTypeChange,
     onSubclassToggle,
-    onScaleChange: _onScaleChange,
     onComplexityChange,
     onScopeToggle,
     onComplexityLevelChange,
@@ -145,15 +155,11 @@ export function BuildingTabView({
     complexityScore = null,
     complexityBand = null,
     contingencyBand = null,
-    nccClass = '—',
+    nccClass = null,
     estCostBand = null,
     riskFlags = [],
     disciplines = { required: [], suggested: [] },
 }: BuildingTabViewProps) {
-    // Note: onScaleChange is reserved for Task 5 (inline scale editing); not
-    // currently wired since the Scale card renders read-only display rows.
-    void _onScaleChange;
-
     // ---- Derived counts ------------------------------------------------
     const totalScopeItems = templates.scopeGroups.reduce(
         (acc, g) => acc + g.items.length,
@@ -204,8 +210,6 @@ export function BuildingTabView({
                                     key={t.value}
                                     label={t.label}
                                     selected={projectType === t.value}
-                                    accent="var(--sw-rose)"
-                                    onAccent="var(--sw-paper)"
                                     onClick={() => onTypeChange(t.value)}
                                 />
                             ))}
@@ -498,7 +502,29 @@ export function BuildingTabView({
                             letterSpacing: '-0.025em',
                         }}
                     >
-                        {nccClass ?? '—'}
+                        {nccClass == null ? (
+                            '—'
+                        ) : (
+                            <>
+                                {nccClass.classCode}
+                                {nccClass.typeAndVolume ? (
+                                    <>
+                                        {' '}
+                                        <span
+                                            style={{
+                                                fontFamily: 'var(--sw-font-mono)',
+                                                fontSize: 11,
+                                                color: 'var(--sw-cyan)',
+                                                fontWeight: 500,
+                                                letterSpacing: '0.05em',
+                                            }}
+                                        >
+                                            {nccClass.typeAndVolume}
+                                        </span>
+                                    </>
+                                ) : null}
+                            </>
+                        )}
                     </div>
                 </div>
                 <div className="p-4">
@@ -683,7 +709,7 @@ export function BuildingTabView({
                                         style={{ fontSize: 13, color: 'var(--sw-ink)' }}
                                     >
                                         <span
-                                                style={{
+                                            style={{
                                                 width: 6,
                                                 height: 6,
                                                 background: 'var(--sw-lav)',
