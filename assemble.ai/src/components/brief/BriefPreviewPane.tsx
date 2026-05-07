@@ -39,10 +39,14 @@ interface NormalizedObjective {
 
 type ObjectivesStatus = 'loading' | 'ready' | 'error';
 
-// API response shape from POST /api/projects/[projectId]/objectives/generate.
-// The route returns `data` keyed by objectiveType ('planning' | 'functional' |
-// 'quality' | 'compliance') with arrays of inserted projectObjectives rows.
-interface GenerateObjectivesResponse {
+// API response shape used by both:
+//   - GET  /api/projects/[projectId]/objectives          (existing rows)
+//   - POST /api/projects/[projectId]/objectives/generate (fresh AI batch)
+// Both wrap `data` keyed by objectiveType ('planning' | 'functional' |
+// 'quality' | 'compliance') with arrays of projectObjectives rows. The GET
+// envelope additionally carries `snapshots`, `projectType`, and
+// `hasAttachedDocuments` — we ignore those here, but tolerate their presence.
+interface ObjectivesResponse {
     success?: boolean;
     data?: Record<string, Array<{ id?: string; text?: string; category?: string | null; objectiveType?: string }>>;
     // Defensive: some shapes may return a flat `objectives` array.
@@ -63,6 +67,9 @@ function buildNarrative(profile: ProfileInput, projectName: string): React.React
     const units = profile?.scaleData?.units;
     const subclassRaw = profile?.subclass?.[0];
     const subclassLabel = subclassRaw ? subclassRaw.replace(/_/g, ' ') : null;
+    // TODO(task-3): replace buildingClass with derived NCC class once deriveNCCClass
+    // (Task 3 of 2026-05-07-brief-building-tab-port plan) lands. Thread output as an
+    // optional nccClass prop in Task 5.
     const buildingClass = profile?.buildingClass ?? null;
 
     // Lede: "{N}-storey, {U}-unit Class {NCC} {subclass}"
@@ -80,6 +87,9 @@ function buildNarrative(profile: ProfileInput, projectName: string): React.React
         ledeParts.push(subclassLabel);
     }
 
+    // TODO(task-5): confirm these complexity keys against profile-templates.json when
+    // wiring BriefPanel; if real keys differ (e.g. snake_case), update accordingly.
+    // Today these silently render nothing on key miss, which is a UX gap.
     // Procurement route — pull from complexity.procurement if present.
     const procurementValue =
         (profile?.complexity?.procurement as string | string[] | undefined) ??
@@ -191,7 +201,7 @@ function tagAccentFor(category: string | null | undefined): string {
  * Handles both the actual shape (`data: { planning: [], functional: [], ... }`)
  * and a defensive fallback (`objectives: []`).
  */
-function normalizeObjectives(payload: GenerateObjectivesResponse): NormalizedObjective[] {
+function normalizeObjectives(payload: ObjectivesResponse): NormalizedObjective[] {
     const out: NormalizedObjective[] = [];
 
     if (payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object') {
@@ -244,16 +254,50 @@ export function BriefPreviewPane({ projectId, projectName, profile }: BriefPrevi
         let cancelled = false;
         setStatus('loading');
 
-        fetch(`/api/projects/${projectId}/objectives/generate`, { method: 'POST' })
-            .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-            .then((data: GenerateObjectivesResponse) => {
+        // GET-first, generate-only-if-empty.
+        //
+        // The /objectives/generate endpoint is destructive: it soft-deletes
+        // every existing projectObjectives row for the project + section and
+        // replaces them with a fresh AI batch. Auto-POSTing on mount would
+        // wipe user edits on every tab switch / project switch / remount.
+        //
+        // Instead: fetch the non-destructive list endpoint first; only fall
+        // through to generate when the project has zero objectives across
+        // all four sections (i.e. a fresh project that has never been
+        // populated).
+        (async () => {
+            try {
+                const getRes = await fetch(`/api/projects/${projectId}/objectives`, {
+                    method: 'GET',
+                });
                 if (cancelled) return;
-                setObjectives(normalizeObjectives(data));
+                if (!getRes.ok) throw new Error(`GET objectives failed: ${getRes.status}`);
+                const getJson: ObjectivesResponse = await getRes.json();
+                if (cancelled) return;
+
+                const existing = normalizeObjectives(getJson);
+                if (existing.length > 0) {
+                    setObjectives(existing);
+                    setStatus('ready');
+                    return;
+                }
+
+                // No existing objectives — safe to generate the first batch.
+                const postRes = await fetch(
+                    `/api/projects/${projectId}/objectives/generate`,
+                    { method: 'POST' }
+                );
+                if (cancelled) return;
+                if (!postRes.ok) throw new Error(`POST generate failed: ${postRes.status}`);
+                const postJson: ObjectivesResponse = await postRes.json();
+                if (cancelled) return;
+
+                setObjectives(normalizeObjectives(postJson));
                 setStatus('ready');
-            })
-            .catch(() => {
+            } catch {
                 if (!cancelled) setStatus('error');
-            });
+            }
+        })();
 
         return () => {
             cancelled = true;
@@ -265,9 +309,11 @@ export function BriefPreviewPane({ projectId, projectName, profile }: BriefPrevi
             {/* 1. Status strip ---------------------------------------------------- */}
             <div
                 className="flex items-center gap-3 px-3 py-2"
+                role="status"
                 style={{ background: 'var(--sw-ink)', color: 'var(--sw-paper)' }}
             >
                 <span
+                    aria-hidden="true"
                     className="inline-block"
                     style={{
                         width: 8,
@@ -319,7 +365,7 @@ export function BriefPreviewPane({ projectId, projectName, profile }: BriefPrevi
                         borderBottom: '1px solid var(--sw-rule-2)',
                     }}
                 >
-                    // Narrative
+                    Narrative
                 </div>
                 <p
                     className="px-4 py-3 m-0"
@@ -335,7 +381,10 @@ export function BriefPreviewPane({ projectId, projectName, profile }: BriefPrevi
             </section>
 
             {/* 3. Inferred Objectives card --------------------------------------- */}
-            <section style={{ background: 'white', border: '1px solid var(--sw-rule)' }}>
+            <section
+                aria-busy={status === 'loading'}
+                style={{ background: 'white', border: '1px solid var(--sw-rule)' }}
+            >
                 <div
                     className="flex items-center justify-between px-4 py-2.5"
                     style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
@@ -350,7 +399,7 @@ export function BriefPreviewPane({ projectId, projectName, profile }: BriefPrevi
                             fontWeight: 600,
                         }}
                     >
-                        // Inferred objectives · {status === 'ready' ? Math.min(objectives.length, 6) : 6}
+                        Inferred objectives · {status === 'ready' ? Math.min(objectives.length, 6) : 6}
                     </span>
                     {status === 'ready' && objectives.length > 0 ? (
                         <span
