@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
 import { ObjectivesWorkspace } from '@/components/profiler/objectives/ObjectivesWorkspace';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
-import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
+import { BriefPreviewPane } from './BriefPreviewPane';
+import type { BuildingClass, ProjectType, Region, ProfileInput } from '@/types/profiler';
 
 interface BriefPanelProps {
     projectId: string;
@@ -30,6 +31,33 @@ interface BriefPanelProps {
     };
     onProfileComplete?: () => void;
     onProfileLoad?: (buildingClass: BuildingClass, projectType: ProjectType) => void;
+    // Optional project display name for the BriefPreviewPane narrative.
+    // Optional for backwards compat — falls back to a sensible default.
+    projectName?: string;
+}
+
+/**
+ * Build a `ProfileInput` for `BriefPreviewPane` from the partial profile data
+ * threaded through `BriefPanel`. `BriefPanelProps.profileData` does not include
+ * `buildingClass` / `projectType` (those live as separate props on the panel),
+ * so we recombine them here. Any missing field falls back to a safe default —
+ * `BriefPreviewPane.buildNarrative` already renders `[—]` placeholders for
+ * empty values, so the preview degrades gracefully.
+ */
+function buildProfileForPreview(args: {
+    profileData?: BriefPanelProps['profileData'];
+    buildingClass: BuildingClass | null;
+    projectType: ProjectType | null;
+}): ProfileInput {
+    return {
+        buildingClass: args.buildingClass ?? 'residential',
+        projectType: args.projectType ?? 'new',
+        subclass: args.profileData?.subclass ?? [],
+        subclassOther: args.profileData?.subclassOther ?? [],
+        scaleData: args.profileData?.scaleData ?? {},
+        complexity: args.profileData?.complexity ?? {},
+        workScope: args.profileData?.workScope ?? [],
+    };
 }
 
 const subTabClassName =
@@ -51,6 +79,7 @@ export function BriefPanel({
     profileData,
     onProfileComplete,
     onProfileLoad,
+    projectName,
 }: BriefPanelProps) {
     return (
         <div className="h-full flex flex-col">
@@ -86,18 +115,34 @@ export function BriefPanel({
                 </TabsContent>
 
                 <TabsContent value="building" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <ProfilerMiddlePanel
-                        projectId={projectId}
-                        buildingClass={buildingClass}
-                        projectType={projectType}
-                        onClassChange={onClassChange}
-                        onTypeChange={onTypeChange}
-                        region={region}
-                        onRegionChange={onRegionChange}
-                        initialData={profileData}
-                        onProfileComplete={onProfileComplete}
-                        onProfileLoad={onProfileLoad}
-                    />
+                    <div
+                        className="grid gap-5 p-5 h-full overflow-y-auto"
+                        style={{ gridTemplateColumns: '1.4fr 1fr' }}
+                    >
+                        <ProfilerMiddlePanel
+                            projectId={projectId}
+                            buildingClass={buildingClass}
+                            projectType={projectType}
+                            onClassChange={onClassChange}
+                            onTypeChange={onTypeChange}
+                            region={region}
+                            onRegionChange={onRegionChange}
+                            initialData={profileData}
+                            onProfileComplete={onProfileComplete}
+                            onProfileLoad={onProfileLoad}
+                        />
+                        <aside className="self-start sticky top-5">
+                            <BriefPreviewPane
+                                projectId={projectId}
+                                projectName={projectName ?? 'Project'}
+                                profile={buildProfileForPreview({
+                                    profileData,
+                                    buildingClass,
+                                    projectType,
+                                })}
+                            />
+                        </aside>
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="objectives" className="flex-1 mt-0 min-h-0 overflow-hidden">

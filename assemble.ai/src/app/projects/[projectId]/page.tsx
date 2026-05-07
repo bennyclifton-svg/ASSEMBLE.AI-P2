@@ -313,6 +313,7 @@ export default function ProjectWorkspace() {
           centerContent={
             <ProcurementCard
               projectId={project.id}
+              projectName={project.name}
               selectedDocumentIds={Array.from(selectedDocumentIds)}
               onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
               buildingClass={profileBuildingClass}

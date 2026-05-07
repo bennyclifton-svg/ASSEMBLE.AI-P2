@@ -21,6 +21,7 @@ import type { StakeholderWithStatus } from '@/types/stakeholder';
 
 interface ProcurementCardProps {
     projectId: string;
+    projectName?: string;
     selectedDocumentIds: string[];
     onSetSelectedDocumentIds?: (ids: string[]) => void;
     buildingClass?: BuildingClass | null;
@@ -82,6 +83,7 @@ function ProfilePrompt({ message, description }: { message: string; description:
 
 export function ProcurementCard({
     projectId,
+    projectName,
     selectedDocumentIds,
     onSetSelectedDocumentIds,
     buildingClass,
@@ -320,6 +322,7 @@ export function ProcurementCard({
                 <TabsContent value="brief" forceMount className="flex-1 mt-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
                     <BriefPanel
                         projectId={projectId}
+                        projectName={projectName}
                         activeSubTab={activeSubTab ?? 'lot'}
                         onSubTabChange={onSubTabChange ?? (() => {})}
                         detailsData={detailsData}
