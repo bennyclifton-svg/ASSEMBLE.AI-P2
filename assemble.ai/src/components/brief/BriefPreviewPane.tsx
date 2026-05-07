@@ -116,17 +116,23 @@ function buildNarrative(profile: BriefPreviewProfile, projectName: string): Reac
     // TODO(task-5): confirm these complexity keys against profile-templates.json when
     // wiring BriefPanel; if real keys differ (e.g. snake_case), update accordingly.
     // Today these silently render nothing on key miss, which is a UX gap.
-    // Procurement route — pull from complexity.procurement if present.
+    // Procurement route — pull from complexity.procurement_route (canonical key
+    // in profile-templates.json), with camelCase / shorter-name fallbacks for
+    // legacy profile data.
     const procurementValue =
-        (profile?.complexity?.procurement as string | string[] | undefined) ??
-        (profile?.complexity?.procurementRoute as string | string[] | undefined);
+        (profile?.complexity?.procurement_route as string | string[] | undefined) ??
+        (profile?.complexity?.procurementRoute as string | string[] | undefined) ??
+        (profile?.complexity?.procurement as string | string[] | undefined);
     const procurement = Array.isArray(procurementValue) ? procurementValue[0] : procurementValue;
     const procurementText = procurement
         ? procurement.replace(/_/g, ' ').replace(/lump\s*sum/i, 'lump-sum')
         : null;
 
-    // Performance targets — look for sustainability/quality fields.
+    // Performance targets — look for sustainability/quality fields. Try both
+    // snake_case (canonical in profile-templates.json) and camelCase variants.
     const targetsRaw =
+        (profile?.complexity?.performance_targets as string | string[] | undefined) ??
+        (profile?.complexity?.sustainability_targets as string | string[] | undefined) ??
         (profile?.complexity?.performanceTargets as string | string[] | undefined) ??
         (profile?.complexity?.sustainabilityTargets as string | string[] | undefined) ??
         (profile?.complexity?.targets as string | string[] | undefined);
@@ -262,14 +268,16 @@ function normalizeObjectives(payload: ObjectivesResponse): NormalizedObjective[]
 // ---------------------------------------------------------------------------
 
 export function BriefPreviewPane({ projectId, projectName, profile, refreshKey = 0 }: BriefPreviewPaneProps) {
-    // Status strip values — frozen at mount so the timestamp doesn't tick.
+    // Status strip values — re-stamped each time refreshKey changes so the
+    // header and the chrome's "regenerated HH:MM:SS" subtitle stay in sync.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const { generatedAt, model, tokens } = useMemo(() => {
         return {
             generatedAt: new Date().toLocaleTimeString('en-AU', { hour12: false }),
             model: 'claude-haiku-4-5',
             tokens: 1840,
         };
-    }, []);
+    }, [refreshKey]);
 
     // Objectives fetch state machine.
     const [objectives, setObjectives] = useState<NormalizedObjective[]>([]);

@@ -373,12 +373,14 @@ Expected: no errors mentioning the deleted path.
 **Step 4: Commit.**
 
 ```bash
-git add -A
+git add src/app/dev/brief-wireframe/page.tsx
 git commit -m "chore: remove Brief wireframe page
 
 Wireframe served its purpose; the real Brief Building tab is now
 in BriefPanel + BuildingTabView + BriefPreviewPane."
 ```
+
+> **Important:** stage ONLY the wireframe file. `git add -A` will sweep up unrelated in-flight changes from the working tree.
 
 ---
 
@@ -442,3 +444,6 @@ git push -u origin sitewise/brief-building-port
 - **MarketContext / ContextChips data**: the per-subclass benchmark tables (typical GFA, beds/keys, cost ranges with AIQS/AIHW/HVS source attribution) and region/currency/programme chips are intentionally absent from the new layout. Future task: add a "Benchmarks" expansion of the Cost card or a Sources drawer.
 - **NCC Type A/B/C derivation** — current helper conservatively omits `typeAndVolume` for everything except Class 1a (Vol 2). Implement the full NCC C2D2 rise-in-storeys mapping (function of class + storeys + storey separation) when needed.
 - **Real `estCostBand` derivation** — currently returns `null` for all inputs. Wire to `CostBenchmark` per region/subclass/quality_tier.
+- **Move `Save` / `Load Profile` buttons from `ProfilerMiddlePanel` into the chrome strip.** Task 4 left them stranded above the cards with a TODO; Task 6 added the chrome but didn't relocate them. Today the user sees two button rows (chrome `Export PDF`/`Regenerate brief`, then internal `Load profile`/`Save`). Consolidate into the chrome strip.
+- **Real generation metadata.** `generatedAt`, `model`, `tokens` in `BriefPreviewPane`'s status strip are hardcoded (`claude-haiku-4-5`, `1840`). Wire to real metadata when a `/api/projects/{id}/brief/generate` endpoint lands.
+- **Single-source POST on regenerate.** `BriefPanel.handleRegenerateBrief` POSTs to `/objectives/generate`, then bumps `refreshKey` which makes `BriefPreviewPane` GET the same data. Acceptable but redundant — collapse to one round-trip via an imperative callback or by lifting `objectives` state to `BriefPanel`.
