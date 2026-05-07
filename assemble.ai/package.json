@@ -6,7 +6,7 @@
     "dev": "concurrently -n next,doc-worker,draw-worker -c blue,magenta,cyan \"next dev\" \"tsx watch workers/document-processor/index.ts\" \"tsx watch workers/drawing-extractor/index.ts\"",
     "dev:next": "next dev",
     "dev:local": "dotenv -e .env.development -- next dev",
-    "build": "next build && npm run worker:build",
+    "build": "next build --webpack && npm run worker:build",
     "start": "concurrently -n next,doc-worker,draw-worker \"node server.js\" \"node dist/workers/document-processor/index.js\" \"node dist/workers/drawing-extractor/index.js\"",
     "start:next": "next start",
     "lint": "eslint",
