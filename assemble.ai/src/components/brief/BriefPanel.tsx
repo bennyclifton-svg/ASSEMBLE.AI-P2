@@ -6,6 +6,7 @@ import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
 import { ObjectivesWorkspace } from '@/components/profiler/objectives/ObjectivesWorkspace';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
 import { BriefPreviewPane, type BriefPreviewProfile } from './BriefPreviewPane';
+import { useToast } from '@/components/ui/use-toast';
 import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
 
 interface BriefPanelProps {
@@ -117,7 +118,7 @@ function StatusPill({ label, tone }: { label: string; tone?: 'rose' }) {
                 fontFamily: 'var(--sw-font-mono)',
                 fontSize: 11,
                 padding: '4px 10px',
-                background: 'white',
+                background: 'var(--sw-paper)',
                 border: tone === 'rose' ? '1px solid var(--sw-rose)' : '1px solid var(--sw-rule)',
                 color: tone === 'rose' ? 'var(--sw-rose-dk)' : 'var(--sw-ink)',
                 letterSpacing: '0.02em',
@@ -217,6 +218,7 @@ export function BriefPanel({
     onProfileLoad,
     projectName,
 }: BriefPanelProps) {
+    const { toast } = useToast();
     // ---- Chrome state ------------------------------------------------------
     // `briefRefreshKey` is bumped after a user-triggered Regenerate brief POST
     // and threaded into `BriefPreviewPane.refreshKey` — that re-runs the
@@ -235,6 +237,11 @@ export function BriefPanel({
             });
             if (!res.ok) {
                 console.error(`Regenerate brief failed: ${res.status}`);
+                toast({
+                    title: 'Failed to regenerate brief',
+                    description: `Server returned ${res.status}.`,
+                    variant: 'destructive',
+                });
                 return;
             }
             // Stamp the regenerate timestamp into the subtitle and force the
@@ -243,6 +250,11 @@ export function BriefPanel({
             setBriefRefreshKey((n) => n + 1);
         } catch (err) {
             console.error('Regenerate brief threw:', err);
+            toast({
+                title: 'Failed to regenerate brief',
+                description: err instanceof Error ? err.message : 'Network error.',
+                variant: 'destructive',
+            });
         } finally {
             setIsRegenerating(false);
         }
