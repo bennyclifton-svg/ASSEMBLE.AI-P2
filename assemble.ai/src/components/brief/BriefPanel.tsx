@@ -109,16 +109,25 @@ function Breadcrumb({
     );
 }
 
-function StatusPill({ label, tone }: { label: string; tone?: 'rose' }) {
+/**
+ * Chrome status pill. Two tones:
+ * - default — paper bg + ink text + thin rule border (e.g. "profile: 92% complete")
+ * - 'dark' — ink bg + paper text (e.g. "stage: detail design")
+ *
+ * The legacy `tone='rose'` API rendered paper-bg + rose-dk-text + rose-border;
+ * superseded by `tone='dark'` to match the wireframe's solid-fill stage chip.
+ */
+function StatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
+    const isDark = tone === 'dark';
     return (
         <span
             style={{
                 fontFamily: 'var(--sw-font-mono)',
                 fontSize: 11,
                 padding: '4px 10px',
-                background: 'var(--sw-paper)',
-                border: tone === 'rose' ? '1px solid var(--sw-rose)' : '1px solid var(--sw-rule)',
-                color: tone === 'rose' ? 'var(--sw-rose-dk)' : 'var(--sw-ink)',
+                background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
+                border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
+                color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
                 letterSpacing: '0.02em',
             }}
         >
@@ -320,7 +329,7 @@ export function BriefPanel({
                     <Breadcrumb projectName={projectName} activeSubTab={activeSubTab} />
                     <div className="flex gap-1.5">
                         <StatusPill label={profileCompletionLabel} />
-                        <StatusPill label={`stage: ${stageLabel}`} tone="rose" />
+                        <StatusPill label={`stage: ${stageLabel}`} tone="dark" />
                     </div>
                 </div>
 
