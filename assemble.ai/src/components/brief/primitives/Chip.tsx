@@ -3,7 +3,7 @@ export function Chip({
     label,
     selected,
     accent = 'var(--sw-rose)',
-    onAccent = 'var(--sw-paper)',
+    onAccent = 'var(--sw-ink)',
     onClick,
 }: {
     label: string;
@@ -30,8 +30,8 @@ export function Chip({
                     : undefined
             }
             style={{
-                fontFamily: 'var(--sw-font-mono)',
-                fontSize: 11,
+                fontFamily: 'var(--sw-font-sans)',
+                fontSize: 12,
                 padding: '5px 10px',
                 background: selected ? accent : 'white',
                 color: selected ? onAccent : 'var(--sw-ink)',
