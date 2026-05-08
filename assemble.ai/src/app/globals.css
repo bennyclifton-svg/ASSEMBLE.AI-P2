@@ -556,6 +556,11 @@
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-accent-primary);
+
+  /* Sitewise typography — override the legacy Precision DM Sans default
+     so all body text picks up Inter Tight from --sw-font-sans. Mono and
+     serif accents are still set per-component via inline style. */
+  --font-body: var(--sw-font-sans);
 }
 
 /* ============================================
