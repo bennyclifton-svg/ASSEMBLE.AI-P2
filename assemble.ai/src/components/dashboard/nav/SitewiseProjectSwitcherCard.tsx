@@ -32,14 +32,6 @@ export function SitewiseProjectSwitcherCard({
                 refreshTrigger={refreshTrigger}
             >
                 <span className="flex flex-col items-start min-w-0 flex-1">
-                    <span style={{
-                        fontFamily: 'var(--sw-font-mono)',
-                        fontSize: 10,
-                        color: 'var(--sw-muted)',
-                        letterSpacing: '0.05em',
-                    }}>
-                        foundry/
-                    </span>
                     <span
                         className="truncate"
                         style={{

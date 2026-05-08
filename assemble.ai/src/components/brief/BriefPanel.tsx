@@ -86,9 +86,9 @@ function Breadcrumb({
     projectName: string;
     activeSubTab: string;
 }) {
-    // Match the wireframe's `foundry / mosaic-apts / brief / building` shape.
-    // The first two crumbs (workspace + project) are muted; the last two
-    // (top-tab "brief" + active sub-tab) are inked.
+    // Crumb shape: `<project> / brief / <sub>`. The leading workspace
+    // crumb (legacy "foundry") was dropped with the rebrand. Project crumb
+    // is muted; the last two (top-tab "brief" + active sub-tab) are inked.
     const slug = projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
     return (
         <nav
@@ -100,8 +100,6 @@ function Breadcrumb({
                 color: muted,
             }}
         >
-            <span>foundry</span>
-            <span style={{ opacity: 0.5 }}>/</span>
             <span>{slug}</span>
             <span style={{ opacity: 0.5 }}>/</span>
             <span style={{ color: 'var(--sw-ink)' }}>brief</span>
