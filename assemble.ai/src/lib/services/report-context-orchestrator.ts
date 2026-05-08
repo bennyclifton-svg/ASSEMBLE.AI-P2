@@ -158,9 +158,9 @@ export const BUILDING_CLASS_DISPLAY: Record<BuildingClass, string> = {
  * Display names for Project Type (v2) enum
  */
 export const PROJECT_TYPE_V2_DISPLAY: Record<ProjectTypeV2, string> = {
-    refurb: 'Refurbishment',
-    extend: 'Extension',
-    new: 'New Build',
+    refurb: 'Refurb',
+    extend: 'Extend',
+    new: 'New',
     remediation: 'Remediation',
     advisory: 'Advisory',
 };
@@ -1152,9 +1152,9 @@ const BUILDING_CLASS_DISPLAY: Record<string, string> = {
 
 // Display name mappings for project types
 const PROJECT_TYPE_DISPLAY: Record<string, string> = {
-    refurb: 'Refurbishment',
-    extend: 'Extension',
-    new: 'New Build',
+    refurb: 'Refurb',
+    extend: 'Extend',
+    new: 'New',
     remediation: 'Remediation',
     advisory: 'Advisory',
 };

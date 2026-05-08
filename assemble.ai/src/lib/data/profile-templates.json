@@ -2453,9 +2453,9 @@
     }
   },
   "projectTypes": [
-    { "value": "refurb", "label": "Refurbishment" },
-    { "value": "extend", "label": "Extension" },
-    { "value": "new", "label": "New Build" },
+    { "value": "refurb", "label": "Refurb" },
+    { "value": "extend", "label": "Extend" },
+    { "value": "new", "label": "New" },
     { "value": "remediation", "label": "Remediation" },
     { "value": "advisory", "label": "Advisory" }
   ],
