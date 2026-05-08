@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans, Spectral, Exo_2 } from "next/font/google";
+import { DM_Sans, Spectral, Exo_2, Inter_Tight, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
@@ -24,25 +24,45 @@ const exo2 = Exo_2({
   weight: ["700", "800"],
 });
 
+const interTight = Inter_Tight({
+  subsets: ["latin"],
+  variable: "--font-inter-tight",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+  weight: ["400", "500", "600"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "SiteWise",
   description: "Architectural Precision in Procurement - AI-powered tender management platform",
 };
 
-// Theme initialization script - runs before React hydration to prevent flash
-// Supports two Architectural Precision themes: precision (dark) and precision-light
+// Theme initialization script - runs before React hydration to prevent flash.
+// Sitewise / Field Console (Devtools Rose) is the active brand.
+// Legacy Architectural Precision themes (precision, precision-light) remain switchable.
 const themeScript = `
   (function() {
     try {
       const stored = localStorage.getItem('theme');
-      const validThemes = ['precision', 'precision-light'];
+      const validThemes = ['sitewise', 'precision', 'precision-light'];
 
-      // Check stored theme first
       if (stored && validThemes.includes(stored)) {
         document.documentElement.setAttribute('data-theme', stored);
       } else {
-        // Default to precision (dark slate with copper)
-        document.documentElement.setAttribute('data-theme', 'precision');
+        document.documentElement.setAttribute('data-theme', 'sitewise');
       }
 
       // Prevent transition flash on load
@@ -53,8 +73,7 @@ const themeScript = `
         });
       });
     } catch (e) {
-      // Fallback to precision theme if localStorage fails
-      document.documentElement.setAttribute('data-theme', 'precision');
+      document.documentElement.setAttribute('data-theme', 'sitewise');
     }
   })();
 `;
@@ -70,7 +89,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body
-        className={`${dmSans.variable} ${spectral.variable} ${exo2.variable} antialiased`}
+        className={`${dmSans.variable} ${spectral.variable} ${exo2.variable} ${interTight.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
         {children}
         <Toaster />

@@ -137,7 +137,7 @@
    "Architectural Precision" Dark - Copper on Slate
    ============================================ */
 [data-theme="precision"],
-:root:not([data-theme="precision-light"]) {
+:root:not([data-theme="precision-light"]):not([data-theme="sitewise"]) {
   /* Backgrounds - Deep slate with warmth */
   --color-bg-primary: var(--primitive-slate-900);
   --color-bg-secondary: var(--primitive-slate-950);
@@ -415,6 +415,144 @@
   --accent-foreground: #FFFFFF;
   --destructive: var(--color-error);
   --destructive-foreground: #FFFFFF;
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-accent-primary);
+}
+
+/* ============================================
+   TIER 2: SEMANTIC TOKENS — SITEWISE / FIELD CONSOLE
+   Devtools Rose dialect. Maps existing semantic tokens onto the
+   Sitewise primitive set so any component using --color-bg-primary,
+   --color-accent-primary, etc. inherits the new look without per-file edits.
+   ============================================ */
+[data-theme="sitewise"] {
+  /* Backgrounds — warm paper / ink */
+  --color-bg-primary: var(--sw-paper-2);          /* sidebars, secondary chrome */
+  --color-bg-secondary: var(--sw-paper);          /* cards, popovers */
+  --color-bg-tertiary: var(--sw-paper);           /* main canvas */
+  --color-bg-elevated: var(--sw-paper);
+  --color-bg-hover: rgba(14, 16, 20, 0.05);
+  --color-bg-inverse: var(--sw-ink);
+
+  /* Text — ink on paper, mono-friendly muted */
+  --color-text-primary: var(--sw-ink);
+  --color-text-secondary: var(--sw-muted);
+  --color-text-muted: rgba(107, 107, 102, 0.78);
+  --color-text-inverse: var(--sw-paper);
+
+  /* Borders — drafting-rule */
+  --color-border: var(--sw-rule);
+  --color-border-subtle: var(--sw-rule-2);
+  --color-border-strong: rgba(14, 16, 20, 0.32);
+  --color-border-accent: rgba(248, 101, 122, 0.28);
+
+  /* Primary accent — Devtools Rose */
+  --color-accent-primary: var(--sw-rose);
+  --color-accent-primary-hover: var(--sw-rose-dk);
+  --color-accent-primary-muted: var(--sw-rose-dk);
+  --color-accent-primary-tint: var(--sw-rose-tint);
+  --color-on-accent: var(--sw-ink);
+
+  /* Secondary accents — syntax palette */
+  --color-accent-blue: var(--sw-cyan);
+  --color-accent-magenta: var(--sw-rose);
+  --color-accent-violet: var(--sw-lav);
+
+  /* Status accents */
+  --color-accent-green: #5C7A4A;
+  --color-accent-yellow: var(--sw-amber);
+  --color-accent-coral: var(--sw-rose-dk);
+  --color-accent-teal: var(--sw-cyan);
+  --color-accent-purple: var(--sw-lav);
+  --color-accent-copper: var(--sw-peach);
+
+  /* Accent tints — soft surfaces for warning/success bands */
+  --color-accent-green-tint: rgba(92, 122, 74, 0.10);
+  --color-accent-yellow-tint: rgba(232, 163, 61, 0.12);
+  --color-accent-coral-tint: rgba(192, 53, 74, 0.10);
+  --color-accent-teal-tint: rgba(122, 184, 194, 0.12);
+  --color-accent-purple-tint: rgba(168, 156, 217, 0.12);
+  --color-accent-copper-tint: rgba(245, 164, 114, 0.12);
+  --color-accent-copper-solid: rgba(245, 164, 114, 0.18);
+  --color-accent-cyan-tint: rgba(122, 184, 194, 0.10);
+  --color-accent-blue-tint: rgba(122, 184, 194, 0.10);
+  --color-accent-magenta-tint: rgba(248, 101, 122, 0.10);
+  --color-accent-violet-tint: rgba(168, 156, 217, 0.10);
+
+  --color-document-header: var(--sw-cyan);
+
+  /* Semantic states */
+  --color-success: #5C7A4A;
+  --color-warning: var(--sw-amber);
+  --color-error: var(--sw-rose-dk);
+  --color-info: var(--sw-cyan);
+
+  /* Shadows — subtle, paper-companion */
+  --shadow-sm: 0 1px 2px rgba(14, 16, 20, 0.06);
+  --shadow: 0 2px 4px rgba(14, 16, 20, 0.08), 0 1px 2px rgba(14, 16, 20, 0.04);
+  --shadow-md: 0 4px 12px rgba(14, 16, 20, 0.10);
+  --shadow-lg: 0 12px 32px -8px rgba(14, 16, 20, 0.18);
+  --shadow-glow: 0 0 18px rgba(248, 101, 122, 0.18);
+  --shadow-aurora: 0 6px 24px -8px rgba(248, 101, 122, 0.20);
+  --shadow-aurora-intense: 0 8px 28px -6px rgba(248, 101, 122, 0.28), 0 0 60px rgba(168, 156, 217, 0.10);
+
+  --shadow-soft: 0 2px 8px rgba(14, 16, 20, 0.06), 0 1px 3px rgba(14, 16, 20, 0.04);
+  --shadow-soft-elevated: 0 4px 16px rgba(14, 16, 20, 0.08), 0 2px 6px rgba(14, 16, 20, 0.05);
+  --shadow-soft-hover: 0 8px 24px rgba(14, 16, 20, 0.10), 0 4px 8px rgba(14, 16, 20, 0.06);
+  --shadow-soft-inner: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-soft-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  --shadow-soft-pressed: inset 0 2px 4px rgba(14, 16, 20, 0.05);
+
+  /* Scrollbar */
+  --scrollbar-track: var(--sw-paper-2);
+  --scrollbar-thumb: var(--sw-linen);
+  --scrollbar-thumb-hover: rgba(14, 16, 20, 0.32);
+
+  /* Firm tile — peach (currency role) */
+  --color-card-firm: var(--sw-paper);
+  --color-card-firm-hover: rgba(255, 255, 255, 0.92);
+  --color-card-firm-selected: rgba(245, 164, 114, 0.22);
+  --color-card-firm-border: var(--sw-rule);
+  --color-card-firm-text: var(--sw-ink);
+  --color-card-firm-accent: rgba(245, 164, 114, 0.42);
+  --color-card-firm-accent-bright: var(--sw-peach);
+
+  /* Procurement tile — lavender (identifier role) */
+  --color-card-procurement: var(--sw-paper);
+  --color-card-procurement-hover: rgba(255, 255, 255, 0.92);
+  --color-card-procurement-selected: rgba(168, 156, 217, 0.22);
+  --color-card-procurement-border: var(--sw-rule);
+  --color-card-procurement-text: var(--sw-ink);
+  --color-card-procurement-accent: rgba(168, 156, 217, 0.42);
+  --color-card-procurement-accent-bright: var(--sw-lav);
+
+  /* Work scope tile — cyan (type role) */
+  --color-card-scope: var(--sw-paper);
+  --color-card-scope-hover: rgba(255, 255, 255, 0.92);
+  --color-card-scope-selected: rgba(122, 184, 194, 0.22);
+  --color-card-scope-border: var(--sw-rule);
+  --color-card-scope-text: var(--sw-ink);
+  --color-card-scope-accent: rgba(122, 184, 194, 0.42);
+  --color-card-scope-accent-bright: var(--sw-cyan);
+
+  /* Tailwind theme integration */
+  --background: var(--color-bg-primary);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-secondary);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-secondary);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent-primary);
+  --primary-foreground: var(--sw-ink);
+  --secondary: var(--color-bg-tertiary);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-tertiary);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-accent-primary);
+  --accent-foreground: var(--sw-ink);
+  --destructive: var(--color-error);
+  --destructive-foreground: var(--sw-paper);
   --border: var(--color-border);
   --input: var(--color-border);
   --ring: var(--color-accent-primary);
@@ -2665,3 +2803,88 @@ textarea:-webkit-autofill:active {
 .brief-section ul > li::marker {
   content: '';
 }
+
+/* ============================================
+   SITEWISE — Field Console (Devtools Rose)
+   Palette + typography for the new public surface.
+   Lives alongside TESSERA; not theme-scoped so it works
+   regardless of [data-theme]. Only consumed by Sitewise
+   landing components — does NOT replace existing theme tokens.
+   ============================================ */
+:root {
+  /* Surface */
+  --sw-ink: #0E1014;
+  --sw-ink-2: #17181D;
+  --sw-paper: #F1EDE3;
+  --sw-paper-2: #E6E1D3;
+  --sw-linen: #DCD5C2;
+  --sw-muted: #6B6B66;
+
+  /* Devtools Rose syntax palette — pulled from Next.js dev-error screen */
+  --sw-rose: #F8657A;          /* primary, errors, hi-viz role */
+  --sw-rose-dk: #C0354A;       /* AA on paper */
+  --sw-rose-tint: #FBE4E8;     /* warning tint on light surfaces */
+  --sw-lav: #A89CD9;           /* identifiers (variation IDs) */
+  --sw-peach: #F5A472;         /* strings / currency */
+  --sw-cyan: #7AB8C2;          /* types / drawings */
+  --sw-amber: #E8A33D;         /* status dots */
+
+  /* Rules */
+  --sw-rule: rgba(14, 16, 20, 0.18);
+  --sw-rule-2: rgba(14, 16, 20, 0.10);
+  --sw-rule-dk: rgba(255, 255, 255, 0.10);
+  --sw-rule-dk-2: rgba(255, 255, 255, 0.18);
+
+  /* Typography */
+  --sw-font-sans: var(--font-inter-tight), 'Inter Tight', var(--font-inter), 'Inter', 'Helvetica Neue', sans-serif;
+  --sw-font-body: var(--font-inter), 'Inter', var(--font-inter-tight), 'Helvetica Neue', sans-serif;
+  --sw-font-mono: var(--font-jetbrains-mono), 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+/* Sitewise aggregate slider — subtle brown dot on a paper rule.
+   Used under Complexity / Scope to set baseline severity. */
+.sw-aggregate-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+}
+.sw-aggregate-slider:focus { outline: none; }
+.sw-aggregate-slider::-webkit-slider-runnable-track {
+  height: 18px;
+  background: transparent;
+  border: none;
+}
+.sw-aggregate-slider::-moz-range-track {
+  height: 18px;
+  background: transparent;
+  border: none;
+}
+.sw-aggregate-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6B5642;
+  border: 1px solid var(--sw-ink);
+  margin-top: 4px;
+  cursor: grab;
+  transition: transform 120ms ease;
+}
+.sw-aggregate-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.sw-aggregate-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.05); }
+.sw-aggregate-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6B5642;
+  border: 1px solid var(--sw-ink);
+  cursor: grab;
+  transition: transform 120ms ease;
+}
+.sw-aggregate-slider::-moz-range-thumb:hover { transform: scale(1.15); }
+.sw-aggregate-slider::-moz-range-thumb:active { cursor: grabbing; transform: scale(1.05); }
