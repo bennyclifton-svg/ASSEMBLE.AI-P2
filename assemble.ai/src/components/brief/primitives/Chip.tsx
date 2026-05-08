@@ -30,8 +30,8 @@ export function Chip({
                     : undefined
             }
             style={{
-                fontFamily: 'var(--sw-font-sans)',
-                fontSize: 12,
+                fontFamily: 'var(--sw-font-mono)',
+                fontSize: 11,
                 padding: '5px 10px',
                 background: selected ? accent : 'white',
                 color: selected ? onAccent : 'var(--sw-ink)',
