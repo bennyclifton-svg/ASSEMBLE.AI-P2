@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ProfilerMiddlePanel } from '@/components/profiler/ProfilerMiddlePanel';
+import { ProfilerMiddlePanel, type ProfilerControls } from '@/components/profiler/ProfilerMiddlePanel';
 import { ObjectivesWorkspace } from '@/components/profiler/objectives/ObjectivesWorkspace';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
 import { BriefPreviewPane, type BriefPreviewProfile } from './BriefPreviewPane';
@@ -228,6 +228,34 @@ export function BriefPanel({
     const [regeneratedAt, setRegeneratedAt] = useState<string | null>(null);
     const [isRegenerating, setIsRegenerating] = useState(false);
 
+    // Profiler imperative controls — populated by ProfilerMiddlePanel each
+    // render. `null` until the Building sub-tab has mounted at least once.
+    const profilerControlsRef = useRef<ProfilerControls | null>(null);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+
+    const handleSaveProfile = async () => {
+        const controls = profilerControlsRef.current;
+        if (!controls || isSavingProfile) return;
+        setIsSavingProfile(true);
+        try {
+            await controls.save();
+        } finally {
+            setIsSavingProfile(false);
+        }
+    };
+
+    const handleLoadProfile = async () => {
+        const controls = profilerControlsRef.current;
+        if (!controls || isLoadingProfile) return;
+        setIsLoadingProfile(true);
+        try {
+            await controls.load();
+        } finally {
+            setIsLoadingProfile(false);
+        }
+    };
+
     const handleRegenerateBrief = async () => {
         if (isRegenerating) return;
         setIsRegenerating(true);
@@ -326,6 +354,48 @@ export function BriefPanel({
                         </div>
                     </div>
                     <div className="flex gap-2">
+                        {activeSubTab === 'building' && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={handleLoadProfile}
+                                    disabled={isLoadingProfile}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '1px solid var(--sw-rule)',
+                                        padding: '8px 14px',
+                                        fontFamily: 'var(--sw-font-mono)',
+                                        fontSize: 11,
+                                        letterSpacing: '0.15em',
+                                        textTransform: 'uppercase',
+                                        color: 'var(--sw-ink)',
+                                        cursor: isLoadingProfile ? 'wait' : 'pointer',
+                                        opacity: isLoadingProfile ? 0.6 : 1,
+                                    }}
+                                >
+                                    {isLoadingProfile ? 'Loading…' : 'Load profile'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveProfile}
+                                    disabled={isSavingProfile}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '1px solid var(--sw-rule)',
+                                        padding: '8px 14px',
+                                        fontFamily: 'var(--sw-font-mono)',
+                                        fontSize: 11,
+                                        letterSpacing: '0.15em',
+                                        textTransform: 'uppercase',
+                                        color: 'var(--sw-ink)',
+                                        cursor: isSavingProfile ? 'wait' : 'pointer',
+                                        opacity: isSavingProfile ? 0.6 : 1,
+                                    }}
+                                >
+                                    {isSavingProfile ? 'Saving…' : 'Save'}
+                                </button>
+                            </>
+                        )}
                         <button
                             type="button"
                             onClick={() => console.log('Export PDF clicked')}
@@ -445,6 +515,7 @@ export function BriefPanel({
                                 onProfileComplete={onProfileComplete}
                                 onProfileLoad={onProfileLoad}
                                 layout="natural"
+                                controlsRef={profilerControlsRef}
                             />
                         </div>
                         <aside className="self-start sticky top-5">

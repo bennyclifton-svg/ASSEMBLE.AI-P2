@@ -34,6 +34,17 @@ const BUILDING_CLASS_ORDER: BuildingClass[] = [
   'defense_secure',
 ];
 
+/**
+ * Imperative profile controls exposed to a parent (e.g. BriefPanel's chrome
+ * strip) so the Save / Load buttons can live outside this panel without
+ * lifting all the form state up.
+ */
+export interface ProfilerControls {
+  save: () => Promise<void>;
+  load: () => Promise<void>;
+  canSave: boolean;
+}
+
 interface ProfilerMiddlePanelProps {
   projectId: string;
   buildingClass: BuildingClass | null;
@@ -62,6 +73,12 @@ interface ProfilerMiddlePanelProps {
    *   (e.g. BriefPanel's Building tab) so the sticky element actually pins.
    */
   layout?: 'fixed' | 'natural';
+  /**
+   * Optional ref the panel populates with imperative profile controls. Lets
+   * the parent's chrome render Save / Load buttons that delegate to this
+   * panel's handlers without lifting form state up.
+   */
+  controlsRef?: React.MutableRefObject<ProfilerControls | null>;
 }
 
 interface ScopeCategoryWithItems {
@@ -495,6 +512,7 @@ export function ProfilerMiddlePanel({
   onProfileComplete,
   onProfileLoad,
   layout = 'fixed',
+  controlsRef,
 }: ProfilerMiddlePanelProps) {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -916,6 +934,13 @@ export function ProfilerMiddlePanel({
 
   const canSave = Boolean(buildingClass && projectType);
 
+  // Expose imperative save/load to parents via the optional controls ref.
+  // Refs are mutable and don't trigger re-renders; assigning during render
+  // keeps the parent's handle in sync with the latest closure each render.
+  if (controlsRef) {
+    controlsRef.current = { save: handleSave, load: handleLoad, canSave };
+  }
+
   // ---- Derive BuildingTabTemplates (the BuildingTabView contract) ----
 
   const derivedTemplates = useMemo<BuildingTabTemplates>(() => {
@@ -1015,29 +1040,6 @@ export function ProfilerMiddlePanel({
 
   return (
     <div className={rootClassName}>
-      {/* TODO(task-6): move Save/Load into BriefPanel chrome strip */}
-      <div className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-5 py-2.5">
-        <button
-          type="button"
-          onClick={handleLoad}
-          disabled={isLoading}
-          className="rounded px-3 py-1.5 text-xs font-medium bg-[var(--color-accent-primary)] text-white hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? 'Loading...' : 'Load Profile'}
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving || !canSave}
-          className={`rounded px-2.5 py-1.5 text-xs font-medium ${canSave && !isSaving
-            ? 'text-[var(--primary-foreground)] bg-[var(--color-accent-green)] hover:bg-[var(--primitive-green-dark)]'
-            : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] cursor-not-allowed'
-            }`}
-        >
-          {isSaving ? 'Saving...' : 'Save'}
-        </button>
-      </div>
-
       <div className={bodyClassName}>
         <BuildingTabView
           buildingClass={buildingClass}
