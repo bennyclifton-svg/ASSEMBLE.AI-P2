@@ -14,7 +14,7 @@ interface ResizableLayoutProps {
     rightContent: ReactNode;
 }
 
-const LEFT_PANEL_DEFAULT_SIZE = 8;
+const LEFT_PANEL_DEFAULT_SIZE = 16;
 const LEFT_PANEL_COLLAPSED_SIZE = 3;
 const RIGHT_PANEL_DEFAULT_SIZE = 25;
 const RIGHT_PANEL_EXPANDED_SIZE = 50;
