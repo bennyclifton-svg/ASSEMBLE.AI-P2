@@ -278,16 +278,6 @@ export function ProcurementCard({
         );
     }
 
-    // Tab styling - uses CSS class for theme-aware styling (dark: gradient, light: solid)
-    // Increased py-4 for taller parent tabs so blue indicator aligns with bottom
-    const tabClassName = `
-        relative rounded-none px-4 py-4 text-[15px] font-medium bg-transparent
-        tab-aurora-main
-        transition-all duration-200 ease-out
-        hover:text-[var(--color-text-primary)]
-        data-[state=inactive]:text-[var(--color-text-muted)]
-    `;
-
     return (
         <ProcurementUIProvider>
         <div className="h-full flex flex-col overflow-hidden">
@@ -296,27 +286,6 @@ export function ProcurementCard({
                 onValueChange={setActiveMainTab}
                 className="flex-1 flex flex-col px-6 min-h-0"
             >
-                <TabsList className="w-full justify-start items-end bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 gap-1.5 pl-[20%]">
-                    <TabsTrigger value="cost-planning" className={tabClassName}>
-                        Cost Planning
-                    </TabsTrigger>
-                    <TabsTrigger value="program" className={tabClassName}>
-                        Program
-                    </TabsTrigger>
-                    <TabsTrigger value="procurement" className={tabClassName}>
-                        Procurement
-                    </TabsTrigger>
-                    <TabsTrigger value="notes" className={tabClassName}>
-                        Notes
-                    </TabsTrigger>
-                    <TabsTrigger value="correspondence" className={tabClassName}>
-                        Correspondence
-                    </TabsTrigger>
-                    <TabsTrigger value="meetings-reports" className={tabClassName}>
-                        Meet & Report
-                    </TabsTrigger>
-                </TabsList>
-
                 {/* Brief Tab Content - sub-tabs: Lot | Building | Objectives.
                     forceMount preserves LEPDataCard fetch state when switching to other top tabs. */}
                 <TabsContent value="brief" forceMount className="flex-1 mt-0 min-h-0 overflow-hidden data-[state=inactive]:hidden">
