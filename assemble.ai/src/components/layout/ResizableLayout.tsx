@@ -82,7 +82,7 @@ export function ResizableLayout({
                 </div>
             </Panel>
             <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize h-full" />
-            <Panel defaultSize={62} minSize={20} className="bg-[var(--color-bg-tertiary)]">
+            <Panel defaultSize={62} minSize={20} className="bg-[var(--sw-paper)]">
                 <div
                     data-chat-dock-anchor="center"
                     className="h-full flex flex-col animate-slide-in-up animate-delay-100 relative"
@@ -96,7 +96,7 @@ export function ResizableLayout({
                 </div>
             </Panel>
             <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize h-full" />
-            <Panel ref={rightPanelRef} defaultSize={RIGHT_PANEL_DEFAULT_SIZE} minSize={15} className="border-l border-[var(--color-border-accent)] bg-[var(--color-bg-tertiary)]">
+            <Panel ref={rightPanelRef} defaultSize={RIGHT_PANEL_DEFAULT_SIZE} minSize={15} className="border-l border-[var(--color-border-accent)] bg-[var(--sw-paper)]">
                 <div className="h-full flex flex-col animate-slide-in-up animate-delay-200">
                     {/* Right Panel Header — Sitewise dialect */}
                     <header className="flex items-center justify-between px-5 py-3 border-b border-[var(--color-border)] flex-shrink-0 min-h-[57px]">
