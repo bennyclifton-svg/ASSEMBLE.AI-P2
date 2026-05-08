@@ -46,6 +46,7 @@ export function SitewiseProjectSwitcherCard({
                             fontSize: 13,
                             fontWeight: 600,
                             color: 'var(--sw-ink)',
+                            textTransform: 'lowercase',
                         }}
                     >
                         {selectedProject.name}
