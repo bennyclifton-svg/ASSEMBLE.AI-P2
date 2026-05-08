@@ -87,14 +87,6 @@ export function ResizableLayout({
                     data-chat-dock-anchor="center"
                     className="h-full flex flex-col animate-slide-in-up animate-delay-100 relative"
                 >
-                    {/* Watermark background */}
-                    <img
-                        src="/images/logo-mask.svg"
-                        alt=""
-                        aria-hidden="true"
-                        draggable={false}
-                        className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none panel-watermark"
-                    />
                     {/* Center Panel Content */}
                     <div className="flex-1 min-h-0 overflow-hidden relative z-10">
                         {centerContent}
