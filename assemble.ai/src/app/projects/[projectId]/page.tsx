@@ -305,6 +305,7 @@ export default function ProjectWorkspace() {
               onKnowledgeNavigate={handleKnowledgeNavigate}
               onShowBrief={handleShowBrief}
               activeMainTab={centerActiveTab}
+              onMainTabChange={setCenterActiveTab}
               refreshKey={refreshTrigger}
               selectedProject={project}
               onSelectProject={handleSelectProject}
