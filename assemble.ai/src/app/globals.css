@@ -1557,9 +1557,8 @@ textarea:-webkit-autofill:active {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #0080FF 0%, #1776c1 50%, #14B8A6 100%);
+  background: var(--sw-rose);
   border-radius: 2px 2px 0 0;
-  box-shadow: 0 0 8px rgba(23, 118, 193, 0.4);
 }
 
 /* Light theme - Sub tabs matching main tab style */
@@ -1603,8 +1602,28 @@ textarea:-webkit-autofill:active {
   left: 0;
   right: 0;
   height: 3px;
-  background: #0066CC;
+  background: var(--sw-rose);
   border-radius: 2px 2px 0 0;
+}
+
+/* Sitewise — rose underline on active sub-tab */
+[data-theme="sitewise"] .tab-aurora-sub {
+  position: relative;
+}
+
+[data-theme="sitewise"] .tab-aurora-sub[data-state="active"] {
+  background: transparent;
+  color: var(--sw-ink);
+}
+
+[data-theme="sitewise"] .tab-aurora-sub[data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--sw-rose);
 }
 
 /* Contractor procurement sub-tabs use the same underline motion as consultant tabs, in copper. */
