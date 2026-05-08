@@ -38,6 +38,7 @@ export function Chip({
                 border: selected ? `1px solid ${accent}` : '1px solid var(--sw-rule)',
                 fontWeight: selected ? 600 : 400,
                 letterSpacing: '0.01em',
+                textTransform: 'lowercase',
                 whiteSpace: 'nowrap',
                 cursor: interactive ? 'pointer' : undefined,
             }}
