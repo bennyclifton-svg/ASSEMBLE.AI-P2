@@ -557,10 +557,14 @@
   --input: var(--color-border);
   --ring: var(--color-accent-primary);
 
-  /* Sitewise typography — override the legacy Precision DM Sans default
-     so all body text picks up Inter Tight from --sw-font-sans. Mono and
-     serif accents are still set per-component via inline style. */
+  /* Sitewise typography — override the legacy Precision defaults so body
+     AND headings pick up Inter Tight from --sw-font-sans. The h1/h2/
+     .heading-serif rule in the BASE STYLES block reads --font-heading,
+     which under :root maps to Spectral; the wireframe wants sans for
+     headings too. Mono accents are still set per-component via inline
+     style. */
   --font-body: var(--sw-font-sans);
+  --font-heading: var(--sw-font-sans);
 }
 
 /* ============================================
