@@ -2866,7 +2866,11 @@ textarea:-webkit-autofill:active {
   /* Typography */
   --sw-font-sans: var(--font-inter-tight), 'Inter Tight', var(--font-inter), 'Inter', 'Helvetica Neue', sans-serif;
   --sw-font-body: var(--font-inter), 'Inter', var(--font-inter-tight), 'Helvetica Neue', sans-serif;
-  --sw-font-mono: var(--font-jetbrains-mono), 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, monospace;
+  /* Mono — lead with Menlo (macOS) / SF Mono / Cascadia Mono / Consolas
+     so the chip and label rendering matches the Claude design source,
+     which was rendered with the designer's system default mono.
+     ui-monospace is the modern browser default fallback. */
+  --sw-font-mono: 'Menlo', 'SF Mono', 'Cascadia Mono', Consolas, ui-monospace, 'JetBrains Mono', monospace;
 }
 
 /* Sitewise aggregate slider — subtle brown dot on a paper rule.
