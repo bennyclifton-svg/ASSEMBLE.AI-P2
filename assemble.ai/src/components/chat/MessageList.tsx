@@ -15,13 +15,21 @@ interface MessageListProps {
     pendingStatus?: string | null;
 }
 
+const WORKFLOW_SCAFFOLD_RE =
+    /i prepared the contractor variation workflow for review[\s\S]*dependent steps will unlock in order/i;
+
 export function MessageList({ messages, activeRun, approvals, pendingStatus }: MessageListProps) {
     const endRef = useRef<HTMLDivElement | null>(null);
 
     const allApprovals = Object.values(approvals);
     const approvalList = allApprovals;
+    const allApprovalsResolved =
+        approvalList.length > 0 && approvalList.every((approval) => approval.resolution);
+    const visibleMessages = allApprovalsResolved
+        ? messages.filter((message) => !isWorkflowScaffoldMessage(message))
+        : messages;
     const timelineItems = [
-        ...messages.map((message, index) => ({
+        ...visibleMessages.map((message, index) => ({
             kind: 'message' as const,
             id: message.id,
             timestamp: toTimestamp(message.createdAt),
@@ -32,7 +40,7 @@ export function MessageList({ messages, activeRun, approvals, pendingStatus }: M
             kind: 'approval' as const,
             id: approval.id,
             timestamp: toTimestamp(approval.createdAt),
-            index: messages.length + index,
+            index: visibleMessages.length + index,
             approval,
         })),
     ].sort((a, b) => {
@@ -139,6 +147,10 @@ export function MessageList({ messages, activeRun, approvals, pendingStatus }: M
             <div ref={endRef} />
         </div>
     );
+}
+
+function isWorkflowScaffoldMessage(message: ChatMessageView): boolean {
+    return message.role === 'assistant' && WORKFLOW_SCAFFOLD_RE.test(message.content);
 }
 
 function toTimestamp(value: string | Date | null | undefined): number {

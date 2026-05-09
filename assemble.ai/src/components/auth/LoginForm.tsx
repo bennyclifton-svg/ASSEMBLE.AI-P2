@@ -98,7 +98,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
       )}
 
       <div>
-        <label htmlFor="email" className="block text-sm text-[#cccccc] mb-1">
+        <label htmlFor="email" className="block text-sm text-[var(--color-text-primary)] mb-1">
           Email
         </label>
         <input
@@ -106,7 +106,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full px-3 py-2 bg-[#3c3c3c] border border-[#3e3e42] rounded text-[#cccccc] focus:outline-none focus:border-[#007acc]"
+          className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)]"
           placeholder="you@example.com"
           required
           disabled={isLoading || isRateLimited}
@@ -114,7 +114,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm text-[#cccccc] mb-1">
+        <label htmlFor="password" className="block text-sm text-[var(--color-text-primary)] mb-1">
           Password
         </label>
         <input
@@ -122,7 +122,7 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full px-3 py-2 bg-[#3c3c3c] border border-[#3e3e42] rounded text-[#cccccc] focus:outline-none focus:border-[#007acc]"
+          className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)]"
           placeholder="Enter your password"
           required
           disabled={isLoading || isRateLimited}
@@ -132,14 +132,14 @@ export function LoginForm({ redirectTo = '/dashboard' }: LoginFormProps) {
       <button
         type="submit"
         disabled={isLoading || isRateLimited}
-        className="w-full py-2 px-4 bg-[#0e639c] hover:bg-[#1177bb] disabled:bg-[#3c3c3c] disabled:cursor-not-allowed rounded text-white font-medium transition-colors"
+        className="w-full py-2 px-4 bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] disabled:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed rounded text-white font-medium transition-colors"
       >
         {isLoading ? 'Signing in...' : isRateLimited ? `Wait ${rateLimitCountdown}s` : 'Sign In'}
       </button>
 
-      <p className="text-sm text-center text-[#808080]">
+      <p className="text-sm text-center text-[var(--color-text-muted)]">
         Don't have an account?{' '}
-        <Link href="/register" className="text-[#569cd6] hover:underline">
+        <Link href="/register" className="text-[var(--sw-cyan)] hover:underline">
           Register
         </Link>
       </p>

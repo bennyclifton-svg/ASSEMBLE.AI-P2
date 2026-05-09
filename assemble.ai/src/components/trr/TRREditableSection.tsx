@@ -14,6 +14,7 @@ import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { useToast } from '@/components/ui/use-toast';
 import { useFieldGeneration } from '@/lib/hooks/use-field-generation';
 import type { FieldType } from '@/lib/constants/field-types';
+import { TRRSectionHeading } from './TRRSectionHeading';
 
 interface TRREditableSectionProps {
     title: string;
@@ -110,7 +111,7 @@ export function TRREditableSection({
         <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="flex items-center gap-1.5 text-xs text-[var(--color-accent-copper)] hover:text-[#6fd1ff] transition-colors disabled:pointer-events-none"
+            className="flex items-center gap-1.5 text-xs text-[var(--color-accent-copper)] hover:text-[var(--sw-cyan)] transition-colors disabled:pointer-events-none"
             title={`Generate ${title.toLowerCase()} with AI`}
         >
             <DiamondIcon variant="empty" className={`w-3.5 h-3.5 ${isGenerating ? 'animate-diamond-spin' : ''}`} />
@@ -122,9 +123,11 @@ export function TRREditableSection({
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                {title}
-            </h3>
+            <div className="px-4">
+                <TRRSectionHeading>
+                    {title}
+                </TRRSectionHeading>
+            </div>
             <div className="overflow-hidden rounded-lg">
                 <RichTextEditor
                     content={value}

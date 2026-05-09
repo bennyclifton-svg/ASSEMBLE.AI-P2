@@ -86,21 +86,22 @@ export function MilestoneMarker({
             >
                 {/* Diamond shape */}
                 <div
-                    className="absolute inset-0 transform rotate-45 border-2 bg-[var(--color-accent-teal)] border-[var(--color-text-primary)] shadow-md"
+                    className="absolute inset-0 rotate-45 transform border-2 border-[var(--sw-ink)] bg-[var(--sw-rose)]"
                 />
 
                 {/* Tooltip */}
                 {showTooltip && (
                     <div
-                        className="absolute z-20 px-2 py-1 text-xs text-[var(--color-text-primary)] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg whitespace-nowrap"
+                        className="absolute z-20 whitespace-nowrap border border-[var(--sw-rule)] bg-white px-2 py-1 text-xs text-[var(--sw-ink)]"
                         style={{
                             bottom: markerSize + 4,
                             left: '50%',
                             transform: 'translateX(-50%)',
+                            fontFamily: 'var(--sw-font-mono)',
                         }}
                     >
                         <div className="font-medium">{milestone.name}</div>
-                        <div className="text-[var(--color-text-muted)]">
+                        <div className="text-[var(--sw-muted)]">
                             {date.toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',

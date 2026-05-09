@@ -75,10 +75,10 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
         <div
             ref={setNodeRef}
             style={style}
-            className={`group flex items-center gap-2 h-9 px-2 hover:bg-[var(--color-bg-tertiary)] transition-colors ${isDragging ? 'bg-[#37373d]' : ''}`}
+            className={`group flex items-center gap-2 h-9 px-2 hover:bg-[var(--color-bg-tertiary)] transition-colors ${isDragging ? 'bg-[var(--color-bg-hover)]' : ''}`}
         >
             <button
-                className="cursor-grab active:cursor-grabbing text-[#4a4a4a] hover:text-[var(--color-text-muted)] transition-colors flex-shrink-0"
+                className="cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] hover:text-[var(--color-text-muted)] transition-colors flex-shrink-0"
                 {...attributes}
                 {...listeners}
                 disabled={disabled}
@@ -109,14 +109,14 @@ function SortableSection({ section, onUpdate, onDelete, disabled }: SortableSect
             />
 
             <button
-                className="flex-shrink-0 text-[#4a4a4a] hover:text-[var(--color-text-muted)] transition-colors"
+                className="flex-shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-muted)] transition-colors"
                 title="Link section"
             >
                 <Link2 className="w-3.5 h-3.5" />
             </button>
 
             <button
-                className="flex-shrink-0 text-[#4a4a4a] hover:text-[var(--color-accent-coral)] transition-colors"
+                className="flex-shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-colors"
                 onClick={() => onDelete(section.id)}
                 disabled={disabled}
                 title="Delete section"
@@ -204,13 +204,13 @@ export const TocEditor = forwardRef<TocEditorHandle, TocEditorProps>(function To
 
     if (isLocked) {
         return (
-            <div className="p-4 border border-[#5a5a00] rounded bg-[#3a3a00]/30 text-[#e6e600]">
+            <div className="p-4 border border-[var(--color-warning)] rounded bg-[var(--color-warning)]/30 text-[var(--color-warning)]">
                 <p className="font-medium">Report is locked</p>
-                <p className="text-sm text-[#b3b300]">
+                <p className="text-sm text-[var(--color-warning)]">
                     {lockOwner ? `${lockOwner} is currently editing this report.` : 'Another user is editing this report.'}
                 </p>
                 <button
-                    className="mt-2 px-4 py-2 border border-[var(--color-border)] rounded bg-[#2d2d30] text-[var(--color-text-primary)] hover:bg-[var(--color-border)] transition-colors"
+                    className="mt-2 px-4 py-2 border border-[var(--color-border)] rounded bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] hover:bg-[var(--color-border)] transition-colors"
                     onClick={onCancel}
                 >
                     Go Back
@@ -231,7 +231,7 @@ export const TocEditor = forwardRef<TocEditorHandle, TocEditorProps>(function To
                         items={sections.map(s => s.id)}
                         strategy={verticalListSortingStrategy}
                     >
-                        <div className="divide-y divide-[#2d2d30]">
+                        <div className="divide-y divide-[var(--color-bg-secondary)]">
                             {sections.map(section => (
                                 <SortableSection
                                     key={section.id}
@@ -245,7 +245,7 @@ export const TocEditor = forwardRef<TocEditorHandle, TocEditorProps>(function To
                 </DndContext>
 
                 <button
-                    className="flex items-center gap-2 w-full px-3 h-9 text-[var(--color-text-muted)] text-sm hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] border-t border-[#2d2d30] transition-colors"
+                    className="flex items-center gap-2 w-full px-3 h-9 text-[var(--color-text-muted)] text-sm hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] border-t border-[var(--color-bg-secondary)] transition-colors"
                     onClick={handleAddSection}
                 >
                     <Plus className="w-3.5 h-3.5" />

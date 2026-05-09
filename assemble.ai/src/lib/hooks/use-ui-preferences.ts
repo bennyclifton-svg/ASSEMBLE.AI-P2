@@ -5,7 +5,7 @@ import { useCallback } from 'react';
 import { toast } from 'sonner';
 
 export type NotesViewMode = 'tiles' | 'list';
-export type NotesSortField = 'date' | 'type';
+export type NotesSortField = 'date' | 'type' | 'name';
 export type NotesSortDir = 'asc' | 'desc';
 
 export interface NotesPreferences {

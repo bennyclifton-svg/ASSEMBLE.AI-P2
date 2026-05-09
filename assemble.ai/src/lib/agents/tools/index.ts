@@ -27,6 +27,7 @@ import './update-risk';
 import './update-variation';
 import './update-stakeholder';
 import './start-issue-variation-workflow';
+import './start-issue-variation-assessment-revision-workflow';
 import './action-tools';
 
 export { getTool, specsFor, type AgentToolDefinition } from './catalog';

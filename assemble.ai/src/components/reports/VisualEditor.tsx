@@ -71,7 +71,7 @@ export default function VisualEditor({
     content,
     editorProps: {
       attributes: {
-        class: 'prose prose-invert prose-base max-w-none focus:outline-none min-h-[500px] px-8 py-6 [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-base [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_h3]:text-[var(--color-accent-teal)] [&_p]:mb-1 [&_p]:leading-normal [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[var(--color-border)] [&_th]:px-4 [&_th]:py-2 [&_th]:bg-[#2d2d30] [&_th]:text-[var(--color-text-muted)] [&_th]:font-medium [&_td]:border [&_td]:border-[var(--color-border)] [&_td]:px-4 [&_td]:py-2',
+        class: 'prose prose-invert prose-base max-w-none focus:outline-none min-h-[500px] px-8 py-6 [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-base [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_h3]:text-[var(--color-accent-teal)] [&_p]:mb-1 [&_p]:leading-normal [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[var(--color-border)] [&_th]:px-4 [&_th]:py-2 [&_th]:bg-[var(--color-bg-secondary)] [&_th]:text-[var(--color-text-muted)] [&_th]:font-medium [&_td]:border [&_td]:border-[var(--color-border)] [&_td]:px-4 [&_td]:py-2',
       },
     },
     onUpdate: ({ editor }) => {

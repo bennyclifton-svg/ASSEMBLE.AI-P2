@@ -113,7 +113,7 @@ export function CompanyAutocomplete({
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Input field */}
       <div className="relative">
-        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[#858585] pointer-events-none">
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none">
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
@@ -138,8 +138,8 @@ export function CompanyAutocomplete({
           disabled={disabled}
           autoFocus={autoFocus}
           className={`
-            w-full bg-[#3c3c3c] border border-[#3e3e42] rounded px-8 py-1.5 text-sm text-[#cccccc]
-            placeholder:text-[#6e6e6e] focus:outline-none focus:border-[#007acc]
+            w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded px-8 py-1.5 text-sm text-[var(--color-text-primary)]
+            placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)]
             disabled:opacity-50 disabled:cursor-not-allowed
           `}
         />
@@ -148,7 +148,7 @@ export function CompanyAutocomplete({
         {(value || displayValue) && !isOpen && (
           <button
             onClick={handleClear}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#858585] hover:text-[#cccccc]"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
           >
             <X className="w-4 h-4" />
           </button>
@@ -159,25 +159,25 @@ export function CompanyAutocomplete({
       {isOpen && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg max-h-60 overflow-auto"
+          className="absolute z-50 w-full mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg max-h-60 overflow-auto"
         >
           {showAddForm ? (
             /* Inline add form */
             <div className="p-3">
-              <div className="text-xs text-[#858585] mb-2">Add new company</div>
+              <div className="text-xs text-[var(--color-text-muted)] mb-2">Add new company</div>
               <input
                 type="text"
                 value={newCompanyName}
                 onChange={(e) => setNewCompanyName(e.target.value)}
                 placeholder="Company name"
                 autoFocus
-                className="w-full bg-[#3c3c3c] border border-[#3e3e42] rounded px-2 py-1.5 text-sm text-[#cccccc] placeholder:text-[#6e6e6e] focus:outline-none focus:border-[#007acc] mb-2"
+                className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded px-2 py-1.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)] mb-2"
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateCompany}
                   disabled={!newCompanyName.trim() || isSubmitting}
-                  className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-[#0e639c] text-white text-xs rounded hover:bg-[#1177bb] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 bg-[var(--color-accent-primary)] text-white text-xs rounded hover:bg-[var(--color-accent-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -188,7 +188,7 @@ export function CompanyAutocomplete({
                 </button>
                 <button
                   onClick={() => setShowAddForm(false)}
-                  className="px-3 py-1.5 bg-[#37373d] text-[#cccccc] text-xs rounded hover:bg-[#4e4e52]"
+                  className="px-3 py-1.5 bg-[var(--color-bg-hover)] text-[var(--color-text-primary)] text-xs rounded hover:bg-[var(--color-border)]"
                 >
                   Cancel
                 </button>
@@ -198,7 +198,7 @@ export function CompanyAutocomplete({
             <>
               {/* Company list */}
               {isLoading ? (
-                <div className="flex items-center justify-center py-4 text-[#858585]">
+                <div className="flex items-center justify-center py-4 text-[var(--color-text-muted)]">
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   <span className="text-sm">Searching...</span>
                 </div>
@@ -210,14 +210,14 @@ export function CompanyAutocomplete({
                         onClick={() => handleSelect(company)}
                         className={`
                           w-full flex items-center gap-2 px-3 py-2 text-left text-sm
-                          hover:bg-[#37373d] transition-colors
-                          ${company.id === value ? 'bg-[#094771] text-white' : 'text-[#cccccc]'}
+                          hover:bg-[var(--color-bg-hover)] transition-colors
+                          ${company.id === value ? 'bg-[var(--color-accent-primary-tint)] text-white' : 'text-[var(--color-text-primary)]'}
                         `}
                       >
-                        <Building2 className="w-4 h-4 flex-shrink-0 text-[#858585]" />
+                        <Building2 className="w-4 h-4 flex-shrink-0 text-[var(--color-text-muted)]" />
                         <span className="truncate">{company.name}</span>
                         {company.abn && (
-                          <span className="ml-auto text-xs text-[#6e6e6e]">
+                          <span className="ml-auto text-xs text-[var(--color-text-muted)]">
                             ABN: {company.abn}
                           </span>
                         )}
@@ -226,16 +226,16 @@ export function CompanyAutocomplete({
                   ))}
                 </ul>
               ) : search ? (
-                <div className="px-3 py-4 text-center text-sm text-[#858585]">
+                <div className="px-3 py-4 text-center text-sm text-[var(--color-text-muted)]">
                   No companies found
                 </div>
               ) : null}
 
               {/* Add new option */}
-              <div className="border-t border-[#3e3e42]">
+              <div className="border-t border-[var(--color-border)]">
                 <button
                   onClick={handleAddNewClick}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#4fc3f7] hover:bg-[#37373d] transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--sw-cyan)] hover:bg-[var(--color-bg-hover)] transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add new company{search ? `: "${search}"` : ''}</span>

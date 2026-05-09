@@ -10,7 +10,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, Check, X, ListChecks } from 'lucide-react';
+import { ChevronDown, ChevronRight, Check, X } from 'lucide-react';
 import { useStakeholders } from '@/lib/hooks/use-stakeholders';
 import {
     STANDARD_AGENDA_SECTIONS,
@@ -19,7 +19,6 @@ import {
     COST_PLANNING_SUB_SECTIONS,
     generateStakeholderSectionKey,
 } from '@/lib/constants/sections';
-import type { StakeholderGroup as StakeholderGroupType } from '@/types/stakeholder';
 
 // ============================================================================
 // TYPES
@@ -131,6 +130,8 @@ export function SectionSelectorDialog({
     // Initialize selection and expanded state when dialog opens
     useEffect(() => {
         if (isOpen) {
+            // Reset transient dialog state when the modal is opened.
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSelectedKeys(new Set(currentSectionKeys));
             // Auto-expand all groups
             setExpandedGroups(new Set(sectionGroups.map(g => g.key)));
@@ -206,22 +207,25 @@ export function SectionSelectorDialog({
             />
 
             {/* Dialog */}
-            <div className="relative bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg shadow-xl w-[420px] max-h-[540px] flex flex-col">
+            <div className="relative flex max-h-[540px] w-[420px] flex-col border border-[var(--sw-rule)] bg-white">
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+                <div className="flex items-center justify-between border-b border-[var(--sw-rule-2)] px-4 py-3">
                     <div>
-                        <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
+                        <h3
+                            className="text-sm font-medium text-[var(--sw-ink)]"
+                            style={{ fontFamily: 'var(--sw-font-mono)' }}
+                        >
                             {dialogTitle}
                         </h3>
                         {entityTitle && (
-                            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                            <p className="mt-0.5 text-xs text-[var(--sw-muted)]">
                                 Adding to: {entityTitle}
                             </p>
                         )}
                     </div>
                     <button
                         onClick={handleClose}
-                        className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                        className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -230,7 +234,7 @@ export function SectionSelectorDialog({
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-3">
                     {stakeholdersLoading ? (
-                        <div className="text-center py-8 text-[var(--color-text-muted)] text-xs">
+                        <div className="py-8 text-center text-xs text-[var(--sw-muted)]">
                             Loading sections...
                         </div>
                     ) : (
@@ -243,10 +247,10 @@ export function SectionSelectorDialog({
                                 const totalSelected = selectedChildCount + (isParentSelected ? 1 : 0);
 
                                 return (
-                                    <div key={group.key} className="border border-[var(--color-border)] rounded-lg overflow-hidden">
+                                    <div key={group.key} className="overflow-hidden border border-[var(--sw-rule)]">
                                         {/* Parent Row */}
                                         <div
-                                            className={`flex items-center gap-2 p-2.5 hover:bg-[var(--color-bg-tertiary)] transition-colors cursor-pointer ${isParentSelected ? 'bg-[var(--color-accent-copper-tint)]' : ''}`}
+                                            className={`flex cursor-pointer items-center gap-2 p-2.5 transition-colors hover:bg-[var(--sw-paper)] ${isParentSelected ? 'bg-[var(--sw-paper)]' : ''}`}
                                         >
                                             {/* Expand/Collapse chevron */}
                                             <button
@@ -255,9 +259,9 @@ export function SectionSelectorDialog({
                                             >
                                                 {hasChildren ? (
                                                     isExpanded ? (
-                                                        <ChevronDown className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
+                                                        <ChevronDown className="h-3.5 w-3.5 text-[var(--sw-muted)]" />
                                                     ) : (
-                                                        <ChevronRight className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
+                                                        <ChevronRight className="h-3.5 w-3.5 text-[var(--sw-muted)]" />
                                                     )
                                                 ) : (
                                                     <div className="w-3.5" />
@@ -268,25 +272,27 @@ export function SectionSelectorDialog({
                                             <button
                                                 onClick={() => toggleParent(group)}
                                                 className={`
-                                                    w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0
+                                                    flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center border
                                                     ${isParentSelected
-                                                        ? 'bg-[var(--color-accent-copper)] border-[var(--color-accent-copper)]'
-                                                        : 'border-[var(--color-border)]'
+                                                        ? 'border-[var(--sw-ink)] bg-[var(--sw-ink)]'
+                                                        : 'border-[var(--sw-rule)]'
                                                     }
                                                 `}
                                             >
-                                                {isParentSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                                {isParentSelected && <Check className="h-2.5 w-2.5 text-[var(--sw-paper)]" />}
                                             </button>
 
                                             <span
-                                                className={`flex-1 text-xs font-medium ${isParentSelected ? 'text-[var(--color-accent-copper)]' : 'text-[var(--color-text-secondary)]'}`}
+                                                className={`flex-1 text-xs font-medium ${isParentSelected ? 'text-[var(--sw-ink)]' : 'text-[var(--sw-muted)]'}`}
+                                                style={{ fontFamily: 'var(--sw-font-mono)' }}
                                                 onClick={() => hasChildren ? toggleGroupExpand(group.key) : toggleParent(group)}
                                             >
+                                                <span className="mr-2 inline-block h-1.5 w-1.5 bg-[var(--sw-lav)] align-middle" />
                                                 {group.label}
                                             </span>
 
                                             {totalSelected > 0 && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-accent-copper)] text-white">
+                                                <span className="bg-[var(--sw-ink)] px-1.5 py-0.5 text-[10px] text-[var(--sw-paper)]">
                                                     {totalSelected}
                                                 </span>
                                             )}
@@ -302,23 +308,24 @@ export function SectionSelectorDialog({
                                                             key={child.key}
                                                             onClick={() => toggleSelection(child.key)}
                                                             className={`
-                                                                w-full flex items-center gap-2 p-2 rounded text-left text-xs transition-all
+                                                                flex w-full items-center gap-2 p-2 text-left text-xs transition-all
                                                                 ${isSelected
-                                                                    ? 'bg-[var(--color-accent-copper-tint)] border border-[var(--color-accent-copper)]'
-                                                                    : 'bg-[var(--color-bg-secondary)] border border-transparent hover:border-[var(--color-border)]'
+                                                                    ? 'border border-[var(--sw-ink)] bg-white'
+                                                                    : 'border border-transparent bg-[var(--sw-paper)] hover:border-[var(--sw-rule)]'
                                                                 }
                                                             `}
                                                         >
                                                             <div className={`
-                                                                w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0
+                                                                flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center border
                                                                 ${isSelected
-                                                                    ? 'bg-[var(--color-accent-copper)] border-[var(--color-accent-copper)]'
-                                                                    : 'border-[var(--color-border)]'
+                                                                    ? 'border-[var(--sw-ink)] bg-[var(--sw-ink)]'
+                                                                    : 'border-[var(--sw-rule)]'
                                                                 }
                                                             `}>
-                                                                {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
+                                                                {isSelected && <Check className="h-2.5 w-2.5 text-[var(--sw-paper)]" />}
                                                             </div>
-                                                            <span className={isSelected ? 'text-[var(--color-accent-copper)]' : 'text-[var(--color-text-secondary)]'}>
+                                                            <span className={isSelected ? 'text-[var(--sw-ink)]' : 'text-[var(--sw-muted)]'}>
+                                                                <span className="mr-2 inline-block h-1.5 w-1.5 bg-[var(--sw-cyan)] align-middle" />
                                                                 {child.label}
                                                             </span>
                                                         </button>
@@ -334,21 +341,21 @@ export function SectionSelectorDialog({
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--color-border)]">
-                    <span className="text-xs text-[var(--color-text-muted)]">
+                <div className="flex items-center justify-between border-t border-[var(--sw-rule-2)] px-4 py-3">
+                    <span className="text-xs text-[var(--sw-muted)]">
                         {selectedKeys.size} selected
                     </span>
                     <div className="flex gap-2">
                         <button
                             onClick={handleClose}
-                            className="px-3 py-1.5 text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                            className="border border-[var(--sw-rule)] px-3 py-1.5 text-xs text-[var(--sw-ink)] transition-colors hover:bg-[var(--sw-paper)]"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleApply}
                             disabled={selectedKeys.size === 0}
-                            className="px-3 py-1.5 text-xs bg-[var(--color-accent-copper)] text-white rounded hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-[var(--sw-ink)] px-3 py-1.5 text-xs text-[var(--sw-paper)] transition-opacity hover:bg-[var(--sw-rose-dk)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Apply
                         </button>

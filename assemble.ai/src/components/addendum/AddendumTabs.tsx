@@ -62,7 +62,7 @@ export function AddendumTabs({
 
     return (
         <>
-            <div className="flex items-center border-b border-[var(--color-border)]">
+            <div className="procurement-instance-tabs">
                 {addenda.map((addendum) => {
                     const label = String(addendum.addendumNumber).padStart(2, '0');
                     const isActive = addendum.id === activeAddendumId;
@@ -72,12 +72,8 @@ export function AddendumTabs({
                     return (
                         <div
                             key={addendum.id}
-                            className={cn(
-                                'relative group flex items-center justify-center min-w-[48px] px-3 py-1 text-sm transition-colors cursor-pointer',
-                                isActive
-                                    ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
-                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                            )}
+                            className="procurement-instance-tab group min-w-[48px] justify-center"
+                            data-state={isActive ? 'active' : 'inactive'}
                             onClick={() => onSelectAddendum(addendum.id)}
                         >
                             <span className="mr-1">{label}</span>
@@ -87,7 +83,7 @@ export function AddendumTabs({
                                 <span
                                     className={cn(
                                         'absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full',
-                                        hasTransmittal ? 'bg-[#3fb950]' : 'bg-[#4fc1ff]'
+                                        hasTransmittal ? 'bg-[var(--color-success)]' : 'bg-[var(--sw-cyan)]'
                                     )}
                                 />
                             )}
@@ -96,7 +92,7 @@ export function AddendumTabs({
                             {onDeleteAddendum && (
                                 <button
                                     onClick={(e) => handleDeleteClick(e, addendum.id)}
-                                    className="absolute right-0 p-0.5 rounded hover:bg-[var(--color-border)] transition-all opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+                                    className="absolute right-0 p-0.5 text-[var(--sw-muted)] opacity-0 transition-all hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)] group-hover:opacity-100"
                                     title={`Delete Addendum ${label}`}
                                 >
                                     <X className="w-3.5 h-3.5" />
@@ -110,7 +106,7 @@ export function AddendumTabs({
                 <button
                     onClick={onCreateAddendum}
                     disabled={isLoading}
-                    className="flex items-center justify-center px-2 py-1 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="procurement-instance-create"
                     title="Create new addendum"
                 >
                     {isLoading ? (
@@ -123,26 +119,26 @@ export function AddendumTabs({
 
             {/* Delete Confirmation Dialog - Aurora styled */}
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogContent className="card-aurora border-0 bg-[rgba(20,22,24,0.95)] backdrop-blur-xl">
+                <AlertDialogContent className="rounded-none border-[var(--sw-rule)] bg-white">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-3 text-[var(--color-text-primary)]">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primitive-aurora-magenta)]/20 to-[var(--primitive-aurora-violet)]/20 border border-[var(--primitive-aurora-magenta)]/30">
-                                <AlertTriangle className="w-5 h-5 text-[var(--primitive-aurora-magenta)]" />
+                        <AlertDialogTitle className="flex items-center gap-3 text-[var(--sw-ink)]">
+                            <div className="flex h-10 w-10 items-center justify-center border border-[var(--sw-rule)] bg-[var(--sw-rose-tint)]">
+                                <AlertTriangle className="h-5 w-5 text-[var(--sw-rose-dk)]" />
                             </div>
                             <span>Delete Addendum {pendingLabel}?</span>
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="text-[var(--color-text-muted)] pl-[52px]">
+                        <AlertDialogDescription className="pl-[52px] text-[var(--sw-muted)]">
                             This will permanently delete the addendum and all its associated transmittal documents.
                             This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="gap-3 sm:gap-3">
-                        <AlertDialogCancel className="btn-aurora-ghost border-[var(--color-border)] hover:border-[var(--primitive-aurora-cyan)]/30">
+                        <AlertDialogCancel className="rounded-none border-[var(--sw-rule)] bg-transparent text-[var(--sw-ink)] hover:bg-[var(--sw-paper)]">
                             Cancel
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={confirmDelete}
-                            className="bg-gradient-to-r from-[var(--primitive-aurora-magenta)] to-[var(--primitive-aurora-violet)] text-white hover:opacity-90 border-0 shadow-[0_0_20px_rgba(255,20,147,0.3)]"
+                            className="rounded-none border-0 bg-[var(--sw-rose)] text-[var(--sw-ink)] hover:bg-[var(--sw-rose-dk)] hover:text-white"
                         >
                             Delete
                         </AlertDialogAction>

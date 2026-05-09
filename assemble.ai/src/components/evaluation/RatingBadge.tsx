@@ -76,11 +76,11 @@ export function RatingButton({ rating, selected, onClick, disabled }: RatingButt
 function getRingColor(rating: QualityRating): string {
     switch (rating) {
         case 'good':
-            return '#22c55e';
+            return 'var(--color-success)';
         case 'average':
-            return '#eab308';
+            return 'var(--color-warning)';
         case 'poor':
-            return '#ef4444';
+            return 'var(--color-error)';
     }
 }
 

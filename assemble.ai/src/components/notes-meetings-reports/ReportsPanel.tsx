@@ -16,7 +16,9 @@ import { SectionHeader } from '@/components/shared/SectionHeader';
 import { NumberedTabs } from '@/components/shared/NumberedTabs';
 import { ExportButtonGroup } from '@/components/shared/ExportButtonGroup';
 import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
+import { ProcurementSectionShell } from '@/components/procurement';
 import { ReportContent } from './ReportContent';
+import { REPORT_RECORD_ACCENT } from './RecordSectionHeading';
 import { useReports, useReportMutations, useReportExport } from '@/lib/hooks/use-reports';
 import { useReportsSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { cn } from '@/lib/utils';
@@ -37,6 +39,7 @@ interface ReportsPanelProps {
     onDeleteGroup?: () => void;
     onSaveTransmittal?: (reportId: string) => void;
     onLoadTransmittal?: (reportId: string) => void;
+    displayMode?: 'accordion' | 'detail';
     className?: string;
 }
 
@@ -44,10 +47,10 @@ export function ReportsPanel({
     projectId,
     groupId,
     groupTitle,
-    onRenameGroup,
     onDeleteGroup,
     onSaveTransmittal,
     onLoadTransmittal,
+    displayMode = 'accordion',
     className,
 }: ReportsPanelProps) {
     const { reports, isLoading, error, refetch } = useReports({ projectId, groupId });
@@ -89,7 +92,7 @@ export function ReportsPanel({
         } finally {
             setIsCreating(false);
         }
-    }, [createReport, projectId, setActiveReportId, setExpanded]);
+    }, [createReport, groupId, projectId, setActiveReportId, setExpanded]);
 
     // Auto-create first report when expanding with none
     const handleExpandToggle = useCallback(async () => {
@@ -153,17 +156,21 @@ export function ReportsPanel({
                     isMenuExpanded={isMenuExpanded}
                     onToggleMenu={() => setMenuExpanded(!isMenuExpanded)}
                 />
-                <div className="flex-1 flex flex-col items-center justify-center p-8" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
-                    <div className="rounded-full bg-red-500/10 p-4 mb-4">
-                        <AlertCircle className="h-8 w-8 text-red-500" />
+                <div className="flex flex-1 flex-col items-center justify-center bg-[var(--sw-paper)] p-8">
+                    <div className="mb-4 border border-[var(--sw-rule)] bg-white p-4">
+                        <AlertCircle className="h-8 w-8 text-[var(--sw-rose-dk)]" />
                     </div>
-                    <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+                    <h3 className="mb-2 text-lg font-medium text-[var(--sw-ink)]">
                         Failed to load reports
                     </h3>
-                    <p className="text-sm text-[var(--color-text-muted)] mb-4 text-center max-w-xs">
+                    <p className="mb-4 max-w-xs text-center text-sm text-[var(--sw-muted)]">
                         {error.message || 'There was an error loading your reports. Please try again.'}
                     </p>
-                    <Button variant="outline" onClick={refetch}>
+                    <Button
+                        variant="outline"
+                        onClick={refetch}
+                        className="rounded-none border-[var(--sw-rule)] bg-transparent text-[var(--sw-ink)] hover:bg-white"
+                    >
                         Retry
                     </Button>
                 </div>
@@ -191,15 +198,21 @@ export function ReportsPanel({
                 isLoading={isLoading}
                 entityName="Report"
                 deleteMessage="This will permanently delete this report and all its sections, recipients, and attachments. This action cannot be undone."
+                accentColor={REPORT_RECORD_ACCENT}
             />
-            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
-            <div className="flex items-center gap-1">
+            <div className="mx-2 h-5 w-px bg-[var(--sw-rule-2)]" />
+            <ExportButtonGroup
+                onExportPdf={() => handleExport('pdf')}
+                onExportDocx={() => handleExport('docx')}
+                disabled={!activeReport}
+            />
+            <div className="ml-auto flex items-center gap-1">
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleRibbonCopy}
                     disabled={!activeReport || isCopying}
-                    className="h-7 w-7 p-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-border)] transition-colors"
+                    className="h-7 w-7 rounded-none border border-[var(--sw-rule)] bg-transparent p-0 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
                     title="Copy report"
                 >
                     {isCopying ? (
@@ -208,35 +221,78 @@ export function ReportsPanel({
                         <Copy className="w-4 h-4" />
                     )}
                 </Button>
-            </div>
-            {onDeleteGroup && (
-                <div className="flex items-center gap-1">
+                {onDeleteGroup && (
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowDeleteGroupDialog(true)}
-                        className="h-7 w-7 p-0 text-[var(--color-text-muted)] hover:text-red-400 hover:bg-[var(--color-border)] transition-colors"
+                        className="h-7 w-7 rounded-none border border-[var(--sw-rule)] bg-transparent p-0 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)]"
                         title="Delete report group"
                     >
                         <Trash className="w-4 h-4" />
                     </Button>
+                )}
+            </div>
+        </>
+    );
+
+    const sectionTitle = activeReport?.title || groupTitle || "Reports";
+    const sectionExpanded = displayMode === 'detail' || isExpanded;
+    const detailDate = activeReport?.reportDate || activeReport?.createdAt || null;
+    const detailDateLabel = detailDate
+        ? new Date(detailDate.includes('T') ? detailDate : `${detailDate}T00:00:00`).toLocaleDateString('en-AU', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+        })
+        : 'no date';
+    const panelContent = (
+        <>
+            {isLoading ? (
+                <ReportsPanelSkeleton />
+            ) : reports.length === 0 ? (
+                <EmptyState />
+            ) : activeReport ? (
+                <ReportContent
+                    report={activeReport}
+                    projectId={projectId}
+                    onUpdate={(data) => handleUpdateReport(activeReport.id, data)}
+                    onCopy={() => handleCopyReport(activeReport.id)}
+                    onSaveTransmittal={onSaveTransmittal ? () => onSaveTransmittal(activeReport.id) : undefined}
+                    onLoadTransmittal={onLoadTransmittal ? () => onLoadTransmittal(activeReport.id) : undefined}
+                    accentColor={REPORT_RECORD_ACCENT}
+                />
+            ) : (
+                <div className="p-8 text-center text-[var(--sw-muted)]">
+                    <p>Select a report or create a new one.</p>
                 </div>
             )}
-            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
-            <ExportButtonGroup
-                onExportPdf={() => handleExport('pdf')}
-                onExportDocx={() => handleExport('docx')}
-                disabled={!activeReport}
-            />
         </>
     );
 
     return (
         <div className={cn(className)}>
+            {displayMode === 'detail' ? (
+                <ProcurementSectionShell
+                    label="report record"
+                    meta={`report / ${detailDateLabel}`}
+                    accentColor={REPORT_RECORD_ACCENT}
+                    isExpanded={sectionExpanded}
+                    onToggleExpanded={handleExpandToggle}
+                    isMenuExpanded={isMenuExpanded}
+                    onToggleMenu={() => setMenuExpanded(!isMenuExpanded)}
+                    displayMode="detail"
+                    menuContent={menuContent}
+                >
+                    {panelContent}
+                </ProcurementSectionShell>
+            ) : (
+                <>
             {/* Header - Segmented ribbon with numbered tabs */}
             <SectionHeader
-                title={activeReport?.title || groupTitle || "Reports"}
+                title={sectionTitle}
                 icon={ClipboardList}
+                accentColor={REPORT_RECORD_ACCENT}
                 isExpanded={isExpanded}
                 onToggleExpand={handleExpandToggle}
                 isMenuExpanded={isMenuExpanded}
@@ -246,26 +302,11 @@ export function ReportsPanel({
 
             {/* Content Area - only shown when expanded */}
             {isExpanded && (
-                <div className="mx-2 p-4 rounded-md shadow-sm" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
-                    {isLoading ? (
-                        <ReportsPanelSkeleton />
-                    ) : reports.length === 0 ? (
-                        <EmptyState onCreateReport={handleCreateReport} />
-                    ) : activeReport ? (
-                        <ReportContent
-                            report={activeReport}
-                            projectId={projectId}
-                            onUpdate={(data) => handleUpdateReport(activeReport.id, data)}
-                            onCopy={() => handleCopyReport(activeReport.id)}
-                            onSaveTransmittal={onSaveTransmittal ? () => onSaveTransmittal(activeReport.id) : undefined}
-                            onLoadTransmittal={onLoadTransmittal ? () => onLoadTransmittal(activeReport.id) : undefined}
-                        />
-                    ) : (
-                        <div className="p-8 text-center text-[var(--color-text-muted)]">
-                            <p>Select a report or create a new one.</p>
-                        </div>
-                    )}
+                <div className="mx-2 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-4">
+                    {panelContent}
                 </div>
+            )}
+                </>
             )}
 
             <AuroraConfirmDialog
@@ -299,23 +340,19 @@ function ReportsPanelSkeleton() {
 }
 
 // Empty State Component
-interface EmptyStateProps {
-    onCreateReport: () => void;
-}
-
-function EmptyState({ onCreateReport }: EmptyStateProps) {
+function EmptyState() {
     return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="rounded-full bg-[var(--color-bg-tertiary)] p-4 mb-4">
-                <ClipboardList className="h-8 w-8 text-[var(--color-text-muted)]" />
+            <div className="mb-4 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-4">
+                <ClipboardList className="h-8 w-8 text-[var(--sw-muted)]" />
             </div>
-            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+            <h3 className="mb-2 text-lg font-medium text-[var(--sw-ink)]">
                 No reports yet
             </h3>
-            <p className="text-sm text-[var(--color-text-muted)] mb-4 max-w-xs">
+            <p className="mb-4 max-w-xs text-sm text-[var(--sw-muted)]">
                 Create your first periodic report to document project progress, financial summaries, and key updates.
             </p>
-            <p className="text-sm text-[var(--color-text-muted)]">
+            <p className="text-sm text-[var(--sw-muted)]">
                 Click the <span className="font-medium">+</span> button above to create a report.
             </p>
         </div>

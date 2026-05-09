@@ -14,6 +14,7 @@ import type {
 } from '@/types/evaluation';
 import { getDisplayContent, getDisplayRating } from '@/types/evaluation';
 import { InlineRatingButtons } from '@/components/evaluation/RatingBadge';
+import { TRR_ACCENT_COLOR, TRRSectionHeading } from './TRRSectionHeading';
 
 interface TRREvaluationNonPriceProps {
     projectId: string;
@@ -87,9 +88,11 @@ export function TRREvaluationNonPrice({
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                Evaluation Non-Price
-            </h3>
+            <div className="px-4">
+                <TRRSectionHeading>
+                    Evaluation Non-Price
+                </TRRSectionHeading>
+            </div>
             <div className="overflow-hidden">
                 {isLoading ? (
                     <div className="px-4 py-3 text-[var(--color-text-secondary)] text-sm">
@@ -100,13 +103,14 @@ export function TRREvaluationNonPrice({
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-[var(--color-border)]">
-                                    <th className="px-4 py-2.5 text-left text-[var(--color-text-primary)] font-medium min-w-[140px]">
+                                    <th className="px-4 py-2.5 text-left font-medium min-w-[140px]" style={{ color: TRR_ACCENT_COLOR }}>
                                         Criteria
                                     </th>
                                     {data?.firms.map((firm) => (
                                         <th
                                             key={firm.id}
-                                            className="px-4 py-2.5 text-left text-[var(--color-text-primary)] font-medium min-w-[180px]"
+                                            className="px-4 py-2.5 text-left font-medium min-w-[180px]"
+                                            style={{ color: TRR_ACCENT_COLOR }}
                                         >
                                             {firm.companyName}
                                         </th>

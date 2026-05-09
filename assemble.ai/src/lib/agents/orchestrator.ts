@@ -15,6 +15,7 @@ import {
     hasFinanceContext,
     hasProgramContext,
     isConsultantAddendumRequest,
+    isContractorVariationClaimRequest,
     isCostValueWriteRequest,
     isDesignWriteRequest,
     isDocumentSelectionRequest,
@@ -32,6 +33,7 @@ import {
     isTenderFirmWriteRequest,
     isTechnicalServicesQuestion,
     isTransmittalWriteRequest,
+    isVariationClaimAssessmentRequest,
     isVariationWriteRequest,
 } from './intent';
 import { runAgent } from './runner';
@@ -57,18 +59,20 @@ export interface RunOrchestratorResult {
     outputTokens: number;
 }
 
-type SpecialistName = 'finance' | 'program' | 'design';
+type SpecialistName = 'finance' | 'program' | 'design' | 'delivery';
 
 const SPECIALIST_LABELS: Record<SpecialistName, string> = {
     finance: 'Finance Agent',
     program: 'Program Agent',
     design: 'Design Agent',
+    delivery: 'Delivery Agent',
 };
 
 const DOMAIN_LABELS: Record<SpecialistName, string> = {
     finance: 'Finance',
     program: 'Programme',
     design: 'Design',
+    delivery: 'Delivery',
 };
 
 export async function runOrchestrator(args: RunOrchestratorArgs): Promise<RunOrchestratorResult> {
@@ -230,6 +234,10 @@ export function routeAgents(text: string): SpecialistName[] {
         return ['finance', 'program', 'design'];
     }
 
+    if (isContractorVariationClaimRequest(text) || isVariationClaimAssessmentRequest(text)) {
+        return ['delivery'];
+    }
+
     if (isConsultantAddendumRequest(text)) {
         return ['design'];
     }
@@ -342,6 +350,17 @@ function specialistRoutingHint(agentName: SpecialistName, latestUserMessage: str
             'Routing note: this is tender-panel firm work. ' +
             'Use add_tender_firms if possible; do not hand this to Procurement, Delivery, or Finance. ' +
             'If this message is only a follow-up firm contact list, use the prior tender-panel request in the chat history to determine firmType and disciplineOrTrade.'
+        );
+    }
+    if (
+        agentName === 'delivery' &&
+        (isContractorVariationClaimRequest(latestUserMessage) ||
+            isVariationClaimAssessmentRequest(latestUserMessage))
+    ) {
+        return (
+            'Routing note: this is a contractor variation-claim request. ' +
+            'Read available evidence. For a first assessment, use start_issue_variation_workflow. For an iteration on an existing assessment note, use list_notes first, then start_issue_variation_assessment_revision_workflow. ' +
+            'Do not create standalone variations, notes, cost-line updates, programme updates, or correspondence records outside those workflows.'
         );
     }
     if (

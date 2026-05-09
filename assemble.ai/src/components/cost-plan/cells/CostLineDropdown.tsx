@@ -139,14 +139,14 @@ export function CostLineDropdown({
         disabled={disabled}
         className={`
           w-full flex items-center justify-between gap-2 px-3 py-1.5
-          bg-[#3c3c3c] border border-[#3e3e42] rounded text-sm
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[#4e4e52] cursor-pointer'}
-          ${isOpen ? 'border-[#007acc]' : ''}
+          bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-sm
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-border)] cursor-pointer'}
+          ${isOpen ? 'border-[var(--color-accent-primary)]' : ''}
         `}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <FileText className="w-4 h-4 flex-shrink-0 text-[#858585]" />
-          <span className={`truncate ${selectedCostLine ? 'text-[#cccccc]' : 'text-[#6e6e6e]'}`}>
+          <FileText className="w-4 h-4 flex-shrink-0 text-[var(--color-text-muted)]" />
+          <span className={`truncate ${selectedCostLine ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}`}>
             {selectedCostLine ? formatCostLine(selectedCostLine) : placeholder}
           </span>
         </div>
@@ -155,31 +155,31 @@ export function CostLineDropdown({
           {showClear && selectedCostLine && (
             <button
               onClick={handleClear}
-              className="p-0.5 hover:bg-[#4e4e52] rounded"
+              className="p-0.5 hover:bg-[var(--color-border)] rounded"
             >
-              <span className="text-[#858585] hover:text-[#cccccc] text-xs">×</span>
+              <span className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-xs">×</span>
             </button>
           )}
           <ChevronDown
-            className={`w-4 h-4 text-[#858585] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-[var(--color-text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
       </button>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full min-w-[300px] mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg">
+        <div className="absolute z-50 w-full min-w-[300px] mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg">
           {/* Search input */}
-          <div className="p-2 border-b border-[#3e3e42]">
+          <div className="p-2 border-b border-[var(--color-border)]">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#858585]" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search cost lines..."
-                className="w-full bg-[#3c3c3c] border border-[#3e3e42] rounded pl-8 pr-3 py-1.5 text-sm text-[#cccccc] placeholder:text-[#6e6e6e] focus:outline-none focus:border-[#007acc]"
+                className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded pl-8 pr-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)]"
               />
             </div>
           </div>
@@ -190,7 +190,7 @@ export function CostLineDropdown({
               filteredAndGrouped.map(({ section, items }) => (
                 <div key={section}>
                   {/* Section header */}
-                  <div className="sticky top-0 px-3 py-1.5 bg-[#2d2d30] text-xs font-medium text-[#858585] uppercase tracking-wider">
+                  <div className="sticky top-0 px-3 py-1.5 bg-[var(--color-bg-secondary)] text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                     {SECTION_NAMES[section]}
                   </div>
 
@@ -201,24 +201,24 @@ export function CostLineDropdown({
                       onClick={() => handleSelect(cl.id)}
                       className={`
                         w-full flex items-center gap-2 px-3 py-2 text-left text-sm
-                        hover:bg-[#37373d] transition-colors
-                        ${cl.id === value ? 'bg-[#094771]' : ''}
+                        hover:bg-[var(--color-bg-hover)] transition-colors
+                        ${cl.id === value ? 'bg-[var(--color-accent-primary-tint)]' : ''}
                       `}
                     >
                       <div className="flex-1 min-w-0">
-                        <div className={`truncate ${cl.id === value ? 'text-white' : 'text-[#cccccc]'}`}>
+                        <div className={`truncate ${cl.id === value ? 'text-white' : 'text-[var(--color-text-primary)]'}`}>
                           {formatCostLine(cl)}
                         </div>
                       </div>
                       {cl.id === value && (
-                        <Check className="w-4 h-4 text-[#4fc3f7] flex-shrink-0" />
+                        <Check className="w-4 h-4 text-[var(--sw-cyan)] flex-shrink-0" />
                       )}
                     </button>
                   ))}
                 </div>
               ))
             ) : (
-              <div className="px-3 py-4 text-center text-sm text-[#858585]">
+              <div className="px-3 py-4 text-center text-sm text-[var(--color-text-muted)]">
                 {search ? 'No matching cost lines' : 'No cost lines available'}
               </div>
             )}

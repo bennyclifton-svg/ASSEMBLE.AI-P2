@@ -23,7 +23,7 @@ jest.mock('@/lib/actions', () => ({
     proposeAction: (...args: unknown[]) => mockProposeAction(...args),
 }));
 
-import { createWorkflowFromPlan } from '../runner';
+import { createWorkflowFromPlan, materializeWorkflowRunFromPlan } from '../runner';
 import type { WorkflowPlan } from '../types';
 
 function setupDbMocks() {
@@ -212,5 +212,48 @@ describe('createWorkflowFromPlan', () => {
             'Skipped because dependency "create_variation" did not produce an applied step.'
         );
         expect(mockProposeAction).toHaveBeenCalledTimes(1);
+    });
+
+    it('materializes an existing preview run instead of inserting another run', async () => {
+        const plan: WorkflowPlan = {
+            workflowKey: 'issue-variation',
+            userGoal: 'Review contractor claim',
+            summary: 'Review contractor claim',
+            executionBrief: 'Prepare contractor variation approvals.',
+            evidence: [],
+            assumptions: [],
+            steps: [
+                {
+                    stepKey: 'create_variation',
+                    title: 'Create variation',
+                    actionId: 'finance.variations.create',
+                    input: { description: 'Latent rock excavation' },
+                    dependencyStepKeys: [],
+                    failurePolicy: 'abort_workflow',
+                    risk: 'sensitive',
+                },
+            ],
+        };
+
+        const result = await materializeWorkflowRunFromPlan({
+            workflowRunId: 'existing-workflow-run',
+            plan,
+            userId: 'user-1',
+            organizationId: 'org-1',
+            projectId: 'project-1',
+            threadId: 'thread-1',
+            agentRunId: 'run-1',
+            activeAgent: 'delivery',
+        });
+
+        expect(result.workflowRunId).toBe('existing-workflow-run');
+        expect(result.status).toBe('awaiting_approval');
+        expect(mockInsert).not.toHaveBeenCalledWith(expect.objectContaining({ workflowKey: expect.anything() }));
+        expect(mockUpdate).toHaveBeenCalled();
+        expect(mockProposeAction).toHaveBeenCalledWith(
+            expect.objectContaining({
+                toolUseId: 'workflow:existing-workflow-run:workflow-step-1',
+            })
+        );
     });
 });

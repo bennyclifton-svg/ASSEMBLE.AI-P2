@@ -46,7 +46,7 @@ export default function RefreshConfirmationModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-[#2d2d2d] border border-gray-700 rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+      <div className="relative bg-[var(--color-bg-secondary)] border border-gray-700 rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
         {/* Icon and Title */}
         <div className="flex items-start gap-3 mb-4">
           <AlertTriangle className="w-6 h-6 text-yellow-500 flex-shrink-0 mt-1" />

@@ -5,10 +5,14 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import useSWR from 'swr';
 import { type Addendum } from '@/lib/hooks/use-addenda';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
+
+export type AddendumDetailViewMode = 'short' | 'long';
+
+const ADDENDUM_HIGHLIGHT_COLOR = 'var(--sw-peach)';
 
 function formatDisplayDate(dateString: string): string {
     if (!dateString) return '';
@@ -26,6 +30,8 @@ interface AddendumContentProps {
     addendum: Addendum;
     onUpdateContent: (addendumId: string, content: string) => Promise<boolean>;
     onUpdateDate: (addendumId: string, date: string) => Promise<boolean>;
+    surface?: 'procurement' | 'record';
+    viewMode?: AddendumDetailViewMode;
 }
 
 const fetcher = async (url: string): Promise<ProjectDetails> => {
@@ -43,11 +49,14 @@ export function AddendumContent({
     addendum,
     onUpdateContent,
     onUpdateDate,
+    surface = 'procurement',
+    viewMode = 'long',
 }: AddendumContentProps) {
     const [content, setContent] = useState(addendum.content || '');
     const [isSaving, setIsSaving] = useState(false);
     const [addendumDate, setAddendumDate] = useState(addendum.addendumDate || new Date().toISOString().split('T')[0]);
     const dateInputRef = useRef<HTMLInputElement>(null);
+    const usesRecordSurface = surface === 'record';
 
     // Fetch project details for the info table (from planning API)
     const { data: projectDetails } = useSWR<ProjectDetails>(
@@ -55,12 +64,6 @@ export function AddendumContent({
         fetcher,
         { revalidateOnFocus: false }
     );
-
-    // Update local content when addendum changes
-    useEffect(() => {
-        setContent(addendum.content || '');
-        setAddendumDate(addendum.addendumDate || new Date().toISOString().split('T')[0]);
-    }, [addendum.id, addendum.content, addendum.addendumDate]);
 
     const handleDateClick = useCallback(() => {
         dateInputRef.current?.showPicker();
@@ -86,6 +89,93 @@ export function AddendumContent({
 
     const addendumLabel = `Addendum ${String(addendum.addendumNumber).padStart(2, '0')}`;
 
+    if (usesRecordSurface) {
+        return (
+            <div
+                className="flex min-h-0 flex-col px-4 pb-4 pt-0 transition-colors"
+                style={{ backgroundColor: 'white', color: 'var(--color-text-primary)' }}
+            >
+                <div
+                    className="-mx-4 overflow-hidden"
+                    style={{
+                        borderBottom: '1px solid var(--sw-rule-2)',
+                    }}
+                >
+                    <table className="w-full text-sm">
+                        <tbody>
+                            <tr style={{ borderBottom: '1px solid var(--sw-rule-2)' }}>
+                                <td
+                                    className="w-36 px-4 py-2.5 font-medium"
+                                    style={{ color: ADDENDUM_HIGHLIGHT_COLOR }}
+                                >
+                                    Project Name
+                                </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
+                                    {projectDetails?.projectName || 'Loading...'}
+                                </td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--sw-rule-2)' }}>
+                                <td
+                                    className="px-4 py-2.5 font-medium"
+                                    style={{ color: ADDENDUM_HIGHLIGHT_COLOR }}
+                                >
+                                    Address
+                                </td>
+                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
+                                    {projectDetails?.address || '-'}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td
+                                    className="px-4 py-2.5 font-medium"
+                                    style={{ color: ADDENDUM_HIGHLIGHT_COLOR }}
+                                >
+                                    Document
+                                </td>
+                                <td className="px-4 py-2.5 font-semibold text-[var(--color-text-primary)]">
+                                    {addendumLabel}
+                                </td>
+                                <td
+                                    className="relative w-44 cursor-pointer px-4 py-2.5 text-right font-medium transition-colors hover:bg-[var(--sw-paper)]"
+                                    style={{ color: ADDENDUM_HIGHLIGHT_COLOR }}
+                                    onClick={handleDateClick}
+                                >
+                                    <span className="select-none">Issued {formatDisplayDate(addendumDate)}</span>
+                                    <input
+                                        ref={dateInputRef}
+                                        type="date"
+                                        value={addendumDate}
+                                        onChange={handleDateChange}
+                                        className="absolute inset-0 cursor-pointer opacity-0"
+                                        tabIndex={-1}
+                                    />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="min-h-0">
+                    <RichTextEditor
+                        content={content}
+                        onChange={handleContentChange}
+                        onBlur={handleBlur}
+                        placeholder="Enter addendum details, changes, clarifications..."
+                        variant="mini"
+                        toolbarVariant="mini"
+                        transparentBg
+                        className="border-0 rounded-none"
+                        editorClassName={`bg-white hover:bg-[var(--sw-paper)] transition-colors ${viewMode === 'long' ? 'min-h-[112px]' : 'min-h-[72px]'}`}
+                    />
+                </div>
+
+                {isSaving ? (
+                    <span className="mt-2 text-xs text-[var(--sw-muted)]">Saving...</span>
+                ) : null}
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-4">
             {/* Project Info Table */}
@@ -93,7 +183,7 @@ export function AddendumContent({
                 <table className="w-full text-sm">
                     <tbody>
                         <tr className="border-b border-[var(--color-border)]">
-                            <td className="w-36 px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                            <td className="w-36 px-4 py-2.5 font-medium" style={{ color: ADDENDUM_HIGHLIGHT_COLOR }}>
                                 Project Name
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -101,7 +191,7 @@ export function AddendumContent({
                             </td>
                         </tr>
                         <tr className="border-b border-[var(--color-border)]">
-                            <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                            <td className="px-4 py-2.5 font-medium" style={{ color: ADDENDUM_HIGHLIGHT_COLOR }}>
                                 Address
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -109,14 +199,15 @@ export function AddendumContent({
                             </td>
                         </tr>
                         <tr>
-                            <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                            <td className="px-4 py-2.5 font-medium" style={{ color: ADDENDUM_HIGHLIGHT_COLOR }}>
                                 Document
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
                                 {addendumLabel}
                             </td>
                             <td
-                                className="w-44 px-4 py-2.5 text-[var(--color-document-header)] font-medium cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative text-right"
+                                className="w-44 px-4 py-2.5 font-medium cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative text-right"
+                                style={{ color: ADDENDUM_HIGHLIGHT_COLOR }}
                                 onClick={handleDateClick}
                             >
                                 <span className="select-none">Issued {formatDisplayDate(addendumDate)}</span>

@@ -90,18 +90,18 @@ export function FirmCardCompact({
   return (
     <div
       className={`
-        flex flex-col px-3 py-2
-        bg-[var(--color-card-firm)] border border-[var(--color-card-firm-border)] transition-colors duration-150 shadow-md
-        ${isDragOver ? 'ring-2 ring-[var(--color-accent-teal)] ring-inset' : ''}
-        ${isHovered && !isDragOver ? 'bg-[var(--color-card-firm-hover)]' : ''}
+        flex flex-col px-3 py-1.5
+        bg-transparent border border-[var(--sw-rule)] transition-colors duration-150
+        ${isDragOver ? 'ring-2 ring-[var(--sw-cyan)] ring-inset' : ''}
+        ${isHovered && !isDragOver ? 'bg-[var(--sw-paper)]' : ''}
         ${firm.awarded ? 'border-l-[3px] border-l-[var(--color-accent-green)]' : ''}
-        w-[220px] flex-shrink-0 group
+        w-[200px] flex-shrink-0 group
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Row 1: Company name - full width */}
-      <div className="w-full h-7 flex items-center">
+      <div className="w-full h-6 flex items-center">
         <input
           ref={inputRef}
           type="text"
@@ -117,35 +117,36 @@ export function FirmCardCompact({
           disabled={isSaving}
           placeholder="Enter Firm Name"
           className={`
-            w-full h-7 px-1 py-1 text-[var(--color-text-primary)] text-sm font-medium
+            w-full h-6 px-1 py-0.5 text-[var(--sw-ink)] text-xs font-medium
             bg-transparent border-none outline-none
             transition-colors duration-150
             disabled:opacity-50
-            selection:bg-[var(--color-accent-primary-tint)] selection:text-[var(--color-text-primary)]
+            selection:bg-[var(--sw-rose-tint)] selection:text-[var(--sw-ink)]
           `}
+          style={{ fontFamily: 'var(--sw-font-sans)' }}
         />
       </div>
 
       {/* Row 2: Action icons */}
-      <div className="flex items-center justify-between mt-1">
+      <div className="flex items-center justify-between mt-0.5">
         {/* Star toggle with label */}
         <button
           onClick={handleStarClick}
-          className={`
-            flex items-center gap-1 p-0.5 rounded transition-colors
-            ${firm.shortlisted ? 'text-[var(--color-accent-blue)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
+            className={`
+            flex items-center gap-1 p-0.5 transition-colors
+            ${firm.shortlisted ? 'text-[var(--sw-cyan)]' : 'text-[var(--sw-muted)] hover:text-[var(--sw-ink)]'}
           `}
           title={firm.shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
         >
           <Star className={`w-3.5 h-3.5 ${firm.shortlisted ? 'fill-current' : ''}`} />
-          <span className="text-[10px]">Shortlisted</span>
+          <span className="text-[10px]" style={{ fontFamily: 'var(--sw-font-mono)', textTransform: 'lowercase' }}>Shortlisted</span>
         </button>
 
         <div className="flex items-center gap-1">
           {/* Folder upload */}
           <button
             onClick={handleUploadClick}
-            className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+            className="p-0.5 text-[var(--sw-muted)] hover:text-[var(--sw-ink)] transition-colors"
             title="Upload file to extract data"
           >
             <Upload className="w-3.5 h-3.5" />
@@ -154,7 +155,7 @@ export function FirmCardCompact({
           {/* Delete button */}
           <button
             onClick={handleDeleteClick}
-            className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-colors"
+            className="p-0.5 text-[var(--sw-muted)] hover:text-[var(--sw-rose-dk)] transition-colors"
             title="Delete firm"
           >
             <Trash className="w-3.5 h-3.5" />
@@ -163,7 +164,7 @@ export function FirmCardCompact({
           {/* Expand chevron */}
           <button
             onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
-            className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+            className="p-1 text-[var(--sw-muted)] hover:text-[var(--sw-ink)] transition-colors"
             title="Expand card"
           >
             <ChevronDown className="w-5 h-5" />
@@ -173,8 +174,8 @@ export function FirmCardCompact({
 
       {/* Drag overlay */}
       {isDragOver && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-accent-teal)]/20 rounded-lg pointer-events-none">
-          <span className="text-[var(--color-text-primary)] text-xs font-medium">Drop to extract</span>
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-accent-teal)]/20 pointer-events-none">
+          <span className="text-[var(--sw-ink)] text-xs font-medium">Drop to extract</span>
         </div>
       )}
     </div>

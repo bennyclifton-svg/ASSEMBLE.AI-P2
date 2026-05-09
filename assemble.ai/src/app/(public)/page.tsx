@@ -10,6 +10,7 @@ import { StatsSection } from '@/components/landing/StatsSection';
 import { AISection } from '@/components/landing/AISection';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { SolutionSection } from '@/components/landing/SolutionSection';
+import { AssessmentCTABand } from '@/components/landing/AssessmentCTABand';
 import { FeaturesSection } from '@/components/landing/FeaturesSection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
 import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
@@ -31,6 +32,7 @@ export default function LandingPage() {
                 <AISection />
                 <ProblemSection />
                 <SolutionSection />
+                <AssessmentCTABand />
                 <FeaturesSection />
                 <BenefitsSection />
                 <TestimonialsSection />

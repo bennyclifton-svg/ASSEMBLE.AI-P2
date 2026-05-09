@@ -31,8 +31,8 @@ export function Chip({
             }
             style={{
                 fontFamily: 'var(--sw-font-mono)',
-                fontSize: 11,
-                padding: '5px 10px',
+                fontSize: 10,
+                padding: '3px 7px',
                 background: selected ? accent : 'white',
                 color: selected ? onAccent : 'var(--sw-ink)',
                 border: selected ? `1px solid ${accent}` : '1px solid var(--sw-rule)',
@@ -41,6 +41,11 @@ export function Chip({
                 textTransform: 'lowercase',
                 whiteSpace: 'nowrap',
                 cursor: interactive ? 'pointer' : undefined,
+                display: 'inline-block',
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                flex: '0 1 auto',
             }}
         >
             {label}

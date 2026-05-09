@@ -51,14 +51,14 @@ export function ReportContentsToolbar({
     className,
 }: ReportContentsToolbarProps) {
     return (
-        <div className={cn('flex items-center gap-2 flex-wrap', className)}>
+        <div className={cn('flex items-center gap-1.5 flex-wrap', className)}>
             {onAddSection && (
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={onAddSection}
                     disabled={isLoading}
-                    className="h-8 gap-1.5"
+                    className="h-8 gap-1.5 rounded-none border-[var(--sw-rule)] bg-transparent text-[var(--sw-ink)] hover:bg-white"
                     title="Add custom section"
                 >
                     <Plus className="h-4 w-4" />
@@ -75,11 +75,12 @@ export function ReportContentsToolbar({
                         onClick={() => onSelectType(type.key)}
                         disabled={isLoading}
                         className={cn(
-                            'h-8',
+                            'h-8 rounded-none px-2 text-[11px] font-semibold',
                             isSelected
-                                ? 'bg-[var(--color-accent-copper-tint)] border-[var(--color-accent-copper)] text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper-tint)]'
-                                : 'hover:bg-[var(--color-accent-copper-tint)] hover:border-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)]'
+                                ? 'border-[var(--sw-ink)] bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-ink)] hover:text-[var(--sw-paper)]'
+                                : 'border-[var(--sw-rule)] bg-transparent text-[var(--sw-ink)] hover:border-[var(--sw-ink)] hover:bg-white'
                         )}
+                        style={{ fontFamily: 'var(--sw-font-mono)' }}
                         title={type.description}
                     >
                         {type.label}

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { CategoryUploadTiles } from './CategoryUploadTiles';
 import { CategorizedList } from './CategorizedList';
-import { UploadProgress, UploadFileStatus } from './UploadProgress';
+import type { UploadFileStatus } from './UploadProgress';
 import { useToast } from '@/components/ui/use-toast';
 import { getCategoryById } from '@/lib/constants/categories';
 import { useDocumentSets, useDocumentSetMutations } from '@/lib/hooks/use-document-sets';
@@ -28,7 +28,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
 
     // RAG document set hooks
     const { documentSets, isLoading: setsLoading } = useDocumentSets(projectId);
-    const { createDocumentSet, addDocuments, isLoading: mutationLoading } = useDocumentSetMutations();
+    const { createDocumentSet, addDocuments } = useDocumentSetMutations();
 
     // Listen for external document changes (e.g., file dropped onto a note)
     useEffect(() => {
@@ -463,9 +463,9 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     };
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col" style={{ background: 'var(--sw-paper-2)' }}>
             {/* Category Upload Tiles */}
-            <div className="px-6 pt-4 pb-4">
+            <div className="px-4 pt-4 pb-4 flex-shrink-0">
                 <CategoryUploadTiles
                     projectId={projectId}
                     onFilesDropped={handleFilesSelected}
@@ -480,7 +480,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
             </div>
 
             {/* Document List - Takes remaining space */}
-            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-6">
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
                 <CategorizedList
                     refreshTrigger={refreshTrigger}
                     projectId={projectId}

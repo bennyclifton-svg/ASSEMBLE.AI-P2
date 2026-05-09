@@ -119,8 +119,8 @@ export function DefaultSettingsSection() {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-[#2a2d2e] rounded w-40" />
-          <div className="h-32 bg-[#2a2d2e] rounded" />
+          <div className="h-6 bg-[var(--color-bg-hover)] rounded w-40" />
+          <div className="h-32 bg-[var(--color-bg-hover)] rounded" />
         </div>
       </div>
     );
@@ -132,49 +132,49 @@ export function DefaultSettingsSection() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#cccccc]">Default Settings</h3>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Default Settings</h3>
         {isSaving && (
-          <div className="flex items-center gap-1 text-xs text-[#808080]">
+          <div className="flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
             <Loader2 className="w-3 h-3 animate-spin" />
             Saving...
           </div>
         )}
       </div>
 
-      <p className="text-sm text-[#808080]">
+      <p className="text-sm text-[var(--color-text-muted)]">
         Configure default disciplines and trades for new projects.
       </p>
 
       {error && (
-        <div className="px-3 py-2 bg-[#f48771]/20 rounded text-sm text-[#f48771]">
+        <div className="px-3 py-2 bg-[var(--color-error)]/20 rounded text-sm text-[var(--color-error)]">
           {error}
         </div>
       )}
 
       {/* Consultant Disciplines */}
-      <div className="border border-[#3e3e42] rounded">
+      <div className="border border-[var(--color-border)] rounded">
         <button
           onClick={() => setIsDisciplinesExpanded(!isDisciplinesExpanded)}
-          className="w-full flex items-center justify-between p-3 hover:bg-[#2a2d2e] transition-colors"
+          className="w-full flex items-center justify-between p-3 hover:bg-[var(--color-bg-hover)] transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4 text-[#808080]" />
-            <span className="text-sm font-medium text-[#cccccc]">
+            <Settings className="w-4 h-4 text-[var(--color-text-muted)]" />
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">
               Consultant Disciplines
             </span>
-            <span className="text-xs text-[#808080]">
+            <span className="text-xs text-[var(--color-text-muted)]">
               ({enabledDisciplines.length} selected)
             </span>
           </div>
           {isDisciplinesExpanded ? (
-            <ChevronUp className="w-4 h-4 text-[#808080]" />
+            <ChevronUp className="w-4 h-4 text-[var(--color-text-muted)]" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-[#808080]" />
+            <ChevronDown className="w-4 h-4 text-[var(--color-text-muted)]" />
           )}
         </button>
 
         {isDisciplinesExpanded && (
-          <div className="border-t border-[#3e3e42] p-3 max-h-64 overflow-auto">
+          <div className="border-t border-[var(--color-border)] p-3 max-h-64 overflow-auto">
             <div className="grid grid-cols-2 gap-2">
               {CONSULTANT_DISCIPLINES.map((discipline) => {
                 const isEnabled = enabledDisciplines.includes(discipline.name);
@@ -187,8 +187,8 @@ export function DefaultSettingsSection() {
                       flex items-center gap-2 p-2 rounded text-left text-sm transition-colors
                       ${
                         isEnabled
-                          ? 'bg-[#0e639c]/20 text-[#cccccc]'
-                          : 'hover:bg-[#2a2d2e] text-[#808080]'
+                          ? 'bg-[var(--color-accent-primary)]/20 text-[var(--color-text-primary)]'
+                          : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]'
                       }
                     `}
                   >
@@ -197,8 +197,8 @@ export function DefaultSettingsSection() {
                         w-4 h-4 rounded border flex items-center justify-center flex-shrink-0
                         ${
                           isEnabled
-                            ? 'bg-[#0e639c] border-[#0e639c]'
-                            : 'border-[#3e3e42]'
+                            ? 'bg-[var(--color-accent-primary)] border-[var(--color-accent-primary)]'
+                            : 'border-[var(--color-border)]'
                         }
                       `}
                     >
@@ -214,29 +214,29 @@ export function DefaultSettingsSection() {
       </div>
 
       {/* Contractor Trades */}
-      <div className="border border-[#3e3e42] rounded">
+      <div className="border border-[var(--color-border)] rounded">
         <button
           onClick={() => setIsTradesExpanded(!isTradesExpanded)}
-          className="w-full flex items-center justify-between p-3 hover:bg-[#2a2d2e] transition-colors"
+          className="w-full flex items-center justify-between p-3 hover:bg-[var(--color-bg-hover)] transition-colors"
         >
           <div className="flex items-center gap-2">
-            <Settings className="w-4 h-4 text-[#808080]" />
-            <span className="text-sm font-medium text-[#cccccc]">
+            <Settings className="w-4 h-4 text-[var(--color-text-muted)]" />
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">
               Contractor Trades
             </span>
-            <span className="text-xs text-[#808080]">
+            <span className="text-xs text-[var(--color-text-muted)]">
               ({enabledTrades.length} selected)
             </span>
           </div>
           {isTradesExpanded ? (
-            <ChevronUp className="w-4 h-4 text-[#808080]" />
+            <ChevronUp className="w-4 h-4 text-[var(--color-text-muted)]" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-[#808080]" />
+            <ChevronDown className="w-4 h-4 text-[var(--color-text-muted)]" />
           )}
         </button>
 
         {isTradesExpanded && (
-          <div className="border-t border-[#3e3e42] p-3 max-h-64 overflow-auto">
+          <div className="border-t border-[var(--color-border)] p-3 max-h-64 overflow-auto">
             <div className="grid grid-cols-2 gap-2">
               {CONTRACTOR_TRADES.map((trade) => {
                 const isEnabled = enabledTrades.includes(trade.name);
@@ -249,8 +249,8 @@ export function DefaultSettingsSection() {
                       flex items-center gap-2 p-2 rounded text-left text-sm transition-colors
                       ${
                         isEnabled
-                          ? 'bg-[#0e639c]/20 text-[#cccccc]'
-                          : 'hover:bg-[#2a2d2e] text-[#808080]'
+                          ? 'bg-[var(--color-accent-primary)]/20 text-[var(--color-text-primary)]'
+                          : 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]'
                       }
                     `}
                   >
@@ -259,8 +259,8 @@ export function DefaultSettingsSection() {
                         w-4 h-4 rounded border flex items-center justify-center flex-shrink-0
                         ${
                           isEnabled
-                            ? 'bg-[#0e639c] border-[#0e639c]'
-                            : 'border-[#3e3e42]'
+                            ? 'bg-[var(--color-accent-primary)] border-[var(--color-accent-primary)]'
+                            : 'border-[var(--color-border)]'
                         }
                       `}
                     >

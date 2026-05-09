@@ -6,7 +6,8 @@
 'use client';
 
 import { useRftNewTransmittal } from '@/lib/hooks/use-rft-new-transmittal';
-import { FileText, Loader2, Folder, Save, RotateCcw, Download } from 'lucide-react';
+import { AttachmentSection } from '@/components/notes-meetings-reports/shared/AttachmentSection';
+import type { AttachmentDocument } from '@/components/notes-meetings-reports/shared/AttachmentTable';
 
 interface RFTNewTransmittalScheduleProps {
     rftNewId: string;
@@ -36,130 +37,39 @@ export function RFTNewTransmittalSchedule({
     // Use props if provided, otherwise fall back to hook values
     const hasTransmittal = hasTransmittalProp !== undefined ? hasTransmittalProp : hasTransmittalHook;
     const documentCount = documentCountProp !== undefined ? documentCountProp : documentCountHook;
+    const documents: AttachmentDocument[] = transmittal.map((doc) => ({
+        id: doc.id,
+        documentId: doc.documentId,
+        categoryId: doc.categoryId,
+        categoryName: doc.categoryName,
+        subcategoryId: doc.subcategoryId,
+        subcategoryName: doc.subcategoryName,
+        documentName: doc.fileName,
+        revision: doc.versionNumber,
+        addedAt: doc.addedAt ?? doc.uploadedAt ?? '',
+        drawingNumber: doc.drawingNumber,
+        drawingName: doc.drawingName,
+        drawingRevision: doc.drawingRevision,
+        drawingExtractionStatus: doc.drawingExtractionStatus,
+    }));
 
     return (
-        <div className="space-y-2">
-            {/* Transmittal Header with Buttons */}
-            <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                    Transmittal
-                </h3>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={onSaveTransmittal}
-                        disabled={!canSaveTransmittal}
-                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
-                    >
-                        <Save className="h-3.5 w-3.5" />
-                        Save Transmittal
-                    </button>
-                    <button
-                        onClick={onLoadTransmittal}
-                        disabled={!hasTransmittal}
-                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
-                    >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        Recall {documentCount > 0 && `(${documentCount})`}
-                    </button>
-                    <button
-                        onClick={onDownloadTransmittal}
-                        disabled={!hasTransmittal || isDownloading}
-                        className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
-                    >
-                        <Download className="h-3.5 w-3.5" />
-                        {isDownloading ? 'Downloading...' : 'Download'}
-                    </button>
-                </div>
-            </div>
-
-            <div className="border border-[var(--color-border)] rounded overflow-hidden">
-            {isLoading ? (
-                <div className="flex items-center justify-center py-8 text-[var(--color-text-muted)]">
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading transmittal...
-                </div>
-            ) : !hasTransmittal ? (
-                <div className="flex flex-col items-center justify-center py-8 text-[#6e6e6e]">
-                    <FileText className="w-8 h-8 mb-2 opacity-50" />
-                    <p className="text-sm">No transmittal documents</p>
-                    <p className="text-xs mt-1">
-                        Select documents and click "Save Transmittal"
-                    </p>
-                </div>
-            ) : (
-                <table className="w-full text-sm">
-                    <thead>
-                        <tr className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                            <th className="text-left px-4 py-1.5 font-medium w-10">#</th>
-                            <th className="text-left px-4 py-1.5 font-medium w-24">DWG #</th>
-                            <th className="text-left px-4 py-1.5 font-medium">Name</th>
-                            <th className="text-center px-4 py-1.5 font-medium w-16">Rev</th>
-                            <th className="text-left px-4 py-1.5 font-medium w-36">Category</th>
-                            <th className="text-left px-4 py-1.5 font-medium w-40">Subcategory</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {transmittal.map((doc, index) => (
-                                <tr
-                                    key={doc.id}
-                                    className="border-t border-[var(--color-border)] hover:bg-[#2d2d30]/50"
-                                >
-                                    <td className="px-4 py-1.5 text-[#6e6e6e]">
-                                        {index + 1}
-                                    </td>
-                                    <td className="px-4 py-1.5 text-[var(--color-text-primary)]">
-                                        {doc.drawingNumber ? (
-                                            <span title={doc.drawingNumber}>
-                                                {doc.drawingNumber}
-                                            </span>
-                                        ) : (
-                                            <span className="text-[#6e6e6e]">-</span>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-1.5 text-[var(--color-text-primary)] truncate max-w-[300px]">
-                                        {doc.drawingName || doc.fileName}
-                                    </td>
-                                    <td className="px-4 py-1.5 text-center text-[var(--color-text-primary)]">
-                                        {doc.drawingRevision || <span className="text-[#6e6e6e]">-</span>}
-                                    </td>
-                                    <td className="px-4 py-1.5">
-                                        {doc.categoryName ? (
-                                            <div className="flex items-center gap-1.5">
-                                                <Folder
-                                                    className="w-3.5 h-3.5 flex-shrink-0 text-[var(--color-text-primary)]"
-                                                />
-                                                <span
-                                                    className="text-sm truncate text-[var(--color-text-primary)]"
-                                                >
-                                                    {doc.categoryName}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-[#6e6e6e]">-</span>
-                                        )}
-                                    </td>
-                                    <td className="px-4 py-1.5">
-                                        {doc.subcategoryName ? (
-                                            <div className="flex items-center gap-1.5">
-                                                <Folder
-                                                    className="w-3.5 h-3.5 flex-shrink-0 text-[var(--color-text-primary)]"
-                                                />
-                                                <span
-                                                    className="text-sm truncate text-[var(--color-text-primary)]"
-                                                >
-                                                    {doc.subcategoryName}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-[#6e6e6e]">-</span>
-                                        )}
-                                    </td>
-                                </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
-            </div>
+        <div className="mt-4 shrink-0 px-4 pb-4">
+            <AttachmentSection
+                documents={hasTransmittal ? documents : []}
+                isLoading={isLoading}
+                onSave={onSaveTransmittal}
+                canSave={canSaveTransmittal ?? true}
+                onLoad={onLoadTransmittal}
+                canLoad={hasTransmittal}
+                onDownload={onDownloadTransmittal}
+                canDownload={hasTransmittal && documentCount > 0 && !isDownloading}
+                isDownloading={isDownloading}
+                headingLabel="Attachments"
+                headingClassName="text-sm font-semibold normal-case text-[var(--color-text-primary)]"
+                headingStyle={{}}
+                compact={true}
+            />
         </div>
     );
 }

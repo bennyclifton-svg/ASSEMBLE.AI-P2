@@ -7,6 +7,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { TRR_ACCENT_COLOR, TRRSectionHeading } from './TRRSectionHeading';
 
 interface EvaluationRow {
     id: string;
@@ -141,9 +142,11 @@ export function TRREvaluationPrice({
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                Evaluation Price
-            </h3>
+            <div className="px-4">
+                <TRRSectionHeading>
+                    Evaluation Price
+                </TRRSectionHeading>
+            </div>
             <div className="overflow-hidden">
                 {isLoading ? (
                     <div className="px-4 py-3 text-[var(--color-text-secondary)] text-sm">
@@ -154,13 +157,14 @@ export function TRREvaluationPrice({
                         <table className="w-full text-sm">
                             <thead>
                                 <tr className="border-b border-black/20">
-                                    <th className="px-4 py-2.5 text-left text-[var(--color-text-primary)] font-medium min-w-[200px]">
+                                    <th className="px-4 py-2.5 text-left font-medium min-w-[200px]" style={{ color: TRR_ACCENT_COLOR }}>
                                         PRICE 01
                                     </th>
                                     {firms.map((firm) => (
                                         <th
                                             key={firm.id}
-                                            className="px-4 py-2.5 text-right text-[var(--color-text-primary)] font-medium min-w-[120px]"
+                                            className="px-4 py-2.5 text-right font-medium min-w-[120px]"
+                                            style={{ color: TRR_ACCENT_COLOR }}
                                         >
                                             {firm.companyName}
                                         </th>

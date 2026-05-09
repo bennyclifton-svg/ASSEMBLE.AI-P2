@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProfilerMiddlePanel, type ProfilerControls } from '@/components/profiler/ProfilerMiddlePanel';
-import { ObjectivesWorkspace } from '@/components/profiler/objectives/ObjectivesWorkspace';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
 import { BriefPreviewPane, type BriefPreviewProfile } from './BriefPreviewPane';
 import { useToast } from '@/components/ui/use-toast';
@@ -316,16 +315,12 @@ export function BriefPanel({
 
     const lotMeta = deriveLotMeta(detailsData);
     const buildingMeta = deriveBuildingMeta(profileData);
-    // TODO: wire to live counts via a `BriefPreviewPane.onObjectivesCount`
-    // callback once Objectives sub-tab redesign lands. Hardcoded for now so
-    // the chrome reads as designed.
-    const objectivesMeta = '6 generated · 4 reviewed';
 
     return (
         <div className="h-full flex flex-col">
             {/* ---- Chrome strip: breadcrumb + status pills + title + actions ---- */}
-            <header className="flex-shrink-0 px-5 pt-5">
-                <div className="flex items-center justify-between mb-5">
+            <header className="flex-shrink-0 px-2 pt-2">
+                <div className="flex items-center justify-between mb-2">
                     <Breadcrumb projectName={projectName} activeSubTab={activeSubTab} />
                     <div className="flex gap-1.5">
                         <StatusPill label={profileCompletionLabel} />
@@ -333,7 +328,7 @@ export function BriefPanel({
                     </div>
                 </div>
 
-                <div className="flex items-end justify-between mb-5">
+                <div className="flex items-end justify-between mb-2">
                     <div>
                         <h1
                             style={{
@@ -449,7 +444,7 @@ export function BriefPanel({
                 onValueChange={onSubTabChange}
                 className="flex-1 flex flex-col min-h-0"
             >
-                <TabsList className="w-full justify-start bg-transparent border-b border-[var(--color-border)]/50 rounded-none h-auto p-0 pl-[20%]">
+                <TabsList className="w-full justify-start bg-transparent border-b border-[var(--color-border)]/50 rounded-none h-auto p-0">
                     <TabsTrigger value="lot" className={subTabClassName}>
                         <SubTabContent
                             label="LOT"
@@ -462,13 +457,6 @@ export function BriefPanel({
                             label="BUILDING"
                             meta={buildingMeta}
                             active={activeSubTab === 'building'}
-                        />
-                    </TabsTrigger>
-                    <TabsTrigger value="objectives" className={subTabClassName}>
-                        <SubTabContent
-                            label="OBJECTIVES"
-                            meta={objectivesMeta}
-                            active={activeSubTab === 'objectives'}
                         />
                     </TabsTrigger>
                 </TabsList>
@@ -506,7 +494,7 @@ export function BriefPanel({
                       claims `h-full`.
                     */}
                     <div
-                        className="grid gap-5 p-5 h-full overflow-y-auto"
+                        className="grid gap-4 p-2 h-full overflow-y-auto"
                         style={{ gridTemplateColumns: '1.4fr 1fr' }}
                     >
                         <div className="min-h-0">
@@ -525,7 +513,7 @@ export function BriefPanel({
                                 controlsRef={profilerControlsRef}
                             />
                         </div>
-                        <aside className="self-start sticky top-5">
+                        <aside className="self-start sticky top-2">
                             <BriefPreviewPane
                                 projectId={projectId}
                                 projectName={projectName}
@@ -541,9 +529,6 @@ export function BriefPanel({
                     </div>
                 </TabsContent>
 
-                <TabsContent value="objectives" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <ObjectivesWorkspace projectId={projectId} />
-                </TabsContent>
             </Tabs>
         </div>
     );

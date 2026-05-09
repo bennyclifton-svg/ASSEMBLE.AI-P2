@@ -16,7 +16,7 @@
  *   7. Disciplines
  */
 
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AggregateSlider, CardShell, Chip } from '@/components/brief/primitives';
 import type {
     BuildingClass,
@@ -47,10 +47,22 @@ export interface BuildingTabTemplates {
         unit?: string;
         note?: string;
         noteAccent?: string;
+        type?: 'integer' | 'decimal' | 'composite';
+        min?: number;
+        max?: number;
+        placeholder?: string;
+        parts?: Array<{
+            key: string;
+            placeholder?: string;
+            min?: number;
+            max?: number;
+            type?: 'integer' | 'decimal';
+        }>;
+        partsSeparator?: string;
+        partsLabel?: string;
     }>;
 }
 
-// TODO(task-5): add onScaleChange when Scale rows become editable.
 export interface BuildingTabViewProps {
     // Identity
     buildingClass: BuildingClass | null;
@@ -70,6 +82,7 @@ export interface BuildingTabViewProps {
     onClassChange: (cls: BuildingClass) => void;
     onTypeChange: (type: ProjectType) => void;
     onSubclassToggle: (subclassValue: string) => void;
+    onScaleChange: (key: string, value: number | null) => void;
     /**
      * Called when a user clicks a complexity chip.
      * For SINGLE-select dimensions (most), the parent should set
@@ -90,7 +103,6 @@ export interface BuildingTabViewProps {
     // Optional derived values — defaults provided
     complexityScore?: number | null;
     complexityBand?: string | null;
-    contingencyBand?: string | null;
     nccClass?: { classCode: string; typeAndVolume?: string } | null;
     estCostBand?: { lowAUD: number; highAUD: number } | null;
     riskFlags?: Array<{ label: string; description: string; tag: string }>;
@@ -131,6 +143,325 @@ function MetaLabel({ children }: { children: React.ReactNode }) {
     );
 }
 
+type ScaleFieldShape = BuildingTabTemplates['scaleFields'][number];
+type ScalePartShape = NonNullable<ScaleFieldShape['parts']>[number];
+
+const scaleInputStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    borderBottom: '1px solid var(--sw-rule-2)',
+    padding: '2px 0',
+    fontFamily: 'var(--sw-font-mono)',
+    fontSize: 14,
+    fontWeight: 600,
+    fontVariantNumeric: 'tabular-nums',
+    color: 'var(--sw-ink)',
+    outline: 'none',
+};
+
+function parseNumeric(raw: string, type: 'integer' | 'decimal' | undefined) {
+    if (raw === '') return null;
+    const n = type === 'decimal' ? parseFloat(raw) : parseInt(raw, 10);
+    return Number.isFinite(n) ? n : undefined;
+}
+
+function ScaleNumberInput({
+    id,
+    value,
+    type,
+    min,
+    max,
+    placeholder,
+    onCommit,
+    width,
+    align,
+}: {
+    id: string;
+    value: string;
+    type: 'integer' | 'decimal' | undefined;
+    min?: number;
+    max?: number;
+    placeholder?: string;
+    onCommit: (n: number | null) => void;
+    width?: number | string;
+    align?: 'left' | 'center';
+}) {
+    const step = type === 'decimal' ? '0.01' : '1';
+    return (
+        <input
+            id={id}
+            type="number"
+            inputMode={type === 'decimal' ? 'decimal' : 'numeric'}
+            value={value}
+            min={min}
+            max={max}
+            step={step}
+            placeholder={placeholder ?? '—'}
+            // Suppress native spinner buttons (Firefox + WebKit) so the chevron
+            // buttons are the only stepper UI; also block mouse-wheel from
+            // changing the value when the input has focus.
+            className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0"
+            onWheel={(e) => e.currentTarget.blur()}
+            onChange={(e) => {
+                const parsed = parseNumeric(e.target.value, type);
+                if (parsed === undefined) return;
+                onCommit(parsed);
+            }}
+            style={{
+                ...scaleInputStyle,
+                width: width ?? '100%',
+                textAlign: align ?? 'left',
+            }}
+            onFocus={(e) => {
+                e.currentTarget.style.borderBottomColor = 'var(--sw-ink)';
+            }}
+            onBlur={(e) => {
+                e.currentTarget.style.borderBottomColor = 'var(--sw-rule-2)';
+            }}
+        />
+    );
+}
+
+function StepperButton({
+    direction,
+    onClick,
+    disabled,
+}: {
+    direction: 'down' | 'up';
+    onClick: () => void;
+    disabled?: boolean;
+}) {
+    const Icon = direction === 'up' ? ChevronRight : ChevronLeft;
+    return (
+        <button
+            type="button"
+            tabIndex={-1}
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={direction === 'up' ? 'Increase' : 'Decrease'}
+            style={{
+                width: 22,
+                height: 22,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                borderRadius: 3,
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                color: 'var(--sw-muted)',
+                opacity: disabled ? 0.4 : 1,
+                flexShrink: 0,
+                padding: 0,
+                transition: 'color 100ms',
+            }}
+            onMouseEnter={(e) => {
+                if (disabled) return;
+                e.currentTarget.style.color = 'var(--sw-ink)';
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'var(--sw-muted)';
+            }}
+        >
+            <Icon size={16} strokeWidth={2} />
+        </button>
+    );
+}
+
+function ScaleStepper({
+    id,
+    value,
+    type,
+    min,
+    max,
+    step,
+    placeholder,
+    onCommit,
+    width,
+}: {
+    id: string;
+    value: string;
+    type: 'integer' | 'decimal' | undefined;
+    min?: number;
+    max?: number;
+    step?: number;
+    placeholder?: string;
+    onCommit: (n: number | null) => void;
+    width?: number;
+}) {
+    const numeric = value === ''
+        ? null
+        : type === 'decimal'
+            ? parseFloat(value)
+            : parseInt(value, 10);
+    const stepBy = step ?? 1;
+
+    const bump = (delta: number) => {
+        const current = numeric ?? 0;
+        let next = current + delta;
+        if (min !== undefined && next < min) next = min;
+        if (max !== undefined && next > max) next = max;
+        onCommit(next);
+    };
+
+    const atMin = numeric !== null && min !== undefined && numeric <= min;
+    const atMax = numeric !== null && max !== undefined && numeric >= max;
+
+    return (
+        <div
+            className="flex items-center gap-1.5"
+            style={{ flexShrink: 0 }}
+        >
+            <StepperButton
+                direction="down"
+                onClick={() => bump(-stepBy)}
+                disabled={atMin}
+            />
+            <ScaleNumberInput
+                id={id}
+                value={value}
+                type={type}
+                min={min}
+                max={max}
+                placeholder={placeholder}
+                onCommit={onCommit}
+                width={width ?? 64}
+                align="center"
+            />
+            <StepperButton
+                direction="up"
+                onClick={() => bump(stepBy)}
+                disabled={atMax}
+            />
+        </div>
+    );
+}
+
+const SCALE_LABEL_WIDTH = 88;
+
+function ScaleFieldCell({
+    field,
+    scaleData,
+    onScaleChange,
+}: {
+    field: ScaleFieldShape;
+    scaleData: Record<string, number | string>;
+    onScaleChange: (key: string, value: number | null) => void;
+}) {
+    const isComposite = field.type === 'composite' && field.parts && field.parts.length > 0;
+    const separator = field.partsSeparator ?? '/';
+
+    const labelEl = (
+        <label
+            htmlFor={`scale-${field.key}`}
+            style={{
+                fontFamily: 'var(--sw-font-mono)',
+                fontSize: 10,
+                color: muted,
+                flexShrink: 0,
+                width: SCALE_LABEL_WIDTH,
+            }}
+        >
+            {field.label}
+        </label>
+    );
+
+    if (isComposite) {
+        return (
+            <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                    {labelEl}
+                    <div
+                        className="flex items-center gap-1"
+                        style={{ flexShrink: 0 }}
+                    >
+                        {field.parts!.map((part: ScalePartShape, i: number) => {
+                            const storageKey = `${field.key}_${part.key}`;
+                            const raw = scaleData[storageKey];
+                            const value =
+                                raw === undefined || raw === '' ? '' : String(raw);
+                            return (
+                                <span
+                                    key={part.key}
+                                    className="flex items-center gap-1"
+                                >
+                                    <ScaleNumberInput
+                                        id={`scale-${storageKey}`}
+                                        value={value}
+                                        type={part.type ?? 'integer'}
+                                        min={part.min}
+                                        max={part.max}
+                                        placeholder={part.placeholder}
+                                        onCommit={(n) =>
+                                            onScaleChange(storageKey, n)
+                                        }
+                                        width={field.parts!.length >= 4 ? 32 : 48}
+                                        align="center"
+                                    />
+                                    {i < field.parts!.length - 1 ? (
+                                        <span
+                                            style={{
+                                                fontFamily: 'var(--sw-font-mono)',
+                                                fontSize: 14,
+                                                color: muted,
+                                            }}
+                                        >
+                                            {separator}
+                                        </span>
+                                    ) : null}
+                                </span>
+                            );
+                        })}
+                    </div>
+                </div>
+                {field.partsLabel ? (
+                    <span
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 10,
+                            color: muted,
+                            paddingLeft: SCALE_LABEL_WIDTH + 8,
+                        }}
+                    >
+                        {field.partsLabel}
+                    </span>
+                ) : null}
+            </div>
+        );
+    }
+
+    const raw = scaleData[field.key];
+    const value = raw === undefined || raw === '' ? '' : String(raw);
+
+    return (
+        <div className="flex items-center gap-2">
+            {labelEl}
+            <ScaleStepper
+                id={`scale-${field.key}`}
+                value={value}
+                type={field.type === 'composite' ? 'integer' : field.type}
+                min={field.min}
+                max={field.max}
+                placeholder={field.placeholder}
+                onCommit={(n) => onScaleChange(field.key, n)}
+                width={88}
+            />
+            {field.unit ? (
+                <span
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 10,
+                        color: muted,
+                        flexShrink: 0,
+                    }}
+                >
+                    {field.unit}
+                </span>
+            ) : null}
+        </div>
+    );
+}
+
 /* ============================================================
    Component
    ============================================================ */
@@ -147,6 +478,7 @@ export function BuildingTabView({
     onClassChange,
     onTypeChange,
     onSubclassToggle,
+    onScaleChange,
     onComplexityChange,
     onScopeToggle,
     onComplexityLevelChange,
@@ -154,7 +486,6 @@ export function BuildingTabView({
     templates,
     complexityScore = null,
     complexityBand = null,
-    contingencyBand = null,
     nccClass = null,
     estCostBand = null,
     riskFlags = [],
@@ -240,103 +571,63 @@ export function BuildingTabView({
                 2. SCALE
                 ============================================================ */}
             <CardShell label="Scale" meta="per AIQS / Rawlinsons 2025">
-                <div className="flex flex-col">
-                    {templates.scaleFields.length === 0 ? (
-                        <div style={{ fontSize: 13, color: muted }}>
-                            Select a building class to see scale fields.
-                        </div>
-                    ) : (
-                        templates.scaleFields.map((field, i) => {
-                            const raw = scaleData[field.key];
-                            const valueDisplay =
-                                raw === undefined || raw === ''
-                                    ? '—'
-                                    : field.unit
-                                      ? `${raw} ${field.unit}`
-                                      : String(raw);
-                            return (
-                                <div
-                                    key={field.key}
-                                    className="grid items-baseline gap-3 py-2"
-                                    style={{
-                                        gridTemplateColumns: '160px 1fr 220px',
-                                        borderBottom:
-                                            i < templates.scaleFields.length - 1
-                                                ? '1px solid var(--sw-rule-2)'
-                                                : 'none',
-                                    }}
-                                >
-                                    <span style={{ fontSize: 13, color: muted }}>
-                                        {field.label}
-                                    </span>
-                                    <span
-                                        style={{
-                                            fontFamily: 'var(--sw-font-mono)',
-                                            fontSize: 14,
-                                            fontWeight: 600,
-                                            fontVariantNumeric: 'tabular-nums',
-                                        }}
-                                    >
-                                        {valueDisplay}
-                                    </span>
-                                    {field.note ? (
-                                        <span
-                                            style={{
-                                                fontFamily: 'var(--sw-font-mono)',
-                                                fontSize: 11,
-                                                color: field.noteAccent ?? muted,
-                                            }}
-                                        >
-                                            {field.note}
-                                        </span>
-                                    ) : (
-                                        <span />
-                                    )}
-                                </div>
-                            );
-                        })
-                    )}
-                </div>
+                {templates.scaleFields.length === 0 ? (
+                    <div
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 10,
+                            color: muted,
+                        }}
+                    >
+                        Select a building class to see scale fields.
+                    </div>
+                ) : (
+                    <div
+                        className="grid gap-x-6 gap-y-2"
+                        style={{ gridTemplateColumns: '1fr 1fr' }}
+                    >
+                        {templates.scaleFields.map((field) => (
+                            <ScaleFieldCell
+                                key={field.key}
+                                field={field}
+                                scaleData={scaleData}
+                                onScaleChange={onScaleChange}
+                            />
+                        ))}
+                    </div>
+                )}
             </CardShell>
 
             {/* ============================================================
                 3. COMPLEXITY
                 ============================================================ */}
             <CardShell label="Complexity" meta={complexityMeta}>
-                {/* Composite score header */}
+                {/* Slider row — left edge aligns with chip column below */}
                 <div
-                    className="flex items-baseline gap-3 mb-4 pb-4"
-                    style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
+                    className="grid items-center gap-3 mb-2"
+                    style={{ gridTemplateColumns: '96px 1fr' }}
                 >
-                    <span
-                        style={{
-                            fontFamily: 'var(--sw-font-sans)',
-                            fontSize: 36,
-                            fontWeight: 800,
-                            color: 'var(--sw-rose-dk)',
-                            letterSpacing: '-0.04em',
-                            fontVariantNumeric: 'tabular-nums',
-                            lineHeight: 1,
-                        }}
-                    >
-                        {complexityScore ?? '—'}
-                    </span>
-                    <span
-                        style={{
-                            fontFamily: 'var(--sw-font-mono)',
-                            fontSize: 11,
-                            color: muted,
-                            letterSpacing: '0.02em',
-                        }}
-                    >
-                        /10 · contingency band {contingencyBand ?? '—'}
-                    </span>
+                    <span />
+                    <div style={{ width: '30%' }}>
+                        <AggregateSlider
+                            value={complexityLevel}
+                            onChange={onComplexityLevelChange}
+                            leftLabel=""
+                            rightLabel=""
+                            thumbColor="var(--sw-peach)"
+                        />
+                    </div>
                 </div>
-
                 {/* Dimension chip rows */}
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
                     {templates.complexityDimensions.length === 0 ? (
-                        <div style={{ fontSize: 13, color: muted }}>
+                        <div
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: muted,
+                            }}
+                        >
                             Select a building class to see complexity dimensions.
                         </div>
                     ) : (
@@ -350,12 +641,18 @@ export function BuildingTabView({
                                 <div
                                     key={dim.key}
                                     className="grid items-center gap-3"
-                                    style={{ gridTemplateColumns: '170px 1fr' }}
+                                    style={{ gridTemplateColumns: '96px 1fr' }}
                                 >
-                                    <span style={{ fontSize: 13, color: 'var(--sw-ink)' }}>
+                                    <span
+                                        style={{
+                                            fontFamily: 'var(--sw-font-mono)',
+                                            fontSize: 10,
+                                            color: muted,
+                                        }}
+                                    >
                                         {dim.label}
                                     </span>
-                                    <div className="flex flex-wrap gap-1">
+                                    <div className="flex flex-nowrap gap-1 min-w-0 overflow-hidden">
                                         {dim.options.map((opt) => (
                                             <Chip
                                                 key={opt.value}
@@ -374,40 +671,41 @@ export function BuildingTabView({
                         })
                     )}
                 </div>
-
-                {/* Aggregate slider */}
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--sw-rule-2)' }}>
-                    <div
-                        className="mb-2"
-                        style={{
-                            fontFamily: 'var(--sw-font-mono)',
-                            fontSize: 10,
-                            letterSpacing: '0.18em',
-                            textTransform: 'uppercase',
-                            color: muted,
-                        }}
-                    >
-                        aggregate · drag to set baseline, fine-tune above
-                    </div>
-                    <AggregateSlider
-                        value={complexityLevel}
-                        onChange={onComplexityLevelChange}
-                        leftLabel="simple"
-                        rightLabel="extreme"
-                    />
-                </div>
             </CardShell>
 
             {/* ============================================================
                 4. SCOPE OF WORK
                 ============================================================ */}
             <CardShell
-                label="Scope of Work"
+                label="Scope"
                 meta={`${scopeSelectedCount} selected · ${scopeRemaining} awaiting`}
             >
-                <div className="flex flex-col gap-3.5">
+                {/* Slider row — left edge aligns with chip column below */}
+                <div
+                    className="grid items-center gap-3 mb-2"
+                    style={{ gridTemplateColumns: '96px 1fr' }}
+                >
+                    <span />
+                    <div style={{ width: '30%' }}>
+                        <AggregateSlider
+                            value={scopeLevel}
+                            onChange={onScopeLevelChange}
+                            leftLabel=""
+                            rightLabel=""
+                            ticks={6}
+                            thumbColor="var(--sw-cyan)"
+                        />
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2">
                     {templates.scopeGroups.length === 0 ? (
-                        <div style={{ fontSize: 13, color: muted }}>
+                        <div
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: muted,
+                            }}
+                        >
                             Select a project type to see scope groups.
                         </div>
                     ) : (
@@ -415,21 +713,19 @@ export function BuildingTabView({
                             <div
                                 key={g.categoryLabel}
                                 className="grid items-start gap-3"
-                                style={{ gridTemplateColumns: '170px 1fr' }}
+                                style={{ gridTemplateColumns: '96px 1fr' }}
                             >
                                 <span
                                     style={{
                                         fontFamily: 'var(--sw-font-mono)',
                                         fontSize: 10,
                                         color: muted,
-                                        letterSpacing: '0.18em',
-                                        textTransform: 'uppercase',
-                                        paddingTop: 5,
+                                        paddingTop: 3,
                                     }}
                                 >
                                     {g.categoryLabel}
                                 </span>
-                                <div className="flex flex-wrap gap-1">
+                                <div className="flex flex-nowrap gap-1 min-w-0 overflow-hidden">
                                     {g.items.map((item) => (
                                         <Chip
                                             key={item.value}
@@ -444,29 +740,6 @@ export function BuildingTabView({
                             </div>
                         ))
                     )}
-                </div>
-
-                {/* Aggregate slider */}
-                <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--sw-rule-2)' }}>
-                    <div
-                        className="mb-2"
-                        style={{
-                            fontFamily: 'var(--sw-font-mono)',
-                            fontSize: 10,
-                            letterSpacing: '0.18em',
-                            textTransform: 'uppercase',
-                            color: muted,
-                        }}
-                    >
-                        aggregate · drag to broaden / narrow scope, fine-tune above
-                    </div>
-                    <AggregateSlider
-                        value={scopeLevel}
-                        onChange={onScopeLevelChange}
-                        leftLabel="minimum"
-                        rightLabel="full scope"
-                        ticks={6}
-                    />
                 </div>
             </CardShell>
 

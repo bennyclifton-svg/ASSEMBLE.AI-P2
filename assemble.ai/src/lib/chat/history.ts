@@ -13,6 +13,8 @@ const MAX_VISIBLE_CHAT_MESSAGES = 10;
 const STALE_APPROVAL_CLAIM_RE =
     /^I've put the proposed changes? in the approval cards? above\.$/i;
 const STALE_WORKFLOW_FAILURE_PATTERNS = [
+    /i prepared the contractor variation workflow for review/i,
+    /dependent steps will unlock in order/i,
     /technical error in the workflow process/i,
     /failed query:\s*insert into\s+"action_invocations"/i,
     /i couldn't create an approval card[\s\S]*action_invocations/i,

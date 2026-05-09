@@ -34,8 +34,8 @@ export function AIPolishButton({
             className={cn(
                 'flex items-center gap-1.5 text-sm font-medium transition-all',
                 disabled || isLoading
-                    ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                    : 'text-[var(--color-accent-copper)] hover:opacity-80',
+                    ? 'text-[var(--sw-muted)] cursor-not-allowed opacity-50'
+                    : 'text-[var(--sw-rose-dk)] hover:opacity-80',
                 className
             )}
             title={tooltip}

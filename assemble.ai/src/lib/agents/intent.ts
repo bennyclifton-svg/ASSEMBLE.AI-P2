@@ -9,6 +9,10 @@ const STRONG_VARIATION_WRITE_RE =
 
 const VARIATION_WORKFLOW_FOLLOW_THROUGH_RE =
     /\b(cost[-\s]?plan|cost lines?|programme|program|schedule|activities?|milestones?|project notes?|notes?|correspondence|letters?|emails?|link it|link this|linked)\b/i;
+const CONTRACTOR_VARIATION_CLAIM_RE =
+    /\b(contractor|builder|head contractor|principal contractor|subcontractor|trade contractor)\b[\s\S]{0,180}\b(variation|claim|latent condition|extra works?|additional cost|additional excavation|rock|delay|extension of time|eot)\b|\b(variation|claim|latent condition|extra works?|additional cost|additional excavation|rock|delay|extension of time|eot)\b[\s\S]{0,180}\b(contractor|builder|head contractor|principal contractor|subcontractor|trade contractor)\b/i;
+const VARIATION_CLAIM_ASSESSMENT_RE =
+    /\b(variation claim|claim assessment|delivery assessment|assessment response|latent condition claim)\b[\s\S]{0,220}\b(assess|assessment|evaluate|evaluation|revise|revision|update|redraft|iterate|interrogate|geotech|geotechnical|entitlement|quantum|programme|program|evidence)\b|\b(assess|assessment|evaluate|evaluation|revise|revision|update|redraft|iterate|interrogate|geotech|geotechnical|entitlement|quantum|programme|program|evidence)\b[\s\S]{0,220}\b(variation claim|claim assessment|delivery assessment|assessment response|latent condition claim)\b/i;
 
 const WRITE_INTENT_RE =
     /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set|move|populate|generate|redraft|replace|append|attach|save)\b/i;
@@ -168,4 +172,12 @@ export function isVariationWriteRequest(text: string): boolean {
 
 export function isIssueVariationWorkflowRequest(text: string): boolean {
     return isVariationWriteRequest(text) && VARIATION_WORKFLOW_FOLLOW_THROUGH_RE.test(text);
+}
+
+export function isContractorVariationClaimRequest(text: string): boolean {
+    return CONTRACTOR_VARIATION_CLAIM_RE.test(text);
+}
+
+export function isVariationClaimAssessmentRequest(text: string): boolean {
+    return VARIATION_CLAIM_ASSESSMENT_RE.test(text);
 }

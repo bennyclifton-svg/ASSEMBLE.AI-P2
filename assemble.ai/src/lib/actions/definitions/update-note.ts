@@ -6,7 +6,7 @@ import type { ProposedDiff } from '@/lib/agents/approvals';
 import { applyUpdateNote } from '@/lib/agents/applicators';
 import { defineAction } from '../define';
 
-const NOTE_COLORS = ['yellow', 'blue', 'green', 'pink', 'white'] as const;
+const NOTE_COLORS = ['purple', 'orange', 'pink', 'blue'] as const;
 const NOTE_TYPES = ['rfi', 'notice', 'eot', 'defect', 'variation', 'risk', 'transmittal', 'review', 'note'] as const;
 const NOTE_STATUSES = ['open', 'closed'] as const;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;

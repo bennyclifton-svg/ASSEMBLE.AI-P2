@@ -66,6 +66,48 @@ export interface CorrespondenceAttachmentView {
     sizeBytes: number;
 }
 
+export interface CorrespondenceVariationTriageFactsView {
+    contractorName: string | null;
+    contractorEmail: string | null;
+    description: string | null;
+    basis: string | null;
+    amountForecastCents: number | null;
+    programmeImpactDays: number | null;
+    requestedAction: string | null;
+    evidenceReferences: string[];
+    dateSubmitted: string | null;
+}
+
+export interface CorrespondenceVariationTraceView {
+    source: 'inbound_email' | 'manual_entry' | 'unknown';
+    trigger: 'auto_triage' | 'manual_review' | 'unknown';
+    agentName: string;
+    workflowKey: string | null;
+    draftingMode:
+        | 'deterministic_delivery_lite_template'
+        | 'llm_assisted_delivery_template'
+        | 'llm_generated'
+        | 'manual'
+        | 'none';
+    llmUsed: boolean;
+    knowledgeLibraryUsed: boolean;
+    approvalRequired: boolean;
+    proposedActions: string[];
+    documentsReviewed: string[];
+}
+
+export interface CorrespondenceVariationTriageView {
+    status: 'auto_triaged' | 'needs_classification' | 'not_candidate';
+    classification: 'variation_claim' | 'other';
+    confidence: number;
+    completeness: 'complete_enough' | 'missing_information';
+    missingInformation: string[];
+    candidateReasons: string[];
+    workflowRunId: string | null;
+    facts: CorrespondenceVariationTriageFactsView;
+    trace: CorrespondenceVariationTraceView;
+}
+
 export interface CorrespondenceView {
     id: string;
     threadId: string;
@@ -82,4 +124,5 @@ export interface CorrespondenceView {
     sentAt: string | null;
     attachmentCount: number;
     attachments: CorrespondenceAttachmentView[];
+    variationTriage: CorrespondenceVariationTriageView | null;
 }

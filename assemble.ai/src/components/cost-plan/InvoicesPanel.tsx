@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react';
 import { Plus, Upload, Check, X, Trash, ChevronUp, ChevronDown } from 'lucide-react';
 import { useInvoices, useInvoiceMutations, useCostLines, useVariations } from '@/lib/hooks/cost-plan';
 import { formatCurrency, getCurrentPeriod } from '@/lib/calculations/cost-plan-formulas';
@@ -42,9 +42,10 @@ type SortColumn = 'invoiceNumber' | 'description' | 'costLine' | 'period' | 'inv
 
 interface InvoicesPanelProps {
     projectId: string;
+    renderTabsList?: () => ReactNode;
 }
 
-export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
+export function InvoicesPanel({ projectId, renderTabsList }: InvoicesPanelProps) {
     const { invoices, isLoading, error, refetch } = useInvoices(projectId);
     const { createInvoice, updateInvoice, deleteInvoice, isSubmitting } = useInvoiceMutations(projectId, refetch);
     const { costLines } = useCostLines(projectId);
@@ -157,7 +158,7 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
 
     if (error) {
         return (
-            <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
+            <div className="h-full flex items-center justify-center" style={{ background: 'var(--sw-paper)' }}>
                 <div className="text-center">
                     <p className="text-[var(--color-accent-coral)] mb-2">Failed to load invoices</p>
                     <button onClick={() => refetch()} className="text-sm text-[var(--color-accent-teal)] hover:opacity-80">
@@ -170,31 +171,53 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
 
     return (
         <InvoiceDropZone projectId={projectId} onUploadComplete={() => refetch()}>
-        <div className="h-full flex flex-col text-xs">
+        <div className="h-full flex flex-col text-xs" style={{ background: 'var(--sw-paper)' }}>
             {/* Toolbar */}
-            <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
-                <Upload className="h-3 w-3 text-[var(--color-text-muted)]" aria-label="Drop invoice" />
-                <select
-                    value={monthFilter}
-                    onChange={(e) => setMonthFilter(e.target.value)}
-                    className="text-xs text-[var(--primary-foreground)] bg-[var(--color-accent-green)] px-2.5 py-1.5 rounded font-medium hover:bg-[var(--primitive-green-dark)] focus:outline-none transition-colors cursor-pointer"
-                    title="Filter invoices by month (matches coded period or invoice date)"
-                >
-                    <option value="all" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                        All months
-                    </option>
-                    {monthFilterOptions.map((option) => (
-                        <option key={option.value} value={option.value} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                            {option.label}
+            <div
+                className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
+                style={{
+                    background: 'var(--sw-paper)',
+                    borderBottom: '1px solid var(--sw-rule)',
+                }}
+            >
+                <div className="min-w-0 flex-shrink-0">
+                    {renderTabsList?.()}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <Upload className="h-3 w-3 text-[var(--color-text-muted)]" aria-label="Drop invoice" />
+                    <select
+                        value={monthFilter}
+                        onChange={(e) => setMonthFilter(e.target.value)}
+                        className="focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40 transition-opacity hover:opacity-90 cursor-pointer"
+                        style={{
+                            background: 'var(--sw-ink)',
+                            border: '1px solid var(--sw-ink)',
+                            color: 'var(--sw-paper)',
+                            padding: '8px 28px 8px 14px',
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 11,
+                            letterSpacing: '0.15em',
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                        }}
+                        title="Filter invoices by month (matches coded period or invoice date)"
+                    >
+                        <option value="all" className="bg-white text-[var(--sw-ink)]">
+                            All months
                         </option>
-                    ))}
-                </select>
+                        {monthFilterOptions.map((option) => (
+                            <option key={option.value} value={option.value} className="bg-white text-[var(--sw-ink)]">
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
             {/* Table */}
-            <div className="flex-1 overflow-auto">
-                <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
-                    <thead className="sticky top-0 z-10 backdrop-blur-sm shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
+            <div className="flex-1 overflow-auto" style={{ background: 'var(--sw-paper)' }}>
+                <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed', fontFamily: 'var(--sw-font-mono)', background: 'white' }}>
+                    <thead className="sticky top-0 z-10 shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ background: 'white' }}>
                         <tr>
                             <th
                                 className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[100px] overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
@@ -291,11 +314,11 @@ export function InvoicesPanel({ projectId }: InvoicesPanelProps) {
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">Loading invoices...</td>
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'white' }}>Loading invoices...</td>
                             </tr>
                         ) : sortedInvoices.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'white' }}>
                                     {monthFilter === 'all'
                                         ? 'No invoices yet. Click the + icon to add one.'
                                         : 'No invoices match the selected month.'}

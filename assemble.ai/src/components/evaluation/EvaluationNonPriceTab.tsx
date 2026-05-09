@@ -12,17 +12,23 @@ import { NonPriceSheet } from './NonPriceSheet';
 import { Loader2, AlertCircle, CheckCircle2, Upload } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import type { QualityRating } from '@/types/evaluation';
+import {
+    EVALUATION_NON_PRICE_ACCENT_COLOR,
+    EvaluationReportHeader,
+} from './EvaluationReportChrome';
 
 interface EvaluationNonPriceTabProps {
     projectId: string;
     stakeholderId?: string;
     stakeholderName?: string;
+    surface?: 'procurement' | 'record';
 }
 
 export function EvaluationNonPriceTab({
     projectId,
     stakeholderId,
     stakeholderName,
+    surface = 'procurement',
 }: EvaluationNonPriceTabProps) {
     const {
         data,
@@ -47,6 +53,7 @@ export function EvaluationNonPriceTab({
     // Show save status indicator
     useEffect(() => {
         if (isSaving) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setSaveStatus('saving');
             if (saveTimeoutRef.current) {
                 clearTimeout(saveTimeoutRef.current);
@@ -72,6 +79,7 @@ export function EvaluationNonPriceTab({
         content: string,
         rating: QualityRating
     ): Promise<boolean> => {
+        void _firmType;
         return await updateCell(criteriaId, firmId, firmType, content, rating);
     }, [updateCell, firmType]);
 
@@ -79,7 +87,7 @@ export function EvaluationNonPriceTab({
     const handleFileDrop = useCallback(async (
         file: File,
         firmId: string,
-        _firmType: 'consultant' | 'contractor'
+        firmTypeFromSheet: 'consultant' | 'contractor'
     ) => {
         const firm = shortlistedFirms.find(f => f.id === firmId);
         const firmName = firm?.companyName || 'Unknown';
@@ -89,7 +97,7 @@ export function EvaluationNonPriceTab({
             description: `Extracting non-price criteria from ${file.name} for ${firmName}`,
         });
 
-        const result = await parseTender(file, firmId, firmType);
+        const result = await parseTender(file, firmId, firmTypeFromSheet);
 
         if (result.success) {
             toast({
@@ -104,7 +112,7 @@ export function EvaluationNonPriceTab({
                 variant: 'destructive',
             });
         }
-    }, [parseTender, firmType, shortlistedFirms, toast]);
+    }, [parseTender, shortlistedFirms, toast]);
 
     // Loading state
     if (isLoading) {
@@ -136,7 +144,7 @@ export function EvaluationNonPriceTab({
                 </h3>
                 <p className="text-xs text-[var(--color-text-secondary)] max-w-sm">
                     To evaluate non-price criteria, first short-list firms by toggling the
-                    "Shortlisted" option on the firm cards above.
+                    &quot;Shortlisted&quot; option on the firm cards above.
                 </p>
             </div>
         );
@@ -146,12 +154,22 @@ export function EvaluationNonPriceTab({
     const sortedCriteria = data?.criteria || [];
 
     return (
-        <div className="space-y-4">
+        <div
+            className="space-y-4"
+            style={surface === 'record' ? { backgroundColor: 'white', color: 'var(--color-text-primary)' } : undefined}
+        >
+            <EvaluationReportHeader
+                projectId={projectId}
+                documentTitle={`Evaluation Non-Price, ${stakeholderName || 'Unknown'}`}
+                accentColor={EVALUATION_NON_PRICE_ACCENT_COLOR}
+                surface={surface}
+            />
+
             {/* Save Status & Upload Instruction */}
             <div className="flex items-center justify-between">
                 {/* Upload instruction - left side */}
                 <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
-                    <Upload className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+                    <Upload className="w-3.5 h-3.5" style={{ color: EVALUATION_NON_PRICE_ACCENT_COLOR }} />
                     <span>Drag submission PDF onto firm column</span>
                 </div>
                 {/* Save status - right side */}
@@ -181,6 +199,8 @@ export function EvaluationNonPriceTab({
                 isParsing={isParsing}
                 parsingFirmId={parsingFirmId}
                 firmType={firmType}
+                accentColor={EVALUATION_NON_PRICE_ACCENT_COLOR}
+                surface={surface}
             />
 
             {/* Instructions */}

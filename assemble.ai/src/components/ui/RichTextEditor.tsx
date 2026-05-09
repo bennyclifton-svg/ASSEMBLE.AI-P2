@@ -80,7 +80,7 @@ const SIZE_CLASSES: Record<RichTextEditorVariant, string> = {
   full: 'min-h-[500px]',
 };
 
-const PROSE_BASE_CLASSES = 'prose prose-invert prose-sm max-w-none focus:outline-none px-3 py-2 leading-normal [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-3 [&_h1]:text-[var(--color-accent-teal)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:text-[var(--color-accent-teal)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-2 [&_h3]:text-[var(--color-accent-teal)] [&_p]:mt-0 [&_p]:mb-1 [&_p]:leading-normal [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:ml-4 [&_ul]:my-0 [&_ol]:list-decimal [&_ol]:ml-4 [&_ol]:my-0 [&_li]:my-0 [&_li]:leading-normal';
+const PROSE_BASE_CLASSES = 'prose prose-sm max-w-none text-[var(--sw-ink)] focus:outline-none px-3 py-2 leading-normal [&_h1]:text-base [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-3 [&_h1]:text-[var(--sw-ink)] [&_h2]:text-sm [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-2.5 [&_h2]:text-[var(--sw-ink)] [&_h3]:text-sm [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-2 [&_h3]:text-[var(--sw-ink)] [&_p]:mt-0 [&_p]:mb-1 [&_p]:leading-normal [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:ml-4 [&_ul]:my-0 [&_ol]:list-decimal [&_ol]:ml-4 [&_ol]:my-0 [&_li]:my-0 [&_li]:leading-normal';
 
 /**
  * Convert markdown syntax to HTML for TipTap rendering
@@ -149,8 +149,8 @@ function ToolbarButton({ onClick, isActive, disabled, title, children, small }: 
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'rounded hover:bg-[var(--color-bg-tertiary)] disabled:opacity-50 disabled:cursor-not-allowed',
-        isActive && 'bg-[var(--color-bg-tertiary)]',
+        'hover:bg-[var(--sw-paper)] disabled:opacity-50 disabled:cursor-not-allowed',
+        isActive && 'bg-[var(--sw-paper-2)]',
         small ? 'p-1' : 'p-1.5'
       )}
       title={title}
@@ -161,7 +161,7 @@ function ToolbarButton({ onClick, isActive, disabled, title, children, small }: 
 }
 
 function ToolbarDivider() {
-  return <div className="w-px h-5 bg-[var(--color-border)] mx-0.5" />;
+  return <div className="w-px h-5 bg-[var(--sw-rule-2)] mx-0.5" />;
 }
 
 export function RichTextEditor({
@@ -196,7 +196,7 @@ export function RichTextEditor({
       Link.configure({
         openOnClick: false,
         HTMLAttributes: {
-          class: 'text-blue-400 hover:text-blue-300 underline',
+          class: 'text-[var(--sw-cyan)] hover:text-[var(--sw-rose-dk)] underline',
         },
       }),
       TextStyle,
@@ -291,25 +291,25 @@ export function RichTextEditor({
   if (!editor) {
     return (
       <div className={cn(
-        'rounded-md',
-        !transparentBg && 'border border-[var(--color-border)] bg-[var(--color-bg-primary)]',
+        'rounded-none',
+        !transparentBg && 'border border-[var(--sw-rule)] bg-white',
         transparentBg && 'bg-transparent',
         className
       )}>
-        <div className={cn('p-3 text-[var(--color-text-muted)]', SIZE_CLASSES[variant])}>
+        <div className={cn('p-3 text-[var(--sw-muted)]', SIZE_CLASSES[variant])}>
           Loading editor...
         </div>
       </div>
     );
   }
 
-  const iconSize = toolbarVariant === 'mini' ? 'w-3.5 h-3.5 text-[var(--color-text-muted)]' : 'w-4 h-4 text-[var(--color-text-muted)]';
+  const iconSize = toolbarVariant === 'mini' ? 'w-3.5 h-3.5 text-[var(--sw-muted)]' : 'w-4 h-4 text-[var(--sw-muted)]';
   const isSmall = toolbarVariant === 'mini';
 
   return (
     <div className={cn(
-      'flex flex-col rounded-md overflow-hidden',
-      !transparentBg && 'border border-[var(--color-border)] bg-[var(--color-bg-primary)]',
+        'flex flex-col rounded-none overflow-hidden',
+      !transparentBg && 'border border-[var(--sw-rule)] bg-white',
       transparentBg && 'bg-transparent',
       className
     )}>
@@ -317,8 +317,8 @@ export function RichTextEditor({
       {toolbarVariant !== 'none' && (
         <div className={cn(
           "flex items-center gap-0.5 px-2 py-1 flex-wrap",
-          !transparentBg && "border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]",
-          transparentBg && "border-b border-black/10"
+          !transparentBg && "border-b border-[var(--sw-rule-2)] bg-[var(--sw-paper)]",
+          transparentBg && "border-b border-[var(--sw-rule-2)]"
         )}>
           <ToolbarButton
             onClick={toggleBold}

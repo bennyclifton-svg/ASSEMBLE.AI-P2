@@ -16,15 +16,20 @@ export function AggregateSlider({
     leftLabel = 'low',
     rightLabel = 'extreme',
     ticks = 5,
+    thumbColor,
 }: {
     value: number; // 0–100
     onChange: (v: number) => void;
     leftLabel?: string;
     rightLabel?: string;
     ticks?: number;
+    thumbColor?: string;
 }) {
+    const containerStyle = thumbColor
+        ? ({ ['--sw-slider-thumb' as string]: thumbColor } as React.CSSProperties)
+        : undefined;
     return (
-        <div>
+        <div style={containerStyle}>
             <div className="relative" style={{ height: 18 }}>
                 {/* Track */}
                 <div
@@ -60,19 +65,21 @@ export function AggregateSlider({
                     style={{ background: 'transparent', appearance: 'none' }}
                 />
             </div>
-            <div
-                className="flex justify-between mt-1.5"
-                style={{
-                    fontFamily: 'var(--sw-font-mono)',
-                    fontSize: 9,
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    color: muted,
-                }}
-            >
-                <span>{leftLabel}</span>
-                <span>{rightLabel}</span>
-            </div>
+            {(leftLabel || rightLabel) && (
+                <div
+                    className="flex justify-between mt-1.5"
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 9,
+                        letterSpacing: '0.18em',
+                        textTransform: 'uppercase',
+                        color: muted,
+                    }}
+                >
+                    <span>{leftLabel}</span>
+                    <span>{rightLabel}</span>
+                </div>
+            )}
         </div>
     );
 }

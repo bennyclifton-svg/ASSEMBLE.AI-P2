@@ -6,10 +6,7 @@ import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
 import { useToast } from '@/lib/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils/currency';
 
-import { RFTNewSection } from '@/components/rft-new';
-import { AddendumSection } from '@/components/addendum';
-import { EvaluationPriceSection, EvaluationNonPriceSection } from '@/components/evaluation';
-import { TRRSection } from '@/components/trr';
+import { ProcurementCardShell, ProcurementWorkflowLayout } from '@/components/procurement';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,14 +30,15 @@ interface ContractorGalleryProps {
   onSetSelectedDocumentIds?: (ids: string[]) => void;
 }
 
+interface FirmExtractionResult {
+  confidence: number;
+  data: FirmData;
+}
+
 export function ContractorGallery({
   projectId,
   trade,
   tradeId,
-  scopeWorks = '',
-  scopePrice = '',
-  scopeProgram = '',
-  onUpdateScope,
   selectedDocumentIds = [],
   onSetSelectedDocumentIds,
 }: ContractorGalleryProps) {
@@ -66,7 +64,7 @@ export function ContractorGallery({
         // Creating new contractor - only companyName is required
         const companyName = data.companyName || newFirm.companyName;
         if (companyName) {
-          const newContractor = await addContractor({
+          await addContractor({
             ...newFirm,
             ...data,
             companyName,
@@ -184,7 +182,7 @@ export function ContractorGallery({
     }
   };
 
-  const handleFileExtraction = async (file: File): Promise<FirmData> => {
+  const handleFileExtraction = async (file: File): Promise<FirmExtractionResult> => {
     setIsExtracting(true);
     try {
       const formData = new FormData();
@@ -372,27 +370,30 @@ export function ContractorGallery({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-sm text-[#858585]">Loading contractors...</p>
+        <p className="text-sm text-[var(--sw-muted)]">Loading contractors...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Firms Section */}
-      <div className="relative">
+    <div className="space-y-3">
+      <ProcurementCardShell
+        meta={`${contractors.length + (newFirm ? 1 : 0)} tenderers`}
+        variant="strip"
+      >
+        <div className="relative">
         {/* Extraction Progress Overlay */}
         {isExtracting && (
           <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center">
-            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3 shadow-lg">
+            <div className="bg-white border border-[var(--sw-rule)] p-6 flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
-              <p className="text-[var(--color-text-primary)] font-semibold">Extracting contractor data...</p>
-              <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
+              <p className="text-[var(--sw-ink)] font-semibold">Extracting contractor data...</p>
+              <p className="text-xs text-[var(--sw-muted)]">This may take a few moments</p>
             </div>
           </div>
         )}
 
-        <div className="flex overflow-x-auto py-3 px-1 items-stretch gap-4 firms-scrollbar" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex overflow-x-auto py-0.5 items-stretch gap-2 firms-scrollbar" style={{ scrollbarWidth: 'thin' }}>
           {/* Existing contractors */}
           {contractors.map((contractor) => (
             <FirmCard
@@ -441,82 +442,37 @@ export function ContractorGallery({
             onFileDrop={handleAddNewFileDrop}
           />
         </div>
-      </div>
+        </div>
+      </ProcurementCardShell>
 
-
-
-      {/* RFT NEW Section - comprehensive RFT documents per trade */}
       {tradeId && (
-        <RFTNewSection
-          projectId={projectId}
-          stakeholderId={tradeId}
-          stakeholderName={trade}
-          selectedDocumentIds={selectedDocumentIds}
-          onLoadTransmittal={onSetSelectedDocumentIds}
-          onSaveTransmittal={() => selectedDocumentIds}
-        />
-      )}
-
-      {/* Addendum Section - independent transmittals per addendum */}
-      {tradeId && (
-        <AddendumSection
-          projectId={projectId}
-          stakeholderId={tradeId}
-          stakeholderName={trade}
-          selectedDocumentIds={selectedDocumentIds}
-          onLoadTransmittal={onSetSelectedDocumentIds}
-          onSaveTransmittal={() => selectedDocumentIds}
-        />
-      )}
-
-      {/* Evaluation Price Section - tender price evaluation with numbered tabs */}
-      {tradeId && (
-        <EvaluationPriceSection
-          projectId={projectId}
-          stakeholderId={tradeId}
-          stakeholderName={trade}
-        />
-      )}
-
-      {/* Evaluation Non-Price Section - non-price evaluation criteria */}
-      {tradeId && (
-        <EvaluationNonPriceSection
-          projectId={projectId}
-          stakeholderId={tradeId}
-          stakeholderName={trade}
-        />
-      )}
-
-      {/* TRR Section - Tender Recommendation Report */}
-      {tradeId && (
-        <TRRSection
+        <ProcurementWorkflowLayout
           projectId={projectId}
           stakeholderId={tradeId}
           stakeholderName={trade}
           contextType="trade"
           selectedDocumentIds={selectedDocumentIds}
-          onLoadTransmittal={onSetSelectedDocumentIds}
-          onSaveTransmittal={() => selectedDocumentIds}
+          onSetSelectedDocumentIds={onSetSelectedDocumentIds}
         />
       )}
 
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
-        <AlertDialogContent className="bg-[#1e1e1e] border-[#3e3e42]">
+        <AlertDialogContent className="rounded-none bg-white border-[var(--sw-rule)]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#cccccc]">Delete Contractor</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#858585]">
+            <AlertDialogTitle className="text-[var(--sw-ink)]">Delete Contractor</AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--sw-muted)]">
               Are you sure you want to delete {deleteDialog.name}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#3e3e42] text-[#cccccc] border-[#3e3e42] hover:bg-[#505050]">
+            <AlertDialogCancel className="rounded-none bg-transparent text-[var(--sw-ink)] border-[var(--sw-rule)] hover:bg-[var(--sw-paper)]">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => handleDelete(deleteDialog.id)}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="rounded-none bg-[var(--sw-rose)] hover:bg-[var(--sw-rose-dk)] text-[var(--sw-ink)] hover:text-white"
             >
               Delete
             </AlertDialogAction>

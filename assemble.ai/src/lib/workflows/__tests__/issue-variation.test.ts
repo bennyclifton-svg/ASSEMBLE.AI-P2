@@ -91,7 +91,7 @@ describe('buildIssueVariationPlan', () => {
             buildIssueVariationPlan({
                 variation: {
                     description: 'Extra hydrants',
-                    status: 'Submitted',
+                    status: 'Submitted' as never,
                     amountForecastCents: 77700,
                 },
             })
@@ -261,6 +261,189 @@ describe('buildIssueVariationPlan', () => {
         );
         expect(plan.steps[1].input.content as string).toContain(
             'Cost line mapping: AC-01 - Acoustic design + site testing.'
+        );
+    });
+
+    it('adds request-particulars outbound correspondence for incomplete inbound contractor claims', () => {
+        const plan = buildIssueVariationPlan({
+            inboundCorrespondenceId: 'in-001',
+            contractor: {
+                name: 'ABC Constructions',
+                email: 'contracts@abc.example',
+            },
+            missingInformation: ['Claimed amount or supporting cost breakdown'],
+            deliveryAssessment: {
+                completeness: 'missing_information',
+                summary: 'Contractor claim needs further particulars before assessment.',
+                missingInformation: ['Claimed amount or supporting cost breakdown'],
+            },
+            variation: {
+                category: 'Contractor',
+                description: 'Additional excavation due to latent rock',
+                status: 'Forecast',
+                requestedBy: 'ABC Constructions',
+            },
+            outboundCorrespondence: {
+                draftType: 'request_particulars',
+                toEmail: 'contracts@abc.example',
+            },
+        });
+
+        expect(plan.steps.map((step) => step.actionId)).toEqual([
+            'finance.variations.create',
+            'correspondence.note.create',
+            'correspondence.outbound_email.draft',
+        ]);
+        expect(plan.steps[0].input).toEqual(
+            expect.objectContaining({
+                category: 'Contractor',
+                status: 'Forecast',
+            })
+        );
+        expect(plan.steps[2].input).toEqual(
+            expect.objectContaining({
+                inboundCorrespondenceId: 'in-001',
+                draftType: 'request_particulars',
+                toEmail: 'contracts@abc.example',
+                markAsSentInAssemble: true,
+            })
+        );
+        expect(plan.steps[2].dependencyStepKeys).toEqual(['create_variation', 'create_note']);
+        expect(plan.steps[2].input.bodyText as string).toContain('Before the claim can be assessed');
+    });
+
+    it('adds assessment-response outbound correspondence for complete-enough inbound claims', () => {
+        const plan = buildIssueVariationPlan({
+            inboundCorrespondenceId: 'in-002',
+            contractor: {
+                name: 'ABC Constructions',
+                email: 'contracts@abc.example',
+            },
+            deliveryAssessment: {
+                completeness: 'complete_enough',
+                summary: 'Claim is complete enough for preliminary assessment.',
+                entitlement: 'Potential latent condition claim.',
+                quantum: 'Claimed amount $42,000.',
+            },
+            variation: {
+                category: 'Contractor',
+                description: 'Latent rock excavation',
+                status: 'Forecast',
+                amountForecastCents: 4200000,
+            },
+            outboundCorrespondence: {
+                draftType: 'assessment_response',
+                toEmail: 'contracts@abc.example',
+            },
+        });
+
+        expect(plan.steps.map((step) => step.actionId)).toEqual([
+            'finance.variations.create',
+            'correspondence.note.create',
+            'correspondence.outbound_email.draft',
+        ]);
+        expect(plan.steps[2].input).toEqual(
+            expect.objectContaining({
+                draftType: 'assessment_response',
+                deliveryAssessmentSummary: expect.stringContaining('Claim is complete enough'),
+            })
+        );
+        expect(plan.steps[2].input.bodyText as string).toContain('registered as a Forecast variation');
+    });
+
+    it('formats a deep Delivery assessment as a reviewable artifact with traceable context', () => {
+        const plan = buildIssueVariationPlan({
+            inboundCorrespondenceId: 'in-rock-002',
+            contractor: {
+                name: 'ABC Constructions',
+                email: 'contracts@abc.example',
+            },
+            evidence: [
+                'Inbound correspondence in-rock-002',
+                'Geotechnical report GT-01 notes possible sandstone floaters.',
+                'Superintendent instruction SI-014 directed excavation to continue.',
+            ],
+            deliveryAssessment: {
+                assessmentMode: 'deep_delivery',
+                completeness: 'complete_enough',
+                summary:
+                    'ABC Constructions submitted a latent rock excavation claim with cost support but limited programme evidence.',
+                entitlement:
+                    'Entitlement is arguable but not accepted. The geotechnical report appears to flag some ground risk while SI-014 may support a directed-work pathway.',
+                quantum:
+                    'The claimed amount is priced, but plant hours, disposal dockets, and subcontractor records should be reconciled before quantum is accepted.',
+                programme:
+                    'The four-day programme impact is not yet supported by a critical-path narrative or contemporaneous delay records.',
+                recommendation:
+                    'Register as Forecast, request programme substantiation, and reserve all rights on entitlement, quantum, and time.',
+                contractAssumption:
+                    'Verify latent condition, notice, valuation, and EOT clauses against the executed contract and special conditions.',
+                documentsReviewed: [
+                    'Geotechnical report GT-01',
+                    'Superintendent instruction SI-014',
+                    'VO-004 Excavation Breakdown.pdf',
+                ],
+                knowledgeReferences: ['Standard-form variation and latent condition administration'],
+                entitlementReasons: [
+                    'SI-014 may evidence a direction to proceed with the excavation.',
+                    'GT-01 may also have warned tenderers about possible rock conditions.',
+                ],
+                quantumReasons: [
+                    'The cost breakdown gives a headline value but does not prove plant hours or disposal quantities.',
+                ],
+                programmeReasons: [
+                    'The claim states four days but does not identify critical-path effect.',
+                ],
+                evidenceGaps: [
+                    'Daily excavation records',
+                    'Plant and labour dockets',
+                    'Delay fragnet or critical-path narrative',
+                ],
+                confidence: 0.68,
+            },
+            variation: {
+                category: 'Contractor',
+                description: 'Latent rock excavation',
+                status: 'Forecast',
+                amountForecastCents: 4200000,
+                requestedBy: 'ABC Constructions',
+            },
+            outboundCorrespondence: {
+                draftType: 'assessment_response',
+                toEmail: 'contracts@abc.example',
+            },
+        });
+
+        const noteStep = plan.steps.find((step) => step.stepKey === 'create_note');
+        const outboundStep = plan.steps.find((step) => step.stepKey === 'draft_outbound_correspondence');
+
+        expect(noteStep?.input).toEqual(
+            expect.objectContaining({
+                title: 'Deep Delivery assessment - Latent rock excavation',
+                type: 'variation',
+                status: 'open',
+            })
+        );
+        expect(noteStep?.input.content as string).toContain('## Entitlement');
+        expect(noteStep?.input.content as string).toContain('Geotechnical report GT-01');
+        expect(noteStep?.input.content as string).toContain('## Evidence Gaps');
+        expect(outboundStep?.input.bodyText as string).toContain(
+            'Our preliminary assessment is that entitlement remains under review'
+        );
+        expect(outboundStep?.input.bodyText as string).toContain('critical-path narrative');
+        expect(outboundStep?.input.deliveryTrace).toEqual(
+            expect.objectContaining({
+                workflowKey: 'issue-variation',
+                draftingMode: 'llm_assisted_delivery_template',
+                llmUsed: true,
+                knowledgeLibraryUsed: true,
+                approvalRequired: true,
+                documentsReviewed: [
+                    'Geotechnical report GT-01',
+                    'Superintendent instruction SI-014',
+                    'VO-004 Excavation Breakdown.pdf',
+                ],
+            })
         );
     });
 });

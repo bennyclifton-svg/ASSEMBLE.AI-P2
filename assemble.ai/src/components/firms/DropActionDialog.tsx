@@ -21,29 +21,29 @@ export function DropActionDialog({
 }: DropActionDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-[#1e1e1e] border-[#3e3e42]">
+      <AlertDialogContent className="rounded-none bg-white border-[var(--sw-rule)]">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-[#cccccc]">Extract Firm Data</AlertDialogTitle>
-          <AlertDialogDescription className="text-[#858585]">
-            Extract data from <span className="text-[#cccccc] font-medium">{fileName}</span>?
+          <AlertDialogTitle className="text-[var(--sw-ink)]">Extract Firm Data</AlertDialogTitle>
+          <AlertDialogDescription className="text-[var(--sw-muted)]">
+            Extract data from <span className="text-[var(--sw-ink)] font-medium">{fileName}</span>?
             <br />
             <br />
             Choose how to handle the extracted data:
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="gap-2">
-          <AlertDialogCancel className="bg-[#3e3e42] text-[#cccccc] border-[#3e3e42] hover:bg-[#505050]">
+          <AlertDialogCancel className="rounded-none bg-transparent text-[var(--sw-ink)] border-[var(--sw-rule)] hover:bg-[var(--sw-paper)]">
             Cancel
           </AlertDialogCancel>
           <AlertDialogAction
             onClick={onAddNew}
-            className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+            className="rounded-none bg-[var(--sw-rose)] hover:bg-[var(--sw-rose-dk)] text-[var(--sw-ink)] hover:text-white"
           >
             Add as New Firm
           </AlertDialogAction>
           <AlertDialogAction
             onClick={onReplace}
-            className="bg-[#3e3e42] hover:bg-[#505050] text-[#cccccc]"
+            className="rounded-none bg-transparent hover:bg-[var(--sw-paper)] text-[var(--sw-ink)] border border-[var(--sw-rule)]"
           >
             Replace This Firm
           </AlertDialogAction>

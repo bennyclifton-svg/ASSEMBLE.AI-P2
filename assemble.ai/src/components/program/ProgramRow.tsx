@@ -31,8 +31,8 @@ interface ProgramRowProps {
     // Sortable props (passed from SortableItem wrapper in ProgramTable)
     sortableRef?: (node: HTMLElement | null) => void;
     sortableStyle?: React.CSSProperties;
-    dragHandleAttributes?: Record<string, any>;
-    dragHandleListeners?: Record<string, any>;
+    dragHandleAttributes?: React.HTMLAttributes<HTMLDivElement>;
+    dragHandleListeners?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 export function ProgramRow({
@@ -266,7 +266,7 @@ export function ProgramRow({
 
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-    }, [hasExistingDates, getDateFromPosition, zoomLevel, updateActivity, activity.id, refetch]);
+    }, [hasExistingDates, getDateFromPosition, updateActivity, activity.id, refetch]);
 
     const rowHeight = 32;
     const indentWidth = 16;
@@ -304,12 +304,12 @@ export function ProgramRow({
         return (
             <div
                 ref={sortableRef}
-                className="group flex items-center border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)]"
-                style={{ height: rowHeight, ...sortableStyle }}
+                className="group flex items-center border-b border-[var(--sw-rule-2)] hover:bg-[var(--sw-paper-2)]"
+                style={{ height: rowHeight, fontFamily: 'var(--sw-font-mono)', ...sortableStyle }}
             >
                 {/* Drag handle - always visible */}
                 <div
-                    className="cursor-grab active:cursor-grabbing p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] touch-none"
+                    className="cursor-grab p-1 text-[var(--sw-muted)] touch-none hover:text-[var(--sw-ink)] active:cursor-grabbing"
                     {...dragHandleAttributes}
                     {...dragHandleListeners}
                 >
@@ -324,7 +324,7 @@ export function ProgramRow({
                     {hasChildren && (
                         <button
                             onClick={handleToggleCollapse}
-                            className="p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                            className="p-0.5 text-[var(--sw-muted)] hover:text-[var(--sw-ink)]"
                         >
                             {activity.collapsed ? (
                                 <ChevronRight className="h-3.5 w-3.5" />
@@ -337,16 +337,16 @@ export function ProgramRow({
 
                 {/* Color indicator */}
                 <div
-                    className="mr-1 h-3 w-1 rounded-full bg-[var(--color-accent-teal)]"
+                    className="mr-1 h-3 w-1 bg-[var(--sw-cyan)]"
                 />
 
                 {/* Tier toggle button */}
                 <button
                     onClick={handleToggleTier}
-                    className={`mr-1 p-0.5 rounded transition-colors ${
+                    className={`mr-1 p-0.5 transition-colors ${
                         activity.parentId
-                            ? 'text-[var(--color-accent-teal)] hover:bg-[var(--color-accent-teal)]/20'
-                            : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)]'
+                            ? 'text-[var(--sw-cyan)] hover:bg-[rgba(122,184,194,0.14)]'
+                            : 'text-[var(--sw-muted)] hover:bg-[var(--sw-paper)]'
                     }`}
                     title={activity.parentId ? 'Promote to Tier 1 (top-level)' : 'Demote to Tier 2 (sub-item)'}
                 >
@@ -367,13 +367,13 @@ export function ProgramRow({
                             onChange={(e) => setEditName(e.target.value)}
                             onBlur={handleSaveName}
                             onKeyDown={handleKeyDown}
-                            className="w-full bg-[var(--color-bg-tertiary)] px-1 py-0.5 text-xs text-[var(--color-text-primary)] outline-none ring-1 ring-[var(--color-accent-teal)]"
+                            className="w-full border-0 bg-[var(--sw-paper)] px-1 py-0.5 text-xs text-[var(--sw-ink)] outline-none ring-1 ring-[var(--sw-cyan)]"
                         />
                     ) : (
                         <span
                             onDoubleClick={handleStartEdit}
                             className={`block truncate text-xs cursor-text ${
-                                hasChildren ? 'font-medium text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]'
+                                hasChildren ? 'font-semibold text-[var(--sw-ink)]' : 'text-[var(--sw-muted)]'
                             }`}
                         >
                             {activity.name}
@@ -384,7 +384,7 @@ export function ProgramRow({
                 {/* Delete button (visible on hover) */}
                 <button
                     onClick={handleDeleteClick}
-                    className="invisible mr-2 p-0.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] group-hover:visible"
+                    className="invisible mr-2 p-0.5 text-[var(--sw-muted)] hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)] group-hover:visible"
                 >
                     <Trash className="h-3.5 w-3.5" />
                 </button>
@@ -415,7 +415,7 @@ export function ProgramRow({
         <div
             ref={timelineRef}
             data-activity-id={activity.id}
-            className={`relative flex border-b border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)]/50 ${
+            className={`relative flex border-b border-[var(--sw-rule-2)] hover:bg-[var(--sw-paper-2)] ${
                 !hasExistingDates ? 'cursor-crosshair' : ''
             }`}
             style={{ height: rowHeight }}
@@ -426,7 +426,7 @@ export function ProgramRow({
             {columns.map((col, i) => (
                 <div
                     key={i}
-                    className="shrink-0 border-r border-[var(--color-border)]/50"
+                    className="shrink-0 border-r border-[var(--sw-rule-2)]"
                     style={{ width: columnWidth }}
                 />
             ))}
@@ -449,7 +449,7 @@ export function ProgramRow({
             {/* Creating bar preview */}
             {isCreatingBar && creatingBarWidth > 10 && (
                 <div
-                    className="absolute pointer-events-none bg-[var(--color-accent-teal)]/20 border border-[var(--color-accent-teal)]/40"
+                    className="pointer-events-none absolute border border-[var(--sw-cyan)] bg-[rgba(122,184,194,0.22)]"
                     style={{
                         left: creatingBarLeft,
                         top: topOffset,

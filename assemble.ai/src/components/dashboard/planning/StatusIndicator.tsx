@@ -16,22 +16,22 @@ const STATUS_CONFIG = {
   brief: {
     icon: FileText,
     label: 'Brief',
-    color: '#9b87f5', // Purple/Lavender
+    color: 'var(--sw-lav)', // identifier role — brief
   },
   tender: {
     icon: Send,
     label: 'Tender.',
-    color: '#f97316', // Orange/Coral
+    color: 'var(--sw-peach)', // currency role — tender
   },
   rec: {
     icon: CheckCircle2,
     label: 'Recommendation',
-    color: '#3b82f6', // Blue
+    color: 'var(--sw-cyan)', // type role — recommendation
   },
   award: {
     icon: Award,
     label: 'Award',
-    color: '#22c55e', // Green
+    color: 'var(--color-success)', // semantic success
   },
 };
 

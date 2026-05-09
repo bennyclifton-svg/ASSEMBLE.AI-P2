@@ -143,40 +143,40 @@ export function KnowledgeDomainManager() {
     const hasActiveFilters = filterType !== 'all' || filterTag !== 'all';
 
     return (
-        <div className="border border-[#3e3e42] rounded">
+        <div className="border border-[var(--color-border)] rounded">
             {/* Section header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-3 hover:bg-[#2a2d2e] transition-colors"
+                className="w-full flex items-center justify-between p-3 hover:bg-[var(--color-bg-hover)] transition-colors"
             >
                 <div className="flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-[#808080]" />
-                    <span className="text-sm font-medium text-[#cccccc]">
+                    <BookOpen className="w-4 h-4 text-[var(--color-text-muted)]" />
+                    <span className="text-sm font-medium text-[var(--color-text-primary)]">
                         Knowledge Domains
                     </span>
-                    <span className="text-xs text-[#808080]">
+                    <span className="text-xs text-[var(--color-text-muted)]">
                         ({activeDomainCount} active)
                     </span>
                 </div>
                 {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 text-[#808080]" />
+                    <ChevronUp className="w-4 h-4 text-[var(--color-text-muted)]" />
                 ) : (
-                    <ChevronDown className="w-4 h-4 text-[#808080]" />
+                    <ChevronDown className="w-4 h-4 text-[var(--color-text-muted)]" />
                 )}
             </button>
 
             {isExpanded && (
-                <div className="border-t border-[#3e3e42] p-4 space-y-4">
+                <div className="border-t border-[var(--color-border)] p-4 space-y-4">
                     {/* Loading */}
                     {isLoading && (
                         <div className="flex items-center justify-center py-8">
-                            <Loader2 className="w-5 h-5 animate-spin text-[#808080]" />
+                            <Loader2 className="w-5 h-5 animate-spin text-[var(--color-text-muted)]" />
                         </div>
                     )}
 
                     {/* Error */}
                     {error && (
-                        <div className="px-3 py-2 bg-[#f48771]/20 rounded text-sm text-[#f48771]">
+                        <div className="px-3 py-2 bg-[var(--color-error)]/20 rounded text-sm text-[var(--color-error)]">
                             {error}
                         </div>
                     )}
@@ -185,13 +185,13 @@ export function KnowledgeDomainManager() {
                         <>
                             {/* Filters + Create button */}
                             <div className="flex items-center gap-2 flex-wrap">
-                                <Filter className="w-3.5 h-3.5 text-[#808080]" />
+                                <Filter className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
 
                                 {/* Type filter */}
                                 <select
                                     value={filterType}
                                     onChange={(e) => setFilterType(e.target.value)}
-                                    className="bg-[#2a2d2e] border border-[#3e3e42] rounded px-2 py-1 text-xs text-[#cccccc] focus:outline-none focus:border-[#0e639c]"
+                                    className="bg-[var(--color-bg-hover)] border border-[var(--color-border)] rounded px-2 py-1 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)]"
                                 >
                                     <option value="all">All Types</option>
                                     {DOMAIN_TYPES.map((t) => (
@@ -205,7 +205,7 @@ export function KnowledgeDomainManager() {
                                 <select
                                     value={filterTag}
                                     onChange={(e) => setFilterTag(e.target.value)}
-                                    className="bg-[#2a2d2e] border border-[#3e3e42] rounded px-2 py-1 text-xs text-[#cccccc] focus:outline-none focus:border-[#0e639c]"
+                                    className="bg-[var(--color-bg-hover)] border border-[var(--color-border)] rounded px-2 py-1 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)]"
                                 >
                                     <option value="all">All Tags</option>
                                     {Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
@@ -222,7 +222,7 @@ export function KnowledgeDomainManager() {
                                 {hasActiveFilters && (
                                     <button
                                         onClick={() => { setFilterType('all'); setFilterTag('all'); }}
-                                        className="text-[10px] text-[#569cd6] hover:text-[#cccccc] transition-colors"
+                                        className="text-[10px] text-[var(--sw-cyan)] hover:text-[var(--color-text-primary)] transition-colors"
                                     >
                                         Clear filters
                                     </button>
@@ -233,7 +233,7 @@ export function KnowledgeDomainManager() {
                                 <Button
                                     onClick={() => setIsCreateOpen(true)}
                                     size="sm"
-                                    className="h-7 px-3 text-xs bg-[#0e639c] hover:bg-[#1177bb] text-white"
+                                    className="h-7 px-3 text-xs bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
                                 >
                                     <Plus className="w-3 h-3 mr-1" />
                                     Custom Domain
@@ -242,7 +242,7 @@ export function KnowledgeDomainManager() {
 
                             {/* Prebuilt domains grid */}
                             <div>
-                                <h5 className="text-xs font-medium text-[#808080] uppercase tracking-wider mb-2">
+                                <h5 className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
                                     Prebuilt Domains ({filteredPrebuilt.length})
                                 </h5>
                                 {filteredPrebuilt.length > 0 ? (
@@ -257,7 +257,7 @@ export function KnowledgeDomainManager() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-[#808080] py-2">
+                                    <p className="text-xs text-[var(--color-text-muted)] py-2">
                                         No prebuilt domains match the current filters.
                                     </p>
                                 )}
@@ -265,7 +265,7 @@ export function KnowledgeDomainManager() {
 
                             {/* Custom domains section */}
                             <div>
-                                <h5 className="text-xs font-medium text-[#808080] uppercase tracking-wider mb-2">
+                                <h5 className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
                                     Custom Domains ({filteredCustom.length})
                                 </h5>
                                 {filteredCustom.length > 0 ? (
@@ -281,7 +281,7 @@ export function KnowledgeDomainManager() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <p className="text-xs text-[#808080] py-2">
+                                    <p className="text-xs text-[var(--color-text-muted)] py-2">
                                         No custom domains yet. Click &quot;Custom Domain&quot; to create one.
                                     </p>
                                 )}
@@ -293,40 +293,40 @@ export function KnowledgeDomainManager() {
 
             {/* Create Custom Domain Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-                <DialogContent className="bg-[#252526] border-[#3e3e42] text-[#cccccc] max-w-md">
+                <DialogContent className="bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-primary)] max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="text-[#cccccc]">Create Custom Domain</DialogTitle>
+                        <DialogTitle className="text-[var(--color-text-primary)]">Create Custom Domain</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-2">
                         {/* Name */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-[#808080]">Name</Label>
+                            <Label className="text-xs text-[var(--color-text-muted)]">Name</Label>
                             <Input
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                                 placeholder="e.g., Heritage Construction Guide"
-                                className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc] placeholder:text-[#555] text-sm"
+                                className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)] placeholder:text-[#555] text-sm"
                             />
                         </div>
 
                         {/* Description */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-[#808080]">Description</Label>
+                            <Label className="text-xs text-[var(--color-text-muted)]">Description</Label>
                             <Input
                                 value={newDescription}
                                 onChange={(e) => setNewDescription(e.target.value)}
                                 placeholder="Brief description of this domain's purpose"
-                                className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc] placeholder:text-[#555] text-sm"
+                                className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)] placeholder:text-[#555] text-sm"
                             />
                         </div>
 
                         {/* Type */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-[#808080]">Domain Type</Label>
+                            <Label className="text-xs text-[var(--color-text-muted)]">Domain Type</Label>
                             <select
                                 value={newType}
                                 onChange={(e) => setNewType(e.target.value)}
-                                className="w-full bg-[#1e1e1e] border border-[#3e3e42] rounded-md px-3 py-2 text-sm text-[#cccccc] focus:outline-none focus:border-[#0e639c]"
+                                className="w-full bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-md px-3 py-2 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)]"
                             >
                                 {DOMAIN_TYPES.map((t) => (
                                     <option key={t} value={t}>
@@ -338,7 +338,7 @@ export function KnowledgeDomainManager() {
 
                         {/* Tags */}
                         <div className="space-y-1.5">
-                            <Label className="text-xs text-[#808080]">Tags</Label>
+                            <Label className="text-xs text-[var(--color-text-muted)]">Tags</Label>
                             {/* Selected tags */}
                             {newTags.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mb-1">
@@ -348,15 +348,15 @@ export function KnowledgeDomainManager() {
                                             className={`
                                                 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px]
                                                 ${isKnownTag(tag)
-                                                    ? 'bg-[#0e639c]/15 text-[#569cd6]'
-                                                    : 'bg-[#3e3e42] text-[#808080]'
+                                                    ? 'bg-[var(--color-accent-primary)]/15 text-[var(--sw-cyan)]'
+                                                    : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'
                                                 }
                                             `}
                                         >
                                             {tag}
                                             <button
                                                 onClick={() => removeTag(tag)}
-                                                className="hover:text-[#cccccc]"
+                                                className="hover:text-[var(--color-text-primary)]"
                                             >
                                                 <X className="w-2.5 h-2.5" />
                                             </button>
@@ -380,15 +380,15 @@ export function KnowledgeDomainManager() {
                                         }
                                     }}
                                     placeholder="Type to search tags..."
-                                    className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc] placeholder:text-[#555] text-sm"
+                                    className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)] placeholder:text-[#555] text-sm"
                                 />
                                 {showTagSuggestions && tagSuggestions.length > 0 && (
-                                    <div className="absolute z-10 w-full mt-1 bg-[#252526] border border-[#3e3e42] rounded-md shadow-lg max-h-32 overflow-auto">
+                                    <div className="absolute z-10 w-full mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-md shadow-lg max-h-32 overflow-auto">
                                         {tagSuggestions.map((tag) => (
                                             <button
                                                 key={tag}
                                                 onClick={() => addTag(tag)}
-                                                className="w-full text-left px-3 py-1.5 text-xs text-[#cccccc] hover:bg-[#2a2d2e] transition-colors"
+                                                className="w-full text-left px-3 py-1.5 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] transition-colors"
                                             >
                                                 {tag}
                                             </button>
@@ -403,7 +403,7 @@ export function KnowledgeDomainManager() {
                             variant="ghost"
                             size="sm"
                             onClick={() => { setIsCreateOpen(false); resetCreateForm(); }}
-                            className="text-[#808080] hover:text-[#cccccc]"
+                            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                         >
                             Cancel
                         </Button>
@@ -411,7 +411,7 @@ export function KnowledgeDomainManager() {
                             size="sm"
                             onClick={handleCreate}
                             disabled={!newName.trim() || isCreating}
-                            className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+                            className="bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
                         >
                             {isCreating ? (
                                 <>

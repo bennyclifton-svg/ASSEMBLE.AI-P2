@@ -32,6 +32,7 @@ import type { Editor } from '@tiptap/react';
 import type { ReportContentsType, GenerateContentResponse } from '@/types/notes-meetings-reports';
 import type { StakeholderGroup } from '@/types/stakeholder';
 import { markdownToHTML } from '@/lib/utils/report-formatting';
+import { REPORT_RECORD_ACCENT, RecordSectionHeading } from './RecordSectionHeading';
 
 function formatDisplayDate(dateString: string | null): string {
     if (!dateString) return 'dd/mm/yyyy';
@@ -60,13 +61,13 @@ interface ReportEditorProps {
     onPreparedForChange: (value: string | null) => Promise<void>;
     onPreparedByChange: (value: string | null) => Promise<void>;
     onReportingPeriodChange: (start: string | null, end: string | null) => Promise<void>;
+    accentColor?: string;
     className?: string;
 }
 
 export function ReportEditor({
     reportId,
     projectId,
-    contentsType,
     reportDate,
     title,
     onTitleChange,
@@ -74,11 +75,11 @@ export function ReportEditor({
     preparedBy,
     reportingPeriodStart,
     reportingPeriodEnd,
-    onContentsTypeChange,
     onReportDateChange,
     onPreparedForChange,
     onPreparedByChange,
     onReportingPeriodChange,
+    accentColor = REPORT_RECORD_ACCENT,
     className,
 }: ReportEditorProps) {
     const { report, isLoading: reportLoading } = useReport({ reportId });
@@ -408,39 +409,39 @@ export function ReportEditor({
     if (reportLoading) {
         return (
             <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-[var(--color-text-muted)]" />
+                <Loader2 className="h-6 w-6 animate-spin text-[var(--sw-muted)]" />
             </div>
         );
     }
 
     return (
-        <div className={cn('divide-y divide-[var(--color-border)]', className)}>
+        <div className={cn('divide-y divide-[var(--sw-rule-2)] text-[var(--sw-ink)]', className)}>
             {/* Project Info Header Table - TRR style */}
             {report?.project && (
-                <div className="overflow-hidden rounded-lg">
+                <div className="overflow-hidden border-b border-[var(--sw-rule-2)]">
                     <table className="w-full text-sm">
                         <tbody>
-                            <tr className="border-b border-[var(--color-border)]">
-                                <td className="w-36 px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                            <tr className="border-b border-[var(--sw-rule-2)]">
+                                <td className="w-36 px-4 py-2.5 font-medium" style={{ color: accentColor }}>
                                     Project Name
                                 </td>
-                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
+                                <td className="px-4 py-2.5 text-[var(--sw-ink)]" colSpan={2}>
                                     {report.project.name}
                                 </td>
                             </tr>
-                            <tr className="border-b border-[var(--color-border)]">
-                                <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                            <tr className="border-b border-[var(--sw-rule-2)]">
+                                <td className="px-4 py-2.5 font-medium" style={{ color: accentColor }}>
                                     Address
                                 </td>
-                                <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
+                                <td className="px-4 py-2.5 text-[var(--sw-ink)]" colSpan={2}>
                                     {report.project.address || '-'}
                                 </td>
                             </tr>
                             <tr>
-                                <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                                <td className="px-4 py-2.5 font-medium" style={{ color: accentColor }}>
                                     Document
                                 </td>
-                                <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
+                                <td className="px-4 py-2.5 font-semibold text-[var(--sw-ink)]">
                                     {isEditingTitle ? (
                                         <Input
                                             value={localTitle}
@@ -449,12 +450,12 @@ export function ReportEditor({
                                             onKeyDown={handleTitleKeyDown}
                                             autoFocus
                                             ref={titleInputRef}
-                                            className="h-7 text-sm font-semibold bg-transparent border-[var(--color-border)] focus:border-[var(--color-accent-copper)]"
+                                            className="h-7 rounded-none border-[var(--sw-rule)] bg-white text-sm font-semibold focus-visible:ring-0 focus-visible:ring-offset-0"
                                         />
                                     ) : (
                                         <span
                                             onClick={handleTitleClick}
-                                            className="cursor-pointer hover:text-[var(--color-accent-copper)] transition-colors"
+                                            className="cursor-pointer transition-colors hover:text-[var(--sw-rose-dk)]"
                                             title="Click to edit title"
                                         >
                                             {title}
@@ -462,11 +463,12 @@ export function ReportEditor({
                                     )}
                                 </td>
                                 <td
-                                    className="px-4 py-2.5 text-[var(--color-document-header)] font-medium cursor-pointer relative whitespace-nowrap text-right"
+                                    className="relative cursor-pointer whitespace-nowrap px-4 py-2.5 text-right font-medium"
+                                    style={{ color: accentColor }}
                                     onClick={handleDateClick}
                                 >
                                     <span className="select-none">
-                                        <span className="text-[var(--color-document-header)] font-medium">Issued</span>
+                                        <span className="font-medium">Issued</span>
                                         <span className="ml-4">{formatDisplayDate(reportDate)}</span>
                                     </span>
                                     <input
@@ -486,6 +488,10 @@ export function ReportEditor({
 
             {/* Report Metadata */}
             <div className="px-4 py-3 space-y-3">
+                <RecordSectionHeading accentColor={accentColor}>
+                    Report Metadata
+                </RecordSectionHeading>
+
                 {/* Reporting Period */}
                 <DateRangePicker
                     startDate={reportingPeriodStart}
@@ -497,7 +503,7 @@ export function ReportEditor({
 
                 {/* Prepared For */}
                 <div className="flex items-center gap-3">
-                    <Label className="text-sm text-[var(--color-text-muted)] min-w-[100px]">
+                    <Label className="min-w-[100px] text-sm text-[var(--sw-muted)]">
                         <User className="h-4 w-4 inline mr-1.5" />
                         Prepared For:
                     </Label>
@@ -505,13 +511,13 @@ export function ReportEditor({
                         value={preparedFor || ''}
                         onChange={(e) => onPreparedForChange(e.target.value || null)}
                         placeholder="Enter recipient name or organization"
-                        className="flex-1 max-w-md"
+                        className="max-w-md flex-1 rounded-none border-[var(--sw-rule)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                 </div>
 
                 {/* Prepared By */}
                 <div className="flex items-center gap-3">
-                    <Label className="text-sm text-[var(--color-text-muted)] min-w-[100px]">
+                    <Label className="min-w-[100px] text-sm text-[var(--sw-muted)]">
                         <UserCircle className="h-4 w-4 inline mr-1.5" />
                         Prepared By:
                     </Label>
@@ -519,7 +525,7 @@ export function ReportEditor({
                         value={preparedBy || ''}
                         onChange={(e) => onPreparedByChange(e.target.value || null)}
                         placeholder="Enter author name"
-                        className="flex-1 max-w-md"
+                        className="max-w-md flex-1 rounded-none border-[var(--sw-rule)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                 </div>
             </div>
@@ -527,9 +533,9 @@ export function ReportEditor({
             {/* Distribution List (Stakeholders) */}
             <div className="px-4 py-3">
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Distribution List:
-                    </h3>
+                    <RecordSectionHeading accentColor={accentColor}>
+                        Distribution List
+                    </RecordSectionHeading>
                     <MeetingStakeholderSelector
                         onSelectGroup={handleSelectGroup}
                         onAddAdhoc={() => setIsAddingAdhoc(true)}
@@ -541,12 +547,12 @@ export function ReportEditor({
                 {/* Feedback message */}
                 {groupFeedback && (
                     <div className={cn(
-                        'mb-3 px-3 py-2 rounded-md text-sm',
+                        'mb-3 border px-3 py-2 text-sm',
                         groupFeedback.includes('No ') || groupFeedback.includes('Failed')
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            ? 'border-[var(--sw-peach)] bg-[rgba(245,164,114,0.12)] text-[var(--sw-ink)]'
                             : groupFeedback.includes('already')
-                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                                : 'bg-green-500/10 text-green-600 dark:text-green-400'
+                                ? 'border-[var(--sw-cyan)] bg-[rgba(122,184,194,0.12)] text-[var(--sw-ink)]'
+                                : 'border-[var(--sw-lav)] bg-[rgba(168,156,217,0.12)] text-[var(--sw-ink)]'
                     )}>
                         {groupFeedback}
                     </div>
@@ -554,7 +560,7 @@ export function ReportEditor({
 
                 {/* Loading indicator for adding group */}
                 {isAddingGroup && (
-                    <div className="mb-3 flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                    <div className="mb-3 flex items-center gap-2 text-sm text-[var(--sw-muted)]">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>Adding stakeholders...</span>
                     </div>
@@ -562,22 +568,24 @@ export function ReportEditor({
 
                 {/* Ad-hoc Form */}
                 {isAddingAdhoc && (
-                    <div className="mb-3 p-3 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-secondary)]">
+                    <div className="mb-3 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-3">
                         <div className="grid grid-cols-3 gap-2 mb-2">
                             <Input
                                 placeholder="Name *"
                                 value={adhocForm.adhocName}
                                 onChange={(e) => setAdhocForm(f => ({ ...f, adhocName: e.target.value }))}
+                                className="rounded-none border-[var(--sw-rule)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0"
                             />
                             <Input
                                 placeholder="Firm"
                                 value={adhocForm.adhocFirm}
                                 onChange={(e) => setAdhocForm(f => ({ ...f, adhocFirm: e.target.value }))}
+                                className="rounded-none border-[var(--sw-rule)] bg-white focus-visible:ring-0 focus-visible:ring-offset-0"
                             />
                             <select
                                 value={adhocForm.adhocGroup}
                                 onChange={(e) => setAdhocForm(f => ({ ...f, adhocGroup: e.target.value as StakeholderGroup }))}
-                                className="h-9 px-3 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] text-sm"
+                                className="h-9 border border-[var(--sw-rule)] bg-white px-3 text-sm outline-none"
                             >
                                 <option value="">Select group</option>
                                 <option value="client">Client</option>
@@ -591,6 +599,7 @@ export function ReportEditor({
                                 size="sm"
                                 onClick={handleAddAdhoc}
                                 disabled={!adhocForm.adhocName.trim()}
+                                className="rounded-none bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-rose-dk)]"
                             >
                                 <Plus className="h-4 w-4 mr-1" />
                                 Add
@@ -602,6 +611,7 @@ export function ReportEditor({
                                     setIsAddingAdhoc(false);
                                     setAdhocForm({ adhocName: '', adhocFirm: '', adhocGroup: '' });
                                 }}
+                                className="rounded-none border border-[var(--sw-rule)] bg-transparent text-[var(--sw-ink)] hover:bg-white"
                             >
                                 Cancel
                             </Button>
@@ -621,15 +631,15 @@ export function ReportEditor({
             {/* Contents Section */}
             <div className="px-4 py-3">
                 <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-medium text-[var(--color-text-primary)]">
-                        Contents:
-                    </h3>
+                    <RecordSectionHeading accentColor={accentColor}>
+                        Contents
+                    </RecordSectionHeading>
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setIsSectionDialogOpen(true)}
                         disabled={isSyncingSections}
-                        className="h-8 gap-1.5"
+                        className="h-8 gap-1.5 rounded-none border-[var(--sw-rule)] bg-transparent text-[var(--sw-ink)] hover:bg-white"
                     >
                         {isSyncingSections ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -642,20 +652,20 @@ export function ReportEditor({
 
                 {sectionsLoading || isSyncingSections ? (
                     <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-5 w-5 animate-spin text-[var(--color-text-muted)]" />
-                        <span className="ml-2 text-sm text-[var(--color-text-muted)]">
+                        <Loader2 className="h-5 w-5 animate-spin text-[var(--sw-muted)]" />
+                        <span className="ml-2 text-sm text-[var(--sw-muted)]">
                             {isSyncingSections ? 'Updating sections...' : 'Loading...'}
                         </span>
                     </div>
                 ) : topLevelSections.length === 0 ? (
-                    <div className="text-sm text-[var(--color-text-muted)] py-4 text-center border border-dashed border-[var(--color-border)] rounded-md">
+                    <div className="border border-dashed border-[var(--sw-rule)] py-4 text-center text-sm text-[var(--sw-muted)]">
                         No content sections. Click &quot;Select Sections&quot; to choose which sections to include.
                     </div>
                 ) : (
                     <>
                         {/* Source count indicator */}
                         {lastSourceInfo && (
-                            <div className="mb-2 flex items-center gap-2 text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-secondary)] px-3 py-2 rounded-md">
+                            <div className="mb-2 flex items-center gap-2 border border-[var(--sw-rule)] bg-[var(--sw-paper)] px-3 py-2 text-xs text-[var(--sw-muted)]">
                                 <FileText className="h-3.5 w-3.5" />
                                 <span>
                                     Generated using {lastSourceInfo.notes} starred note{lastSourceInfo.notes !== 1 ? 's' : ''} and {lastSourceInfo.procurementDocs} procurement doc{lastSourceInfo.procurementDocs !== 1 ? 's' : ''}
@@ -663,14 +673,14 @@ export function ReportEditor({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-5 w-5 ml-auto"
+                                    className="ml-auto h-5 w-5 rounded-none hover:bg-white"
                                     onClick={() => setLastSourceInfo(null)}
                                 >
                                     <X className="h-3 w-3" />
                                 </Button>
                             </div>
                         )}
-                        <div className="border border-[var(--color-border)] rounded-md overflow-hidden">
+                        <div className="overflow-hidden border border-[var(--sw-rule)]">
                             {topLevelSections.map((section) => (
                                 <ReportContentsSection
                                     key={section.id}
@@ -684,6 +694,7 @@ export function ReportEditor({
                                     isGenerating={generatingSectionId === section.id}
                                     isPolishing={polishingSectionId === section.id}
                                     isExecuting={executingSectionId === section.id}
+                                    accentColor={accentColor}
                                 />
                             ))}
                         </div>

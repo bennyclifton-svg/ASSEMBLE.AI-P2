@@ -14,10 +14,11 @@
  * Standalone for now (Task 2). Wiring into BriefPanel happens in Task 5.
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ArrowUpRight, RotateCw } from 'lucide-react';
 import type { ProfileInput } from '@/types/profiler';
+import type { ObjectiveType } from '@/lib/db/objectives-schema';
+import type { ObjectiveRow } from '@/components/profiler/objectives/ObjectivesWorkspace';
 
 const muted = 'var(--sw-muted)';
 
@@ -57,11 +58,11 @@ interface BriefPreviewPaneProps {
     refreshKey?: number;
 }
 
-interface NormalizedObjective {
-    id: string;
-    text: string;
-    category: string;
-}
+type GroupedObjectives = Record<ObjectiveType, ObjectiveRow[]>;
+
+type ViewMode = 'short' | 'long';
+
+const SECTION_ORDER: ObjectiveType[] = ['planning', 'functional', 'quality', 'compliance'];
 
 type ObjectivesStatus = 'loading' | 'ready' | 'error';
 
@@ -70,13 +71,13 @@ type ObjectivesStatus = 'loading' | 'ready' | 'error';
 //   - POST /api/projects/[projectId]/objectives/generate (fresh AI batch)
 // Both wrap `data` keyed by objectiveType ('planning' | 'functional' |
 // 'quality' | 'compliance') with arrays of projectObjectives rows. The GET
-// envelope additionally carries `snapshots`, `projectType`, and
-// `hasAttachedDocuments` — we ignore those here, but tolerate their presence.
+// envelope additionally carries `snapshots`, `projectType`,
+// `hasAttachedDocuments`, and `attachedDocumentCount` — only the count is
+// surfaced (in the Sources footer); the rest are tolerated but ignored.
 interface ObjectivesResponse {
     success?: boolean;
-    data?: Record<string, Array<{ id?: string; text?: string; category?: string | null; objectiveType?: string }>>;
-    // Defensive: some shapes may return a flat `objectives` array.
-    objectives?: Array<{ id?: string; text?: string; category?: string | null; objectiveType?: string }>;
+    data?: Partial<Record<ObjectiveType, ObjectiveRow[]>>;
+    attachedDocumentCount?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -228,39 +229,27 @@ function tagAccentFor(category: string | null | undefined): string {
     }
 }
 
+function emptyGrouped(): GroupedObjectives {
+    return { planning: [], functional: [], quality: [], compliance: [] };
+}
+
 /**
- * Normalize the generate-objectives API response into a flat array.
- * Handles both the actual shape (`data: { planning: [], functional: [], ... }`)
- * and a defensive fallback (`objectives: []`).
+ * Extract the grouped-by-section shape from the GET / generate response.
+ * Defaults each section to an empty array if missing from the payload.
  */
-function normalizeObjectives(payload: ObjectivesResponse): NormalizedObjective[] {
-    const out: NormalizedObjective[] = [];
-
-    if (payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object') {
-        for (const [type, rows] of Object.entries(payload.data)) {
-            if (!Array.isArray(rows)) continue;
-            for (const row of rows) {
-                if (!row?.text) continue;
-                out.push({
-                    id: row.id ?? '',
-                    text: String(row.text),
-                    // Prefer the row's category field; fall back to the section key.
-                    category: (row.category ?? row.objectiveType ?? type) || '',
-                });
-            }
-        }
-    } else if (Array.isArray(payload?.objectives)) {
-        for (const row of payload.objectives) {
-            if (!row?.text) continue;
-            out.push({
-                id: row.id ?? '',
-                text: String(row.text),
-                category: (row.category ?? row.objectiveType ?? '') || '',
-            });
-        }
+function extractGrouped(payload: ObjectivesResponse): GroupedObjectives {
+    const out = emptyGrouped();
+    const data = payload?.data;
+    if (!data || typeof data !== 'object') return out;
+    for (const type of SECTION_ORDER) {
+        const rows = data[type];
+        if (Array.isArray(rows)) out[type] = rows;
     }
-
     return out;
+}
+
+function totalCount(grouped: GroupedObjectives): number {
+    return SECTION_ORDER.reduce((n, t) => n + grouped[t].length, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -280,10 +269,59 @@ export function BriefPreviewPane({ projectId, projectName, profile, refreshKey =
     }, [refreshKey]);
 
     // Objectives fetch state machine.
-    const [objectives, setObjectives] = useState<NormalizedObjective[]>([]);
+    const [grouped, setGrouped] = useState<GroupedObjectives>(emptyGrouped);
+    const [attachedDocumentCount, setAttachedDocumentCount] = useState(0);
+    const [viewModes, setViewModes] = useState<Record<ObjectiveType, ViewMode>>({
+        planning: 'short',
+        functional: 'short',
+        quality: 'short',
+        compliance: 'short',
+    });
+    const [generatingSection, setGeneratingSection] = useState<ObjectiveType | null>(null);
     const [status, setStatus] = useState<ObjectivesStatus>('loading');
     const [retryNonce, setRetryNonce] = useState(0);
 
+    // Sources footer — count populated profile fields client-side. Mirrors
+    // what the inference engine will actually feed into objective generation.
+    const profileFieldsCount = useMemo(() => {
+        let n = 0;
+        if (profile.buildingClass) n++;
+        if (profile.projectType) n++;
+        if (profile.subclass && profile.subclass.length > 0) n++;
+        if (profile.region) n++;
+        if (profile.scaleData) {
+            for (const v of Object.values(profile.scaleData)) {
+                if (v === null || v === undefined) continue;
+                if (typeof v === 'string' && v === '') continue;
+                n++;
+            }
+        }
+        if (profile.complexity) {
+            for (const v of Object.values(profile.complexity)) {
+                if (Array.isArray(v) ? v.length > 0 : v != null && v !== '') n++;
+            }
+        }
+        if (profile.workScope && profile.workScope.length > 0) n++;
+        return n;
+    }, [profile]);
+
+    // Apply a fresh grouped payload to state and seed initial view modes:
+    // any section with at least one polished row opens in Long; otherwise Short.
+    const applyGrouped = useCallback((next: GroupedObjectives) => {
+        setGrouped(next);
+        setViewModes((prev) => {
+            const updated = { ...prev };
+            for (const type of SECTION_ORDER) {
+                const hasPolished = next[type].some((r) => Boolean(r.textPolished));
+                updated[type] = hasPolished ? 'long' : 'short';
+            }
+            return updated;
+        });
+    }, []);
+
+    // Fetch objectives once per (projectId, retryNonce, refreshKey). Keeping
+    // applyGrouped out of the dep list is intentional: it's a stable useCallback
+    // and including it would re-fire fetches whenever React re-creates it.
     useEffect(() => {
         let cancelled = false;
         setStatus('loading');
@@ -309,9 +347,10 @@ export function BriefPreviewPane({ projectId, projectName, profile, refreshKey =
                 const getJson: ObjectivesResponse = await getRes.json();
                 if (cancelled) return;
 
-                const existing = normalizeObjectives(getJson);
-                if (existing.length > 0) {
-                    setObjectives(existing);
+                const existing = extractGrouped(getJson);
+                if (totalCount(existing) > 0) {
+                    applyGrouped(existing);
+                    setAttachedDocumentCount(getJson.attachedDocumentCount ?? 0);
                     setStatus('ready');
                     return;
                 }
@@ -326,7 +365,10 @@ export function BriefPreviewPane({ projectId, projectName, profile, refreshKey =
                 const postJson: ObjectivesResponse = await postRes.json();
                 if (cancelled) return;
 
-                setObjectives(normalizeObjectives(postJson));
+                applyGrouped(extractGrouped(postJson));
+                // Generate response doesn't include the attached-doc count, so
+                // re-use the GET payload (the source-of-truth for that field).
+                setAttachedDocumentCount(getJson.attachedDocumentCount ?? 0);
                 setStatus('ready');
             } catch {
                 if (!cancelled) setStatus('error');
@@ -336,7 +378,49 @@ export function BriefPreviewPane({ projectId, projectName, profile, refreshKey =
         return () => {
             cancelled = true;
         };
-    }, [projectId, retryNonce, refreshKey]);
+    }, [projectId, retryNonce, refreshKey, applyGrouped]);
+
+    // Per-row regenerate. Mirrors ObjectivesWorkspace.runRegenerate:
+    //   short → /objectives/generate (destructive replace)
+    //   long  → /objectives/polish   (polishes existing short bullets)
+    // No dirty-edit confirmation here — the brief is read-only; edits live in
+    // the Objectives tab.
+    const handleRegenerate = useCallback(async (type: ObjectiveType) => {
+        if (generatingSection) return;
+        const mode = viewModes[type];
+        setGeneratingSection(type);
+        try {
+            const url = mode === 'short'
+                ? `/api/projects/${projectId}/objectives/generate`
+                : `/api/projects/${projectId}/objectives/polish`;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ section: type }),
+            });
+            if (!res.ok) return;
+            // Re-fetch the full grouped state — the generate/polish responses
+            // only cover the regenerated section, but a clean GET keeps the
+            // rest in sync without juggling per-section merges.
+            const getRes = await fetch(`/api/projects/${projectId}/objectives`);
+            if (!getRes.ok) return;
+            const getJson: ObjectivesResponse = await getRes.json();
+            const next = extractGrouped(getJson);
+            setGrouped(next);
+            setAttachedDocumentCount(getJson.attachedDocumentCount ?? 0);
+            // Long-mode regenerate produces polished content — flip the view
+            // to Long so the user sees what they just generated.
+            if (mode === 'long') {
+                setViewModes((prev) => ({ ...prev, [type]: 'long' }));
+            }
+        } finally {
+            setGeneratingSection(null);
+        }
+    }, [generatingSection, projectId, viewModes]);
+
+    const handleViewModeChange = useCallback((type: ObjectiveType, mode: ViewMode) => {
+        setViewModes((prev) => ({ ...prev, [type]: mode }));
+    }, []);
 
     return (
         <div className="flex flex-col gap-3">
@@ -419,36 +503,6 @@ export function BriefPreviewPane({ projectId, projectName, profile, refreshKey =
                 aria-busy={status === 'loading'}
                 style={{ background: 'white', border: '1px solid var(--sw-rule)' }}
             >
-                <div
-                    className="flex items-center justify-between px-4 py-2.5"
-                    style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
-                >
-                    <span
-                        style={{
-                            fontFamily: 'var(--sw-font-mono)',
-                            fontSize: 10,
-                            letterSpacing: '0.18em',
-                            textTransform: 'uppercase',
-                            color: muted,
-                            fontWeight: 600,
-                        }}
-                    >
-                        Inferred objectives · {status === 'ready' ? Math.min(objectives.length, 6) : 6}
-                    </span>
-                    {status === 'ready' && objectives.length > 0 ? (
-                        <span
-                            style={{
-                                fontFamily: 'var(--sw-font-mono)',
-                                fontSize: 10,
-                                color: 'var(--sw-rose-dk)',
-                                letterSpacing: '0.05em',
-                            }}
-                        >
-                            0 reviewed · {Math.min(objectives.length, 6)} pending
-                        </span>
-                    ) : null}
-                </div>
-
                 {status === 'loading' ? <ObjectivesSkeleton /> : null}
 
                 {status === 'error' ? (
@@ -456,12 +510,24 @@ export function BriefPreviewPane({ projectId, projectName, profile, refreshKey =
                 ) : null}
 
                 {status === 'ready' ? (
-                    <ObjectivesList items={objectives.slice(0, 6)} />
+                    <CategoryRows
+                        grouped={grouped}
+                        viewModes={viewModes}
+                        generatingSection={generatingSection}
+                        onViewModeChange={handleViewModeChange}
+                        onRegenerate={handleRegenerate}
+                    />
                 ) : null}
             </section>
 
-            {/* 4. Sources footer ------------------------------------------------- */}
-            {/* TODO: replace with real source counts when /api/projects/[id]/brief/generate lands */}
+            {/* 4. Sources footer -------------------------------------------------
+                Wired counts (attached docs, profile fields) reflect what the
+                objectives generator actually consumes today. The knowledge
+                library segment + view-trace link are intentional ghost
+                placeholders — kept visible at reduced opacity so the user
+                sees the full set of inputs that *will* feed into brief
+                generation once those sources are wired.
+                ------------------------------------------------------------- */}
             <div
                 className="flex items-center justify-between px-3 py-2.5"
                 style={{
@@ -475,15 +541,16 @@ export function BriefPreviewPane({ projectId, projectName, profile, refreshKey =
             >
                 <span>
                     <span style={{ color: 'var(--sw-rose-dk)' }}>// SOURCES</span>{' '}
-                    attached docs (3) · profile fields (12) · knowledge library (6)
+                    attached docs ({attachedDocumentCount}) · profile fields ({profileFieldsCount}) ·{' '}
+                    <span style={{ opacity: 0.45 }}>knowledge library (—)</span>
                 </span>
-                <Link
-                    href="#"
+                <span
                     className="inline-flex items-center gap-1"
-                    style={{ color: 'var(--sw-ink)' }}
+                    style={{ color: muted, opacity: 0.45 }}
+                    title="Trace view not yet available"
                 >
                     view trace <ArrowUpRight className="w-3 h-3" />
-                </Link>
+                </span>
             </div>
         </div>
     );
@@ -495,46 +562,52 @@ export function BriefPreviewPane({ projectId, projectName, profile, refreshKey =
 
 function ObjectivesSkeleton() {
     return (
-        <ul className="m-0 p-0">
-            {Array.from({ length: 6 }).map((_, i) => (
-                <li
-                    key={i}
-                    className="grid items-center gap-3 px-4 py-2.5"
-                    style={{
-                        gridTemplateColumns: '60px 1fr 110px',
-                        borderBottom: i < 5 ? '1px solid var(--sw-rule-2)' : 'none',
-                    }}
-                >
-                    <span
-                        style={{
-                            fontFamily: 'var(--sw-font-mono)',
-                            fontSize: 11,
-                            color: muted,
-                            letterSpacing: '0.02em',
-                        }}
+        <div>
+            {SECTION_ORDER.map((type, i) => {
+                const accent = tagAccentFor(type);
+                const isLast = i === SECTION_ORDER.length - 1;
+                return (
+                    <div
+                        key={type}
+                        style={{ borderBottom: isLast ? 'none' : '1px solid var(--sw-rule-2)' }}
                     >
-                        OBJ-0{i + 1}
-                    </span>
-                    <span
-                        className="animate-pulse"
-                        style={{
-                            height: 12,
-                            background: 'var(--sw-rule-2)',
-                            opacity: 0.7,
-                        }}
-                    />
-                    <span
-                        className="animate-pulse justify-self-end"
-                        style={{
-                            width: 80,
-                            height: 14,
-                            background: 'var(--sw-rule-2)',
-                            opacity: 0.7,
-                        }}
-                    />
-                </li>
-            ))}
-        </ul>
+                        <div
+                            className="flex items-center justify-between px-4 py-2"
+                            style={{ borderLeft: `3px solid ${accent}` }}
+                        >
+                            <span
+                                className="animate-pulse"
+                                style={{
+                                    width: 80,
+                                    height: 12,
+                                    background: 'var(--sw-rule-2)',
+                                    opacity: 0.7,
+                                }}
+                            />
+                            <span
+                                className="animate-pulse"
+                                style={{
+                                    width: 110,
+                                    height: 18,
+                                    background: 'var(--sw-rule-2)',
+                                    opacity: 0.7,
+                                }}
+                            />
+                        </div>
+                        <div className="px-4 py-2.5">
+                            <span
+                                className="animate-pulse block"
+                                style={{
+                                    height: 12,
+                                    background: 'var(--sw-rule-2)',
+                                    opacity: 0.7,
+                                }}
+                            />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
     );
 }
 
@@ -576,68 +649,184 @@ function ObjectivesError({ onRetry }: { onRetry: () => void }) {
     );
 }
 
-function ObjectivesList({ items }: { items: NormalizedObjective[] }) {
-    if (items.length === 0) {
-        return (
-            <div
-                className="px-4 py-3"
-                style={{
-                    fontFamily: 'var(--sw-font-mono)',
-                    fontSize: 11,
-                    color: muted,
-                    letterSpacing: '0.02em',
-                }}
-            >
-                No objectives generated yet.
-            </div>
-        );
-    }
+interface CategoryRowsProps {
+    grouped: GroupedObjectives;
+    viewModes: Record<ObjectiveType, ViewMode>;
+    generatingSection: ObjectiveType | null;
+    onViewModeChange: (type: ObjectiveType, mode: ViewMode) => void;
+    onRegenerate: (type: ObjectiveType) => void;
+}
+
+function CategoryRows({
+    grouped,
+    viewModes,
+    generatingSection,
+    onViewModeChange,
+    onRegenerate,
+}: CategoryRowsProps) {
+    const isAnyGenerating = generatingSection !== null;
+    // Continuous numbering across sections — matches the Objectives tab's
+    // global counter (Planning starts at 1; Functional continues from where
+    // Planning ended; etc.).
+    let runningCounter = 1;
     return (
-        <ul className="m-0 p-0">
-            {items.map((o, i) => {
-                const accent = tagAccentFor(o.category);
-                const code = `OBJ-${String(i + 1).padStart(2, '0')}`;
-                const tag = (o.category || 'OBJECTIVE').toUpperCase();
+        <div>
+            {SECTION_ORDER.map((type, i) => {
+                const rows = grouped[type];
+                const accent = tagAccentFor(type);
+                const tag = type.toUpperCase();
+                const mode = viewModes[type];
+                const isGenerating = generatingSection === type;
+                const isLast = i === SECTION_ORDER.length - 1;
+                const sectionStart = runningCounter;
+                runningCounter += rows.length;
                 return (
-                    <li
-                        key={o.id || `${i}-${code}`}
-                        className="grid items-baseline gap-3 px-4 py-2.5"
-                        style={{
-                            gridTemplateColumns: '60px 1fr 110px',
-                            borderBottom: i < items.length - 1 ? '1px solid var(--sw-rule-2)' : 'none',
-                        }}
+                    <div
+                        key={type}
+                        style={{ borderBottom: isLast ? 'none' : '1px solid var(--sw-rule-2)' }}
                     >
-                        <span
-                            style={{
-                                fontFamily: 'var(--sw-font-mono)',
-                                fontSize: 11,
-                                color: muted,
-                                letterSpacing: '0.02em',
-                            }}
+                        {/* Section header bar: PLANNING / FUNCTIONAL / QUALITY / COMPLIANCE
+                            on the left, Short/Long/Refresh on the right. */}
+                        <div
+                            className="flex items-center justify-between px-4 py-2"
+                            style={{ borderLeft: `3px solid ${accent}` }}
                         >
-                            {code}
-                        </span>
-                        <span style={{ fontSize: 13, color: 'var(--sw-ink)', lineHeight: 1.4 }}>
-                            {o.text}
-                        </span>
-                        <span
-                            className="justify-self-end inline-flex items-center gap-1.5 px-1.5 py-0.5"
-                            style={{
-                                fontFamily: 'var(--sw-font-mono)',
-                                fontSize: 9,
-                                fontWeight: 700,
-                                letterSpacing: '0.18em',
-                                color: accent,
-                                background: `${accent}15`,
-                                border: `1px solid ${accent}33`,
-                            }}
-                        >
-                            <span style={{ width: 6, height: 6, background: accent, flexShrink: 0 }} />
-                            {tag}
-                        </span>
-                    </li>
+                            <span
+                                style={{
+                                    fontFamily: 'var(--sw-font-mono)',
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.18em',
+                                    color: accent,
+                                }}
+                            >
+                                {tag}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                                <div
+                                    role="group"
+                                    aria-label="View mode"
+                                    className="inline-flex items-center"
+                                    style={{
+                                        border: '1px solid var(--sw-rule)',
+                                        fontFamily: 'var(--sw-font-mono)',
+                                        fontSize: 10,
+                                        letterSpacing: '0.05em',
+                                    }}
+                                >
+                                    <ViewModeButton
+                                        label="Short"
+                                        active={mode === 'short'}
+                                        onClick={() => onViewModeChange(type, 'short')}
+                                    />
+                                    <ViewModeButton
+                                        label="Long"
+                                        active={mode === 'long'}
+                                        onClick={() => onViewModeChange(type, 'long')}
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => onRegenerate(type)}
+                                    disabled={isAnyGenerating}
+                                    title={`Regenerate ${mode} ${type}`}
+                                    aria-label={`Refresh ${type} objectives`}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '1px solid var(--sw-rule)',
+                                        padding: '3px 5px',
+                                        color: isAnyGenerating ? muted : 'var(--sw-rose-dk)',
+                                        cursor: isAnyGenerating ? 'not-allowed' : 'pointer',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                    }}
+                                >
+                                    <RotateCw
+                                        className={isGenerating ? 'animate-spin' : ''}
+                                        style={{ width: 12, height: 12 }}
+                                    />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Section body: rendered objectives, full width. */}
+                        <div className="flex flex-col gap-1.5 px-4 py-2.5">
+                            {rows.length === 0 ? (
+                                <span
+                                    style={{
+                                        fontFamily: 'var(--sw-font-mono)',
+                                        fontSize: 11,
+                                        color: muted,
+                                        letterSpacing: '0.02em',
+                                    }}
+                                >
+                                    No objectives
+                                </span>
+                            ) : (
+                                rows.map((row, j) => {
+                                    const text = mode === 'long' && row.textPolished
+                                        ? row.textPolished
+                                        : row.text;
+                                    return (
+                                        <p
+                                            key={row.id}
+                                            className="m-0 flex gap-2"
+                                            style={{
+                                                fontSize: 13,
+                                                color: 'var(--sw-ink)',
+                                                lineHeight: 1.4,
+                                            }}
+                                        >
+                                            <span
+                                                style={{
+                                                    fontFamily: 'var(--sw-font-mono)',
+                                                    fontSize: 11,
+                                                    color: muted,
+                                                    flexShrink: 0,
+                                                    minWidth: 18,
+                                                }}
+                                            >
+                                                {sectionStart + j}.
+                                            </span>
+                                            <span>{text}</span>
+                                        </p>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
                 );
             })}
-        </ul>
+        </div>
+    );
+}
+
+function ViewModeButton({
+    label,
+    active,
+    onClick,
+}: {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            style={{
+                background: active ? 'var(--sw-rose-tint)' : 'transparent',
+                color: active ? 'var(--sw-rose-dk)' : muted,
+                border: 'none',
+                padding: '3px 8px',
+                fontFamily: 'inherit',
+                fontSize: 'inherit',
+                letterSpacing: 'inherit',
+                cursor: 'pointer',
+                fontWeight: active ? 700 : 500,
+            }}
+        >
+            {label}
+        </button>
     );
 }

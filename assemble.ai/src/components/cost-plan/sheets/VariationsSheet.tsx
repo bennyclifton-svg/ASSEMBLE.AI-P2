@@ -33,8 +33,8 @@ const Workbook = dynamic(
 
 function SheetLoading() {
   return (
-    <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
-      <div className="text-sm text-[#858585]">Loading variations...</div>
+    <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
+      <div className="text-sm text-[var(--color-text-muted)]">Loading variations...</div>
     </div>
   );
 }
@@ -46,9 +46,9 @@ type RowMapping = Array<{
 
 // Category colors
 const CATEGORY_COLORS: Record<VariationCategory, string> = {
-  Principal: '#6B9BD1',    // Blue
-  Contractor: '#D4A574',   // Orange/amber
-  'Lessor Works': '#9F7AEA', // Purple
+  Principal: 'var(--sw-cyan)',    // Blue
+  Contractor: 'var(--sw-peach)',   // Orange/amber
+  'Lessor Works': 'var(--sw-lav)', // Purple
 };
 
 // Status colors
@@ -185,14 +185,14 @@ export function VariationsSheet({
       />
       <style jsx global>{`
         .fortune-sheet-container {
-          --fortune-sheet-bg: #1e1e1e;
+          --fortune-sheet-bg: var(--color-bg-primary);
         }
         .fortune-sheet-container .luckysheet {
-          background-color: #1e1e1e !important;
+          background-color: var(--color-bg-primary) !important;
         }
         .fortune-sheet-container .luckysheet-cell-input {
-          background-color: #252526 !important;
-          color: #cccccc !important;
+          background-color: var(--color-bg-secondary) !important;
+          color: var(--color-text-primary) !important;
         }
       `}</style>
     </div>

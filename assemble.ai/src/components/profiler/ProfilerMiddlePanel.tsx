@@ -102,21 +102,27 @@ function arraysMatch(a: string[], b: string[]): boolean {
 // (greenfield, sloping, bushfire, etc.) that can co-exist on one site.
 const MULTI_SELECT_COMPLEXITY = new Set<string>(['site_conditions']);
 
-// ---- Per-dimension chip accent colours (matches the wireframe). ----
-const DIMENSION_ACCENT: Record<string, string> = {
-  quality_tier: 'var(--sw-peach)',
-  site_conditions: 'var(--sw-amber)',
-  heritage: 'var(--sw-amber)',
-  approval_pathway: 'var(--sw-cyan)',
-  contamination_level: 'var(--sw-amber)',
-  access_constraints: 'var(--sw-cyan)',
-  operational_constraints: 'var(--sw-cyan)',
-  procurement_route: 'var(--sw-lav)',
-  stakeholder_complexity: 'var(--sw-lav)',
-  environmental_sensitivity: 'var(--sw-amber)',
+// All Complexity dimensions share the same accent — keeps the card calm and
+// reinforces that complexity is one composite axis. Peach/orange chosen to
+// echo the AggregateSlider thumb colour above the chips.
+const COMPLEXITY_ACCENT = 'var(--sw-peach)';
+function dimensionAccent(_key: string): string {
+  return COMPLEXITY_ACCENT;
+}
+
+// Short labels for the Complexity card's left column. Falls back to formatKey().
+const DIMENSION_LABEL: Record<string, string> = {
+  quality_tier: 'Quality',
+  site_conditions: 'Site',
+  contamination_level: 'Contamination',
+  access_constraints: 'Access',
+  operational_constraints: 'Operational',
+  procurement_route: 'Procurement',
+  stakeholder_complexity: 'Stakeholder',
+  environmental_sensitivity: 'Environmental',
 };
-function dimensionAccent(key: string): string {
-  return DIMENSION_ACCENT[key] ?? 'var(--sw-ink)';
+function dimensionLabel(key: string): string {
+  return DIMENSION_LABEL[key] ?? formatKey(key);
 }
 
 // ---- Project type labels ----
@@ -143,25 +149,6 @@ function deriveComplexityBand(score: number | null | undefined): string | null {
   if (score < 8) return 'high';
   if (score < 10) return 'very high';
   return 'extreme';
-}
-
-function deriveContingencyBand(
-  band: string | null | undefined,
-): string | null {
-  switch (band) {
-    case 'low':
-      return '5-10%';
-    case 'standard':
-      return '10-15%';
-    case 'high':
-      return '15-25%';
-    case 'very high':
-      return '20-35%';
-    case 'extreme':
-      return '25-40%';
-    default:
-      return null;
-  }
 }
 
 /**
@@ -951,7 +938,7 @@ export function ProfilerMiddlePanel({
     const complexityDimensions = Object.entries(complexityOptions).map(
       ([key, options]) => ({
         key,
-        label: formatKey(key),
+        label: dimensionLabel(key),
         options,
         accent: dimensionAccent(key),
       }),
@@ -962,19 +949,20 @@ export function ProfilerMiddlePanel({
       items: cat.items,
     }));
 
-    const scaleFieldsView = scaleFields.map((f) => {
-      const unit = f.key.endsWith('_sqm') || f.key === 'gfa_sqm'
-        ? 'm2'
-        : f.key.endsWith('_percent')
-          ? '%'
-          : undefined;
-      return {
-        key: f.key,
-        label: f.label,
-        unit,
-        note: f.placeholder ? `placeholder ${f.placeholder}` : undefined,
-      };
-    });
+    const scaleFieldsView = scaleFields.map((f) => ({
+      key: f.key,
+      label: f.label,
+      unit: f.unit,
+      note: f.note,
+      noteAccent: f.noteAccent,
+      type: f.type,
+      min: f.min,
+      max: f.max,
+      placeholder: f.placeholder,
+      parts: f.parts,
+      partsSeparator: f.partsSeparator,
+      partsLabel: f.partsLabel,
+    }));
 
     return {
       buildingClasses: BUILDING_CLASS_OPTIONS,
@@ -991,10 +979,6 @@ export function ProfilerMiddlePanel({
   const complexityBand = useMemo(
     () => deriveComplexityBand(complexityScore),
     [complexityScore],
-  );
-  const contingencyBand = useMemo(
-    () => deriveContingencyBand(complexityBand),
-    [complexityBand],
   );
   const nccClass = useMemo(
     () => deriveNCCClass(buildingClass, selectedSubclasses),
@@ -1036,7 +1020,7 @@ export function ProfilerMiddlePanel({
   const rootClassName =
     layout === 'natural' ? 'flex flex-col' : 'h-full flex flex-col overflow-hidden';
   const bodyClassName =
-    layout === 'natural' ? 'p-5' : 'flex-1 overflow-y-auto p-5';
+    layout === 'natural' ? '' : 'flex-1 overflow-y-auto p-5';
 
   return (
     <div className={rootClassName}>
@@ -1053,6 +1037,17 @@ export function ProfilerMiddlePanel({
           onClassChange={(cls) => onClassChange?.(cls)}
           onTypeChange={(type) => selectType(type)}
           onSubclassToggle={handleSubclassToggle}
+          onScaleChange={(key, value) => {
+            setScaleData((prev) => {
+              if (value === null) {
+                if (!(key in prev)) return prev;
+                const next = { ...prev };
+                delete next[key];
+                return next;
+              }
+              return { ...prev, [key]: value };
+            });
+          }}
           onComplexityChange={handleComplexityChange}
           onScopeToggle={handleScopeToggle}
           onComplexityLevelChange={handleComplexitySliderChange}
@@ -1060,7 +1055,6 @@ export function ProfilerMiddlePanel({
           templates={derivedTemplates}
           complexityScore={complexityScore}
           complexityBand={complexityBand}
-          contingencyBand={contingencyBand}
           nccClass={nccClass}
           estCostBand={estCostBand}
           riskFlags={riskFlags}

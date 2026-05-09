@@ -7,6 +7,7 @@ import {
     db,
 } from '@/lib/db';
 import { ensureProjectInbox } from '@/lib/correspondence/ingest';
+import { extractVariationTriageView } from '@/lib/correspondence/view';
 import type { CorrespondenceView } from '@/types/correspondence';
 
 export const runtime = 'nodejs';
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 classificationStatus: correspondence.classificationStatus,
                 receivedAt: correspondence.receivedAt,
                 sentAt: correspondence.sentAt,
+                rawPayload: correspondence.rawPayload,
             })
             .from(correspondence)
             .innerJoin(correspondenceThreads, eq(correspondence.threadId, correspondenceThreads.id))
@@ -80,6 +82,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 receivedAt: toIso(row.receivedAt),
                 sentAt: toIso(row.sentAt),
                 attachmentCount: attachments.length,
+                variationTriage: extractVariationTriageView(row.rawPayload),
                 attachments: attachments.map((attachment) => ({
                     id: attachment.id,
                     documentId: attachment.documentId,

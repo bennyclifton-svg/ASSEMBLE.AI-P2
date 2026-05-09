@@ -8,25 +8,27 @@
 
 import { useState } from 'react';
 import { useEvaluationNonPriceSectionUI } from '@/lib/contexts/procurement-ui-context';
-import { FileText, Loader2, MoreHorizontal, MoreVertical } from 'lucide-react';
-import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { PdfIcon, DocxIcon, XlsxIcon } from '@/components/ui/file-type-icons';
 import { EvaluationNonPriceTab } from './EvaluationNonPriceTab';
-
-// Procurement section accent color (copper from design system)
-const SECTION_ACCENT = 'var(--primitive-copper-darker)';
+import {
+    ProcurementIconButton,
+    ProcurementSectionShell,
+} from '@/components/procurement';
+import { EVALUATION_NON_PRICE_ACCENT_COLOR } from './EvaluationReportChrome';
 
 interface EvaluationNonPriceSectionProps {
     projectId: string;
     stakeholderId?: string;
     stakeholderName?: string;
+    displayMode?: 'accordion' | 'detail';
 }
 
 export function EvaluationNonPriceSection({
     projectId,
     stakeholderId,
     stakeholderName,
+    displayMode = 'accordion',
 }: EvaluationNonPriceSectionProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [isMenuExpanded, setIsMenuExpanded] = useState(false);
@@ -78,105 +80,59 @@ export function EvaluationNonPriceSection({
         }
     };
 
-    return (
-        <div className="mt-2">
-            {/* Header - Segmented white ribbons with grey surround */}
-            <div className="flex items-stretch gap-0.5 p-2">
-                {/* Evaluation Non-Price segment */}
-                <div
-                    className="flex items-center w-fit h-11 px-3 py-1.5 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-l-md"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                >
-                    <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
-                    <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                        Evaluation Non-Price
-                    </span>
-                </div>
-                {/* Corner bracket segment - square, points out to expand, in to collapse */}
-                <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="flex items-center justify-center w-11 h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                    title={isExpanded ? 'Collapse' : 'Expand'}
-                >
-                    <CornerBracketIcon
-                        direction={isExpanded ? 'right' : 'left'}
-                        className="w-4 h-4"
-                    />
-                </button>
-                {/* More options segment - expandable to show export buttons (no tabs) */}
-                <div
-                    className="flex items-center h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-r-md transition-all"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                >
-                    <button
-                        onClick={() => setIsMenuExpanded(!isMenuExpanded)}
-                        className="flex items-center justify-center w-11 h-11 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                        title={isMenuExpanded ? 'Hide options' : 'Show options'}
-                    >
-                        {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
-                    </button>
-                    {/* Expanded content: export buttons only (no tabs for non-price) */}
-                    {isMenuExpanded && (
-                        <>
-                            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
-                            <div className="flex items-center gap-1">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleExport('pdf')}
-                                    disabled={isExporting}
-                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
-                                    title="Export PDF"
-                                >
-                                    {isExporting ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <PdfIcon size={20} />
-                                    )}
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleExport('docx')}
-                                    disabled={isExporting}
-                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
-                                    title="Export Word"
-                                >
-                                    <DocxIcon size={20} />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleExport('xlsx')}
-                                    disabled={isExporting}
-                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
-                                    title="Export Excel"
-                                >
-                                    <XlsxIcon size={20} />
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
+    const sectionExpanded = displayMode === 'detail' || isExpanded;
+    const sectionLabel = displayMode === 'detail' ? 'evaluation non-price record' : 'evaluation non-price';
 
-            {/* Content Area */}
-            <div>
-                {/* Content - only shown when expanded */}
-                {isExpanded && (
-                    <div
-                        className="mx-2 p-4 backdrop-blur-md rounded-md shadow-sm"
-                        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                    >
-                        <EvaluationNonPriceTab
-                            projectId={projectId}
-                            stakeholderId={stakeholderId}
-                            stakeholderName={stakeholderName}
-                        />
-                    </div>
-                )}
-            </div>
+    return (
+        <div className={displayMode === 'detail' ? '' : 'mt-2'}>
+            <ProcurementSectionShell
+                label={sectionLabel}
+                meta={displayMode === 'detail' ? 'evaluation non-price / criteria' : 'criteria - scoring'}
+                isExpanded={sectionExpanded}
+                accentColor={displayMode === 'detail' ? EVALUATION_NON_PRICE_ACCENT_COLOR : undefined}
+                onToggleExpanded={() => setIsExpanded(!isExpanded)}
+                isMenuExpanded={isMenuExpanded}
+                onToggleMenu={() => setIsMenuExpanded(!isMenuExpanded)}
+                displayMode={displayMode}
+                menuContent={
+                    <>
+                        <div className="flex items-center gap-1">
+                            <ProcurementIconButton
+                                title="Export PDF"
+                                onClick={() => handleExport('pdf')}
+                                disabled={isExporting}
+                            >
+                                {isExporting ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <PdfIcon size={20} />
+                                )}
+                            </ProcurementIconButton>
+                            <ProcurementIconButton
+                                title="Export Word"
+                                onClick={() => handleExport('docx')}
+                                disabled={isExporting}
+                            >
+                                <DocxIcon size={20} />
+                            </ProcurementIconButton>
+                            <ProcurementIconButton
+                                title="Export Excel"
+                                onClick={() => handleExport('xlsx')}
+                                disabled={isExporting}
+                            >
+                                <XlsxIcon size={20} />
+                            </ProcurementIconButton>
+                        </div>
+                    </>
+                }
+            >
+                <EvaluationNonPriceTab
+                    projectId={projectId}
+                    stakeholderId={stakeholderId}
+                    stakeholderName={stakeholderName}
+                    surface={displayMode === 'detail' ? 'record' : 'procurement'}
+                />
+            </ProcurementSectionShell>
         </div>
     );
 }

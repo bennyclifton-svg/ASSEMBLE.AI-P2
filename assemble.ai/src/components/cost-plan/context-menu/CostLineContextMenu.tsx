@@ -70,10 +70,10 @@ function MenuItem({
         w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left
         transition-colors
         ${disabled
-          ? 'text-[#6e6e6e] cursor-not-allowed'
+          ? 'text-[var(--color-text-muted)] cursor-not-allowed'
           : danger
-          ? 'text-[#f87171] hover:bg-[#f87171]/10'
-          : 'text-[#cccccc] hover:bg-[#37373d]'}
+          ? 'text-[var(--color-error)] hover:bg-[var(--color-error)]/10'
+          : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'}
       `}
     >
       <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
@@ -81,17 +81,17 @@ function MenuItem({
       </span>
       <span className="flex-1">{label}</span>
       {shortcut && (
-        <span className="text-xs text-[#6e6e6e] ml-4">{shortcut}</span>
+        <span className="text-xs text-[var(--color-text-muted)] ml-4">{shortcut}</span>
       )}
       {hasSubmenu && (
-        <ChevronRight className="w-3 h-3 text-[#6e6e6e]" />
+        <ChevronRight className="w-3 h-3 text-[var(--color-text-muted)]" />
       )}
     </button>
   );
 }
 
 function MenuDivider() {
-  return <div className="my-1 border-t border-[#3e3e42]" />;
+  return <div className="my-1 border-t border-[var(--color-border)]" />;
 }
 
 export function CostLineContextMenu({
@@ -174,7 +174,7 @@ export function CostLineContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] bg-[#252526] border border-[#3e3e42] rounded-lg shadow-xl py-1 min-w-[200px]"
+      className="fixed z-[9999] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-xl py-1 min-w-[200px]"
       style={{ left: pos.x, top: pos.y }}
     >
       {/* Insert actions */}

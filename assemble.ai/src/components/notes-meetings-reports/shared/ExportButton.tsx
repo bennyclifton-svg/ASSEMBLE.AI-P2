@@ -89,35 +89,37 @@ export function ExportButton({
                     <Loader2
                         className={cn(
                             iconSizeClasses[size],
-                            'animate-spin text-[var(--color-accent-primary)]'
+                            'animate-spin text-[var(--sw-muted)]'
                         )}
                     />
                 ) : (
                     <Download
                         className={cn(
                             iconSizeClasses[size],
-                            'text-[var(--color-text-muted)]'
+                            'text-[var(--sw-muted)]'
                         )}
                     />
                 )}
             </Button>
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px] rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-1 min-w-[150px] border border-[var(--sw-rule)] bg-white">
                     <div className="p-1">
                         <button
-                            className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-[var(--sw-ink)] transition-colors hover:bg-[var(--sw-paper)]"
+                            style={{ fontFamily: 'var(--sw-font-mono)' }}
                             onClick={() => handleExport('pdf')}
                         >
-                            <FileText className="h-4 w-4 text-red-500" />
-                            Export as PDF
+                            <FileText className="h-4 w-4 text-[var(--sw-rose-dk)]" />
+                            export pdf
                         </button>
                         <button
-                            className="flex w-full items-center gap-2 rounded px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)] transition-colors"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-[var(--sw-ink)] transition-colors hover:bg-[var(--sw-paper)]"
+                            style={{ fontFamily: 'var(--sw-font-mono)' }}
                             onClick={() => handleExport('docx')}
                         >
-                            <FileType className="h-4 w-4 text-blue-500" />
-                            Export as DOCX
+                            <FileType className="h-4 w-4 text-[var(--sw-cyan)]" />
+                            export docx
                         </button>
                     </div>
                 </div>

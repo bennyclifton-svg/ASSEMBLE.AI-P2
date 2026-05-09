@@ -72,29 +72,37 @@ export function BillingPanel() {
 
     if (isLoading) {
         return (
-            <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
-                <div className="animate-pulse text-[var(--color-text-muted)]">Loading billing...</div>
+            <div className="h-full flex items-center justify-center bg-[var(--sw-paper)]">
+                <div className="animate-pulse font-mono text-[var(--sw-muted)]">Loading billing...</div>
             </div>
         );
     }
 
     return (
-        <div className="h-full overflow-auto bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
-            {/* Header */}
-            <div className="border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-                <div className="mx-auto max-w-4xl px-6 py-4">
-                    <h1 className="text-2xl font-bold">Billing & Subscription</h1>
+        <div className="h-full overflow-auto bg-transparent text-[var(--sw-ink)]">
+            <div className="sitewise-page-frame max-w-4xl">
+                <div className="sitewise-page-header">
+                    <div>
+                        <div className="sitewise-page-kicker">account / billing</div>
+                        <h1 className="mt-2">Billing & Subscription</h1>
+                        <p className="sitewise-page-subtitle">
+                            Current plan, upgrade paths, subscription portal, and transaction history.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                        <span className="sitewise-status-pill">{subscription.subscriptionStatus}</span>
+                        <span className="sitewise-status-pill sitewise-status-pill-dark">
+                            {subscription.currentPlanId}
+                        </span>
+                    </div>
                 </div>
-            </div>
-
-            <div className="mx-auto max-w-4xl px-6 py-8">
                 {/* Success/Canceled Messages */}
                 {showSuccess && (
-                    <div className="mb-8 flex items-center gap-3 rounded-lg border border-[var(--color-accent-green)]/30 bg-[var(--color-accent-green)]/10 p-4">
-                        <CheckCircle className="h-5 w-5 text-[var(--color-accent-green)]" />
+                    <div className="sitewise-card mb-8 flex items-center gap-3 border-l-[3px] border-l-[#5c7a4a] p-4">
+                        <CheckCircle className="h-5 w-5 text-[#5c7a4a]" />
                         <div>
-                            <p className="font-medium text-[var(--color-accent-green)]">Payment successful!</p>
-                            <p className="text-sm text-[var(--color-accent-green)]/80">
+                            <p className="font-medium text-[#4b653c]">Payment successful!</p>
+                            <p className="text-sm text-[var(--sw-muted)]">
                                 Your subscription has been activated. It may take a moment to reflect in your account.
                             </p>
                         </div>
@@ -102,12 +110,12 @@ export function BillingPanel() {
                 )}
 
                 {showCanceled && (
-                    <div className="mb-8 flex items-center gap-3 rounded-lg border border-[var(--color-accent-yellow)]/30 bg-[var(--color-accent-yellow)]/10 p-4">
-                        <XCircle className="h-5 w-5 text-[var(--color-accent-yellow)]" />
+                    <div className="sitewise-card mb-8 flex items-center gap-3 border-l-[3px] border-l-[var(--sw-amber)] p-4">
+                        <XCircle className="h-5 w-5 text-[var(--sw-amber)]" />
                         <div>
-                            <p className="font-medium text-[var(--color-accent-yellow)]">Checkout canceled</p>
-                            <p className="text-sm text-[var(--color-accent-yellow)]/80">
-                                No charges were made. You can try again whenever you're ready.
+                            <p className="font-medium text-[#8a5a16]">Checkout canceled</p>
+                            <p className="text-sm text-[var(--sw-muted)]">
+                                No charges were made. You can try again whenever you are ready.
                             </p>
                         </div>
                     </div>
@@ -115,7 +123,7 @@ export function BillingPanel() {
 
                 {/* Current Subscription */}
                 <section className="mb-12">
-                    <h2 className="mb-4 text-lg font-semibold">Current Plan</h2>
+                    <div className="sitewise-section-label mb-4">Current Plan</div>
                     <SubscriptionCard
                         planId={subscription.currentPlanId}
                         status={subscription.subscriptionStatus}
@@ -126,7 +134,7 @@ export function BillingPanel() {
 
                 {/* Available Plans */}
                 <section>
-                    <h2 className="mb-4 text-lg font-semibold">Available Plans</h2>
+                    <div className="sitewise-section-label mb-4">Available Plans</div>
                     <div className="grid gap-6 md:grid-cols-3">
                         {plans.map((plan) => (
                             <PricingCard
@@ -141,9 +149,9 @@ export function BillingPanel() {
 
                 {/* Manage Subscription Link */}
                 {subscription.currentPlanId !== 'free' && (
-                    <section className="mt-12 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6">
-                        <h2 className="mb-2 text-lg font-semibold">Need to make changes?</h2>
-                        <p className="mb-4 text-[var(--color-text-muted)]">
+                    <section className="sitewise-card mt-12 p-6">
+                        <div className="sitewise-section-label mb-2">Need to make changes?</div>
+                        <p className="mb-4 text-[var(--sw-muted)]">
                             Update your payment method, cancel your subscription, or view invoices through the customer portal.
                         </p>
                         <CustomerPortalButton />
@@ -152,31 +160,31 @@ export function BillingPanel() {
 
                 {/* Transaction History */}
                 <section className="mt-12">
-                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-                        <Receipt className="h-5 w-5 text-[var(--color-text-muted)]" />
+                    <div className="sitewise-section-label mb-4 flex items-center gap-2">
+                        <Receipt className="h-4 w-4 text-[var(--sw-muted)]" />
                         Transaction History
-                    </h2>
+                    </div>
                     {transactions.length === 0 ? (
-                        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 text-center">
-                            <p className="text-[var(--color-text-muted)]">No transactions yet</p>
-                            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                        <div className="sitewise-card p-6 text-center">
+                            <p className="text-[var(--sw-muted)]">No transactions yet</p>
+                            <p className="mt-1 text-sm text-[var(--sw-muted)]">
                                 Your payment history will appear here after your first purchase.
                             </p>
                         </div>
                     ) : (
-                        <div className="overflow-hidden rounded-lg border border-[var(--color-border)]">
+                        <div className="sitewise-card overflow-hidden">
                             <table className="w-full">
-                                <thead className="bg-[var(--color-bg-secondary)]">
+                                <thead>
                                     <tr>
-                                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">Date</th>
-                                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">Product</th>
-                                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">Amount</th>
-                                        <th className="px-4 py-3 text-left text-sm font-medium text-[var(--color-text-muted)]">Status</th>
+                                        <th className="px-4 py-3 text-left">Date</th>
+                                        <th className="px-4 py-3 text-left">Product</th>
+                                        <th className="px-4 py-3 text-left">Amount</th>
+                                        <th className="px-4 py-3 text-left">Status</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[var(--color-border)]">
+                                <tbody className="divide-y divide-[var(--sw-rule-2)]">
                                     {transactions.map((tx) => (
-                                        <tr key={tx.id} className="bg-[var(--color-bg-primary)]">
+                                        <tr key={tx.id}>
                                             <td className="px-4 py-3 text-sm">
                                                 {new Date(tx.createdAt * 1000).toLocaleDateString()}
                                             </td>
@@ -187,12 +195,12 @@ export function BillingPanel() {
                                                 ${(tx.amountCents / 100).toFixed(2)} {(tx.currency || 'USD').toUpperCase()}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                                                <span className={`sitewise-chip ${
                                                     tx.status === 'completed'
-                                                        ? 'bg-[var(--color-accent-green)]/10 text-[var(--color-accent-green)]'
+                                                        ? 'sitewise-chip-green'
                                                         : tx.status === 'refunded'
-                                                            ? 'bg-[var(--color-accent-coral)]/10 text-[var(--color-accent-coral)]'
-                                                            : 'bg-[var(--color-accent-yellow)]/10 text-[var(--color-accent-yellow)]'
+                                                            ? 'sitewise-chip-rose'
+                                                            : 'sitewise-chip-amber'
                                                 }`}>
                                                     {tx.status}
                                                 </span>
@@ -206,7 +214,7 @@ export function BillingPanel() {
                 </section>
 
                 {/* Help text */}
-                <p className="mt-8 text-center text-sm text-[var(--color-text-muted)]">
+                <p className="mt-8 text-center text-sm text-[var(--sw-muted)]">
                     Questions about billing?{' '}
                     <a href="mailto:support@sitewise.au" className="text-[var(--color-accent-primary)] hover:underline">
                         Contact support

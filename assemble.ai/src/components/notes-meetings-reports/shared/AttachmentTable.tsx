@@ -48,11 +48,11 @@ export function AttachmentTable({
 }: AttachmentTableProps) {
     if (documents.length === 0) {
         return (
-            <div className={cn('flex flex-col items-center justify-center py-8 text-[var(--color-text-muted)]', className)}>
-                <FileText className="w-8 h-8 mb-2 opacity-50" />
-                <p className="text-sm">{emptyMessage}</p>
-                <p className="text-xs mt-1">
-                    Select documents and click "Save"
+            <div className={cn('flex flex-col items-center justify-center border border-dashed border-[var(--sw-rule)] py-8 text-center text-[var(--sw-muted)]', className)}>
+                <FileText className="mb-2 h-8 w-8 opacity-50" />
+                <p className="text-sm text-[var(--sw-muted)]">{emptyMessage}</p>
+                <p className="mt-1 text-xs text-[var(--sw-muted)]">
+                    Select documents and click &quot;Save&quot;
                 </p>
             </div>
         );
@@ -64,18 +64,21 @@ export function AttachmentTable({
     const textSize = compact ? 'text-xs' : 'text-sm';
 
     return (
-        <div className={cn('border border-black/10 rounded overflow-hidden', className)}>
+        <div className={cn('overflow-hidden border border-[var(--sw-rule)]', className)}>
             <table className={cn('w-full', textSize)}>
                 <thead>
-                    <tr className="bg-black/5 text-[var(--color-text-primary)]">
-                        <th className={cn('text-left font-medium w-8', headerPadding)}>#</th>
-                        <th className={cn('text-left font-medium', compact ? 'w-20' : 'w-24', headerPadding)}>DWG #</th>
-                        <th className={cn('text-left font-medium', headerPadding)}>Name</th>
-                        <th className={cn('text-center font-medium w-12', headerPadding)}>Rev</th>
+                    <tr
+                        className="bg-[var(--sw-paper)] text-[var(--sw-muted)]"
+                        style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.12em' }}
+                    >
+                        <th className={cn('w-8 text-left text-[10px] font-medium uppercase', headerPadding)}>#</th>
+                        <th className={cn('text-left text-[10px] font-medium uppercase', compact ? 'w-20' : 'w-24', headerPadding)}>dwg #</th>
+                        <th className={cn('text-left text-[10px] font-medium uppercase', headerPadding)}>name</th>
+                        <th className={cn('w-12 text-center text-[10px] font-medium uppercase', headerPadding)}>rev</th>
                         {!compact && (
                             <>
-                                <th className={cn('text-left font-medium w-36', headerPadding)}>Category</th>
-                                <th className={cn('text-left font-medium w-40', headerPadding)}>Subcategory</th>
+                                <th className={cn('w-36 text-left text-[10px] font-medium uppercase', headerPadding)}>category</th>
+                                <th className={cn('w-40 text-left text-[10px] font-medium uppercase', headerPadding)}>subcategory</th>
                             </>
                         )}
                         {showRemove && (
@@ -87,25 +90,25 @@ export function AttachmentTable({
                     {documents.map((doc, index) => (
                             <tr
                                 key={doc.id}
-                                className="border-t border-black/10 hover:bg-black/5"
+                                className="border-t border-[var(--sw-rule-2)] hover:bg-[var(--sw-paper-2)]"
                             >
-                                <td className={cn('text-[var(--color-text-muted)]', cellPadding)}>
+                                <td className={cn('text-[var(--sw-muted)]', cellPadding)}>
                                     {index + 1}
                                 </td>
-                                <td className={cn('text-[var(--color-text-primary)]', cellPadding)}>
+                                <td className={cn('text-[var(--sw-ink)]', cellPadding)}>
                                     {doc.drawingNumber ? (
                                         <span title={doc.drawingNumber} className="truncate block">
                                             {doc.drawingNumber}
                                         </span>
                                     ) : (
-                                        <span className="text-[var(--color-text-muted)]">-</span>
+                                        <span className="text-[var(--sw-muted)]">-</span>
                                     )}
                                 </td>
-                                <td className={cn('text-[var(--color-text-primary)] truncate', compact ? 'max-w-[180px]' : 'max-w-[300px]', cellPadding)}>
+                                <td className={cn('truncate text-[var(--sw-ink)]', compact ? 'max-w-[180px]' : 'max-w-[300px]', cellPadding)}>
                                     {doc.drawingName || doc.documentName}
                                 </td>
-                                <td className={cn('text-center text-[var(--color-text-primary)]', cellPadding)}>
-                                    {doc.drawingRevision || <span className="text-[var(--color-text-muted)]">-</span>}
+                                <td className={cn('text-center text-[var(--sw-ink)]', cellPadding)}>
+                                    {doc.drawingRevision || <span className="text-[var(--sw-muted)]">-</span>}
                                 </td>
                                 {!compact && (
                                     <>
@@ -113,32 +116,32 @@ export function AttachmentTable({
                                             {doc.categoryName ? (
                                                 <div className="flex items-center gap-1.5">
                                                     <Folder
-                                                        className="w-3.5 h-3.5 flex-shrink-0 text-[var(--color-text-primary)]"
+                                                        className="h-3.5 w-3.5 flex-shrink-0 text-[var(--sw-muted)]"
                                                     />
                                                     <span
-                                                        className="text-sm truncate text-[var(--color-text-primary)]"
+                                                        className="truncate text-sm text-[var(--sw-ink)]"
                                                     >
                                                         {doc.categoryName}
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <span className="text-[var(--color-text-muted)]">-</span>
+                                                <span className="text-[var(--sw-muted)]">-</span>
                                             )}
                                         </td>
                                         <td className={cellPadding}>
                                             {doc.subcategoryName ? (
                                                 <div className="flex items-center gap-1.5">
                                                     <Folder
-                                                        className="w-3.5 h-3.5 flex-shrink-0 text-[var(--color-text-primary)]"
+                                                        className="h-3.5 w-3.5 flex-shrink-0 text-[var(--sw-muted)]"
                                                     />
                                                     <span
-                                                        className="text-sm truncate text-[var(--color-text-primary)]"
+                                                        className="truncate text-sm text-[var(--sw-ink)]"
                                                     >
                                                         {doc.subcategoryName}
                                                     </span>
                                                 </div>
                                             ) : (
-                                                <span className="text-[var(--color-text-muted)]">-</span>
+                                                <span className="text-[var(--sw-muted)]">-</span>
                                             )}
                                         </td>
                                     </>
@@ -148,7 +151,7 @@ export function AttachmentTable({
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className={cn('hover:text-red-500', compact ? 'h-5 w-5' : 'h-7 w-7')}
+                                            className={cn('rounded-none text-[var(--sw-muted)] hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)]', compact ? 'h-5 w-5' : 'h-7 w-7')}
                                             onClick={() => onRemove(doc.documentId)}
                                             title="Remove"
                                         >

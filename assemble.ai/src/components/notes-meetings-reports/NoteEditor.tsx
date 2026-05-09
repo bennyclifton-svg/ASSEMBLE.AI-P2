@@ -8,7 +8,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { RichTextEditor, type RichTextToolbarVariant } from '@/components/ui/RichTextEditor';
 import type { Editor } from '@tiptap/react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +22,8 @@ interface NoteEditorProps {
     transparentBg?: boolean;
     /** Extra content rendered at the right end of the toolbar */
     toolbarExtra?: React.ReactNode;
+    /** Toolbar density/toolset */
+    toolbarVariant?: RichTextToolbarVariant;
     /** Callback fired when the TipTap editor instance is ready */
     onEditorReady?: (editor: Editor) => void;
 }
@@ -34,6 +36,7 @@ export function NoteEditor({
     className,
     transparentBg = false,
     toolbarExtra,
+    toolbarVariant = 'full',
     onEditorReady,
 }: NoteEditorProps) {
     const [localContent, setLocalContent] = useState(content);
@@ -107,7 +110,7 @@ export function NoteEditor({
                 onBlur={handleBlur}
                 placeholder={placeholder}
                 variant="compact"
-                toolbarVariant="full"
+                toolbarVariant={toolbarVariant}
                 transparentBg={transparentBg}
                 toolbarExtra={toolbarExtra}
                 onEditorReady={onEditorReady}

@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useAddenda, type Addendum } from '@/lib/hooks/use-addenda';
+import { useAddenda } from '@/lib/hooks/use-addenda';
 import { useAddendumSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { useAddendumTransmittal } from '@/lib/hooks/use-addendum-transmittal';
 import { AddendumTabs } from './AddendumTabs';
@@ -16,13 +16,17 @@ import {
     ADDENDUM_CREATED_EVENT,
     type AddendumCreatedDetail,
 } from '@/lib/chat/addendum-events';
-import { FileText, MoreHorizontal, MoreVertical } from 'lucide-react';
-import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
+import { RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PdfIcon, DocxIcon } from '@/components/ui/file-type-icons';
+import {
+    ProcurementIconButton,
+    ProcurementSectionShell,
+    ProcurementToolbarDivider,
+} from '@/components/procurement';
+import type { AddendumDetailViewMode } from './AddendumContent';
 
-// Procurement section accent color (aurora blue from design system)
-const SECTION_ACCENT = 'var(--color-accent-copper)'; // Aurora blue for icons
+const ADDENDUM_ACCENT_COLOR = 'var(--sw-peach)';
 
 interface AddendumSectionProps {
     projectId: string;
@@ -31,6 +35,14 @@ interface AddendumSectionProps {
     selectedDocumentIds?: string[];
     onLoadTransmittal?: (documentIds: string[]) => void;
     onSaveTransmittal?: () => string[];
+    displayMode?: 'accordion' | 'detail';
+}
+
+function formatDetailDate(value: string | null | undefined): string {
+    if (!value) return '';
+    const date = new Date(value.includes('T') ? value : `${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function AddendumSection({
@@ -40,10 +52,14 @@ export function AddendumSection({
     selectedDocumentIds = [],
     onLoadTransmittal,
     onSaveTransmittal,
+    displayMode = 'accordion',
 }: AddendumSectionProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [isMenuExpanded, setIsMenuExpanded] = useState(false);
+    const [viewMode, setViewMode] = useState<AddendumDetailViewMode>('long');
+    const [isRefreshingContent, setIsRefreshingContent] = useState(false);
+    const [contentRefreshKey, setContentRefreshKey] = useState(0);
 
     // Use context for expanded state persistence across tab navigation
     const {
@@ -100,7 +116,6 @@ export function AddendumSection({
     }, [isExpanded, addenda.length, isLoading, isCreating, handleCreateAddendumWithExpand, setIsExpanded]);
 
     const {
-        transmittal,
         saveTransmittal,
         loadTransmittal,
         hasTransmittal,
@@ -151,7 +166,7 @@ export function AddendumSection({
                 setActiveAddendumId(remaining.length > 0 ? remaining[0].id : null);
             }
         }
-    }, [activeAddendumId, addenda, deleteAddendum]);
+    }, [activeAddendumId, addenda, deleteAddendum, setActiveAddendumId]);
 
     const handleSaveTransmittal = useCallback(async () => {
         if (onSaveTransmittal) {
@@ -243,137 +258,167 @@ export function AddendumSection({
         }
     }, [activeAddendumId]);
 
-    const contextName = stakeholderName || 'Unknown';
+    const handleRefreshContent = useCallback(() => {
+        setIsRefreshingContent(true);
+        setContentRefreshKey((key) => key + 1);
+        window.setTimeout(() => setIsRefreshingContent(false), 180);
+    }, []);
+
+    const sectionExpanded = displayMode === 'detail' || isExpanded;
+    const detailDate = activeAddendum
+        ? formatDetailDate(activeAddendum.addendumDate ?? activeAddendum.createdAt)
+        : '';
+    const sectionLabel = displayMode === 'detail' ? 'addendum record' : 'addendum';
+    const sectionMeta = displayMode === 'detail'
+        ? `addendum / ${detailDate || 'no date'}`
+        : `${addenda.length} issued - ${documentCount} docs`;
 
     return (
-        <div className="mt-2">
-            {/* Header - Segmented white ribbons with grey surround */}
-            <div className="flex items-stretch gap-0.5 p-2">
-                {/* Addendum segment */}
-                <div
-                    className="flex items-center w-fit h-11 px-3 py-1.5 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-l-md"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                >
-                    <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
-                    <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                        Addendum
-                    </span>
-                </div>
-                {/* Corner bracket segment - square, points out to expand, in to collapse */}
-                <button
-                    onClick={handleExpandToggle}
-                    className="flex items-center justify-center w-11 h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                    title={isExpanded ? 'Collapse' : 'Expand'}
-                >
-                    <CornerBracketIcon
-                        direction={isExpanded ? 'right' : 'left'}
-                        className="w-4 h-4"
-                    />
-                </button>
-                {/* More options segment - expandable to show tabs and export buttons */}
-                <div
-                    className="flex items-center h-11 backdrop-blur-md border border-[var(--color-border)]/50 shadow-sm rounded-r-md transition-all"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                >
-                    <button
-                        onClick={() => setIsMenuExpanded(!isMenuExpanded)}
-                        className="flex items-center justify-center w-11 h-11 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                        title={isMenuExpanded ? 'Hide options' : 'Show options'}
-                    >
-                        {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
-                    </button>
-                    {/* Expanded content: tabs and export buttons */}
-                    {isMenuExpanded && (
-                        <>
-                            <div className="ml-1 mr-2 h-5 w-px bg-[var(--color-border)]" />
-                            <AddendumTabs
-                                addenda={addenda}
-                                activeAddendumId={activeAddendumId}
-                                onSelectAddendum={handleSelectAddendum}
-                                onCreateAddendum={handleCreateAddendumWithExpand}
-                                onDeleteAddendum={handleDeleteAddendum}
-                                isLoading={isLoading}
-                            />
-                            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
-                            <div className="flex items-center gap-1 pr-2">
+        <div className={displayMode === 'detail' ? '' : 'mt-2'}>
+            <ProcurementSectionShell
+                label={sectionLabel}
+                meta={sectionMeta}
+                accentColor={displayMode === 'detail' ? ADDENDUM_ACCENT_COLOR : undefined}
+                isExpanded={sectionExpanded}
+                onToggleExpanded={handleExpandToggle}
+                isMenuExpanded={isMenuExpanded}
+                onToggleMenu={() => setIsMenuExpanded(!isMenuExpanded)}
+                displayMode={displayMode}
+                menuContent={
+                    <>
+                        <AddendumTabs
+                            addenda={addenda}
+                            activeAddendumId={activeAddendumId}
+                            onSelectAddendum={handleSelectAddendum}
+                            onCreateAddendum={handleCreateAddendumWithExpand}
+                            onDeleteAddendum={handleDeleteAddendum}
+                            isLoading={isLoading}
+                        />
+                        <ProcurementToolbarDivider />
+                        <div className="flex items-center gap-1">
+                            <ProcurementIconButton
+                                title="Export PDF"
+                                onClick={() => handleExport('pdf')}
+                                disabled={!activeAddendumId || isExporting}
+                            >
+                                <PdfIcon size={20} />
+                            </ProcurementIconButton>
+                            <ProcurementIconButton
+                                title="Export Word"
+                                onClick={() => handleExport('docx')}
+                                disabled={!activeAddendumId || isExporting}
+                            >
+                                <DocxIcon size={20} />
+                            </ProcurementIconButton>
+                        </div>
+                        {displayMode === 'detail' ? (
+                            <>
+                                <ProcurementToolbarDivider />
+                                <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                                    <div
+                                        role="group"
+                                        aria-label="View mode"
+                                        className="inline-flex items-center"
+                                        style={{
+                                            border: '1px solid var(--sw-rule)',
+                                            fontFamily: 'var(--sw-font-mono)',
+                                            fontSize: 10,
+                                            letterSpacing: '0.05em',
+                                        }}
+                                    >
+                                        <DetailViewModeButton
+                                            label="Short"
+                                            active={viewMode === 'short'}
+                                            onClick={() => setViewMode('short')}
+                                        />
+                                        <DetailViewModeButton
+                                            label="Long"
+                                            active={viewMode === 'long'}
+                                            onClick={() => setViewMode('long')}
+                                        />
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={handleRefreshContent}
+                                        disabled={isRefreshingContent}
+                                        title="Refresh addendum content"
+                                        aria-label="Refresh addendum content"
+                                        className="inline-flex items-center border border-[var(--sw-rule)] bg-transparent px-1.5 py-1 text-[var(--sw-rose-dk)] transition-colors hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55"
+                                    >
+                                        <RotateCw className={`h-3 w-3 ${isRefreshingContent ? 'animate-spin' : ''}`} />
+                                    </button>
+                                </div>
+                            </>
+                        ) : null}
+                    </>
+                }
+            >
+                {activeAddendum ? (
+                    <>
+                        <AddendumContent
+                            key={`${activeAddendum.id}-${contentRefreshKey}`}
+                            projectId={projectId}
+                            addendum={activeAddendum}
+                            onUpdateContent={updateContent}
+                            onUpdateDate={updateDate}
+                            surface={displayMode === 'detail' ? 'record' : 'procurement'}
+                            viewMode={viewMode}
+                        />
+
+                        <AddendumTransmittalSchedule
+                            addendumId={activeAddendum.id}
+                            onSaveTransmittal={handleSaveTransmittal}
+                            onLoadTransmittal={handleLoadTransmittal}
+                            onDownloadTransmittal={handleDownloadTransmittal}
+                            canSaveTransmittal={!!activeAddendumId && selectedDocumentIds.length > 0}
+                            hasTransmittal={hasTransmittal}
+                            documentCount={documentCount}
+                            isDownloading={isDownloading}
+                        />
+                    </>
+                ) : (
+                    <div className="p-8 text-center text-[var(--sw-muted)]">
+                        {isLoading ? (
+                            <p>Loading addenda...</p>
+                        ) : (
+                            <div>
+                                <p className="mb-3">No addenda created yet</p>
                                 <Button
-                                    variant="ghost"
+                                    variant="outline"
                                     size="sm"
-                                    onClick={() => handleExport('pdf')}
-                                    disabled={!activeAddendumId || isExporting}
-                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
-                                    title="Export PDF"
+                                    onClick={handleCreateAddendumWithExpand}
+                                    className="rounded-none border-[var(--sw-rule)] bg-transparent text-xs text-[var(--sw-ink)] hover:bg-[var(--sw-paper)]"
                                 >
-                                    <PdfIcon size={20} />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleExport('docx')}
-                                    disabled={!activeAddendumId || isExporting}
-                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
-                                    title="Export Word"
-                                >
-                                    <DocxIcon size={20} />
+                                    Create Addendum 01
                                 </Button>
                             </div>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* Content Area */}
-            <div>
-                {/* Content - only shown when expanded */}
-                {isExpanded && (
-                    activeAddendum ? (
-                        <div
-                            className="mx-2 p-4 backdrop-blur-md rounded-md shadow-sm"
-                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                        >
-                            <AddendumContent
-                                projectId={projectId}
-                                addendum={activeAddendum}
-                                onUpdateContent={updateContent}
-                                onUpdateDate={updateDate}
-                            />
-
-                            <AddendumTransmittalSchedule
-                                addendumId={activeAddendum.id}
-                                onSaveTransmittal={handleSaveTransmittal}
-                                onLoadTransmittal={handleLoadTransmittal}
-                                onDownloadTransmittal={handleDownloadTransmittal}
-                                canSaveTransmittal={!!activeAddendumId && selectedDocumentIds.length > 0}
-                                hasTransmittal={hasTransmittal}
-                                documentCount={documentCount}
-                                isDownloading={isDownloading}
-                            />
-                        </div>
-                    ) : (
-                        <div
-                            className="mx-2 p-8 text-center text-[var(--color-text-muted)] backdrop-blur-md rounded-md shadow-sm"
-                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                        >
-                            {isLoading ? (
-                                <p>Loading addenda...</p>
-                            ) : (
-                                <div>
-                                    <p className="mb-3">No addenda created yet</p>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleCreateAddendumWithExpand}
-                                        className="text-xs"
-                                    >
-                                        Create Addendum 01
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-                    )
+                        )}
+                    </div>
                 )}
-            </div>
+            </ProcurementSectionShell>
         </div>
+    );
+}
+
+interface DetailViewModeButtonProps {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}
+
+function DetailViewModeButton({ label, active, onClick }: DetailViewModeButtonProps) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="px-2 py-1 transition-colors"
+            style={{
+                background: active ? 'var(--sw-ink)' : 'transparent',
+                color: active ? 'var(--sw-paper)' : 'var(--sw-muted)',
+                borderRight: label === 'Short' ? '1px solid var(--sw-rule)' : 'none',
+            }}
+        >
+            {label}
+        </button>
     );
 }

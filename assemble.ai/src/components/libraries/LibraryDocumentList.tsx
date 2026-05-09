@@ -51,26 +51,26 @@ export function LibraryDocumentList({
     switch (status) {
       case 'synced':
         return (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-[#4ec9b0]/20 text-[#4ec9b0]">
+          <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-success)]/20 text-[var(--color-success)]">
             Synced
           </span>
         );
       case 'processing':
         return (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-[#dcdcaa]/20 text-[#dcdcaa] flex items-center gap-1">
+          <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--sw-amber)]/20 text-[var(--sw-amber)] flex items-center gap-1">
             <Loader2 className="w-3 h-3 animate-spin" />
             Processing
           </span>
         );
       case 'failed':
         return (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-[#f48771]/20 text-[#f48771]">
+          <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-error)]/20 text-[var(--color-error)]">
             Failed
           </span>
         );
       default:
         return (
-          <span className="text-xs px-1.5 py-0.5 rounded bg-[#808080]/20 text-[#808080]">
+          <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-text-muted)]/20 text-[var(--color-text-muted)]">
             Pending
           </span>
         );
@@ -125,14 +125,14 @@ export function LibraryDocumentList({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-32">
-        <Loader2 className="w-6 h-6 text-[#808080] animate-spin" />
+        <Loader2 className="w-6 h-6 text-[var(--color-text-muted)] animate-spin" />
       </div>
     );
   }
 
   if (documents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-32 text-[#808080]">
+      <div className="flex flex-col items-center justify-center h-32 text-[var(--color-text-muted)]">
         <FileText className="w-8 h-8 mb-2" />
         <p className="text-sm">No documents in this library</p>
         <p className="text-xs mt-1">Drag and drop files to upload</p>
@@ -145,7 +145,7 @@ export function LibraryDocumentList({
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="flex items-center justify-between p-2 border-b border-[#3e3e42]">
+      <div className="flex items-center justify-between p-2 border-b border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           <button
             onClick={handleSelectAll}
@@ -153,14 +153,14 @@ export function LibraryDocumentList({
               w-5 h-5 rounded border flex items-center justify-center transition-colors
               ${
                 allSelected
-                  ? 'bg-[#0e639c] border-[#0e639c]'
-                  : 'border-[#3e3e42] hover:border-[#0e639c]'
+                  ? 'bg-[var(--color-accent-primary)] border-[var(--color-accent-primary)]'
+                  : 'border-[var(--color-border)] hover:border-[var(--color-accent-primary)]'
               }
             `}
           >
             {allSelected && <Check className="w-3 h-3 text-white" />}
           </button>
-          <span className="text-xs text-[#808080]">
+          <span className="text-xs text-[var(--color-text-muted)]">
             {selectedIds.size > 0
               ? `${selectedIds.size} selected`
               : `${documents.length} documents`}
@@ -173,7 +173,7 @@ export function LibraryDocumentList({
             disabled={isDeleting}
             variant="ghost"
             size="sm"
-            className="text-[#f48771] hover:bg-[#f48771]/10"
+            className="text-[var(--color-error)] hover:bg-[var(--color-error)]/10"
           >
             {isDeleting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -195,8 +195,8 @@ export function LibraryDocumentList({
               key={doc.id}
               onClick={(e) => handleRowClick(index, e)}
               className={`
-                flex items-center gap-3 p-3 border-b border-[#3e3e42] cursor-pointer transition-colors
-                ${isSelected ? 'bg-[#0e639c]/20' : 'hover:bg-[#2a2d2e]'}
+                flex items-center gap-3 p-3 border-b border-[var(--color-border)] cursor-pointer transition-colors
+                ${isSelected ? 'bg-[var(--color-accent-primary)]/20' : 'hover:bg-[var(--color-bg-hover)]'}
               `}
             >
               {/* Selection indicator */}
@@ -205,8 +205,8 @@ export function LibraryDocumentList({
                   w-5 h-5 rounded border flex items-center justify-center flex-shrink-0 transition-colors
                   ${
                     isSelected
-                      ? 'bg-[#0e639c] border-[#0e639c]'
-                      : 'border-[#3e3e42]'
+                      ? 'bg-[var(--color-accent-primary)] border-[var(--color-accent-primary)]'
+                      : 'border-[var(--color-border)]'
                   }
                 `}
               >
@@ -214,12 +214,12 @@ export function LibraryDocumentList({
               </div>
 
               {/* File icon */}
-              <FileText className="w-5 h-5 text-[#808080] flex-shrink-0" />
+              <FileText className="w-5 h-5 text-[var(--color-text-muted)] flex-shrink-0" />
 
               {/* File info */}
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-[#cccccc] truncate">{doc.fileName}</div>
-                <div className="flex items-center gap-2 text-xs text-[#6e6e6e] mt-0.5">
+                <div className="text-sm text-[var(--color-text-primary)] truncate">{doc.fileName}</div>
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)] mt-0.5">
                   <span>{formatFileSize(doc.sizeBytes)}</span>
                   <span>•</span>
                   <span>{formatDate(doc.addedAt)}</span>

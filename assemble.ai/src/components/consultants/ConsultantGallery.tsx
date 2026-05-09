@@ -6,10 +6,7 @@ import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
 import { useToast } from '@/lib/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils/currency';
 
-import { RFTNewSection } from '@/components/rft-new';
-import { AddendumSection } from '@/components/addendum';
-import { EvaluationPriceSection, EvaluationNonPriceSection } from '@/components/evaluation';
-import { TRRSection } from '@/components/trr';
+import { ProcurementCardShell, ProcurementWorkflowLayout } from '@/components/procurement';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,14 +30,15 @@ interface ConsultantGalleryProps {
   onSetSelectedDocumentIds?: (ids: string[]) => void;
 }
 
+interface FirmExtractionResult {
+  confidence: number;
+  data: FirmData;
+}
+
 export function ConsultantGallery({
   projectId,
   discipline,
   disciplineId,
-  briefServices = '',
-  briefFee = '',
-  briefProgram = '',
-  onUpdateBrief,
   selectedDocumentIds = [],
   onSetSelectedDocumentIds,
 }: ConsultantGalleryProps) {
@@ -89,7 +87,7 @@ export function ConsultantGallery({
         };
 
         if (mergedData.companyName) {
-          const newConsultant = await addConsultant(mergedData);
+          await addConsultant(mergedData);
           toast({
             title: 'Success',
             description: 'Consultant added successfully',
@@ -186,7 +184,7 @@ export function ConsultantGallery({
     }
   };
 
-  const handleFileExtraction = async (file: File): Promise<FirmData> => {
+  const handleFileExtraction = async (file: File): Promise<FirmExtractionResult> => {
     setIsExtracting(true);
     try {
       const formData = new FormData();
@@ -379,27 +377,30 @@ export function ConsultantGallery({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-sm text-[var(--color-text-muted)]">Loading consultants...</p>
+        <p className="text-sm text-[var(--sw-muted)]">Loading consultants...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Firms Section */}
-      <div className="relative">
+    <div className="space-y-3">
+      <ProcurementCardShell
+        meta={`${consultants.length + (newFirm ? 1 : 0)} tenderers`}
+        variant="strip"
+      >
+        <div className="relative">
         {/* Extraction Progress Overlay */}
         {isExtracting && (
           <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center">
-            <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3 shadow-lg">
+            <div className="bg-white border border-[var(--sw-rule)] p-6 flex flex-col items-center gap-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-green)]"></div>
-              <p className="text-[var(--color-text-primary)] font-semibold">Extracting consultant data...</p>
-              <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
+              <p className="text-[var(--sw-ink)] font-semibold">Extracting consultant data...</p>
+              <p className="text-xs text-[var(--sw-muted)]">This may take a few moments</p>
             </div>
           </div>
         )}
 
-        <div className="flex overflow-x-auto py-3 px-1 items-stretch gap-4 firms-scrollbar" style={{ scrollbarWidth: 'thin' }}>
+        <div className="flex overflow-x-auto py-0.5 items-stretch gap-2 firms-scrollbar" style={{ scrollbarWidth: 'thin' }}>
           {/* Existing consultants */}
           {consultants.map((consultant) => (
             <FirmCard
@@ -449,81 +450,36 @@ export function ConsultantGallery({
             onFileDrop={handleAddNewFileDrop}
           />
         </div>
-      </div>
+        </div>
+      </ProcurementCardShell>
 
-
-
-      {/* RFT NEW Section - comprehensive RFT documents per discipline */}
       {disciplineId && (
-        <RFTNewSection
-          projectId={projectId}
-          stakeholderId={disciplineId}
-          stakeholderName={discipline}
-          selectedDocumentIds={selectedDocumentIds}
-          onLoadTransmittal={onSetSelectedDocumentIds}
-          onSaveTransmittal={() => selectedDocumentIds}
-        />
-      )}
-
-      {/* Addendum Section - independent transmittals per addendum */}
-      {disciplineId && (
-        <AddendumSection
-          projectId={projectId}
-          stakeholderId={disciplineId}
-          stakeholderName={discipline}
-          selectedDocumentIds={selectedDocumentIds}
-          onLoadTransmittal={onSetSelectedDocumentIds}
-          onSaveTransmittal={() => selectedDocumentIds}
-        />
-      )}
-
-      {/* Evaluation Price Section - tender price evaluation with numbered tabs */}
-      {disciplineId && (
-        <EvaluationPriceSection
-          projectId={projectId}
-          stakeholderId={disciplineId}
-          stakeholderName={discipline}
-        />
-      )}
-
-      {/* Evaluation Non-Price Section - non-price evaluation criteria */}
-      {disciplineId && (
-        <EvaluationNonPriceSection
-          projectId={projectId}
-          stakeholderId={disciplineId}
-          stakeholderName={discipline}
-        />
-      )}
-
-      {/* TRR Section - Tender Recommendation Report */}
-      {disciplineId && (
-        <TRRSection
+        <ProcurementWorkflowLayout
           projectId={projectId}
           stakeholderId={disciplineId}
           stakeholderName={discipline}
           contextType="discipline"
           selectedDocumentIds={selectedDocumentIds}
-          onLoadTransmittal={onSetSelectedDocumentIds}
-          onSaveTransmittal={() => selectedDocumentIds}
+          onSetSelectedDocumentIds={onSetSelectedDocumentIds}
         />
       )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}>
-        <AlertDialogContent className="bg-[var(--color-bg-primary)] border-[var(--color-border)]">
+        <AlertDialogContent className="rounded-none bg-white border-[var(--sw-rule)]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[var(--color-text-primary)]">Delete Consultant</AlertDialogTitle>
-            <AlertDialogDescription className="text-[var(--color-text-muted)]">
+            <AlertDialogTitle className="text-[var(--sw-ink)]">Delete Consultant</AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--sw-muted)]">
               Are you sure you want to delete {deleteDialog.name}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[var(--color-border)] text-[var(--color-text-primary)] border-[var(--color-border)] hover:bg-[var(--color-bg-tertiary)] transition-colors">
+            <AlertDialogCancel className="rounded-none bg-transparent text-[var(--sw-ink)] border-[var(--sw-rule)] hover:bg-[var(--sw-paper)] transition-colors">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => handleDelete(deleteDialog.id)}
-              className="bg-[var(--color-accent-coral)] hover:bg-[var(--primitive-coral-dark)] text-white transition-colors"
+              className="rounded-none bg-[var(--sw-rose)] hover:bg-[var(--sw-rose-dk)] text-[var(--sw-ink)] hover:text-white transition-colors"
             >
               Delete
             </AlertDialogAction>

@@ -74,12 +74,20 @@ export default async function AdminUsersPage() {
     const users = await getUsers();
 
     return (
-        <div className="mx-auto max-w-6xl px-6 py-8">
-            <div className="mb-6">
-                <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">Users</h1>
-                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                    {users.length} total. All actions are logged to <code className="text-xs text-[var(--color-text-secondary)]">admin_audit_log</code>.
-                </p>
+        <div className="sitewise-page-frame">
+            <div className="sitewise-page-header">
+                <div>
+                    <div className="sitewise-page-kicker">admin / users</div>
+                    <h1 className="mt-2">Users</h1>
+                    <p className="sitewise-page-subtitle">
+                        User access, suspension, and password reset controls. Actions are logged to{' '}
+                        <code className="sitewise-code">admin_audit_log</code>.
+                    </p>
+                </div>
+                <div className="flex flex-wrap justify-end gap-2">
+                    <span className="sitewise-status-pill">{users.length} total</span>
+                    <span className="sitewise-status-pill sitewise-status-pill-dark">audit logged</span>
+                </div>
             </div>
             <UsersTable initialUsers={users} />
         </div>

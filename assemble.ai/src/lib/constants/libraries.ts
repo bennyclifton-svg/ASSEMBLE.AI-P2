@@ -5,12 +5,12 @@
  */
 
 export const KNOWLEDGE_LIBRARY_TYPES = [
-  { id: 'due-diligence', name: 'Due Diligence', color: '#ce9178' },
-  { id: 'house', name: 'House', color: '#4ec9b0' },
+  { id: 'due-diligence', name: 'Due Diligence', color: 'var(--sw-peach)' },
+  { id: 'house', name: 'House', color: 'var(--color-success)' },
   { id: 'apartments', name: 'Apartments', color: '#569cd6' },
-  { id: 'fitout', name: 'Fitout', color: '#dcdcaa' },
-  { id: 'industrial', name: 'Industrial', color: '#c586c0' },
-  { id: 'remediation', name: 'Remediation', color: '#9cdcfe' },
+  { id: 'fitout', name: 'Fitout', color: 'var(--sw-amber)' },
+  { id: 'industrial', name: 'Industrial', color: 'var(--sw-lav)' },
+  { id: 'remediation', name: 'Remediation', color: 'var(--sw-cyan)' },
 ] as const;
 
 export type LibraryType = typeof KNOWLEDGE_LIBRARY_TYPES[number]['id'];

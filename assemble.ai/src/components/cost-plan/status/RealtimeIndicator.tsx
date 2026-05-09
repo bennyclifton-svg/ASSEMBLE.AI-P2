@@ -64,7 +64,7 @@ export function RealtimeIndicator({
         disabled={status === 'reconnecting'}
         className={`
           flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors
-          ${status === 'disconnected' ? 'cursor-pointer hover:bg-[#37373d]' : 'cursor-default'}
+          ${status === 'disconnected' ? 'cursor-pointer hover:bg-[var(--color-bg-hover)]' : 'cursor-default'}
         `}
       >
         {/* Status dot */}
@@ -84,20 +84,20 @@ export function RealtimeIndicator({
       {/* Tooltip */}
       {showTooltip && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50">
-          <div className="bg-[#252526] border border-[#3e3e42] rounded shadow-lg px-3 py-2 text-xs whitespace-nowrap">
-            <div className="font-medium text-[#cccccc] mb-1">{config.tooltipTitle}</div>
-            <div className="text-[#858585]">
+          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg px-3 py-2 text-xs whitespace-nowrap">
+            <div className="font-medium text-[var(--color-text-primary)] mb-1">{config.tooltipTitle}</div>
+            <div className="text-[var(--color-text-muted)]">
               {getTooltipContent(status, lastPollTime, countdown, pollInterval)}
             </div>
             {status === 'disconnected' && onReconnect && (
-              <div className="mt-1.5 pt-1.5 border-t border-[#3e3e42]">
-                <span className="text-[#0e639c]">Click to reconnect</span>
+              <div className="mt-1.5 pt-1.5 border-t border-[var(--color-border)]">
+                <span className="text-[var(--color-accent-primary)]">Click to reconnect</span>
               </div>
             )}
           </div>
           {/* Arrow */}
           <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
-            <div className="border-4 border-transparent border-t-[#3e3e42]" />
+            <div className="border-4 border-transparent border-t-[var(--color-border)]" />
           </div>
         </div>
       )}
@@ -111,36 +111,36 @@ function getStatusConfig(status: ConnectionStatus) {
     case 'connected':
       return {
         icon: <Wifi className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#4ade80]',
-        textClass: 'text-[#4ade80]',
-        dotClass: 'bg-[#4ade80] animate-pulse',
+        iconClass: 'text-[var(--color-success)]',
+        textClass: 'text-[var(--color-success)]',
+        dotClass: 'bg-[var(--color-success)] animate-pulse',
         label: 'Live',
         tooltipTitle: 'Connected',
       };
     case 'reconnecting':
       return {
         icon: <RefreshCw className="w-3.5 h-3.5 animate-spin" />,
-        iconClass: 'text-[#f59e0b]',
-        textClass: 'text-[#f59e0b]',
-        dotClass: 'bg-[#f59e0b]',
+        iconClass: 'text-[var(--color-warning)]',
+        textClass: 'text-[var(--color-warning)]',
+        dotClass: 'bg-[var(--color-warning)]',
         label: 'Reconnecting...',
         tooltipTitle: 'Reconnecting',
       };
     case 'disconnected':
       return {
         icon: <WifiOff className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#f87171]',
-        textClass: 'text-[#f87171]',
-        dotClass: 'bg-[#f87171]',
+        iconClass: 'text-[var(--color-error)]',
+        textClass: 'text-[var(--color-error)]',
+        dotClass: 'bg-[var(--color-error)]',
         label: 'Disconnected',
         tooltipTitle: 'Disconnected',
       };
     default:
       return {
         icon: <Wifi className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#858585]',
-        textClass: 'text-[#858585]',
-        dotClass: 'bg-[#858585]',
+        iconClass: 'text-[var(--color-text-muted)]',
+        textClass: 'text-[var(--color-text-muted)]',
+        dotClass: 'bg-[var(--color-text-muted)]',
         label: 'Unknown',
         tooltipTitle: 'Unknown Status',
       };

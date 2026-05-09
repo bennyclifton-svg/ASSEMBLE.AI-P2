@@ -18,7 +18,7 @@ export function CustomerPortalButton() {
         <button
             type="button"
             onClick={handleClick}
-            className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-bg-tertiary)] px-4 py-2 font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-border)]"
+            className="sitewise-button"
         >
             Manage Subscription
             <ExternalLink className="h-4 w-4" />

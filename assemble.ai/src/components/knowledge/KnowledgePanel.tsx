@@ -1,16 +1,25 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Plus, X, Trash, Eye, EyeOff, Users } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Eye, EyeOff, Loader2, Minus, Plus, Trash, Users, X } from 'lucide-react';
 import { useKnowledgeSubcategories, type KnowledgeSubcategory } from '@/lib/hooks/use-knowledge-subcategories';
 import { useKnowledgeSubcategoryRefresh } from '@/lib/contexts/knowledge-subcategory-refresh-context';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface KnowledgePanelProps {
   projectId: string;
+  projectName?: string;
+  buildingClass?: string | null;
+  projectType?: string | null;
+  profileData?: {
+    subclass?: string[];
+    scaleData?: Record<string, number>;
+    complexity?: Record<string, string | string[]>;
+    workScope?: string[];
+  };
+  className?: string;
 }
 
 const GROUP_ORDER = ['planning', 'procurement', 'delivery', 'authorities'] as const;
@@ -28,10 +37,103 @@ const GROUP_LABELS: Record<KnowledgeGroup, string> = {
   'ifc-design': 'IFC Design',
 };
 
-export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
+const GROUP_ACCENTS: Record<KnowledgeGroup, string> = {
+  planning: 'var(--sw-cyan)',
+  procurement: 'var(--sw-lav)',
+  delivery: 'var(--sw-rose)',
+  authorities: 'var(--sw-amber)',
+  'scheme-design': 'var(--sw-peach)',
+  'detail-design': 'var(--sw-cyan)',
+  'ifc-design': 'var(--sw-lav)',
+};
+
+const DESIGN_GROUP_SET = new Set<KnowledgeGroup>(DESIGN_GROUP_ORDER);
+const muted = 'var(--sw-muted)';
+
+type DeleteIntent =
+  | { type: 'selected'; group: KnowledgeGroup; ids: string[] }
+  | { type: 'group'; group: KnowledgeGroup; ids: string[] }
+  | null;
+
+function slugifyProjectName(projectName: string): string {
+  return projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+}
+
+function deriveProfileCompletion(args: {
+  buildingClass?: string | null;
+  projectType?: string | null;
+  profile?: KnowledgePanelProps['profileData'];
+}): number {
+  const { buildingClass, projectType, profile } = args;
+  let filled = 0;
+  if (buildingClass) filled++;
+  if (projectType) filled++;
+  if ((profile?.subclass?.length ?? 0) > 0) filled++;
+  if (profile?.scaleData?.gfa_sqm != null) filled++;
+  if (profile?.scaleData?.storeys != null) filled++;
+  if (profile?.scaleData?.units != null) filled++;
+  if (profile?.complexity && Object.keys(profile.complexity).length >= 5) filled++;
+  if ((profile?.workScope?.length ?? 0) > 0) filled++;
+  return Math.round((filled / 8) * 100);
+}
+
+function KnowledgeBreadcrumb({
+  projectName,
+  activeCrumb,
+}: {
+  projectName: string;
+  activeCrumb: string;
+}) {
+  return (
+    <nav
+      aria-label="Breadcrumb"
+      className="flex items-center gap-2"
+      style={{
+        fontFamily: 'var(--sw-font-mono)',
+        fontSize: 12,
+        color: muted,
+      }}
+    >
+      <span>{slugifyProjectName(projectName)}</span>
+      <span style={{ opacity: 0.5 }}>/</span>
+      <span style={{ color: 'var(--sw-ink)' }}>KNOWLEDGE</span>
+      <span style={{ opacity: 0.5 }}>/</span>
+      <span style={{ color: 'var(--sw-ink)' }}>{activeCrumb}</span>
+    </nav>
+  );
+}
+
+function StatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
+  const isDark = tone === 'dark';
+  return (
+    <span
+      style={{
+        fontFamily: 'var(--sw-font-mono)',
+        fontSize: 11,
+        padding: '4px 10px',
+        background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
+        border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
+        color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
+        letterSpacing: '0.02em',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+export function KnowledgePanel({
+  projectId,
+  projectName = 'project',
+  buildingClass,
+  projectType,
+  profileData,
+  className,
+}: KnowledgePanelProps) {
   const {
     subcategories,
     isLoading,
+    error,
     createSubcategory,
     updateSubcategory,
     deleteSubcategory,
@@ -41,16 +143,16 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
 
   const { triggerRefresh } = useKnowledgeSubcategoryRefresh();
 
+  const [activeGroup, setActiveGroup] = useState<KnowledgeGroup>('planning');
+
   // Quick add state
   const [quickAddGroup, setQuickAddGroup] = useState<KnowledgeGroup | null>(null);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // Group delete state
-  const [groupToDelete, setGroupToDelete] = useState<KnowledgeGroup | null>(null);
+  const [deleteIntent, setDeleteIntent] = useState<DeleteIntent>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Visibility state
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
@@ -87,7 +189,7 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
     }
   };
 
-  const handleAdoptConsultants = async (categoryId: string) => {
+  const handleAdoptConsultants = async (categoryId: KnowledgeGroup) => {
     setAdoptingGroup(categoryId);
     try {
       const res = await fetch(`/api/projects/${projectId}/knowledge-subcategories/adopt-consultants`, {
@@ -104,6 +206,32 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
     }
   };
 
+  const activeItems = useMemo(() => subcategories[activeGroup] || [], [activeGroup, subcategories]);
+  const activeSelectedIds = useMemo(
+    () => activeItems.filter(item => selectedIds.has(item.id)).map(item => item.id),
+    [activeItems, selectedIds]
+  );
+  const activeSelectedCount = activeSelectedIds.length;
+  const allActiveSelected = activeItems.length > 0 && activeSelectedCount === activeItems.length;
+  const someActiveSelected = activeSelectedCount > 0;
+  const totalEntries = useMemo(
+    () => ALL_GROUPS.reduce((total, group) => total + (subcategories[group] || []).length, 0),
+    [subcategories]
+  );
+  const visibleCategoryCount = ALL_GROUPS.filter(group => visibility[group] !== false).length;
+  const profileCompletionPct = useMemo(
+    () => deriveProfileCompletion({ buildingClass, projectType, profile: profileData }),
+    [buildingClass, projectType, profileData]
+  );
+
+  useEffect(() => {
+    const availableIds = new Set(ALL_GROUPS.flatMap(group => (subcategories[group] || []).map(item => item.id)));
+    setSelectedIds(prev => {
+      const next = new Set([...prev].filter(id => availableIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [subcategories]);
+
   // Selection handler (click/ctrl+click/shift+click)
   const handleSelect = (id: string, event: React.MouseEvent) => {
     // Prevent text selection on shift+click
@@ -113,18 +241,21 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
 
     const newSelected = new Set(selectedIds);
     const isSelected = newSelected.has(id);
-    const allItems = ALL_GROUPS.flatMap(g => subcategories[g] || []);
 
     if (event.shiftKey && lastSelectedId) {
-      const start = allItems.findIndex(s => s.id === lastSelectedId);
-      const end = allItems.findIndex(s => s.id === id);
+      const start = activeItems.findIndex(s => s.id === lastSelectedId);
+      const end = activeItems.findIndex(s => s.id === id);
       if (start !== -1 && end !== -1) {
         const [low, high] = start < end ? [start, end] : [end, start];
-        allItems.slice(low, high + 1).forEach(s => newSelected.add(s.id));
+        activeItems.slice(low, high + 1).forEach(s => newSelected.add(s.id));
       }
       setLastSelectedId(id);
     } else if (event.ctrlKey || event.metaKey) {
-      isSelected ? newSelected.delete(id) : newSelected.add(id);
+      if (isSelected) {
+        newSelected.delete(id);
+      } else {
+        newSelected.add(id);
+      }
       setLastSelectedId(id);
     } else {
       if (selectedIds.size === 1 && selectedIds.has(id)) {
@@ -139,6 +270,20 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
     setSelectedIds(newSelected);
   };
 
+  const handleToggleSelectActive = useCallback(() => {
+    if (activeItems.length === 0) return;
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allActiveSelected) {
+        activeItems.forEach(item => next.delete(item.id));
+      } else {
+        activeItems.forEach(item => next.add(item.id));
+      }
+      return next;
+    });
+    setLastSelectedId(allActiveSelected ? null : activeItems[activeItems.length - 1]?.id ?? null);
+  }, [activeItems, allActiveSelected]);
+
   // Quick add handler
   const handleQuickAddSubmit = async (group: KnowledgeGroup, name: string) => {
     if (!name.trim()) return;
@@ -146,32 +291,44 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
     setQuickAddGroup(null);
   };
 
-  // Bulk delete handler
-  const handleBulkDelete = async () => {
-    const idsToDelete = Array.from(selectedIds);
-    await bulkDeleteSubcategories(idsToDelete);
-    setSelectedIds(new Set());
-    setLastSelectedId(null);
-    setShowDeleteConfirm(false);
+  const handleRequestTableDelete = () => {
+    if (activeSelectedCount > 0) {
+      setDeleteIntent({ type: 'selected', group: activeGroup, ids: activeSelectedIds });
+      return;
+    }
+
+    if (activeItems.length > 0) {
+      setDeleteIntent({ type: 'group', group: activeGroup, ids: activeItems.map(item => item.id) });
+    }
   };
 
-  // Group delete handler
-  const handleDeleteGroup = async () => {
-    if (!groupToDelete) return;
-    const groupItems = subcategories[groupToDelete] || [];
-    await bulkDeleteSubcategories(groupItems.map(item => item.id));
-    setGroupToDelete(null);
+  const handleConfirmDelete = async () => {
+    if (!deleteIntent || deleteIntent.ids.length === 0) return;
+    setIsDeleting(true);
+    try {
+      if (deleteIntent.ids.length === 1 && deleteIntent.type === 'selected') {
+        await deleteSubcategory(deleteIntent.ids[0]);
+      } else {
+        await bulkDeleteSubcategories(deleteIntent.ids);
+      }
+      const deleted = new Set(deleteIntent.ids);
+      setSelectedIds(prev => new Set([...prev].filter(id => !deleted.has(id))));
+      setLastSelectedId(null);
+    } finally {
+      setIsDeleting(false);
+      setDeleteIntent(null);
+    }
   };
 
   if (isLoading) {
     return (
-      <div className="h-full p-6 overflow-y-auto">
-        <div className="max-w-6xl mx-auto">
-          <div className="rounded-lg border border-[var(--color-border)] overflow-hidden">
-            <Skeleton className="h-10 w-full" />
+      <div className={cn('flex h-full flex-col', className)} style={{ background: 'var(--sw-paper)' }}>
+        <div className="p-4">
+          <div className="border border-[var(--sw-rule)] bg-white">
+            <Skeleton className="h-10 w-full rounded-none" />
             <div className="space-y-1 p-2">
               {[1, 2, 3, 4, 5, 6].map(i => (
-                <Skeleton key={i} className="h-10 w-full" />
+                <Skeleton key={i} className="h-10 w-full rounded-none" />
               ))}
             </div>
           </div>
@@ -180,128 +337,412 @@ export function KnowledgePanel({ projectId }: KnowledgePanelProps) {
     );
   }
 
+  const deleteTitle = deleteIntent?.type === 'group'
+    ? `Delete all ${deleteIntent ? GROUP_LABELS[deleteIntent.group] : ''} entries?`
+    : `Delete ${deleteIntent?.ids.length ?? 0} selected knowledge entr${deleteIntent?.ids.length === 1 ? 'y' : 'ies'}?`;
+  const deleteDescription = deleteIntent?.type === 'group'
+    ? `This will permanently delete every entry in ${GROUP_LABELS[deleteIntent.group]}.`
+    : 'This will permanently delete the selected knowledge entries.';
+
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarGutter: 'stable both-edges' }}>
-        <div className="grid grid-cols-2 gap-4 items-start">
-          {/* Column 1: Operational categories */}
-          <div className="space-y-4">
-            {GROUP_ORDER.map(group => {
-              const items = subcategories[group] || [];
-              const selectedInGroup = items.filter(s => selectedIds.has(s.id)).length;
-              const hasSelectedInGroup = selectedInGroup > 0;
-
-              return (
-                <GroupCard
-                  key={group}
-                  group={group}
-                  items={items}
-                  onUpdate={updateSubcategory}
-                  onDelete={deleteSubcategory}
-                  onDeleteGroup={() => setGroupToDelete(group)}
-                  onDeleteSelected={() => setShowDeleteConfirm(true)}
-                  hasSelectedInGroup={hasSelectedInGroup}
-                  selectedInGroup={selectedInGroup}
-                  quickAddGroup={quickAddGroup}
-                  onQuickAdd={() => setQuickAddGroup(group)}
-                  onQuickAddSubmit={handleQuickAddSubmit}
-                  onQuickAddCancel={() => setQuickAddGroup(null)}
-                  selectedIds={selectedIds}
-                  onSelect={handleSelect}
-                  isVisible={visibility[group] !== false}
-                  onToggleVisibility={() => toggleVisibility(group)}
-                />
-              );
-            })}
-          </div>
-
-          {/* Column 2: Design categories */}
-          <div className="space-y-4">
-            {DESIGN_GROUP_ORDER.map(group => {
-              const items = subcategories[group] || [];
-              const selectedInGroup = items.filter(s => selectedIds.has(s.id)).length;
-              const hasSelectedInGroup = selectedInGroup > 0;
-
-              return (
-                <GroupCard
-                  key={group}
-                  group={group}
-                  items={items}
-                  onUpdate={updateSubcategory}
-                  onDelete={deleteSubcategory}
-                  onDeleteGroup={() => setGroupToDelete(group)}
-                  onDeleteSelected={() => setShowDeleteConfirm(true)}
-                  hasSelectedInGroup={hasSelectedInGroup}
-                  selectedInGroup={selectedInGroup}
-                  quickAddGroup={quickAddGroup}
-                  onQuickAdd={() => setQuickAddGroup(group)}
-                  onQuickAddSubmit={handleQuickAddSubmit}
-                  onQuickAddCancel={() => setQuickAddGroup(null)}
-                  selectedIds={selectedIds}
-                  onSelect={handleSelect}
-                  isVisible={visibility[group] !== false}
-                  onToggleVisibility={() => toggleVisibility(group)}
-                  isDesignCategory={true}
-                  onAdoptConsultants={() => handleAdoptConsultants(group)}
-                  isAdopting={adoptingGroup === group}
-                />
-              );
-            })}
+    <div className={cn('flex h-full flex-col overflow-hidden', className)} style={{ background: 'var(--sw-paper)' }}>
+      <header className="shrink-0 px-4 pt-2 pb-3" style={{ borderBottom: '1px solid var(--sw-rule-2)' }}>
+        <div className="mb-2 flex items-center justify-between gap-4">
+          <KnowledgeBreadcrumb projectName={projectName} activeCrumb={GROUP_LABELS[activeGroup].toUpperCase()} />
+          <div className="flex gap-1.5">
+            <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
+            <StatusPill label="stage: detail design" tone="dark" />
           </div>
         </div>
+
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h2
+              className="text-[30px] font-bold leading-none text-[var(--sw-ink)]"
+              style={{ fontFamily: 'var(--sw-font-sans)', letterSpacing: 0 }}
+            >
+              Knowledge
+            </h2>
+            <div className="mt-1 min-h-[18px] text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
+              {ALL_GROUPS.length} categories / {totalEntries} entries / {visibleCategoryCount} visible
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 xl:grid-cols-[360px_minmax(520px,1fr)]">
+        <CategoryRegister
+          activeGroup={activeGroup}
+          selectedIds={selectedIds}
+          subcategories={subcategories}
+          visibility={visibility}
+          onSelectGroup={setActiveGroup}
+          onToggleVisibility={toggleVisibility}
+        />
+
+        <section className="flex min-h-[260px] min-w-0 flex-col overflow-hidden border border-[var(--sw-rule)] bg-white">
+          <div
+            className="flex h-9 shrink-0 items-center gap-2 px-3"
+            style={{ background: 'var(--sw-ink)', color: 'var(--sw-paper)' }}
+          >
+            <span
+              aria-hidden="true"
+              className="inline-block rounded-full"
+              style={{ width: 8, height: 8, background: GROUP_ACCENTS[activeGroup] }}
+            />
+            <span
+              className="min-w-0 truncate text-[10px] font-semibold uppercase"
+              style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.18em' }}
+            >
+              {GROUP_LABELS[activeGroup]}
+            </span>
+            <span
+              className="ml-auto truncate text-[10px]"
+              style={{ fontFamily: 'var(--sw-font-mono)', color: 'rgba(232,228,218,0.6)' }}
+            >
+              {activeItems.length} entr{activeItems.length === 1 ? 'y' : 'ies'}
+              {activeSelectedCount > 0 ? ` / ${activeSelectedCount} selected` : ''}
+            </span>
+          </div>
+
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--sw-rule-2)] px-3 py-2">
+            <div className="min-w-0">
+              <div
+                className="truncate text-[10px] font-semibold uppercase"
+                style={{
+                  fontFamily: 'var(--sw-font-mono)',
+                  letterSpacing: '0.18em',
+                  color: GROUP_ACCENTS[activeGroup],
+                }}
+              >
+                Category entries
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5">
+              <IconButton
+                title={visibility[activeGroup] !== false ? 'Visible in Document Repository' : 'Hidden from Document Repository'}
+                onClick={() => toggleVisibility(activeGroup)}
+              >
+                {visibility[activeGroup] !== false ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              </IconButton>
+
+              {DESIGN_GROUP_SET.has(activeGroup) && (
+                <IconButton
+                  title="Populate from consultant list"
+                  onClick={() => handleAdoptConsultants(activeGroup)}
+                  disabled={adoptingGroup === activeGroup}
+                >
+                  {adoptingGroup === activeGroup ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Users className="h-3.5 w-3.5" />}
+                </IconButton>
+              )}
+
+              <IconButton
+                title={`Add ${GROUP_LABELS[activeGroup]} entry`}
+                onClick={() => setQuickAddGroup(activeGroup)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </IconButton>
+            </div>
+          </div>
+
+          {error && (
+            <div className="border-b border-[var(--sw-rule-2)] bg-[var(--sw-rose-tint)] px-3 py-2 text-xs text-[var(--sw-rose-dk)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
+              {error}
+            </div>
+          )}
+
+          <KnowledgeEntriesTable
+            activeGroup={activeGroup}
+            items={activeItems}
+            quickAddGroup={quickAddGroup}
+            selectedIds={selectedIds}
+            allActiveSelected={allActiveSelected}
+            someActiveSelected={someActiveSelected}
+            activeSelectedCount={activeSelectedCount}
+            isDeleting={isDeleting}
+            onToggleSelectActive={handleToggleSelectActive}
+            onQuickAddSubmit={handleQuickAddSubmit}
+            onQuickAddCancel={() => setQuickAddGroup(null)}
+            onUpdate={updateSubcategory}
+            onDelete={deleteSubcategory}
+            onSelect={handleSelect}
+            onDeleteFromTable={handleRequestTableDelete}
+          />
+        </section>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        title="Delete Selected Subcategories"
-      >
-        <div className="space-y-4">
-          <p className="text-[var(--color-text-primary)]">
-            Are you sure you want to delete {selectedIds.size} selected subcategor
-            {selectedIds.size !== 1 ? 'ies' : 'y'}?
-          </p>
-          <p className="text-sm text-[var(--color-text-muted)]">This action cannot be undone.</p>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleBulkDelete}>
-              Delete
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Group Delete Confirmation Modal */}
-      <Modal
-        isOpen={groupToDelete !== null}
-        onClose={() => setGroupToDelete(null)}
-        title={`Delete All ${groupToDelete ? GROUP_LABELS[groupToDelete] : ''} Subcategories`}
-      >
-        <div className="space-y-4">
-          <p className="text-[var(--color-text-primary)]">
-            Are you sure you want to delete all {groupToDelete ? (subcategories[groupToDelete] || []).length : 0}{' '}
-            {groupToDelete ? GROUP_LABELS[groupToDelete].toLowerCase() : ''} subcategor
-            {groupToDelete && (subcategories[groupToDelete] || []).length !== 1 ? 'ies' : 'y'}?
-          </p>
-          <p className="text-sm text-[var(--color-text-muted)]">This action cannot be undone.</p>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setGroupToDelete(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteGroup}>
-              Delete All
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <AuroraConfirmDialog
+        open={deleteIntent !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteIntent(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title={deleteTitle}
+        description={deleteDescription}
+      />
     </div>
   );
 }
 
-// Inline editable field component (same pattern as StakeholderRow)
+interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children: React.ReactNode;
+}
+
+function IconButton({ children, className, ...props }: IconButtonProps) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        'inline-flex h-7 w-7 items-center justify-center text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-ink)] disabled:cursor-not-allowed disabled:opacity-45',
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+interface CategoryRegisterProps {
+  activeGroup: KnowledgeGroup;
+  selectedIds: Set<string>;
+  subcategories: Record<string, KnowledgeSubcategory[]>;
+  visibility: Record<string, boolean>;
+  onSelectGroup: (group: KnowledgeGroup) => void;
+  onToggleVisibility: (group: KnowledgeGroup) => void;
+}
+
+function CategoryRegister({
+  activeGroup,
+  selectedIds,
+  subcategories,
+  visibility,
+  onSelectGroup,
+  onToggleVisibility,
+}: CategoryRegisterProps) {
+  return (
+    <section
+      className="min-w-0 self-start overflow-hidden border border-[var(--sw-rule)] bg-white"
+      aria-label="Knowledge category register"
+    >
+      <div
+        className="grid h-8 grid-cols-[minmax(0,1fr)_76px_42px] items-center border-b border-[var(--sw-rule-2)] px-3"
+        style={{
+          fontFamily: 'var(--sw-font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.18em',
+          color: 'var(--sw-muted)',
+        }}
+      >
+        <span>category</span>
+        <span className="text-right">entries</span>
+        <span className="text-right">show</span>
+      </div>
+
+      <div>
+        {ALL_GROUPS.map(group => {
+          const items = subcategories[group] || [];
+          const isActive = activeGroup === group;
+          const isVisible = visibility[group] !== false;
+          const selectedInGroup = items.filter(item => selectedIds.has(item.id)).length;
+
+          return (
+            <div
+              key={group}
+              role="button"
+              tabIndex={0}
+              onClick={() => onSelectGroup(group)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelectGroup(group);
+                }
+              }}
+              className={cn(
+                'grid h-10 cursor-pointer grid-cols-[minmax(0,1fr)_76px_42px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
+                isActive
+                  ? 'border-l-4 bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-ink)]'
+                  : 'bg-transparent hover:bg-[var(--sw-paper-2)]',
+                !isVisible && !isActive && 'opacity-55'
+              )}
+              style={{
+                borderLeftColor: GROUP_ACCENTS[group],
+                fontFamily: 'var(--sw-font-mono)',
+              }}
+              aria-pressed={isActive}
+            >
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 shrink-0"
+                  style={{ background: GROUP_ACCENTS[group] }}
+                />
+                <span
+                  className={cn(
+                    'truncate text-[10px] font-semibold',
+                    isActive ? 'text-[var(--sw-paper)]' : 'text-[var(--sw-ink)]',
+                    isActive && 'font-bold'
+                  )}
+                  title={GROUP_LABELS[group]}
+                >
+                  {GROUP_LABELS[group]}
+                </span>
+              </span>
+              <span className={cn(
+                'flex items-center justify-end gap-1 text-[10px]',
+                isActive ? 'text-[rgba(232,228,218,0.72)]' : 'text-[var(--sw-muted)]'
+              )}>
+                <span>{items.length}</span>
+                {selectedInGroup > 0 && (
+                  <span className={isActive ? 'text-[var(--sw-paper)]' : 'text-[var(--sw-rose)]'}>/{selectedInGroup}</span>
+                )}
+                {isActive ? <Check className="h-3 w-3 shrink-0 text-[var(--sw-paper)]" /> : null}
+              </span>
+              <span className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggleVisibility(group);
+                  }}
+                  className={cn(
+                    'p-1 transition-colors',
+                    isActive
+                      ? 'text-[rgba(232,228,218,0.72)] hover:bg-[rgba(232,228,218,0.12)] hover:text-[var(--sw-paper)]'
+                      : 'text-[var(--sw-muted)] hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-ink)]'
+                  )}
+                  title={isVisible ? 'Visible in Document Repository' : 'Hidden from Document Repository'}
+                >
+                  {isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                </button>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+interface KnowledgeEntriesTableProps {
+  activeGroup: KnowledgeGroup;
+  items: KnowledgeSubcategory[];
+  quickAddGroup: KnowledgeGroup | null;
+  selectedIds: Set<string>;
+  allActiveSelected: boolean;
+  someActiveSelected: boolean;
+  activeSelectedCount: number;
+  isDeleting: boolean;
+  onToggleSelectActive: () => void;
+  onQuickAddSubmit: (group: KnowledgeGroup, name: string) => void;
+  onQuickAddCancel: () => void;
+  onUpdate: (id: string, name: string) => Promise<KnowledgeSubcategory | null>;
+  onDelete: (id: string) => Promise<boolean>;
+  onSelect: (id: string, event: React.MouseEvent) => void;
+  onDeleteFromTable: () => void;
+}
+
+function KnowledgeEntriesTable({
+  activeGroup,
+  items,
+  quickAddGroup,
+  selectedIds,
+  allActiveSelected,
+  someActiveSelected,
+  activeSelectedCount,
+  isDeleting,
+  onToggleSelectActive,
+  onQuickAddSubmit,
+  onQuickAddCancel,
+  onUpdate,
+  onDelete,
+  onSelect,
+  onDeleteFromTable,
+}: KnowledgeEntriesTableProps) {
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto">
+      <table
+        className="w-full table-fixed caption-bottom text-[11px]"
+        style={{ fontFamily: 'var(--sw-font-mono)', lineHeight: 1.1 }}
+      >
+        <thead>
+          <tr className="border-b border-[var(--sw-rule-2)] bg-white hover:bg-white">
+            <th
+              className="w-12 px-3 py-2 text-left text-[10px] font-semibold uppercase text-[var(--sw-muted)]"
+              style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
+            >
+              <button
+                type="button"
+                onClick={onToggleSelectActive}
+                disabled={items.length === 0}
+                className={cn(
+                  'flex h-3.5 w-3.5 items-center justify-center border transition-colors disabled:cursor-not-allowed disabled:opacity-35',
+                  someActiveSelected
+                    ? 'border-[var(--sw-rose)] bg-[var(--sw-rose)] text-[var(--sw-ink)]'
+                    : 'border-[var(--sw-rule)] bg-white hover:border-[var(--sw-ink)]'
+                )}
+                title={allActiveSelected ? 'Clear visible selection' : 'Select all entries in this category'}
+              >
+                {allActiveSelected ? <Check className="h-2.5 w-2.5" /> : someActiveSelected ? <Minus className="h-2.5 w-2.5" /> : null}
+              </button>
+            </th>
+            <th
+              className="px-2 py-2 text-left text-[10px] font-semibold uppercase text-[var(--sw-muted)]"
+              style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
+            >
+              Entry{' '}
+              <span className={activeSelectedCount > 0 ? 'text-[var(--sw-rose)]' : 'text-[var(--sw-muted)]'}>
+                ({activeSelectedCount > 0 ? activeSelectedCount : items.length})
+              </span>
+            </th>
+            <th className="w-10 px-1 py-2 text-right">
+              <button
+                type="button"
+                onClick={onDeleteFromTable}
+                disabled={items.length === 0 || isDeleting}
+                className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)] disabled:cursor-not-allowed disabled:opacity-35"
+                title={activeSelectedCount > 0 ? `Delete ${activeSelectedCount} selected entr${activeSelectedCount === 1 ? 'y' : 'ies'}` : `Delete all ${GROUP_LABELS[activeGroup]} entries`}
+              >
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash className="h-4 w-4" />}
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {quickAddGroup === activeGroup && (
+            <QuickAddRow
+              group={activeGroup}
+              onSubmit={onQuickAddSubmit}
+              onCancel={onQuickAddCancel}
+            />
+          )}
+
+          {items.map(item => (
+            <KnowledgeRow
+              key={item.id}
+              item={item}
+              group={activeGroup}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+              isSelected={selectedIds.has(item.id)}
+              onSelect={onSelect}
+            />
+          ))}
+
+          {items.length === 0 && quickAddGroup !== activeGroup && (
+            <tr>
+              <td colSpan={3} className="px-4 py-12 text-center text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
+                No {GROUP_LABELS[activeGroup].toLowerCase()} entries yet.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 interface InlineEditProps {
   value: string;
   onSave: (newValue: string) => Promise<void>;
@@ -359,199 +800,16 @@ function InlineEdit({ value, onSave, className }: InlineEditProps) {
       onKeyDown={handleKeyDown}
       disabled={isSaving}
       className={cn(
-        'w-full bg-transparent outline-none focus-visible:outline-none text-sm',
-        'placeholder:text-[var(--color-text-muted)]',
-        'hover:bg-[var(--color-bg-secondary)] focus:bg-[var(--color-bg-secondary)]',
-        'px-1 py-0.5 transition-colors',
-        isFocused
-          ? 'border border-[var(--color-accent-primary)]'
-          : 'border border-transparent',
+        'h-7 w-full border bg-transparent px-1.5 text-[11px] text-[var(--sw-ink)] outline-none transition-colors',
+        'hover:bg-[var(--sw-paper-2)] focus:bg-white focus:border-[var(--sw-rose)]',
+        isFocused ? 'border-[var(--sw-rose)]' : 'border-transparent',
         className
       )}
+      style={{ fontFamily: 'var(--sw-font-mono)' }}
     />
   );
 }
 
-// Group card component
-interface GroupCardProps {
-  group: KnowledgeGroup;
-  items: KnowledgeSubcategory[];
-  onUpdate: (id: string, name: string) => Promise<KnowledgeSubcategory | null>;
-  onDelete: (id: string) => Promise<boolean>;
-  onDeleteGroup: () => void;
-  onDeleteSelected: () => void;
-  hasSelectedInGroup: boolean;
-  selectedInGroup: number;
-  quickAddGroup: KnowledgeGroup | null;
-  onQuickAdd: () => void;
-  onQuickAddSubmit: (group: KnowledgeGroup, name: string) => void;
-  onQuickAddCancel: () => void;
-  selectedIds: Set<string>;
-  onSelect: (id: string, event: React.MouseEvent) => void;
-  isVisible?: boolean;
-  onToggleVisibility?: () => void;
-  isDesignCategory?: boolean;
-  onAdoptConsultants?: () => void;
-  isAdopting?: boolean;
-}
-
-function GroupCard({
-  group,
-  items,
-  onUpdate,
-  onDelete,
-  onDeleteGroup,
-  onDeleteSelected,
-  hasSelectedInGroup,
-  selectedInGroup,
-  quickAddGroup,
-  onQuickAdd,
-  onQuickAddSubmit,
-  onQuickAddCancel,
-  selectedIds,
-  onSelect,
-  isVisible,
-  onToggleVisibility,
-  isDesignCategory,
-  onAdoptConsultants,
-  isAdopting,
-}: GroupCardProps) {
-  const handleTrashClick = () => {
-    if (hasSelectedInGroup) {
-      onDeleteSelected();
-    } else {
-      onDeleteGroup();
-    }
-  };
-
-  const trashTitle = hasSelectedInGroup
-    ? `Delete ${selectedInGroup} selected subcategor${selectedInGroup !== 1 ? 'ies' : 'y'}`
-    : `Delete all ${GROUP_LABELS[group]} subcategories`;
-
-  return (
-    <div className="border border-[var(--color-border)]/50 rounded overflow-hidden flex flex-col">
-      {/* Header with copper tint background */}
-      <div
-        className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
-        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
-      >
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onQuickAdd}
-            className={cn(
-              'p-1 rounded transition-colors',
-              'text-blue-500 hover:text-blue-400 hover:bg-blue-500/10'
-            )}
-            title={`Add ${GROUP_LABELS[group]} subcategory`}
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-          {isDesignCategory && onAdoptConsultants && (
-            <button
-              onClick={onAdoptConsultants}
-              disabled={isAdopting}
-              className={cn(
-                'p-1 rounded transition-colors',
-                isAdopting
-                  ? 'text-[var(--color-text-muted)]/50 cursor-wait animate-pulse'
-                  : 'text-[var(--color-text-muted)] hover:text-blue-400 hover:bg-blue-500/10'
-              )}
-              title="Populate from consultant list"
-            >
-              <Users className="w-4 h-4" />
-            </button>
-          )}
-          <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
-            {GROUP_LABELS[group]} ({items.length})
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          {onToggleVisibility && (
-            <button
-              onClick={onToggleVisibility}
-              className={cn(
-                'p-1 rounded transition-colors',
-                isVisible
-                  ? 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                  : 'text-[var(--color-text-muted)]/30 hover:text-[var(--color-text-muted)]'
-              )}
-              title={isVisible ? 'Visible in Document Repository (click to hide)' : 'Hidden from Document Repository (click to show)'}
-            >
-              {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            </button>
-          )}
-          <button
-            onClick={handleTrashClick}
-            className={cn(
-              'p-1 rounded transition-colors',
-              items.length > 0 || hasSelectedInGroup
-                ? 'text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10'
-                : 'text-[var(--color-text-muted)]/30 cursor-not-allowed'
-            )}
-            title={trashTitle}
-            disabled={items.length === 0 && !hasSelectedInGroup}
-          >
-            <Trash className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Content area */}
-      <div
-        className="flex-1 backdrop-blur-md"
-        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-      >
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-[var(--color-border)]/50">
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-32">
-                Category
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider">
-                Subcategory
-              </th>
-              <th className="px-3 py-2 w-10" />
-            </tr>
-          </thead>
-          <tbody>
-            {/* Quick Add Row */}
-            {quickAddGroup === group && (
-              <QuickAddRow
-                group={group}
-                onSubmit={onQuickAddSubmit}
-                onCancel={onQuickAddCancel}
-              />
-            )}
-
-            {/* Subcategory rows */}
-            {items.map(item => (
-              <KnowledgeRow
-                key={item.id}
-                item={item}
-                group={group}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
-                isSelected={selectedIds.has(item.id)}
-                onSelect={onSelect}
-              />
-            ))}
-
-            {/* Empty state */}
-            {items.length === 0 && quickAddGroup !== group && (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-sm text-[var(--color-text-muted)]">
-                  No {GROUP_LABELS[group].toLowerCase()} subcategories yet. Click + to add.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-// Quick add row with text input
 interface QuickAddRowProps {
   group: KnowledgeGroup;
   onSubmit: (group: KnowledgeGroup, name: string) => void;
@@ -582,37 +840,33 @@ function QuickAddRow({ group, onSubmit, onCancel }: QuickAddRowProps) {
   };
 
   return (
-    <tr className="bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
-      <td className="px-3 py-2 text-sm text-[var(--color-text-muted)]">
-        {GROUP_LABELS[group]}
-      </td>
-      <td className="px-3 py-2">
+    <tr className="border-b border-[var(--sw-rule-2)] bg-[var(--sw-paper-2)]">
+      <td className="w-12 px-3 py-1" />
+      <td className="px-2 py-1">
         <input
           ref={inputRef}
           type="text"
-          placeholder="Subcategory name..."
+          placeholder="Entry name..."
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
-          className={cn(
-            'w-full px-2 py-1 text-sm rounded bg-[var(--color-bg-primary)] border border-[var(--color-border)]',
-            'focus:outline-none focus:border-[var(--color-accent-copper)]',
-            'text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)]'
-          )}
+          className="h-7 w-full border border-[var(--sw-rose)] bg-white px-1.5 text-[11px] text-[var(--sw-ink)] outline-none placeholder:text-[var(--sw-muted)]"
+          style={{ fontFamily: 'var(--sw-font-mono)' }}
         />
       </td>
-      <td className="px-3 py-2 w-10">
+      <td className="w-10 px-1 py-1 text-right">
         <button
+          type="button"
           onClick={onCancel}
-          className="p-1 text-[var(--color-text-muted)] hover:text-red-500"
+          className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)]"
+          title="Cancel entry"
         >
-          <X className="w-4 h-4" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </td>
     </tr>
   );
 }
 
-// Individual subcategory row
 interface KnowledgeRowProps {
   item: KnowledgeSubcategory;
   group: KnowledgeGroup;
@@ -623,24 +877,31 @@ interface KnowledgeRowProps {
 }
 
 function KnowledgeRow({ item, group, onUpdate, onDelete, isSelected, onSelect }: KnowledgeRowProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
   return (
     <tr
       className={cn(
-        'border-b border-[var(--color-border)]/30 cursor-pointer transition-colors select-none',
-        isSelected
-          ? 'bg-[var(--color-bg-tertiary)]'
-          : 'hover:bg-[var(--color-bg-secondary)]'
+        'h-9 cursor-pointer select-none border-b border-l-2 border-[var(--sw-rule-2)] transition-colors',
+        'hover:bg-[var(--sw-paper-2)]',
+        isSelected && 'bg-[var(--sw-paper-2)] hover:bg-[var(--sw-paper-2)]'
       )}
+      style={{ borderLeftColor: GROUP_ACCENTS[group] }}
       onClick={e => onSelect(item.id, e)}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseDown={(event) => {
+        if (event.shiftKey) event.preventDefault();
+      }}
+      aria-selected={isSelected}
     >
-      <td className="px-3 py-2 text-sm text-[var(--color-text-muted)]">
-        {GROUP_LABELS[group]}
+      <td className="w-12 px-3 py-1">
+        <div className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 shrink-0"
+            style={{ background: GROUP_ACCENTS[group] }}
+          />
+          {isSelected && <Check className="h-3 w-3 shrink-0 text-[var(--sw-rose)]" />}
+        </div>
       </td>
-      <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
+      <td className="min-w-0 px-2 py-1" onClick={e => e.stopPropagation()}>
         <InlineEdit
           value={item.name}
           onSave={async (newName) => {
@@ -648,19 +909,18 @@ function KnowledgeRow({ item, group, onUpdate, onDelete, isSelected, onSelect }:
           }}
         />
       </td>
-      <td className="px-3 py-2 w-10">
-        {(isHovered || isSelected) && (
-          <button
-            onClick={e => {
-              e.stopPropagation();
-              onDelete(item.id);
-            }}
-            className="p-1 text-[var(--color-text-muted)] hover:text-red-500 transition-colors"
-            title="Delete subcategory"
-          >
-            <Trash className="w-3.5 h-3.5" />
-          </button>
-        )}
+      <td className="w-10 px-1 py-1 text-right">
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            onDelete(item.id);
+          }}
+          className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)]"
+          title="Delete entry"
+        >
+          <Trash className="h-3.5 w-3.5" />
+        </button>
       </td>
     </tr>
   );

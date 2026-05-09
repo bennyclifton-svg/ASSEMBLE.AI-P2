@@ -47,7 +47,7 @@ export function DateColumnsRow({
 
     return (
         <div
-            className="flex border-b border-[var(--color-border)]"
+            className="flex border-b border-[var(--sw-rule-2)]"
             style={{ height: rowHeight }}
         >
             {/* Start date column */}

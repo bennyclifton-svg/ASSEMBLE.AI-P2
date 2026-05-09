@@ -7,9 +7,9 @@ import { KnowledgeDomainManager } from '@/components/knowledge/KnowledgeDomainMa
 
 export function SettingsPanel() {
   return (
-    <div className="h-full flex flex-col bg-[#252526] overflow-auto">
+    <div className="h-full flex flex-col bg-[var(--color-bg-secondary)] overflow-auto">
       {/* User Profile Section */}
-      <div className="border-b border-[#3e3e42]">
+      <div className="border-b border-[var(--color-border)]">
         <UserProfileSection />
       </div>
 

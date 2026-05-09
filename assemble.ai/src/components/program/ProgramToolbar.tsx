@@ -15,6 +15,14 @@ interface ProgramToolbarProps {
     onZoomChange: (level: ZoomLevel) => void;
 }
 
+const toolbarButtonBase =
+    'inline-flex h-9 items-center gap-1.5 border px-3 text-[11px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+
+const toolbarButtonStyle: React.CSSProperties = {
+    fontFamily: 'var(--sw-font-mono)',
+    letterSpacing: '0.06em',
+};
+
 export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramToolbarProps) {
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -81,7 +89,7 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Program_${new Date().toISOString().split('T')[0]}.pdf`;
+            a.download = `Programme_${new Date().toISOString().split('T')[0]}.pdf`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -90,7 +98,7 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
             console.error('Export error:', error);
             toast({
                 title: 'Error',
-                description: 'Failed to export program',
+                description: 'Failed to export programme',
                 variant: 'destructive',
             });
         } finally {
@@ -99,45 +107,43 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
     };
 
     return (
-        <div className="relative z-10 flex items-center gap-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm px-3 py-2" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
-            {/* Week/Month Toggle - Segmented Control */}
-            <div className="relative flex rounded-full bg-[var(--color-bg-tertiary)] p-0.5">
-                {/* Sliding background indicator */}
-                <div
-                    className={`absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-full bg-[var(--color-accent-green)] transition-transform duration-200 ease-out ${
-                        zoomLevel === 'month' ? 'translate-x-[calc(100%+4px)]' : 'translate-x-0'
-                    }`}
-                />
+        <div className="relative z-10 flex shrink-0 items-center gap-2">
+            <div
+                role="group"
+                aria-label="Timeline zoom"
+                className="inline-flex h-9 items-stretch border border-[var(--sw-rule)] bg-white"
+                style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.06em' }}
+            >
                 <button
+                    type="button"
                     onClick={() => onZoomChange('week')}
-                    className={`relative z-10 px-3 py-1 text-xs font-medium transition-colors duration-200 ${
+                    className={`px-3 text-[11px] font-semibold uppercase transition-colors ${
                         zoomLevel === 'week'
-                            ? 'text-[var(--primary-foreground)]'
-                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+                            ? 'bg-[var(--sw-ink)] text-[var(--sw-paper)]'
+                            : 'text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]'
                     }`}
                 >
                     Week
                 </button>
                 <button
+                    type="button"
                     onClick={() => onZoomChange('month')}
-                    className={`relative z-10 px-3 py-1 text-xs font-medium transition-colors duration-200 ${
+                    className={`border-l border-[var(--sw-rule)] px-3 text-[11px] font-semibold uppercase transition-colors ${
                         zoomLevel === 'month'
-                            ? 'text-[var(--primary-foreground)]'
-                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]'
+                            ? 'bg-[var(--sw-ink)] text-[var(--sw-paper)]'
+                            : 'text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]'
                     }`}
                 >
                     Month
                 </button>
             </div>
 
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* Template Dropdown */}
             <div className="relative">
                 <button
+                    type="button"
                     onClick={() => setShowTemplateMenu(!showTemplateMenu)}
-                    className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-white bg-[#1776c1] hover:opacity-90"
+                    className={`${toolbarButtonBase} border-[var(--sw-ink)] bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-transparent hover:text-[var(--sw-ink)]`}
+                    style={toolbarButtonStyle}
                 >
                     Template
                     <ChevronDown className="h-3.5 w-3.5" />
@@ -149,12 +155,14 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
                             className="fixed inset-0 z-10"
                             onClick={() => setShowTemplateMenu(false)}
                         />
-                        <div className="absolute right-0 top-full z-20 mt-1 w-48 rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] py-1 shadow-lg">
+                        <div className="absolute right-0 top-full z-20 mt-1 w-56 border border-[var(--sw-rule)] bg-white py-1">
                             {PROGRAM_TEMPLATES.map((template) => (
                                 <button
+                                    type="button"
                                     key={template.key}
                                     onClick={() => handleInsertTemplate(template.key)}
-                                    className="w-full px-3 py-1.5 text-left text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-accent-teal)]/10 hover:text-[var(--color-accent-teal)]"
+                                    className="w-full px-3 py-2 text-left text-[11px] text-[var(--sw-ink)] transition-colors hover:bg-[var(--sw-paper)]"
+                                    style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.04em' }}
                                 >
                                     {template.name}
                                 </button>
@@ -164,42 +172,44 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
                 )}
             </div>
 
-            {/* Add Activity Button */}
             <button
+                type="button"
                 onClick={handleAddActivity}
                 disabled={createActivity.isLoading}
-                className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--primary-foreground)] bg-[var(--color-accent-green)] hover:bg-[var(--primitive-green-dark)] disabled:opacity-50"
+                className={`${toolbarButtonBase} border-[var(--sw-rose)] bg-[var(--sw-rose)] text-[var(--sw-ink)] hover:bg-[var(--sw-rose-dk)] hover:text-white`}
+                style={toolbarButtonStyle}
             >
                 <Plus className="h-3.5 w-3.5" />
                 Add Activity
             </button>
 
-            {/* Clear All Button */}
             <button
+                type="button"
                 onClick={handleClearAllClick}
                 disabled={isClearing}
-                className="rounded px-2.5 py-1.5 text-xs font-medium text-white bg-[var(--color-accent-coral)] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-coral)] focus:ring-opacity-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Delete all program activities"
+                className={`${toolbarButtonBase} border-[var(--sw-rule)] bg-transparent text-[var(--sw-rose-dk)] hover:bg-[var(--sw-rose-tint)]`}
+                style={toolbarButtonStyle}
+                title="Delete all programme activities"
             >
                 {isClearing ? 'Clearing...' : 'Clear All'}
             </button>
 
-            {/* Clear All Confirmation Dialog */}
             <AuroraConfirmDialog
                 open={clearAllDialogOpen}
                 onOpenChange={setClearAllDialogOpen}
                 onConfirm={handleConfirmClearAll}
                 title="Delete all activities?"
-                description="This will delete all program activities. This action cannot be undone."
+                description="This will delete all programme activities. This action cannot be undone."
                 variant="destructive"
                 confirmLabel="Delete All"
             />
 
-            {/* Export Button */}
             <button
+                type="button"
                 onClick={handleExport}
                 disabled={isExporting}
-                className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] disabled:opacity-50"
+                className={`${toolbarButtonBase} border-[var(--sw-rule)] bg-transparent text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]`}
+                style={toolbarButtonStyle}
                 title="Export to PDF"
             >
                 <Download className="h-3.5 w-3.5" />

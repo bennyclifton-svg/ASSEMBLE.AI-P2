@@ -7,16 +7,16 @@
 
 export default function CostPlanLoading() {
   return (
-    <div className="h-full flex flex-col bg-[#1e1e1e]">
+    <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
       {/* Tabs skeleton */}
-      <div className="flex items-center bg-[#252526] border-b border-[#3e3e42] px-2 py-2 gap-2">
+      <div className="flex items-center bg-[var(--color-bg-secondary)] border-b border-[var(--color-border)] px-2 py-2 gap-2">
         <div className="h-8 w-24 bg-[#37373d] rounded animate-pulse" />
         <div className="h-8 w-24 bg-[#37373d] rounded animate-pulse" />
         <div className="h-8 w-24 bg-[#37373d] rounded animate-pulse" />
       </div>
 
       {/* Toolbar skeleton */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-[#3e3e42] bg-[#252526]">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
         <div className="flex items-center gap-6">
           <div className="h-4 w-32 bg-[#37373d] rounded animate-pulse" />
           <div className="h-4 w-28 bg-[#37373d] rounded animate-pulse" />
@@ -84,27 +84,27 @@ function SectionSkeleton({ sectionName, rowCount }: { sectionName: string; rowCo
       {/* Section header */}
       <div className="flex gap-1 mt-2 mb-1">
         <div className="h-7 w-full bg-[#37373d] rounded-sm animate-pulse flex items-center px-2">
-          <span className="text-xs text-[#6e6e6e]">{sectionName}</span>
+          <span className="text-xs text-[var(--color-text-muted)]">{sectionName}</span>
         </div>
       </div>
 
       {/* Data rows */}
       {Array.from({ length: rowCount }).map((_, i) => (
         <div key={i} className="flex gap-1 mb-0.5">
-          <div className="h-6 w-6 bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-16 bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-20 bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 flex-1 bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[72px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[72px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[60px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[60px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[72px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[72px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[72px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[60px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-[72px] bg-[#252526] rounded-sm animate-pulse" />
-          <div className="h-6 w-7 bg-[#252526] rounded-sm animate-pulse" />
+          <div className="h-6 w-6 bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-16 bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-20 bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 flex-1 bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[72px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[72px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[60px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[60px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[72px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[72px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[72px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[60px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-[72px] bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
+          <div className="h-6 w-7 bg-[var(--color-bg-secondary)] rounded-sm animate-pulse" />
         </div>
       ))}
 

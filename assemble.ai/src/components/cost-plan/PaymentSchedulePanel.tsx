@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useCostPlan } from '@/lib/hooks/cost-plan';
 import { useInvoices, useVariations } from '@/lib/hooks/cost-plan';
 import { useStakeholders } from '@/lib/hooks/use-stakeholders';
@@ -8,6 +8,7 @@ import { formatCurrency, sumContractOnlyInvoicesForCostLine, sumInvoicesForVaria
 
 interface PaymentSchedulePanelProps {
     projectId: string;
+    renderTabsList?: () => ReactNode;
 }
 
 interface ProjectDetails {
@@ -15,7 +16,7 @@ interface ProjectDetails {
     address?: string;
 }
 
-export function PaymentSchedulePanel({ projectId }: PaymentSchedulePanelProps) {
+export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSchedulePanelProps) {
     // Month selector state
     const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number }>({
         year: new Date().getFullYear(),
@@ -208,13 +209,104 @@ export function PaymentSchedulePanel({ projectId }: PaymentSchedulePanelProps) {
 
     if (!selectedStakeholderId) {
         return (
-            <div className="h-full flex flex-col">
+            <div className="h-full flex flex-col" style={{ background: 'var(--sw-paper)' }}>
                 {/* Toolbar */}
-                <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
+                <div
+                    className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
+                    style={{
+                        background: 'var(--sw-paper)',
+                        borderBottom: '1px solid var(--sw-rule)',
+                    }}
+                >
+                    <div className="min-w-0 flex-shrink-0">
+                        {renderTabsList?.()}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <select
+                            value=""
+                            onChange={(e) => setSelectedStakeholderId(e.target.value || null)}
+                            className="focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40 transition-opacity hover:opacity-90 cursor-pointer min-w-[200px]"
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid var(--sw-rule)',
+                                color: 'var(--sw-ink)',
+                                padding: '8px 28px 8px 14px',
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 11,
+                                letterSpacing: '0.15em',
+                                textTransform: 'uppercase',
+                            }}
+                        >
+                            <option value="">Discipline...</option>
+                            {stakeholdersWithCostLines.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.name || s.disciplineOrTrade || 'Unknown'}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            value={`${selectedMonth.year}-${String(selectedMonth.month).padStart(2, '0')}`}
+                            onChange={(e) => {
+                                const [year, month] = e.target.value.split('-').map(Number);
+                                setSelectedMonth({ year, month });
+                            }}
+                            className="focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40 transition-opacity hover:opacity-90 cursor-pointer"
+                            style={{
+                                background: 'var(--sw-ink)',
+                                border: '1px solid var(--sw-ink)',
+                                color: 'var(--sw-paper)',
+                                padding: '8px 28px 8px 14px',
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 11,
+                                letterSpacing: '0.15em',
+                                textTransform: 'uppercase',
+                                fontWeight: 700,
+                            }}
+                        >
+                            {monthOptions.map(option => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+                {/* Empty state */}
+                <div className="flex-1 flex items-center justify-center">
+                    <p className="text-sm text-[var(--color-text-muted)]">Select a discipline to view payment schedule</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="h-full flex flex-col" style={{ background: 'var(--sw-paper)' }}>
+            {/* Toolbar */}
+            <div
+                className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
+                style={{
+                    background: 'var(--sw-paper)',
+                    borderBottom: '1px solid var(--sw-rule)',
+                }}
+            >
+                <div className="min-w-0 flex-shrink-0">
+                    {renderTabsList?.()}
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
                     <select
-                        value=""
+                        value={selectedStakeholderId}
                         onChange={(e) => setSelectedStakeholderId(e.target.value || null)}
-                        className="text-xs text-white bg-[#1776c1] px-2.5 py-1.5 rounded font-medium hover:opacity-90 focus:outline-none transition-colors cursor-pointer min-w-[200px]"
+                        className="focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40 transition-opacity hover:opacity-90 cursor-pointer min-w-[200px]"
+                        style={{
+                            background: 'transparent',
+                            border: '1px solid var(--sw-rule)',
+                            color: 'var(--sw-ink)',
+                            padding: '8px 28px 8px 14px',
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 11,
+                            letterSpacing: '0.15em',
+                            textTransform: 'uppercase',
+                        }}
                     >
                         <option value="">Discipline...</option>
                         {stakeholdersWithCostLines.map(s => (
@@ -229,7 +321,18 @@ export function PaymentSchedulePanel({ projectId }: PaymentSchedulePanelProps) {
                             const [year, month] = e.target.value.split('-').map(Number);
                             setSelectedMonth({ year, month });
                         }}
-                        className="text-xs text-[var(--primary-foreground)] bg-[var(--color-accent-green)] px-2.5 py-1.5 rounded font-medium hover:bg-[var(--primitive-green-dark)] focus:outline-none transition-colors cursor-pointer"
+                        className="focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40 transition-opacity hover:opacity-90 cursor-pointer"
+                        style={{
+                            background: 'var(--sw-ink)',
+                            border: '1px solid var(--sw-ink)',
+                            color: 'var(--sw-paper)',
+                            padding: '8px 28px 8px 14px',
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 11,
+                            letterSpacing: '0.15em',
+                            textTransform: 'uppercase',
+                            fontWeight: 700,
+                        }}
                     >
                         {monthOptions.map(option => (
                             <option key={option.value} value={option.value}>
@@ -238,54 +341,16 @@ export function PaymentSchedulePanel({ projectId }: PaymentSchedulePanelProps) {
                         ))}
                     </select>
                 </div>
-                {/* Empty state */}
-                <div className="flex-1 flex items-center justify-center">
-                    <p className="text-sm text-[var(--color-text-muted)]">Select a discipline to view payment schedule</p>
-                </div>
-            </div>
-        );
-    }
-
-    return (
-        <div className="h-full flex flex-col">
-            {/* Toolbar */}
-            <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
-                <select
-                    value={selectedStakeholderId}
-                    onChange={(e) => setSelectedStakeholderId(e.target.value || null)}
-                    className="text-xs text-white bg-[#1776c1] px-2.5 py-1.5 rounded font-medium hover:opacity-90 focus:outline-none transition-colors cursor-pointer min-w-[200px]"
-                >
-                    <option value="">Discipline...</option>
-                    {stakeholdersWithCostLines.map(s => (
-                        <option key={s.id} value={s.id}>
-                            {s.name || s.disciplineOrTrade || 'Unknown'}
-                        </option>
-                    ))}
-                </select>
-                <select
-                    value={`${selectedMonth.year}-${String(selectedMonth.month).padStart(2, '0')}`}
-                    onChange={(e) => {
-                        const [year, month] = e.target.value.split('-').map(Number);
-                        setSelectedMonth({ year, month });
-                    }}
-                    className="text-xs text-[var(--primary-foreground)] bg-[var(--color-accent-green)] px-2.5 py-1.5 rounded font-medium hover:bg-[var(--primitive-green-dark)] focus:outline-none transition-colors cursor-pointer"
-                >
-                    {monthOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </select>
             </div>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-auto p-4">
+            <div className="flex-1 overflow-auto p-4" style={{ background: 'var(--sw-paper)' }}>
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-sm text-[var(--color-text-muted)]">Loading...</p>
                     </div>
                 ) : (
-                    <div className="max-w-[900px] mx-auto p-6 bg-[var(--color-bg-secondary)] rounded-md shadow-sm space-y-6">
+                    <div className="max-w-[900px] mx-auto p-6 bg-white rounded-md shadow-sm space-y-6">
                         {/* ============================================================ */}
                         {/* HEADER SECTION */}
                         {/* ============================================================ */}

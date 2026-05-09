@@ -221,9 +221,9 @@
   --shadow-soft-pressed: inset 0 2px 4px rgba(0, 0, 0, 0.15);
 
   /* Scrollbar */
-  --scrollbar-track: var(--primitive-slate-900);
-  --scrollbar-thumb: var(--primitive-slate-700);
-  --scrollbar-thumb-hover: var(--primitive-slate-600);
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(232, 230, 227, 0.18);
+  --scrollbar-thumb-hover: rgba(232, 230, 227, 0.32);
 
   /* Firm Card Colors - warm amber for dark mode */
   --color-card-firm: rgba(255, 255, 255, 0.04);
@@ -367,9 +367,9 @@
   --shadow-soft-pressed: inset 0 2px 4px rgba(0, 0, 0, 0.04);
 
   /* Scrollbar */
-  --scrollbar-track: var(--primitive-cool-gray-50);
-  --scrollbar-thumb: var(--primitive-cool-gray-300);
-  --scrollbar-thumb-hover: var(--primitive-cool-gray-400);
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(92, 85, 76, 0.18);
+  --scrollbar-thumb-hover: rgba(92, 85, 76, 0.32);
 
   /* Firm tile - warm gold frosted glass */
   --color-card-firm: rgba(255, 255, 255, 0.50);
@@ -505,9 +505,9 @@
   --shadow-soft-pressed: inset 0 2px 4px rgba(14, 16, 20, 0.05);
 
   /* Scrollbar */
-  --scrollbar-track: var(--sw-paper-2);
-  --scrollbar-thumb: var(--sw-linen);
-  --scrollbar-thumb-hover: rgba(14, 16, 20, 0.32);
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(107, 86, 66, 0.24);
+  --scrollbar-thumb-hover: rgba(107, 86, 66, 0.38);
 
   /* Firm tile — peach (currency role) */
   --color-card-firm: var(--sw-paper);
@@ -618,31 +618,40 @@ h2,
    SCROLLBAR STYLING
    ============================================ */
 * {
-  scrollbar-width: auto;
+  scrollbar-width: thin;
   scrollbar-color: transparent var(--scrollbar-track);
 }
 
-*:hover {
+*:hover,
+*:focus,
+*:focus-within {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* WebKit browsers (Chrome, Safari, Edge) */
 *::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 8px;
+  height: 8px;
 }
 
 *::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
 }
 
-*::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-corner {
   background: transparent;
-  border: 2px solid var(--scrollbar-track);
-  border-radius: var(--radius);
 }
 
-*:hover::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+  border-radius: 9999px;
+}
+
+*:hover::-webkit-scrollbar-thumb,
+*:focus::-webkit-scrollbar-thumb,
+*:focus-within::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
 }
 
@@ -657,76 +666,98 @@ h2,
   width: 0;
 }
 
-/* Note-colored scrollbars - matches sticky note color */
+/* Note panel scrollbars inherit the app-wide muted treatment. */
 /* Target the element itself */
 .note-colored-scrollbar::-webkit-scrollbar-track {
-  background: var(--note-scrollbar-track, transparent);
+  background: var(--scrollbar-track);
 }
 
 .note-colored-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--note-scrollbar-thumb, rgba(0, 0, 0, 0.15));
-  border: 2px solid var(--note-scrollbar-track, transparent);
+  background: transparent;
+  background-clip: padding-box;
+  border: 2px solid transparent;
   border-radius: 9999px;
 }
 
 .note-colored-scrollbar:hover::-webkit-scrollbar-thumb {
-  background: var(--note-scrollbar-thumb, rgba(0, 0, 0, 0.15));
+  background: var(--scrollbar-thumb);
 }
 
 .note-colored-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--note-scrollbar-thumb, rgba(0, 0, 0, 0.25));
-  filter: brightness(0.85);
+  background: var(--scrollbar-thumb-hover);
 }
 
 .note-colored-scrollbar {
-  scrollbar-color: var(--note-scrollbar-thumb, rgba(0, 0, 0, 0.15)) var(--note-scrollbar-track, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: transparent var(--scrollbar-track);
+}
+
+.note-colored-scrollbar:hover,
+.note-colored-scrollbar:focus,
+.note-colored-scrollbar:focus-within {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* Also target descendant scrollable elements */
 .note-colored-scrollbar *::-webkit-scrollbar-track {
-  background: var(--note-scrollbar-track, transparent);
+  background: var(--scrollbar-track);
 }
 
 .note-colored-scrollbar *::-webkit-scrollbar-thumb {
-  background: var(--note-scrollbar-thumb, rgba(0, 0, 0, 0.15));
-  border: 2px solid var(--note-scrollbar-track, transparent);
+  background: transparent;
+  background-clip: padding-box;
+  border: 2px solid transparent;
   border-radius: 9999px;
 }
 
 .note-colored-scrollbar *:hover::-webkit-scrollbar-thumb {
-  background: var(--note-scrollbar-thumb, rgba(0, 0, 0, 0.15));
+  background: var(--scrollbar-thumb);
 }
 
 .note-colored-scrollbar *::-webkit-scrollbar-thumb:hover {
-  background: var(--note-scrollbar-thumb, rgba(0, 0, 0, 0.25));
-  filter: brightness(0.85);
+  background: var(--scrollbar-thumb-hover);
 }
 
 .note-colored-scrollbar * {
-  scrollbar-color: var(--note-scrollbar-thumb, rgba(0, 0, 0, 0.15)) var(--note-scrollbar-track, transparent);
+  scrollbar-width: thin;
+  scrollbar-color: transparent var(--scrollbar-track);
 }
 
-/* Firms gallery scrollbar - transparent track, grey thumb */
+.note-colored-scrollbar *:hover,
+.note-colored-scrollbar *:focus,
+.note-colored-scrollbar *:focus-within {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Firms gallery scrollbar - same app-wide muted treatment */
 .firms-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--scrollbar-track);
 }
 
 .firms-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.4);
+  background: transparent;
+  background-clip: padding-box;
   border: 2px solid transparent;
-  border-radius: 4px;
+  border-radius: 9999px;
 }
 
 .firms-scrollbar:hover::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.5);
+  background: var(--scrollbar-thumb);
 }
 
 .firms-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 150, 150, 0.65);
+  background: var(--scrollbar-thumb-hover);
 }
 
 .firms-scrollbar {
-  scrollbar-color: rgba(150, 150, 150, 0.4) transparent;
+  scrollbar-width: thin;
+  scrollbar-color: transparent var(--scrollbar-track);
+}
+
+.firms-scrollbar:hover,
+.firms-scrollbar:focus,
+.firms-scrollbar:focus-within {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* Force dark text on sticky note backgrounds (light bg in both themes) */
@@ -1917,8 +1948,7 @@ textarea:-webkit-autofill:active {
 
 /* Unified panel container - outer wrapper for joined sections */
 .nav-panel-unified {
-  background: rgba(20, 22, 24, 0.85);
-  /* More opaque base */
+  background: var(--color-bg-primary);
 }
 
 /* Internal section within unified panel */
@@ -2005,10 +2035,6 @@ textarea:-webkit-autofill:active {
 }
 
 /* Light theme adjustments for unified sections */
-[data-theme="precision-light"] .nav-panel-unified {
-  background: #ffffff;
-}
-
 [data-theme="precision-light"] .nav-panel-section {
   background: transparent;
 }
@@ -2901,7 +2927,7 @@ textarea:-webkit-autofill:active {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #6B5642;
+  background: var(--sw-slider-thumb, #6B5642);
   border: 1px solid var(--sw-ink);
   margin-top: 4px;
   cursor: grab;
@@ -2913,10 +2939,533 @@ textarea:-webkit-autofill:active {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #6B5642;
+  background: var(--sw-slider-thumb, #6B5642);
   border: 1px solid var(--sw-ink);
   cursor: grab;
   transition: transform 120ms ease;
 }
 .sw-aggregate-slider::-moz-range-thumb:hover { transform: scale(1.15); }
 .sw-aggregate-slider::-moz-range-thumb:active { cursor: grabbing; transform: scale(1.05); }
+
+/* Procurement workspace — ports the Brief/Building visual regime to the
+   procurement tab while leaving the underlying workflow layout intact. */
+.procurement-workspace {
+  color: var(--sw-ink);
+  font-family: var(--sw-font-body);
+}
+
+.procurement-workspace button,
+.procurement-workspace input,
+.procurement-workspace textarea,
+.procurement-workspace select {
+  font-family: inherit;
+}
+
+.procurement-workspace table {
+  color: var(--sw-ink);
+  background: white;
+}
+
+.procurement-workspace h3 {
+  font-family: var(--sw-font-mono);
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.18em;
+  text-transform: lowercase;
+  color: var(--sw-muted) !important;
+}
+
+.procurement-workspace th,
+.procurement-workspace .table-section-header {
+  font-family: var(--sw-font-mono);
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em;
+  text-transform: lowercase;
+  color: var(--sw-muted) !important;
+}
+
+.procurement-workspace .table-header-aurora {
+  background: white;
+  border-bottom: 1px solid var(--sw-rule-2);
+}
+
+.procurement-workspace .table-header-aurora::after {
+  display: none;
+}
+
+.procurement-workspace .table-section-header {
+  background: var(--sw-paper);
+  border-bottom: 1px solid var(--sw-rule-2) !important;
+}
+
+.procurement-workspace .rounded,
+.procurement-workspace .rounded-md,
+.procurement-workspace .rounded-lg {
+  border-radius: 0 !important;
+}
+
+.procurement-workspace .shadow-sm,
+.procurement-workspace .shadow-md,
+.procurement-workspace .shadow-lg {
+  box-shadow: none !important;
+}
+
+.program-workspace {
+  color: var(--sw-ink);
+  font-family: var(--sw-font-body);
+}
+
+.program-workspace button,
+.program-workspace input,
+.program-workspace textarea,
+.program-workspace select {
+  font-family: inherit;
+}
+
+.program-workspace .rounded,
+.program-workspace .rounded-md,
+.program-workspace .rounded-lg {
+  border-radius: 0 !important;
+}
+
+.program-workspace .shadow-sm,
+.program-workspace .shadow-md,
+.program-workspace .shadow-lg {
+  box-shadow: none !important;
+}
+
+.procurement-instance-tabs {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  border-bottom: 1px solid var(--sw-rule-2);
+}
+
+.procurement-instance-tab,
+.procurement-instance-create {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-bottom: 2px solid transparent;
+  color: var(--sw-muted);
+  cursor: pointer;
+  font-family: var(--sw-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: lowercase;
+  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.procurement-instance-tab:hover,
+.procurement-instance-create:hover {
+  color: var(--sw-ink);
+  background: var(--sw-paper);
+}
+
+.procurement-instance-tab[data-state="active"] {
+  color: var(--sw-ink);
+  border-bottom-color: var(--sw-rose);
+  font-weight: 600;
+}
+
+.procurement-instance-create {
+  justify-content: center;
+  border: 0;
+  background: transparent;
+}
+
+.procurement-instance-create:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Sitewise control surfaces - shared by operator admin and billing.
+   Mirrors the Brief tab language: paper surfaces, ink text, rose accents,
+   mono micro-labels, 1px drafting rules, and a quiet logo-mask graphic. */
+[data-theme="sitewise"] .tab-aurora-main {
+  position: relative;
+}
+
+[data-theme="sitewise"] .tab-aurora-main::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  transform: translateX(-50%);
+  background: var(--sw-rose);
+  opacity: 0.45;
+  transition: width 160ms ease, opacity 160ms ease;
+}
+
+[data-theme="sitewise"] .tab-aurora-main:hover::before {
+  width: 2rem;
+  opacity: 0.7;
+}
+
+[data-theme="sitewise"] .tab-aurora-main[data-state="active"] {
+  color: var(--sw-ink);
+}
+
+[data-theme="sitewise"] .tab-aurora-main[data-state="active"]::before {
+  display: none;
+}
+
+[data-theme="sitewise"] .tab-aurora-main[data-state="active"]::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--sw-rose);
+}
+
+[data-theme="sitewise"] .panel-watermark {
+  filter: brightness(0);
+  opacity: 0.026;
+}
+
+.sitewise-control-surface {
+  color: var(--sw-ink);
+  font-family: var(--sw-font-body);
+}
+
+.sitewise-control-surface h1 {
+  color: var(--sw-ink);
+  font-family: var(--sw-font-sans);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.sitewise-control-surface h2 {
+  color: var(--sw-ink);
+  font-family: var(--sw-font-sans);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.sitewise-control-surface h3 {
+  color: var(--sw-ink);
+  font-family: var(--sw-font-sans);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.sitewise-control-surface a {
+  color: var(--sw-rose-dk);
+}
+
+.sitewise-control-surface input,
+.sitewise-control-surface textarea,
+.sitewise-control-surface select {
+  border-color: var(--sw-rule) !important;
+  border-radius: 0 !important;
+  background: white !important;
+  color: var(--sw-ink) !important;
+}
+
+.sitewise-control-surface input:focus,
+.sitewise-control-surface textarea:focus,
+.sitewise-control-surface select:focus {
+  border-color: var(--sw-rose) !important;
+  box-shadow: 0 0 0 1px var(--sw-rose);
+  outline: none;
+}
+
+.sitewise-control-surface table {
+  color: var(--sw-ink);
+  background: white;
+}
+
+.sitewise-control-surface thead {
+  background: white;
+}
+
+.sitewise-control-surface th {
+  color: var(--sw-muted) !important;
+  font-family: var(--sw-font-mono);
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.12em;
+  text-transform: lowercase !important;
+}
+
+.sitewise-control-surface tbody tr {
+  background: white;
+  transition: background 120ms ease;
+}
+
+.sitewise-control-surface tbody tr:hover {
+  background: var(--sw-paper) !important;
+}
+
+.sitewise-graphic-field {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--sw-paper);
+}
+
+.sitewise-graphic-field::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url('/images/logo-mask.svg');
+  background-repeat: no-repeat;
+  background-position: calc(100% + 160px) 40px;
+  background-size: min(680px, 70vw);
+  filter: brightness(0);
+  opacity: 0.026;
+}
+
+.sitewise-page-frame {
+  position: relative;
+  z-index: 1;
+  margin-inline: auto;
+  width: min(100%, 72rem);
+  padding: 32px 24px;
+}
+
+.sitewise-page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.sitewise-page-kicker,
+.sitewise-section-label {
+  color: var(--sw-muted);
+  font-family: var(--sw-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.sitewise-page-subtitle {
+  max-width: 760px;
+  margin-top: 6px;
+  color: var(--sw-muted);
+  font-family: var(--sw-font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sitewise-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--sw-rule);
+  background: var(--sw-paper);
+  color: var(--sw-ink);
+  font-family: var(--sw-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.sitewise-status-pill-dark {
+  border-color: var(--sw-ink);
+  background: var(--sw-ink);
+  color: var(--sw-paper);
+}
+
+.sitewise-card {
+  border: 1px solid var(--sw-rule) !important;
+  border-radius: 0 !important;
+  background: white !important;
+  box-shadow: none !important;
+}
+
+.sitewise-card-header {
+  border-bottom: 1px solid var(--sw-rule-2);
+  padding: 10px 12px;
+}
+
+.sitewise-info-card {
+  border: 1px solid var(--sw-rule);
+  border-left: 3px solid var(--sw-rose);
+  background: var(--sw-rose-tint);
+}
+
+.sitewise-status-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--sw-ink);
+  color: var(--sw-paper);
+  font-family: var(--sw-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.sitewise-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 1px solid var(--sw-rule);
+  border-radius: 0 !important;
+  padding: 8px 14px;
+  background: transparent;
+  color: var(--sw-ink);
+  font-family: var(--sw-font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+.sitewise-button:hover:not(:disabled) {
+  border-color: var(--sw-rose);
+  background: white;
+}
+
+.sitewise-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.sitewise-button-primary {
+  border-color: var(--sw-rose);
+  background: var(--sw-rose);
+  color: var(--sw-ink);
+}
+
+.sitewise-button-primary:hover:not(:disabled) {
+  border-color: var(--sw-rose-dk);
+  background: var(--sw-rose-dk);
+  color: var(--sw-paper);
+}
+
+.sitewise-button-muted {
+  background: var(--sw-paper);
+  color: var(--sw-muted);
+}
+
+.sitewise-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--sw-rule);
+  border-radius: 0 !important;
+  background: transparent;
+  color: var(--sw-muted);
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.sitewise-icon-button:hover:not(:disabled) {
+  border-color: var(--sw-rose);
+  background: var(--sw-paper);
+  color: var(--sw-ink);
+}
+
+.sitewise-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--sw-rule);
+  border-radius: 0 !important;
+  padding: 3px 8px;
+  background: white;
+  color: var(--sw-ink);
+  font-family: var(--sw-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  text-transform: lowercase;
+  white-space: nowrap;
+}
+
+button.sitewise-chip {
+  cursor: pointer;
+}
+
+button.sitewise-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.sitewise-chip-rose {
+  border-color: rgba(248, 101, 122, 0.35);
+  background: var(--sw-rose-tint);
+  color: var(--sw-rose-dk);
+}
+
+.sitewise-chip-green {
+  border-color: rgba(92, 122, 74, 0.22);
+  background: rgba(92, 122, 74, 0.10);
+  color: #4b653c;
+}
+
+.sitewise-chip-cyan {
+  border-color: rgba(122, 184, 194, 0.35);
+  background: rgba(122, 184, 194, 0.15);
+  color: #3d7882;
+}
+
+.sitewise-chip-amber {
+  border-color: rgba(232, 163, 61, 0.35);
+  background: rgba(232, 163, 61, 0.14);
+  color: #8a5a16;
+}
+
+.sitewise-code {
+  display: inline-block;
+  border: 1px solid var(--sw-rule-2);
+  border-radius: 0 !important;
+  background: var(--sw-paper);
+  color: var(--sw-ink);
+  font-family: var(--sw-font-mono);
+  font-size: 11px;
+  padding: 3px 7px;
+}
+
+.sitewise-segmented {
+  display: inline-flex;
+  gap: 2px;
+  border: 1px solid var(--sw-rule);
+  background: white;
+  padding: 2px;
+}
+
+.sitewise-segmented button {
+  border: 0;
+  border-radius: 0 !important;
+  padding: 5px 10px;
+  color: var(--sw-muted);
+  font-family: var(--sw-font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+}
+
+.sitewise-segmented button[aria-pressed="true"] {
+  background: var(--sw-rose);
+  color: var(--sw-ink);
+}

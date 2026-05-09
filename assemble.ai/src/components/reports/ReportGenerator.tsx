@@ -231,13 +231,13 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
                         <div className="flex items-center gap-2">
                             <input
                                 type="text"
-                                className="flex-1 px-3 py-2 border rounded bg-[#3c3c3c] border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-border)]"
+                                className="flex-1 px-3 py-2 border rounded bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-border)]"
                                 value={formData.title}
                                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                                 placeholder={`e.g., Request For Tender ${initialDiscipline || 'Fire Services'}`}
                             />
                             <button
-                                className="px-4 py-2 bg-[var(--color-accent-green)] text-white rounded hover:bg-[#1177bb] disabled:opacity-50 text-sm whitespace-nowrap"
+                                className="px-4 py-2 bg-[var(--color-accent-green)] text-white rounded hover:bg-[var(--color-accent-primary-hover)] disabled:opacity-50 text-sm whitespace-nowrap"
                                 onClick={handleStart}
                                 disabled={!formData.title || isGenerating}
                             >
@@ -249,7 +249,7 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
                         <div className="flex items-center gap-2">
                             <input
                                 type="text"
-                                className="flex-1 px-3 py-2 border rounded bg-[#3c3c3c] border-[var(--color-border)] text-[var(--color-text-muted)]"
+                                className="flex-1 px-3 py-2 border rounded bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-muted)]"
                                 value={initialDiscipline ? `Tender Recommendation Report ${initialDiscipline}` : ''}
                                 disabled
                                 placeholder={`e.g., Tender Recommendation Report ${initialDiscipline || 'Fire Services'}`}
@@ -269,7 +269,7 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
                                 <label className="block text-sm font-medium mb-1 text-[var(--color-text-primary)]">Discipline</label>
                                 <input
                                     type="text"
-                                    className="w-full px-3 py-2 border rounded bg-[#3c3c3c] border-[var(--color-border)] text-[var(--color-text-primary)]"
+                                    className="w-full px-3 py-2 border rounded bg-[var(--color-bg-secondary)] border-[var(--color-border)] text-[var(--color-text-primary)]"
                                     value={formData.discipline ?? ''}
                                     onChange={e => setFormData({ ...formData, discipline: e.target.value })}
                                     placeholder="e.g., Fire Services"
@@ -383,7 +383,7 @@ export const ReportGenerator = forwardRef<ReportGeneratorHandle, ReportGenerator
                                 </h2>
                             </div>
                             <button
-                                className="px-3 py-1 border border-[#3e3e42] rounded hover:bg-[#3e3e42] text-[#cccccc] text-sm"
+                                className="px-3 py-1 border border-[var(--color-border)] rounded hover:bg-[var(--color-border)] text-[var(--color-text-primary)] text-sm"
                                 onClick={handleCancel}
                             >
                                 {inline ? 'Close' : 'Done'}
@@ -436,7 +436,7 @@ function RepoCheckbox({ repo, isSelected, onToggle, variant }: RepoCheckboxProps
     const borderColor = variant === 'project' ? 'border-[var(--color-accent-green)]' : 'border-[var(--color-border)]';
     const bgColor = isSelected
         ? variant === 'project'
-            ? 'bg-[#1e3a5f]'
+            ? 'bg-[var(--color-accent-primary-tint)]'
             : 'bg-[var(--color-bg-tertiary)]'
         : 'bg-[var(--color-bg-primary)]';
 
@@ -448,13 +448,13 @@ function RepoCheckbox({ repo, isSelected, onToggle, variant }: RepoCheckboxProps
                 type="checkbox"
                 checked={isSelected}
                 onChange={onToggle}
-                className="w-4 h-4 rounded border-[var(--color-border)] bg-[#3c3c3c] accent-[var(--color-accent-green)]"
+                className="w-4 h-4 rounded border-[var(--color-border)] bg-[var(--color-bg-secondary)] accent-[var(--color-accent-green)]"
             />
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-[var(--color-text-primary)] truncate">{repoLabel}</span>
                     {variant === 'project' && (
-                        <span className="text-xs px-1 py-0.5 bg-[var(--color-accent-green)]/30 text-[#8bb8e8] rounded">
+                        <span className="text-xs px-1 py-0.5 bg-[var(--color-accent-green)]/30 text-[var(--sw-cyan)] rounded">
                             Project
                         </span>
                     )}

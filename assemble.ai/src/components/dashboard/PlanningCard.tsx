@@ -31,9 +31,9 @@ interface PlanningCardProps {
 const WORKFLOW_ITEMS: Array<{ tab: string; label: string; kbd: string }> = [
     { tab: 'brief',            label: 'Brief',          kbd: '⌥1' },
     { tab: 'cost-planning',    label: 'Cost Planning',  kbd: '⌥2' },
-    { tab: 'program',          label: 'Program',        kbd: '⌥3' },
+    { tab: 'program',          label: 'Programme',        kbd: '⌥3' },
     { tab: 'procurement',      label: 'Procurement',    kbd: '⌥4' },
-    { tab: 'notes',            label: 'Notes',          kbd: '⌥5' },
+    { tab: 'notes',            label: 'Records',        kbd: '⌥5' },
     { tab: 'correspondence',   label: 'Correspondence', kbd: '⌥6' },
     { tab: 'meetings-reports', label: 'Meet & Report',  kbd: '⌥7' },
 ];
@@ -93,3 +93,4 @@ export function PlanningCard({
         </aside>
     );
 }
+

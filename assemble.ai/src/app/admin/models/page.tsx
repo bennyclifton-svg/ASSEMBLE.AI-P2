@@ -79,12 +79,20 @@ export default async function AdminModelsPage() {
     );
 
     return (
-        <div className="mx-auto max-w-6xl px-6 py-8">
-            <div className="mb-6">
-                <h1 className="text-2xl font-semibold text-[var(--color-text-primary)]">AI Models</h1>
-                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                    Pick the provider and model for each feature group. Changes propagate within ~60 seconds (in-memory cache TTL) and are logged to <code className="text-xs text-[var(--color-text-secondary)]">admin_audit_log</code>.
-                </p>
+        <div className="sitewise-page-frame">
+            <div className="sitewise-page-header">
+                <div>
+                    <div className="sitewise-page-kicker">admin / ai models</div>
+                    <h1 className="mt-2">AI Models</h1>
+                    <p className="sitewise-page-subtitle">
+                        Pick the provider and model for each feature group. Changes propagate within about 60 seconds and are logged to{' '}
+                        <code className="sitewise-code">admin_audit_log</code>.
+                    </p>
+                </div>
+                <div className="flex flex-wrap justify-end gap-2">
+                    <span className="sitewise-status-pill">{featureGroupSettings.length} feature groups</span>
+                    <span className="sitewise-status-pill sitewise-status-pill-dark">cached registry</span>
+                </div>
             </div>
             <ModelSettingsForm
                 initialSettings={featureGroupSettings}

@@ -29,7 +29,7 @@ export function ObjectivesReadOnlyList({ data }: ObjectivesReadOnlyListProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 px-4" style={{ fontFamily: 'var(--sw-font-body)' }}>
       {SECTION_ORDER.map((type) => {
         const rows = data[type];
         if (!rows || rows.length === 0) return null;
@@ -39,8 +39,8 @@ export function ObjectivesReadOnlyList({ data }: ObjectivesReadOnlyListProps) {
             {/* Section header */}
             <div className="mb-1.5">
               <span
-                className="text-xs font-semibold uppercase tracking-wide"
-                style={{ color: 'var(--color-text-primary)' }}
+                className="text-sm font-bold"
+                style={{ color: 'var(--sw-ink)' }}
               >
                 {SECTION_LABELS[type]}
               </span>
@@ -58,15 +58,15 @@ export function ObjectivesReadOnlyList({ data }: ObjectivesReadOnlyListProps) {
                   <div key={row.id} className="flex items-start gap-2">
                     {/* Global index badge */}
                     <span
-                      className="text-xs font-mono w-6 text-right flex-shrink-0 mt-0.5"
+                      className="w-6 flex-shrink-0 text-right text-xs font-mono"
                       style={{ color: 'var(--color-text-muted)' }}
                     >
                       {startIndices[type] + index}
                     </span>
                     {/* Text */}
                     <span
-                      className="text-sm leading-relaxed"
-                      style={{ color: 'var(--color-text-primary)' }}
+                      className="text-sm leading-normal"
+                      style={{ color: 'var(--sw-ink)' }}
                     >
                       {displayText}
                     </span>

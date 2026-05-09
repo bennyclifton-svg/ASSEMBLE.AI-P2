@@ -11,6 +11,7 @@
 import Link from 'next/link';
 import { ArrowLeft, Settings } from 'lucide-react';
 import { requireSuperAdminPage } from '@/lib/admin/guard';
+import { SitewiseWordmark } from '@/components/brand/SitewiseWordmark';
 import { AdminTabs } from './AdminTabs';
 
 export default async function AdminLayout({
@@ -21,34 +22,37 @@ export default async function AdminLayout({
     await requireSuperAdminPage();
 
     return (
-        <div className="min-h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+        <div className="sitewise-control-surface min-h-screen bg-[var(--sw-paper)] text-[var(--sw-ink)]">
             {/* Admin Header */}
-            <div className="bg-[var(--color-bg-secondary)]">
+            <header className="border-b border-[var(--sw-rule)] bg-[var(--sw-paper-2)]">
                 {/* Row 1 — branding + back link */}
-                <div className="mx-auto max-w-6xl px-6 pt-4 pb-2">
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/dashboard"
-                            className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Back to App
-                        </Link>
-                        <span className="text-[var(--color-border-strong)]">|</span>
-                        <div className="flex items-center gap-2 text-[var(--color-text-primary)]">
-                            <Settings className="h-5 w-5 text-[var(--color-accent-primary)]" />
-                            <span className="font-semibold">Admin</span>
+                <div className="mx-auto max-w-6xl px-6 pt-4 pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <Link href="/dashboard" className="sitewise-button sitewise-button-muted">
+                                <ArrowLeft className="h-3.5 w-3.5" />
+                                App
+                            </Link>
+                            <span className="h-8 w-px bg-[var(--sw-rule)]" />
+                            <div className="flex items-center gap-3">
+                                <SitewiseWordmark size={24} color="var(--sw-ink)" accent="var(--sw-rose)" />
+                                <span className="sitewise-status-pill sitewise-status-pill-dark">
+                                    <Settings className="h-3.5 w-3.5" />
+                                    admin
+                                </span>
+                            </div>
                         </div>
+                        <span className="sitewise-page-kicker">operator console</span>
                     </div>
                 </div>
                 {/* Row 2 — tabs */}
                 <div className="mx-auto max-w-6xl px-6">
                     <AdminTabs />
                 </div>
-            </div>
+            </header>
 
             {/* Admin Content */}
-            <main>{children}</main>
+            <main className="sitewise-graphic-field min-h-[calc(100vh-104px)]">{children}</main>
         </div>
     );
 }

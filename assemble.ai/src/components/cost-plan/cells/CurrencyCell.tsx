@@ -130,10 +130,10 @@ export function CurrencyCell({
   // Determine text color based on variance
   const getTextColor = () => {
     if (showVarianceColor) {
-      if (value > 0) return 'text-[#4ade80]'; // Green for positive
-      if (value < 0) return 'text-[#f87171]'; // Red for negative
+      if (value > 0) return 'text-[var(--color-success)]'; // Green for positive
+      if (value < 0) return 'text-[var(--color-error)]'; // Red for negative
     }
-    return 'text-[#cccccc]';
+    return 'text-[var(--color-text-primary)]';
   };
 
   const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-right';
@@ -141,7 +141,7 @@ export function CurrencyCell({
   if (isEditing) {
     return (
       <div className={`relative ${className}`}>
-        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[#858585] text-sm">
+        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] text-sm">
           $
         </span>
         <input
@@ -153,8 +153,8 @@ export function CurrencyCell({
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
           className={`
-            w-full bg-[#3c3c3c] border border-[#007acc] rounded
-            pl-5 pr-2 py-1.5 text-sm text-[#cccccc] ${textAlign}
+            w-full bg-[var(--color-bg-secondary)] border border-[var(--color-accent-primary)] rounded
+            pl-5 pr-2 py-1.5 text-sm text-[var(--color-text-primary)] ${textAlign}
             focus:outline-none
           `}
         />
@@ -167,8 +167,8 @@ export function CurrencyCell({
       onClick={handleClick}
       className={`
         px-2 py-1.5 text-sm ${textAlign} ${getTextColor()}
-        ${readOnly ? 'cursor-default' : 'cursor-text hover:bg-[#37373d] rounded'}
-        ${value === 0 ? 'text-[#6e6e6e]' : ''}
+        ${readOnly ? 'cursor-default' : 'cursor-text hover:bg-[var(--color-bg-hover)] rounded'}
+        ${value === 0 ? 'text-[var(--color-text-muted)]' : ''}
         ${className}
       `}
     >
@@ -265,10 +265,10 @@ export function CurrencyInput({
   return (
     <div className={className}>
       {label && (
-        <label className="block text-sm text-[#cccccc] mb-1">{label}</label>
+        <label className="block text-sm text-[var(--color-text-primary)] mb-1">{label}</label>
       )}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#858585]">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
           $
         </span>
         <input
@@ -279,22 +279,22 @@ export function CurrencyInput({
           placeholder={placeholder}
           disabled={disabled}
           className={`
-            w-full bg-[#3c3c3c] border rounded
-            pl-7 pr-3 py-2 text-sm text-[#cccccc] text-right
-            placeholder:text-[#6e6e6e]
-            focus:outline-none focus:border-[#007acc]
+            w-full bg-[var(--color-bg-secondary)] border rounded
+            pl-7 pr-3 py-2 text-sm text-[var(--color-text-primary)] text-right
+            placeholder:text-[var(--color-text-muted)]
+            focus:outline-none focus:border-[var(--color-accent-primary)]
             disabled:opacity-50 disabled:cursor-not-allowed
-            ${error ? 'border-[#f87171]' : 'border-[#3e3e42]'}
+            ${error ? 'border-[var(--color-error)]' : 'border-[var(--color-border)]'}
           `}
         />
         {currency !== 'AUD' && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6e6e6e]">
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]">
             {currency}
           </span>
         )}
       </div>
       {error && (
-        <p className="mt-1 text-xs text-[#f87171]">{error}</p>
+        <p className="mt-1 text-xs text-[var(--color-error)]">{error}</p>
       )}
     </div>
   );

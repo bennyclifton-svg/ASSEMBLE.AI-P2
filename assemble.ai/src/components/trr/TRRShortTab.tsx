@@ -29,6 +29,7 @@ interface TRRShortTabProps {
     onDownloadTransmittal?: () => void;
     canSaveTransmittal?: boolean;
     isDownloading?: boolean;
+    surface?: 'procurement' | 'record';
 }
 
 /** Imperative handle exposed via ref — lets parent flush pending saves */
@@ -53,6 +54,7 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
     onDownloadTransmittal,
     canSaveTransmittal,
     isDownloading,
+    surface = 'procurement',
 }, ref) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
     const [firms, setFirms] = useState<TenderProcessFirm[]>([]);
@@ -216,7 +218,7 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
     // if the trr prop updates and resets local state.
     const createTrrGenerateHandler = useMemo(() => {
         const makeHandler = (field: 'executiveSummary' | 'clarifications' | 'recommendation') => {
-            return async (_currentValue: string): Promise<string> => {
+            return async (): Promise<string> => {
                 const res = await fetch(`/api/trr/${trr.id}/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -250,8 +252,13 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
         );
     }
 
+    const usesRecordSurface = surface === 'record';
+
     return (
-        <div className="space-y-6">
+        <div
+            className="space-y-6"
+            style={usesRecordSurface ? { backgroundColor: 'white', color: 'var(--color-text-primary)' } : undefined}
+        >
             {/* Saving indicator */}
             {isSaving && (
                 <div className="fixed top-4 right-4 bg-[var(--color-bg-tertiary)] border border-[var(--color-border)] rounded px-3 py-1.5 text-xs text-[var(--color-accent-copper)] z-50">
@@ -266,6 +273,7 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
                 documentTitle={`Tender Recommendation Report, ${contextName} ${String(trr.trrNumber).padStart(2, '0')}`}
                 reportDate={reportDate}
                 onDateChange={handleDateChange}
+                surface={surface}
             />
 
             {/* 2. Executive Summary */}

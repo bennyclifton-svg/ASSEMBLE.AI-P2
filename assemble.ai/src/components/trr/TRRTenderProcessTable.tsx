@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { TenderProcessFirm } from '@/types/trr';
 import { Star } from 'lucide-react';
+import { TRR_ACCENT_COLOR, TRRSectionHeading } from './TRRSectionHeading';
 
 function formatDisplayDate(dateString: string): string {
     if (!dateString) return '';
@@ -85,24 +86,26 @@ export function TRRTenderProcessTable({
 
     return (
         <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                Tender Process
-            </h3>
+            <div className="px-4">
+                <TRRSectionHeading>
+                    Tender Process
+                </TRRSectionHeading>
+            </div>
             <div className="overflow-hidden rounded-lg">
                 {firms.length > 0 ? (
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-[var(--color-border)]">
-                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[35%]">
+                                <th className="px-4 py-2.5 text-left font-medium w-[35%]" style={{ color: TRR_ACCENT_COLOR }}>
                                     Company Name
                                 </th>
-                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[30%]">
+                                <th className="px-4 py-2.5 text-left font-medium w-[30%]" style={{ color: TRR_ACCENT_COLOR }}>
                                     Contact
                                 </th>
-                                <th className="px-4 py-2.5 text-center text-[var(--color-document-header)] font-medium w-[10%]">
+                                <th className="px-4 py-2.5 text-center font-medium w-[10%]" style={{ color: TRR_ACCENT_COLOR }}>
                                     Short
                                 </th>
-                                <th className="px-4 py-2.5 text-left text-[var(--color-document-header)] font-medium w-[25%]">
+                                <th className="px-4 py-2.5 text-left font-medium w-[25%]" style={{ color: TRR_ACCENT_COLOR }}>
                                     Tender Release
                                 </th>
                             </tr>

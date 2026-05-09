@@ -34,7 +34,8 @@ export type ProjectEntity =
     | 'objective'
     | 'program_activity'
     | 'program_milestone'
-    | 'stakeholder';
+    | 'stakeholder'
+    | 'correspondence';
 export type ProjectEntityOp = 'created' | 'updated' | 'deleted';
 
 export type EntityUpdatedEvent = {

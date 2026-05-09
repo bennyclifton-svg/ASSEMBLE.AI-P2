@@ -15,6 +15,7 @@ import { KnowledgePanel } from '@/components/knowledge/KnowledgePanel';
 import { CorrespondencePanel } from '@/components/correspondence/CorrespondencePanel';
 import { MeetingsReportsContainer } from '@/components/notes-meetings-reports/MeetingsReportsContainer';
 import { NotesPanel } from '@/components/notes-meetings-reports/NotesPanel';
+import { ProcurementCardShell } from '@/components/procurement';
 import { AlertCircle } from 'lucide-react';
 import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
 import type { StakeholderWithStatus } from '@/types/stakeholder';
@@ -36,7 +37,7 @@ interface ProcurementCardProps {
     onMainTabChange?: (tab: string) => void;
     activeSubTab?: string;
     onSubTabChange?: (sub: string) => void;
-    detailsData?: any;
+    detailsData?: unknown;
     onDetailsUpdate?: () => void;
     onProjectNameChange?: () => void;
 }
@@ -62,22 +63,101 @@ interface ProfileData {
 // T065: Profile completion prompt component
 function ProfilePrompt({ message, description }: { message: string; description: string }) {
     return (
-        <div className="flex flex-col items-center justify-center h-full p-8">
+        <div
+            className="flex h-full flex-col items-center justify-center p-8"
+            style={{ background: 'var(--sw-paper)' }}
+        >
             <div className="max-w-md text-center">
-                <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--color-accent-copper-tint)] flex items-center justify-center">
-                    <AlertCircle className="w-6 h-6 text-[var(--color-accent-copper)]" />
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center border border-[var(--sw-rule)] bg-white">
+                    <AlertCircle className="h-6 w-6 text-[var(--sw-rose-dk)]" />
                 </div>
-                <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+                <h3
+                    className="mb-2 text-lg font-semibold text-[var(--sw-ink)]"
+                    style={{ fontFamily: 'var(--sw-font-sans)' }}
+                >
                     {message}
                 </h3>
-                <p className="text-sm text-[var(--color-text-muted)] mb-6">
+                <p className="mb-6 text-sm text-[var(--sw-muted)]">
                     {description}
                 </p>
-                <p className="text-xs text-[var(--color-text-muted)]">
+                <p
+                    className="text-xs text-[var(--sw-muted)]"
+                    style={{ fontFamily: 'var(--sw-font-mono)' }}
+                >
                     Go to the Planning Card and complete the Profile section to continue.
                 </p>
             </div>
         </div>
+    );
+}
+
+const muted = 'var(--sw-muted)';
+
+const procurementSubTabClassName =
+    'tab-aurora-sub h-10 shrink-0 rounded-none px-4 py-2 text-[var(--sw-muted)] text-xs font-medium whitespace-nowrap transition-all duration-200 hover:text-[var(--sw-ink)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--sw-ink)]';
+
+function slugifyProjectName(projectName: string): string {
+    return projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+}
+
+function ProcurementBreadcrumb({
+    projectName,
+    activeLabel,
+}: {
+    projectName: string;
+    activeLabel: string;
+}) {
+    return (
+        <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-2"
+            style={{
+                fontFamily: 'var(--sw-font-mono)',
+                fontSize: 12,
+                color: muted,
+            }}
+        >
+            <span>{slugifyProjectName(projectName)}</span>
+            <span style={{ opacity: 0.5 }}>/</span>
+            <span style={{ color: 'var(--sw-ink)' }}>procurement</span>
+            <span style={{ opacity: 0.5 }}>/</span>
+            <span style={{ color: 'var(--sw-ink)' }}>{activeLabel}</span>
+        </nav>
+    );
+}
+
+function ProcurementStatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
+    const isDark = tone === 'dark';
+    return (
+        <span
+            style={{
+                fontFamily: 'var(--sw-font-mono)',
+                fontSize: 11,
+                padding: '4px 10px',
+                background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
+                border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
+                color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
+                letterSpacing: '0.02em',
+            }}
+        >
+            {label}
+        </span>
+    );
+}
+
+function ProcurementTabLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <span
+            className="block max-w-[180px] truncate"
+            style={{
+                fontFamily: 'var(--sw-font-mono)',
+                fontSize: 11,
+                letterSpacing: '0.08em',
+                textTransform: 'lowercase',
+            }}
+        >
+            {children}
+        </span>
     );
 }
 
@@ -211,32 +291,24 @@ export function ProcurementCard({
     }, [projectId, onClassChange, onTypeChange]);
 
     useEffect(() => {
-        fetchProfileStatus();
+        const timeoutId = window.setTimeout(() => {
+            void fetchProfileStatus();
+        }, 0);
+        return () => window.clearTimeout(timeoutId);
     }, [fetchProfileStatus, projectId]);
 
     // Re-fetch profile data when navigating to the Building sub-tab of the Brief tab
     useEffect(() => {
         if (activeMainTab === 'brief' && activeSubTab === 'building') {
-            fetchProfileStatus();
+            const timeoutId = window.setTimeout(() => {
+                void fetchProfileStatus();
+            }, 0);
+            return () => window.clearTimeout(timeoutId);
         }
     }, [activeMainTab, activeSubTab, fetchProfileStatus]);
 
     // Check if profile is complete enough for Cost/Program tabs
     const isProfileComplete = profileStatus.hasProfile && profileStatus.buildingClass && profileStatus.projectType;
-
-    // Initialize active tab when data loads (first consultant, or first contractor if no consultants)
-    useEffect(() => {
-        if (!activeTab) {
-            const firstItem = consultantStakeholders[0]?.id
-                ? `consultant-${consultantStakeholders[0].id}`
-                : contractorStakeholders[0]?.id
-                    ? `contractor-${contractorStakeholders[0].id}`
-                    : null;
-            if (firstItem) {
-                setActiveTab(firstItem);
-            }
-        }
-    }, [consultantStakeholders, contractorStakeholders, activeTab]);
 
     // Handlers for note transmittals (Save/Load document attachments)
     const handleSaveNoteTransmittal = useCallback(async (noteId: string) => {
@@ -270,10 +342,52 @@ export function ProcurementCard({
         }
     }, [onSetSelectedDocumentIds]);
 
+    const firstProcurementTab =
+        consultantStakeholders[0]?.id
+            ? `consultant-${consultantStakeholders[0].id}`
+            : contractorStakeholders[0]?.id
+                ? `contractor-${contractorStakeholders[0].id}`
+                : '';
+    const activeTabIsAvailable = Boolean(
+        activeTab &&
+        (
+            consultantStakeholders.some((s) => `consultant-${s.id}` === activeTab) ||
+            contractorStakeholders.some((s) => `contractor-${s.id}` === activeTab)
+        )
+    );
+    const activeProcurementTab = activeTabIsAvailable ? activeTab! : firstProcurementTab;
+    const activeConsultant = consultantStakeholders.find((s) => `consultant-${s.id}` === activeProcurementTab);
+    const activeContractor = contractorStakeholders.find((s) => `contractor-${s.id}` === activeProcurementTab);
+    const activeProcurementKind = activeConsultant ? 'consultant' : activeContractor ? 'contractor' : 'none';
+    const activeProcurementName =
+        activeConsultant?.disciplineOrTrade ||
+        activeConsultant?.name ||
+        activeContractor?.disciplineOrTrade ||
+        activeContractor?.name ||
+        'register';
+    const procurementSubtitle = [
+        `${consultantStakeholders.length} consultants`,
+        `${contractorStakeholders.length} contractors`,
+        activeProcurementKind !== 'none' ? `active · ${activeProcurementName}` : null,
+    ].filter(Boolean).join(' · ');
+
+    const handleProcurementTabsWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+        const el = event.currentTarget;
+        if (el.scrollWidth <= el.clientWidth) return;
+
+        const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX)
+            ? event.deltaY
+            : event.deltaX;
+        if (delta === 0) return;
+
+        event.preventDefault();
+        el.scrollLeft += delta;
+    }, []);
+
     if (isLoadingStakeholders) {
         return (
             <div className="h-full flex items-center justify-center">
-                <div className="text-[var(--color-text-secondary)]">Loading...</div>
+                <div className="text-[var(--sw-muted)]">Loading...</div>
             </div>
         );
     }
@@ -315,80 +429,144 @@ export function ProcurementCard({
                     />
                 </TabsContent>
 
-                <TabsContent value="procurement" className="flex-1 mt-0 min-h-0 flex flex-col section-procurement">
-                    {consultantStakeholders.length === 0 && contractorStakeholders.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-64 border border-dashed border-[var(--color-border)] rounded-lg">
-                            <p className="text-sm text-[var(--color-text-muted)] text-center px-4">
-                                No consultants or contractors scheduled.
-                                <br />
-                                Add consultants or contractors in the Stakeholders panel to create tabs here.
-                            </p>
-                        </div>
-                    ) : (
-                        <Tabs
-                            value={activeTab || (consultantStakeholders[0]?.id ? `consultant-${consultantStakeholders[0].id}` : contractorStakeholders[0]?.id ? `contractor-${contractorStakeholders[0].id}` : '')}
-                            onValueChange={(value) => setActiveTab(value)}
-                            className="flex-1 flex flex-col min-h-0"
-                        >
-                            <TabsList className="w-full justify-start bg-transparent border-b border-[var(--color-border)] rounded-none h-auto p-0 flex-wrap">
-                                {/* Consultant tabs */}
+                <TabsContent value="procurement" className="flex-1 mt-0 min-h-0 overflow-hidden section-procurement procurement-workspace">
+                    <div className="h-full flex flex-col">
+                        <header className="flex-shrink-0 px-2 pt-2">
+                            <div className="flex items-center justify-between mb-2">
+                                <ProcurementBreadcrumb
+                                    projectName={projectName}
+                                    activeLabel={activeProcurementName.toLowerCase()}
+                                />
+                                <div className="flex gap-1.5">
+                                    <ProcurementStatusPill label={`consultants: ${consultantStakeholders.length}`} />
+                                    <ProcurementStatusPill label={`contractors: ${contractorStakeholders.length}`} />
+                                    <ProcurementStatusPill label={`active: ${activeProcurementName}`} tone="dark" />
+                                </div>
+                            </div>
+
+                            <div className="flex items-end justify-between mb-2">
+                                <div>
+                                    <h1
+                                        style={{
+                                            fontFamily: 'var(--sw-font-sans)',
+                                            fontSize: 30,
+                                            fontWeight: 700,
+                                            letterSpacing: '-0.025em',
+                                            margin: 0,
+                                            lineHeight: 1.1,
+                                            color: 'var(--sw-ink)',
+                                        }}
+                                    >
+                                        Procurement
+                                    </h1>
+                                    <div
+                                        style={{
+                                            fontFamily: 'var(--sw-font-mono)',
+                                            fontSize: 12,
+                                            color: muted,
+                                            marginTop: 4,
+                                            minHeight: 18,
+                                        }}
+                                    >
+                                        {procurementSubtitle || 'consultants · contractors · tender workflow'}
+                                    </div>
+                                </div>
+                            </div>
+                        </header>
+
+                        {consultantStakeholders.length === 0 && contractorStakeholders.length === 0 ? (
+                            <div className="p-2">
+                                <ProcurementCardShell label="stakeholders" meta="0 scheduled">
+                                    <div className="flex h-48 flex-col items-center justify-center border border-dashed border-[var(--sw-rule)]">
+                                        <p className="px-4 text-center text-sm text-[var(--sw-muted)]">
+                                            No consultants or contractors scheduled.
+                                            <br />
+                                            Add consultants or contractors in the Stakeholders panel to create tabs here.
+                                        </p>
+                                    </div>
+                                </ProcurementCardShell>
+                            </div>
+                        ) : (
+                            <Tabs
+                                value={activeProcurementTab}
+                                onValueChange={(value) => setActiveTab(value)}
+                                className="flex-1 flex flex-col min-h-0"
+                            >
+                                <TabsList
+                                    onWheel={handleProcurementTabsWheel}
+                                    className="firms-scrollbar w-full max-w-full justify-start bg-transparent border-b border-[var(--sw-rule)] rounded-none h-auto p-0 flex-nowrap overflow-x-auto overflow-y-hidden whitespace-nowrap"
+                                >
+                                    {/* Consultant tabs */}
+                                    {consultantStakeholders.map(s => {
+                                        const value = `consultant-${s.id}`;
+                                        const label = s.disciplineOrTrade || s.name;
+                                        return (
+                                            <TabsTrigger
+                                                key={value}
+                                                value={value}
+                                                className={procurementSubTabClassName}
+                                                aria-label={`${label} consultant`}
+                                                title={label}
+                                            >
+                                                <ProcurementTabLabel>{label}</ProcurementTabLabel>
+                                            </TabsTrigger>
+                                        );
+                                    })}
+
+                                    {/* Contractor tabs */}
+                                    {contractorStakeholders.map(s => {
+                                        const value = `contractor-${s.id}`;
+                                        const label = s.disciplineOrTrade || s.name;
+                                        return (
+                                            <TabsTrigger
+                                                key={value}
+                                                value={value}
+                                                className={procurementSubTabClassName}
+                                                aria-label={`${label} contractor`}
+                                                title={label}
+                                            >
+                                                <ProcurementTabLabel>{label}</ProcurementTabLabel>
+                                            </TabsTrigger>
+                                        );
+                                    })}
+                                </TabsList>
+
+                                {/* Consultant TabsContent */}
                                 {consultantStakeholders.map(s => (
-                                    <TabsTrigger
-                                        key={`consultant-${s.id}`}
-                                        value={`consultant-${s.id}`}
-                                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] bg-transparent data-[state=active]:bg-transparent"
-                                    >
-                                        {s.disciplineOrTrade || s.name}
-                                    </TabsTrigger>
+                                    <TabsContent key={`consultant-${s.id}`} value={`consultant-${s.id}`} className="flex-1 mt-0 min-h-0 overflow-y-auto p-2">
+                                        <ConsultantGallery
+                                            projectId={projectId}
+                                            discipline={s.disciplineOrTrade || s.name}
+                                            disciplineId={s.id}
+                                            briefServices={s.briefServices || ''}
+                                            briefFee={s.briefFee || ''}
+                                            briefProgram={s.briefProgram || ''}
+                                            onUpdateBrief={updateBrief}
+                                            selectedDocumentIds={selectedDocumentIds}
+                                            onSetSelectedDocumentIds={onSetSelectedDocumentIds}
+                                        />
+                                    </TabsContent>
                                 ))}
 
-                                {/* Contractor tabs */}
+                                {/* Contractor TabsContent */}
                                 {contractorStakeholders.map(s => (
-                                    <TabsTrigger
-                                        key={`contractor-${s.id}`}
-                                        value={`contractor-${s.id}`}
-                                        className="tab-aurora-sub tab-contractor-copper-hover rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] bg-transparent data-[state=active]:bg-transparent"
-                                    >
-                                        {s.disciplineOrTrade || s.name}
-                                    </TabsTrigger>
+                                    <TabsContent key={`contractor-${s.id}`} value={`contractor-${s.id}`} className="flex-1 mt-0 min-h-0 overflow-y-auto p-2">
+                                        <ContractorGallery
+                                            projectId={projectId}
+                                            trade={s.disciplineOrTrade || s.name}
+                                            tradeId={s.id}
+                                            scopeWorks={s.scopeWorks || ''}
+                                            scopePrice={s.scopePrice || ''}
+                                            scopeProgram={s.scopeProgram || ''}
+                                            onUpdateScope={updateScope}
+                                            selectedDocumentIds={selectedDocumentIds}
+                                            onSetSelectedDocumentIds={onSetSelectedDocumentIds}
+                                        />
+                                    </TabsContent>
                                 ))}
-                            </TabsList>
-
-                            {/* Consultant TabsContent */}
-                            {consultantStakeholders.map(s => (
-                                <TabsContent key={`consultant-${s.id}`} value={`consultant-${s.id}`} className="flex-1 mt-4 min-h-0 overflow-y-auto">
-                                    <ConsultantGallery
-                                        projectId={projectId}
-                                        discipline={s.disciplineOrTrade || s.name}
-                                        disciplineId={s.id}
-                                        briefServices={s.briefServices || ''}
-                                        briefFee={s.briefFee || ''}
-                                        briefProgram={s.briefProgram || ''}
-                                        onUpdateBrief={updateBrief}
-                                        selectedDocumentIds={selectedDocumentIds}
-                                        onSetSelectedDocumentIds={onSetSelectedDocumentIds}
-                                    />
-                                </TabsContent>
-                            ))}
-
-                            {/* Contractor TabsContent */}
-                            {contractorStakeholders.map(s => (
-                                <TabsContent key={`contractor-${s.id}`} value={`contractor-${s.id}`} className="flex-1 mt-4 min-h-0 overflow-y-auto">
-                                    <ContractorGallery
-                                        projectId={projectId}
-                                        trade={s.disciplineOrTrade || s.name}
-                                        tradeId={s.id}
-                                        scopeWorks={s.scopeWorks || ''}
-                                        scopePrice={s.scopePrice || ''}
-                                        scopeProgram={s.scopeProgram || ''}
-                                        onUpdateScope={updateScope}
-                                        selectedDocumentIds={selectedDocumentIds}
-                                        onSetSelectedDocumentIds={onSetSelectedDocumentIds}
-                                    />
-                                </TabsContent>
-                            ))}
-                        </Tabs>
-                    )}
+                            </Tabs>
+                        )}
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="cost-planning" className="flex-1 mt-0 min-h-0 overflow-hidden section-cost">
@@ -398,46 +576,78 @@ export function ProcurementCard({
                             description="The cost plan uses your building class, project type, and complexity score to provide accurate cost benchmarks and multipliers."
                         />
                     ) : (
-                        <CostPlanPanel projectId={projectId} />
+                        <CostPlanPanel
+                            projectId={projectId}
+                            projectName={projectName}
+                            buildingClass={buildingClass ?? null}
+                            projectType={projectType ?? null}
+                            profileData={profileData || undefined}
+                        />
                     )}
                 </TabsContent>
 
                 <TabsContent value="program" className="flex-1 mt-0 min-h-0 overflow-hidden section-planning">
                     {!isProfileComplete ? (
                         <ProfilePrompt
-                            message="Complete your project profile to unlock program features"
-                            description="The program uses your building class and project type to suggest appropriate programme templates and durations."
+                            message="Complete your project profile to unlock programme features"
+                            description="The programme uses your building class and project type to suggest appropriate templates and durations."
                         />
                     ) : (
-                        <ProgramPanel projectId={projectId} />
+                        <ProgramPanel
+                            projectId={projectId}
+                            projectName={projectName}
+                            buildingClass={buildingClass ?? null}
+                            projectType={projectType ?? null}
+                            profileData={profileData || undefined}
+                        />
                     )}
                 </TabsContent>
 
                 <TabsContent value="stakeholders" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <StakeholderPanel projectId={projectId} />
+                    <StakeholderPanel
+                        projectId={projectId}
+                        projectName={projectName}
+                        buildingClass={buildingClass ?? null}
+                        projectType={projectType ?? null}
+                        profileData={profileData || undefined}
+                    />
                 </TabsContent>
 
                 <TabsContent value="knowledge" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <KnowledgePanel projectId={projectId} />
+                    <KnowledgePanel
+                        projectId={projectId}
+                        projectName={projectName}
+                        buildingClass={buildingClass ?? null}
+                        projectType={projectType ?? null}
+                        profileData={profileData || undefined}
+                    />
                 </TabsContent>
 
                 {/* Notes Tab Content */}
                 <TabsContent value="notes" className="flex-1 mt-0 min-h-0 overflow-y-auto">
                     <NotesPanel
                         projectId={projectId}
+                        projectName={projectName}
+                        buildingClass={buildingClass ?? null}
+                        projectType={projectType ?? null}
+                        profileData={profileData || undefined}
                         onSaveTransmittal={handleSaveNoteTransmittal}
                         onLoadTransmittal={handleLoadNoteTransmittal}
                     />
                 </TabsContent>
 
-                <TabsContent value="correspondence" className="flex-1 mt-0 min-h-0 overflow-hidden">
-                    <CorrespondencePanel projectId={projectId} />
+                <TabsContent value="correspondence" className="flex-1 mt-0 min-h-0 overflow-hidden section-procurement procurement-workspace">
+                    <CorrespondencePanel projectId={projectId} projectName={projectName} />
                 </TabsContent>
 
                 {/* Meetings/Reports Tab Content - T096, T099 */}
                 <TabsContent value="meetings-reports" className="flex-1 mt-0 min-h-0 overflow-hidden">
                     <MeetingsReportsContainer
                         projectId={projectId}
+                        projectName={projectName}
+                        buildingClass={buildingClass ?? null}
+                        projectType={projectType ?? null}
+                        profileData={profileData || undefined}
                         selectedDocumentIds={selectedDocumentIds}
                         onSetSelectedDocumentIds={onSetSelectedDocumentIds}
                     />

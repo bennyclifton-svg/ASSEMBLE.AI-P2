@@ -76,7 +76,7 @@ function createSectionHeaderRow(section: CostLineSection) {
 function createEmptyRow() {
   return Array(12).fill(null).map(() => ({
     v: '',
-    bg: '#1e1e2e',
+    bg: 'var(--color-bg-primary)',
     fc: '#6b7280',
   }));
 }
@@ -84,7 +84,7 @@ function createEmptyRow() {
 // Create cost line row
 function createCostLineRow(line: CostLineWithCalculations) {
   const variance = line.calculated.varianceToBudgetCents;
-  const varianceColor = variance < 0 ? '#dc2626' : variance > 0 ? '#16a34a' : '#000000';
+  const varianceColor = variance < 0 ? 'var(--color-error)' : variance > 0 ? 'var(--color-success)' : '#000000';
   const varianceBg = variance < 0 ? '#fee2e2' : undefined;
 
   return [
@@ -105,7 +105,7 @@ function createCostLineRow(line: CostLineWithCalculations) {
 
 // Create totals row
 function createTotalsRow(totals: CostPlanTotals) {
-  const varianceColor = totals.varianceCents < 0 ? '#dc2626' : '#16a34a';
+  const varianceColor = totals.varianceCents < 0 ? 'var(--color-error)' : 'var(--color-success)';
 
   return [
     { v: 'TOTAL', ct: { fa: '@', t: 's' }, bg: '#D4A574', fc: '#141618', bl: 1 },
@@ -296,13 +296,13 @@ export function CostPlanSheet({
       />
       <style jsx global>{`
         .fortune-sheet-container {
-          --fortune-sheet-bg: #1e1e2e;
+          --fortune-sheet-bg: var(--color-bg-primary);
         }
         .fortune-sheet-container .luckysheet {
-          background-color: #1e1e2e !important;
+          background-color: var(--color-bg-primary) !important;
         }
         .fortune-sheet-container .luckysheet-cell-input {
-          background-color: #252536 !important;
+          background-color: var(--color-bg-secondary) !important;
           color: white !important;
         }
       `}</style>

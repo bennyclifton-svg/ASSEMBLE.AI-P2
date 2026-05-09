@@ -113,7 +113,7 @@ export default function ExportButton({ reportId, content }: ExportButtonProps) {
 
       {/* Dropdown Menu */}
       {isOpen && !isExporting && (
-        <div className="absolute right-0 mt-2 w-48 bg-[#2d2d2d] border border-gray-700 rounded-lg shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-48 bg-[var(--color-bg-secondary)] border border-gray-700 rounded-lg shadow-lg z-50">
           <div className="py-1">
             <button
               onClick={() => handleExport('pdf')}

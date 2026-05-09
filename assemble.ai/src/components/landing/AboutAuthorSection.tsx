@@ -1,11 +1,9 @@
-import { SectionContainer } from './shared/SectionContainer';
 import { ScrollReveal } from './shared/ScrollReveal';
 import { aboutAuthorContent } from './data/landing-data';
 
 type Institution = (typeof aboutAuthorContent.institutions)[number];
 
 function MarqueeRow({ logos, direction }: { logos: Institution[]; direction: 'rtl' | 'ltr' }) {
-    // Duplicate the list so the -50% translate completes one full visual cycle seamlessly.
     const doubled = [...logos, ...logos];
     const animationClass = direction === 'rtl' ? 'animate-marquee-rtl' : 'animate-marquee-ltr';
     return (
@@ -37,58 +35,124 @@ export function AboutAuthorSection() {
     const rowTwo = aboutAuthorContent.institutions.slice(half);
 
     return (
-        <SectionContainer background="bg-white" className="py-24">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-center max-w-5xl mx-auto">
-                {/* Headshot */}
-                <ScrollReveal>
-                    <div className="rounded-2xl overflow-hidden border border-[var(--gray-200)] bg-[var(--gray-50)] aspect-[4/5] w-full">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src={aboutAuthorContent.headshot.src}
-                            alt={aboutAuthorContent.headshot.alt}
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
-                </ScrollReveal>
+        <section
+            className="relative overflow-hidden py-24"
+            style={{ background: 'var(--sw-paper-2)', fontFamily: 'var(--sw-font-sans)' }}
+        >
+            <div className="relative max-w-[1280px] mx-auto px-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 items-center max-w-5xl mx-auto">
+                    <ScrollReveal>
+                        <div
+                            className="overflow-hidden aspect-[4/5] w-full"
+                            style={{
+                                border: '1px solid var(--sw-rule)',
+                                background: 'var(--sw-paper)',
+                            }}
+                        >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={aboutAuthorContent.headshot.src}
+                                alt={aboutAuthorContent.headshot.alt}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    </ScrollReveal>
 
-                {/* Content */}
-                <ScrollReveal delay={100}>
-                    <p className="text-[var(--gray-500)] text-sm font-medium mb-3 uppercase tracking-widest">
-                        {aboutAuthorContent.label}
-                    </p>
-                    <h2 className="serif text-[clamp(28px,3.5vw,44px)] leading-[1.15] text-[var(--gray-800)] mb-6">
-                        {aboutAuthorContent.headline}
-                    </h2>
-                    <div className="space-y-4 mb-8">
-                        {aboutAuthorContent.bio.map((paragraph, idx) => (
-                            <p key={idx} className="text-[var(--gray-700)] text-base lg:text-lg leading-relaxed">
-                                {paragraph}
-                            </p>
-                        ))}
+                    <ScrollReveal delay={100}>
+                        <p
+                            className="mb-3"
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 11,
+                                color: 'var(--sw-rose-dk)',
+                                letterSpacing: '0.18em',
+                                textTransform: 'uppercase',
+                                fontWeight: 600,
+                            }}
+                        >
+                            // {aboutAuthorContent.label}
+                        </p>
+                        <h2
+                            className="mb-6 text-balance"
+                            style={{
+                                fontFamily: 'var(--sw-font-sans)',
+                                fontSize: 'clamp(28px, 3.4vw, 42px)',
+                                fontWeight: 700,
+                                lineHeight: 1.15,
+                                letterSpacing: '-0.025em',
+                                color: 'var(--sw-ink)',
+                            }}
+                        >
+                            {aboutAuthorContent.headline}
+                        </h2>
+                        <div className="space-y-4 mb-8">
+                            {aboutAuthorContent.bio.map((paragraph, idx) => (
+                                <p
+                                    key={idx}
+                                    style={{
+                                        fontFamily: 'var(--sw-font-body)',
+                                        fontSize: 16,
+                                        lineHeight: 1.6,
+                                        color: 'var(--sw-ink)',
+                                    }}
+                                >
+                                    {paragraph}
+                                </p>
+                            ))}
+                        </div>
+                        <ul className="space-y-2">
+                            {aboutAuthorContent.qualifications.map((qual) => (
+                                <li
+                                    key={qual}
+                                    className="flex items-start gap-3"
+                                    style={{
+                                        fontFamily: 'var(--sw-font-body)',
+                                        fontSize: 14,
+                                        lineHeight: 1.5,
+                                        color: 'var(--sw-ink)',
+                                    }}
+                                >
+                                    <span
+                                        className="mt-2 flex-shrink-0 inline-block"
+                                        style={{
+                                            width: 6,
+                                            height: 6,
+                                            background: 'var(--sw-rose)',
+                                        }}
+                                        aria-hidden="true"
+                                    />
+                                    <span>{qual}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    </ScrollReveal>
+                </div>
+
+                <ScrollReveal delay={200}>
+                    <div
+                        className="mt-20 pt-12"
+                        style={{ borderTop: '1px solid var(--sw-rule)' }}
+                    >
+                        <p
+                            className="text-center mb-10"
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 11,
+                                color: 'var(--sw-muted)',
+                                letterSpacing: '0.18em',
+                                textTransform: 'uppercase',
+                                fontWeight: 600,
+                            }}
+                        >
+                            // {aboutAuthorContent.logosCaption}
+                        </p>
+                        <div className="space-y-8">
+                            <MarqueeRow logos={rowOne} direction="rtl" />
+                            <MarqueeRow logos={rowTwo} direction="ltr" />
+                        </div>
                     </div>
-                    <ul className="space-y-3">
-                        {aboutAuthorContent.qualifications.map((qual) => (
-                            <li key={qual} className="flex items-start gap-3 text-[var(--gray-700)]">
-                                <span className="mt-2 w-1.5 h-1.5 rounded-full bg-[var(--primary)] flex-shrink-0" />
-                                <span>{qual}</span>
-                            </li>
-                        ))}
-                    </ul>
                 </ScrollReveal>
             </div>
-
-            {/* Institution logos — dual-direction marquee */}
-            <ScrollReveal delay={200}>
-                <div className="mt-20 pt-12 border-t border-[var(--gray-200)]">
-                    <p className="text-center text-[var(--gray-500)] text-sm font-medium mb-10">
-                        {aboutAuthorContent.logosCaption}
-                    </p>
-                    <div className="space-y-8">
-                        <MarqueeRow logos={rowOne} direction="rtl" />
-                        <MarqueeRow logos={rowTwo} direction="ltr" />
-                    </div>
-                </div>
-            </ScrollReveal>
-        </SectionContainer>
+        </section>
     );
 }

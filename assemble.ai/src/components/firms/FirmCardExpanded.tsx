@@ -89,18 +89,21 @@ function InlineField({ label, value, onSave, placeholder, required, multiline, t
   };
 
   const baseStyles = `
-    w-full px-1 py-0 text-[var(--color-text-primary)] text-xs
+    w-full px-1 py-0 text-[var(--sw-ink)] text-xs
     bg-transparent border-none outline-none
     transition-colors duration-150
     disabled:opacity-50
     resize-none
-    selection:bg-[var(--color-accent-primary-tint)] selection:text-[var(--color-text-primary)]
+    selection:bg-[var(--sw-rose-tint)] selection:text-[var(--sw-ink)]
   `;
 
   return (
     <div className="space-y-0">
-      <label className="text-[10px] text-[var(--color-text-secondary)] leading-tight">
-        {label} {required && <span className="text-[var(--color-accent-coral)]">*</span>}
+      <label
+        className="text-[10px] text-[var(--sw-muted)] leading-tight"
+        style={{ fontFamily: 'var(--sw-font-mono)', textTransform: 'lowercase' }}
+      >
+        {label} {required && <span className="text-[var(--sw-rose-dk)]">*</span>}
       </label>
       {multiline ? (
         <textarea
@@ -219,9 +222,9 @@ export function FirmCardExpanded({
   return (
     <div
       className={`
-        bg-[var(--color-card-firm)] border border-[var(--color-card-firm-border)] transition-colors duration-150 shadow-md
-        ${isDragOver ? 'ring-2 ring-[var(--color-accent-teal)] ring-inset' : ''}
-        ${isHovered && !isDragOver ? 'bg-[var(--color-card-firm-hover)]' : ''}
+        bg-transparent border border-[var(--sw-rule)] transition-colors duration-150
+        ${isDragOver ? 'ring-2 ring-[var(--sw-cyan)] ring-inset' : ''}
+        ${isHovered && !isDragOver ? 'bg-[var(--sw-paper)]' : ''}
         ${firm.awarded ? 'border-l-[3px] border-l-[var(--color-accent-green)]' : ''}
         w-[220px] flex-shrink-0
       `}
@@ -229,7 +232,7 @@ export function FirmCardExpanded({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Header */}
-      <div className="flex flex-col px-3 py-1 border-b border-[var(--color-border)]">
+      <div className="flex flex-col px-3 py-1 border-b border-[var(--sw-rule-2)]">
         {/* Row 1: Company name - full width */}
         <div className="w-full h-6 flex items-center">
           <input
@@ -247,12 +250,13 @@ export function FirmCardExpanded({
             disabled={isSaving}
             placeholder="Enter Firm Name"
             className={`
-              w-full h-6 px-1 py-0.5 text-[var(--color-text-primary)] text-sm font-medium
+              w-full h-6 px-1 py-0.5 text-[var(--sw-ink)] text-sm font-medium
               bg-transparent border-none outline-none
               transition-colors duration-150
               disabled:opacity-50
-              selection:bg-[var(--color-accent-primary-tint)] selection:text-[var(--color-text-primary)]
+              selection:bg-[var(--sw-rose-tint)] selection:text-[var(--sw-ink)]
             `}
+            style={{ fontFamily: 'var(--sw-font-sans)' }}
           />
         </div>
 
@@ -262,20 +266,20 @@ export function FirmCardExpanded({
           <button
             onClick={handleStarClick}
             className={`
-              flex items-center gap-1 p-0.5 rounded transition-colors
-              ${firm.shortlisted ? 'text-[var(--color-accent-blue)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
+              flex items-center gap-1 p-0.5 transition-colors
+              ${firm.shortlisted ? 'text-[var(--sw-cyan)]' : 'text-[var(--sw-muted)] hover:text-[var(--sw-ink)]'}
             `}
             title={firm.shortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
           >
             <Star className={`w-3.5 h-3.5 ${firm.shortlisted ? 'fill-current' : ''}`} />
-            <span className="text-[10px]">Shortlisted</span>
+            <span className="text-[10px]" style={{ fontFamily: 'var(--sw-font-mono)', textTransform: 'lowercase' }}>Shortlisted</span>
           </button>
 
           <div className="flex items-center gap-1">
             {/* Folder upload */}
             <button
               onClick={handleUploadClick}
-              className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+              className="p-0.5 text-[var(--sw-muted)] hover:text-[var(--sw-ink)] transition-colors"
               title="Upload file to extract data"
             >
               <Upload className="w-3.5 h-3.5" />
@@ -284,7 +288,7 @@ export function FirmCardExpanded({
             {/* Delete button */}
             <button
               onClick={onDelete}
-              className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-colors"
+              className="p-0.5 text-[var(--sw-muted)] hover:text-[var(--sw-rose-dk)] transition-colors"
               title="Delete firm"
             >
               <Trash className="w-3.5 h-3.5" />
@@ -293,7 +297,7 @@ export function FirmCardExpanded({
             {/* Collapse chevron */}
             <button
               onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
-              className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+              className="p-1 text-[var(--sw-muted)] hover:text-[var(--sw-ink)] transition-colors"
               title="Collapse card"
             >
               <ChevronUp className="w-5 h-5" />
@@ -349,9 +353,9 @@ export function FirmCardExpanded({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center px-3 py-1 border-t border-[var(--color-border)]">
+      <div className="flex items-center px-3 py-1 border-t border-[var(--sw-rule-2)]">
         <div className="flex items-center gap-1.5">
-          <Label className="text-[var(--color-text-secondary)] text-xs font-medium">Award</Label>
+          <Label className="text-[var(--sw-muted)] text-xs font-medium">Award</Label>
           <Switch
             checked={firm.awarded}
             onCheckedChange={handleAwardToggle}
@@ -366,8 +370,8 @@ export function FirmCardExpanded({
 
       {/* Drag overlay */}
       {isDragOver && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-accent-teal)]/20 rounded-lg pointer-events-none">
-          <span className="text-[var(--color-text-primary)] text-sm font-medium">Drop to extract</span>
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-accent-teal)]/20 pointer-events-none">
+          <span className="text-[var(--sw-ink)] text-sm font-medium">Drop to extract</span>
         </div>
       )}
     </div>

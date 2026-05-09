@@ -17,7 +17,11 @@ import { MergeRowsDialog } from './MergeRowsDialog';
 import { Loader2, AlertCircle, CheckCircle2, Upload } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import type { EvaluationTotals, EvaluationRow } from '@/types/evaluation';
-import { EVALUATION_TABLE_COLUMNS, getEvaluationTableWidth } from '@/types/evaluation';
+import { EVALUATION_TABLE_COLUMNS } from '@/types/evaluation';
+import {
+    EVALUATION_PRICE_ACCENT_COLOR,
+    EvaluationReportHeader,
+} from './EvaluationReportChrome';
 
 interface EvaluationPriceTabProps {
     projectId: string;
@@ -25,13 +29,18 @@ interface EvaluationPriceTabProps {
     stakeholderName?: string;
     evaluationPriceId?: string; // For multi-instance price evaluation
     evaluationPriceNumber?: number; // Tab number (1, 2, etc.) for dynamic title
+    issuedDate?: string | null;
+    surface?: 'procurement' | 'record';
 }
 
 export function EvaluationPriceTab({
     projectId,
     stakeholderId,
+    stakeholderName,
     evaluationPriceId,
     evaluationPriceNumber = 1,
+    issuedDate,
+    surface = 'procurement',
 }: EvaluationPriceTabProps) {
     const {
         isLoading,
@@ -392,27 +401,44 @@ export function EvaluationPriceTab({
                 </h3>
                 <p className="text-xs text-[var(--color-text-secondary)] max-w-sm">
                     To use the evaluation tables, first short-list firms by toggling the
-                    "Shortlisted" option on the firm cards above.
+                    &quot;Shortlisted&quot; option on the firm cards above.
                 </p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
+        <div
+            className="space-y-6"
+            style={surface === 'record' ? { backgroundColor: 'white', color: 'var(--color-text-primary)' } : undefined}
+        >
+            <EvaluationReportHeader
+                projectId={projectId}
+                documentTitle={`Evaluation Price, ${stakeholderName || 'Unknown'} ${String(evaluationPriceNumber).padStart(2, '0')}`}
+                issuedDate={issuedDate}
+                accentColor={EVALUATION_PRICE_ACCENT_COLOR}
+                surface={surface}
+            />
+
             {/* Save Status & Upload Instruction */}
             <div className="flex items-center justify-between">
                 {/* Upload instruction / parsing status - left side */}
                 {isParsing ? (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--color-accent-copper)]/10 border border-[var(--color-accent-copper)]/30">
-                        <Loader2 className="w-3.5 h-3.5 text-[var(--color-accent-copper)] animate-spin" />
-                        <span className="text-xs text-[var(--color-accent-copper)] font-medium">
+                    <div
+                        className="flex items-center gap-2 rounded-none border px-3 py-1.5"
+                        style={{
+                            background: `color-mix(in srgb, ${EVALUATION_PRICE_ACCENT_COLOR} 10%, transparent)`,
+                            borderColor: `color-mix(in srgb, ${EVALUATION_PRICE_ACCENT_COLOR} 30%, transparent)`,
+                        }}
+                    >
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: EVALUATION_PRICE_ACCENT_COLOR }} />
+                        <span className="text-xs font-medium" style={{ color: EVALUATION_PRICE_ACCENT_COLOR }}>
                             Ingesting tender pricing{parsingFileName ? ` — ${parsingFileName}` : ''}…
                         </span>
                     </div>
                 ) : (
                     <div className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
-                        <Upload className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+                        <Upload className="w-3.5 h-3.5" style={{ color: EVALUATION_PRICE_ACCENT_COLOR }} />
                         <span>Drag submission PDF onto firm column</span>
                     </div>
                 )}
@@ -450,6 +476,8 @@ export function EvaluationPriceTab({
                 parsingFirmId={parsingFirmId}
                 subtotals={totals.initialPriceSubtotals}
                 title={`Price ${String(evaluationPriceNumber).padStart(2, '0')}`}
+                accentColor={EVALUATION_PRICE_ACCENT_COLOR}
+                surface={surface}
             />
 
             {/* Adds & Subs Table - with row selection and merge */}
@@ -470,6 +498,8 @@ export function EvaluationPriceTab({
                 subtotals={totals.addSubsSubtotals}
                 title="Adds & Subs"
                 showFirmHeaders={false}
+                accentColor={EVALUATION_PRICE_ACCENT_COLOR}
+                surface={surface}
             />
 
             {/* Grand Total */}
@@ -499,13 +529,13 @@ export function EvaluationPriceTab({
                                 className="px-3 text-sm font-bold text-[var(--color-text-primary)]"
                                 style={{ height: 28 }}
                             >
-                                GRAND TOTAL
+                                Grand Total
                             </td>
                             {shortlistedFirms.map(firm => (
                                 <td
                                     key={firm.id}
-                                    className="px-3 text-right text-sm font-bold text-[var(--color-accent-copper)]"
-                                    style={{ height: 28 }}
+                                    className="px-3 text-right text-sm font-bold"
+                                    style={{ height: 28, color: EVALUATION_PRICE_ACCENT_COLOR }}
                                 >
                                     {formatCurrency(totals.grandTotals[firm.id] || 0)}
                                 </td>

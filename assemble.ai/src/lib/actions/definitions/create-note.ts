@@ -16,7 +16,7 @@ import { defineAction } from '../define';
 import type { ActionContext } from '../types';
 import type { ProposedDiff } from '@/lib/agents/approvals';
 
-const NOTE_COLORS = ['yellow', 'blue', 'green', 'pink', 'white'] as const;
+const NOTE_COLORS = ['purple', 'orange', 'pink', 'blue'] as const;
 const NOTE_TYPES = ['rfi', 'notice', 'eot', 'defect', 'variation', 'risk', 'transmittal', 'review', 'note'] as const;
 const NOTE_STATUSES = ['open', 'closed'] as const;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -238,7 +238,7 @@ export const createNoteAction = defineAction<CreateNoteInput, Record<string, unk
             title: input.title,
             content: input.content ?? null,
             isStarred: input.isStarred ?? false,
-            color: input.color ?? 'yellow',
+            color: input.color ?? 'purple',
             type: input.type ?? 'note',
             status: input.status ?? 'open',
             noteDate: input.noteDate ?? null,

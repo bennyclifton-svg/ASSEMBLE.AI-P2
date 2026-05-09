@@ -206,30 +206,30 @@ export function KnowledgeLibraryRepository() {
   const pendingCount = documents.filter((d) => d.syncStatus === 'pending').length;
 
   return (
-    <div className="h-full flex flex-col bg-[#1e1e1e]">
+    <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
       {/* Header */}
-      <div className="p-4 border-b border-[#3e3e42]">
-        <h2 className="text-lg font-semibold text-[#cccccc]">Knowledge Libraries</h2>
-        <p className="text-sm text-[#808080] mt-1">
+      <div className="p-4 border-b border-[var(--color-border)]">
+        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Knowledge Libraries</h2>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
           Upload documents to train AI on your organization&apos;s knowledge
         </p>
       </div>
 
       {/* Upload Status */}
       {isUploading && (
-        <div className="px-4 py-2 bg-[#0e639c]/20 border-b border-[#3e3e42] flex items-center gap-2">
-          <Loader2 className="w-4 h-4 text-[#0e639c] animate-spin" />
-          <span className="text-sm text-[#0e639c]">Uploading...</span>
+        <div className="px-4 py-2 bg-[var(--color-accent-primary)]/20 border-b border-[var(--color-border)] flex items-center gap-2">
+          <Loader2 className="w-4 h-4 text-[var(--color-accent-primary)] animate-spin" />
+          <span className="text-sm text-[var(--color-accent-primary)]">Uploading...</span>
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="px-4 py-2 bg-[#f48771]/20 border-b border-[#3e3e42] flex items-center justify-between">
-          <span className="text-sm text-[#f48771]">{error}</span>
+        <div className="px-4 py-2 bg-[var(--color-error)]/20 border-b border-[var(--color-border)] flex items-center justify-between">
+          <span className="text-sm text-[var(--color-error)]">{error}</span>
           <button
             onClick={() => setError(null)}
-            className="text-[#f48771] hover:text-white text-sm"
+            className="text-[var(--color-error)] hover:text-white text-sm"
           >
             Dismiss
           </button>
@@ -237,7 +237,7 @@ export function KnowledgeLibraryRepository() {
       )}
 
       {/* Library Tiles */}
-      <div className="p-4 border-b border-[#3e3e42]">
+      <div className="p-4 border-b border-[var(--color-border)]">
         <LibraryUploadTiles
           libraries={libraries}
           selectedType={selectedType}
@@ -252,13 +252,13 @@ export function KnowledgeLibraryRepository() {
         {selectedType ? (
           <>
             {/* Library Header */}
-            <div className="px-4 py-3 border-b border-[#3e3e42] flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div
                   className="w-3 h-3 rounded"
                   style={{ backgroundColor: currentLibrary?.color }}
                 />
-                <span className="font-medium text-[#cccccc]">
+                <span className="font-medium text-[var(--color-text-primary)]">
                   {currentLibrary?.name}
                 </span>
               </div>
@@ -269,7 +269,7 @@ export function KnowledgeLibraryRepository() {
                   disabled={isLoadingDocuments}
                   variant="ghost"
                   size="sm"
-                  className="text-[#808080] hover:text-[#cccccc]"
+                  className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
                 >
                   <RefreshCw
                     className={`w-4 h-4 ${isLoadingDocuments ? 'animate-spin' : ''}`}
@@ -281,7 +281,7 @@ export function KnowledgeLibraryRepository() {
                     onClick={handleSync}
                     disabled={isSyncing}
                     size="sm"
-                    className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+                    className="bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
                   >
                     {isSyncing ? (
                       <>
@@ -312,7 +312,7 @@ export function KnowledgeLibraryRepository() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[#808080]">
+          <div className="flex-1 flex items-center justify-center text-[var(--color-text-muted)]">
             <div className="text-center">
               <CloudUpload className="w-12 h-12 mx-auto mb-3 opacity-50" />
               <p className="text-sm">Select a library to view documents</p>

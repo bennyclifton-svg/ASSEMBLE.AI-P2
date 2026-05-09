@@ -1548,7 +1548,7 @@ export const notes = pgTable('notes', {
     title: text('title').notNull().default('New Note'),
     content: text('content'),
     isStarred: boolean('is_starred').default(false),
-    color: text('color').default('yellow'), // 'yellow' | 'blue' | 'green' | 'pink' | 'white'
+    color: text('color').default('purple'), // 'purple' | 'orange' | 'pink' | 'blue'
     type: text('type').notNull().default('note'),
     status: text('status').notNull().default('open'),
     noteDate: text('note_date'),
@@ -2137,5 +2137,22 @@ export const workflowSteps = pgTable('workflow_steps', {
     index('idx_workflow_steps_run').on(table.workflowRunId),
     index('idx_workflow_steps_state').on(table.state),
     index('idx_workflow_steps_approval').on(table.approvalId),
+]);
+
+// ============================================================================
+// MARKETING — ASSESSMENT WAITLIST
+// ============================================================================
+// Captures email signups from /assessment while the Tender Readiness Health
+// Check quiz is being built. Convert to live quiz lead capture once the Tally
+// form is wired through.
+
+export const assessmentWaitlist = pgTable('assessment_waitlist', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    email: text('email').notNull().unique(),
+    name: text('name'),
+    source: text('source').default('assessment_landing'),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    index('idx_assessment_waitlist_created').on(table.createdAt),
 ]);
 

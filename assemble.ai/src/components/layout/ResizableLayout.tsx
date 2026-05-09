@@ -2,7 +2,7 @@
 
 import { ReactNode, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle, ImperativePanelHandle } from 'react-resizable-panels';
 import { SitewiseWordmark } from '@/components/brand/SitewiseWordmark';
 import { UserProfileDropdown } from './UserProfileDropdown';
@@ -47,15 +47,21 @@ export function ResizableLayout({
         <div className="h-full w-full relative">
             <PanelGroup direction="horizontal" className="h-full w-full relative">
                 <Panel ref={leftPanelRef} defaultSize={LEFT_PANEL_DEFAULT_SIZE} minSize={LEFT_PANEL_COLLAPSED_SIZE} className="shadow-xl z-10">
-                <div className={cn(
-                    'h-full flex flex-col animate-slide-in-up bg-[var(--color-bg-primary)] transition-all duration-200',
-                    isRightPanelExpanded && 'left-panel-collapsed'
-                )}>
+                <div
+                    className={cn(
+                        'h-full flex flex-col animate-slide-in-up transition-all duration-200',
+                        isRightPanelExpanded && 'left-panel-collapsed'
+                    )}
+                    style={{ background: 'var(--sw-paper-2)' }}
+                >
                     {/* Left Panel Header — Sitewise wordmark */}
-                    <header className={cn(
-                        'flex items-center py-3 flex-shrink-0 transition-all duration-200',
-                        isRightPanelExpanded ? 'px-0 justify-center' : 'px-4'
-                    )}>
+                    <header
+                        className={cn(
+                            'flex items-center py-3 flex-shrink-0 transition-all duration-200',
+                            isRightPanelExpanded ? 'px-0 justify-center' : 'px-4'
+                        )}
+                        style={{ background: 'var(--sw-paper-2)' }}
+                    >
                         <Link href="/" className="hover:opacity-80 transition-opacity flex-shrink-0" aria-label="Sitewise — home">
                             {isRightPanelExpanded ? (
                                 <span
@@ -99,39 +105,31 @@ export function ResizableLayout({
             <Panel ref={rightPanelRef} defaultSize={RIGHT_PANEL_DEFAULT_SIZE} minSize={15} className="border-l border-[var(--color-border-accent)] bg-[var(--sw-paper)]">
                 <div className="h-full flex flex-col animate-slide-in-up animate-delay-200">
                     {/* Right Panel Header — Sitewise dialect */}
-                    <header className="flex items-center justify-between px-5 py-3 border-b border-[var(--color-border)] flex-shrink-0 min-h-[57px]">
+                    <header
+                        className="flex items-center justify-between px-5 py-4 flex-shrink-0 min-h-[64px]"
+                        style={{ background: 'var(--sw-paper-2)' }}
+                    >
                         <button
                             type="button"
                             onClick={handleRightPanelExpandToggle}
                             title={isRightPanelExpanded ? 'Collapse panel' : 'Expand panel'}
-                            className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
+                            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
                             style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
                         >
                             {isRightPanelExpanded
-                                ? <ChevronRight className="w-4 h-4" style={{ color: 'var(--sw-rose)' }} />
-                                : <ChevronLeft className="w-4 h-4" style={{ color: 'var(--sw-rose)' }} />}
+                                ? <ChevronsRight className="w-5 h-5" style={{ color: 'var(--sw-rose)' }} />
+                                : <ChevronsLeft className="w-5 h-5" style={{ color: 'var(--sw-rose)' }} />}
                             <span
                                 style={{
                                     fontFamily: 'var(--sw-font-sans)',
-                                    fontSize: 18,
+                                    fontSize: 22,
                                     fontWeight: 700,
-                                    letterSpacing: '-0.02em',
+                                    letterSpacing: 0,
                                     color: 'var(--color-text-primary)',
+                                    lineHeight: 1,
                                 }}
                             >
                                 Documents
-                            </span>
-                            <span
-                                style={{
-                                    fontFamily: 'var(--sw-font-mono)',
-                                    fontSize: 10,
-                                    color: 'var(--color-text-muted)',
-                                    letterSpacing: '0.18em',
-                                    textTransform: 'uppercase',
-                                    marginLeft: 4,
-                                }}
-                            >
-                                /repo
                             </span>
                         </button>
                         <UserProfileDropdown />

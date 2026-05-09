@@ -105,7 +105,7 @@ export const testimonialsContent = {
     headline: 'Trusted by AEC professionals',
     testimonials: [
         {
-            quote: "We used to spend two full days reviewing tender submissions. Now our AI does the heavy lifting and we're done in a few hours. ASSEMBLE.AI paid for itself in the first month.",
+            quote: "We used to spend two full days reviewing tender submissions. Now our AI does the heavy lifting and we're done in a few hours. SiteWise paid for itself in the first month.",
             author: 'Sarah Chen',
             title: 'Project Director',
             company: 'Mitchell & Associates',
@@ -186,6 +186,7 @@ export const aboutAuthorContent = {
         "I'm the developer of this application — drawing on 20+ years across the full development lifecycle: early planning advisory, feasibility, design, procurement and commercial delivery, on commercial, residential, hotel, health and education projects. I've worked under the procurement frameworks of Health Infrastructure NSW, Schools Infrastructure NSW and other state agencies; against international brand design guidelines such as Holiday Inn Express; and on high-quality residential developments for property developers including CBUS Property — all built on an early career in tier 1 head contracting.",
         "That breadth and depth — across building classifications, procurement frameworks, contract systems, and every phase of a project's life — is what I've engineered into this platform. Purpose-built for the NSW construction industry: the workflows, the standards, and the realities of how projects actually get delivered.",
         "AEC knowledge is built into its DNA. The terminology, architecture and database schema are aligned from the ground up with how the industry actually thinks and works — not a generic productivity tool with a construction skin, but a system that speaks the language of the work.",
+        "That same expertise — the procurement frameworks, the contract knowledge, the standards depth — is what's distilled into the Tender Readiness Health Check, the 3-minute self-diagnostic at /assessment. If you'd rather start there, it's free and the recommendations land in your inbox immediately.",
     ],
     qualifications: [
         'Bachelor of Civil Engineering — UNSW',
@@ -235,5 +236,5 @@ export const finalCtaContent = {
 };
 
 export const footerContent = {
-    copyright: '2026 FOUNDRYCM',
+    copyright: '2026 SITEWISE',
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { useUpdateActivity } from '@/lib/hooks/use-program';
 import { useRefetch } from './ProgramPanel';
 import type { ProgramActivity, ZoomLevel } from '@/types/program';
@@ -86,17 +86,6 @@ export function ProgramBar({
     const startDate = parseDate(activity.startDate);
     const endDate = parseDate(activity.endDate);
 
-    if (!startDate || !endDate || columns.length === 0) {
-        return null;
-    }
-
-    const left = getPositionForDate(startDate, columns, columnWidth, zoomLevel);
-    const right = getPositionForDate(endDate, columns, columnWidth, zoomLevel);
-    const width = Math.max(right - left, 8); // Minimum width
-
-    const barHeight = 20;
-    const topOffset = (rowHeight - barHeight) / 2;
-
     // Get date from X position - stable reference
     const getDateFromPosition = useCallback((x: number): Date => {
         const colIndex = Math.floor(x / columnWidth);
@@ -114,6 +103,17 @@ export function ProgramBar({
         const targetTime = colStart + fraction * (colEnd - colStart);
         return new Date(targetTime);
     }, [columns, columnWidth, zoomLevel]);
+
+    if (!startDate || !endDate || columns.length === 0) {
+        return null;
+    }
+
+    const left = getPositionForDate(startDate, columns, columnWidth, zoomLevel);
+    const right = getPositionForDate(endDate, columns, columnWidth, zoomLevel);
+    const width = Math.max(right - left, 8); // Minimum width
+
+    const barHeight = 20;
+    const topOffset = (rowHeight - barHeight) / 2;
 
     // Handle drag start (move entire bar)
     const handleMouseDown = (e: React.MouseEvent) => {
@@ -303,14 +303,14 @@ export function ProgramBar({
             ref={barRef}
             className={`absolute ${
                 isDragging || isResizingLeft || isResizingRight
-                    ? 'opacity-80 ring-2 ring-[var(--color-text-primary)]/30'
+                    ? 'opacity-80 ring-2 ring-[rgba(14,16,20,0.3)]'
                     : isSelected
-                    ? 'ring-2 ring-[var(--color-accent-teal)] ring-offset-1 ring-offset-[var(--color-bg-primary)]'
+                    ? 'ring-2 ring-[var(--sw-ink)] ring-offset-1 ring-offset-white'
                     : 'hover:brightness-110'
             } ${
                 isSelected
-                    ? 'bg-[var(--color-accent-teal)]/35 border border-[var(--color-accent-teal)]/70'
-                    : 'bg-[var(--color-accent-teal)]/20 border border-[var(--color-accent-teal)]/40'
+                    ? 'border border-[var(--sw-cyan)] bg-[rgba(122,184,194,0.38)]'
+                    : 'border border-[var(--sw-cyan)] bg-[rgba(122,184,194,0.22)]'
             }`}
             style={{
                 left,
@@ -323,7 +323,7 @@ export function ProgramBar({
         >
             {/* Left resize handle - wider hit area */}
             <div
-                className="absolute top-0 bottom-0 hover:bg-[var(--color-text-primary)]/30 z-10"
+                className="absolute top-0 bottom-0 z-10 hover:bg-[rgba(14,16,20,0.24)]"
                 style={{
                     left: -2,
                     width: 8,
@@ -334,7 +334,7 @@ export function ProgramBar({
 
             {/* Right resize handle - wider hit area */}
             <div
-                className="absolute top-0 bottom-0 hover:bg-[var(--color-text-primary)]/30 z-10"
+                className="absolute top-0 bottom-0 z-10 hover:bg-[rgba(14,16,20,0.24)]"
                 style={{
                     right: -2,
                     width: 8,
@@ -345,21 +345,24 @@ export function ProgramBar({
 
             {/* Link connector - left (for SS dependencies) */}
             <div
-                className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-text-primary)]/50 opacity-0 hover:opacity-100 hover:bg-[var(--color-text-primary)] cursor-crosshair z-20"
+                className="absolute -left-1 top-1/2 z-20 h-2 w-2 -translate-y-1/2 cursor-crosshair rounded-full bg-[rgba(14,16,20,0.5)] opacity-0 hover:bg-[var(--sw-ink)] hover:opacity-100"
                 title="Drag to create Start-to-Start dependency"
                 onMouseDown={handleLinkDragStart('start')}
             />
 
             {/* Link connector - right (for FS dependencies) */}
             <div
-                className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[var(--color-text-primary)]/50 opacity-0 hover:opacity-100 hover:bg-[var(--color-text-primary)] cursor-crosshair z-20"
+                className="absolute -right-1 top-1/2 z-20 h-2 w-2 -translate-y-1/2 cursor-crosshair rounded-full bg-[rgba(14,16,20,0.5)] opacity-0 hover:bg-[var(--sw-ink)] hover:opacity-100"
                 title="Drag to create Finish-to-Start dependency"
                 onMouseDown={handleLinkDragStart('end')}
             />
 
             {/* Activity name (only show if bar is wide enough) */}
             {width > 60 && (
-                <span className="absolute inset-0 flex items-center justify-center text-[10px] text-[var(--color-accent-teal)] font-medium truncate px-3 pointer-events-none">
+                <span
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center truncate px-3 text-[10px] font-semibold text-[var(--sw-ink)]"
+                    style={{ fontFamily: 'var(--sw-font-mono)' }}
+                >
                     {activity.name}
                 </span>
             )}

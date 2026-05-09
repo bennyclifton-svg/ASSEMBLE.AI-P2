@@ -27,6 +27,10 @@ import {
     parseAddress,
     parseAddressList,
 } from './threading';
+import {
+    autoTriageInboundVariationClaim,
+    type InboundVariationClaimTriage,
+} from './variation-triage';
 
 const CORRESPONDENCE_CATEGORY_ID = 'correspondence';
 const DEFAULT_INBOUND_DOMAIN = 'inbound.assemble.local';
@@ -298,6 +302,7 @@ export async function ingestInboundCorrespondence(
     attachmentCount: number;
     documentIds: string[];
     idempotent: boolean;
+    variationTriage?: InboundVariationClaimTriage | null;
 }> {
     const projectId = projectIdOverride || input.projectId;
     if (!projectId) throw new Error('projectId is required for inbound correspondence.');
@@ -429,11 +434,29 @@ export async function ingestInboundCorrespondence(
         })
         .where(eq(correspondenceThreads.id, threadId));
 
+    const variationTriage = await tryAutoTriageInboundVariationClaim({
+        projectId,
+        correspondenceId,
+    });
+
     return {
         correspondenceId,
         threadId,
         attachmentCount: documentIds.length,
         documentIds,
         idempotent: false,
+        variationTriage,
     };
+}
+
+async function tryAutoTriageInboundVariationClaim(args: {
+    projectId: string;
+    correspondenceId: string;
+}): Promise<InboundVariationClaimTriage | null> {
+    try {
+        return await autoTriageInboundVariationClaim(args);
+    } catch (error) {
+        console.warn('[correspondence] Inbound variation triage failed:', error);
+        return null;
+    }
 }
