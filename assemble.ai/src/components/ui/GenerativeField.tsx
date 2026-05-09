@@ -234,13 +234,13 @@ export function GenerativeField({
             {/* Label with AI icon */}
             {label && (
                 <div className="flex items-center gap-2">
-                    <label className="text-sm font-medium text-[#858585]">
+                    <label className="text-sm font-medium text-[var(--color-text-muted)]">
                         {label}
                     </label>
                     {showGenerateIcon && (
                         <AIGenerateIcon
                             size={14}
-                            className="text-[#4fc1ff] hover:text-[#6fd1ff]"
+                            className="text-[var(--sw-cyan)] hover:text-[var(--sw-cyan)]"
                             onClick={handleGenerate}
                             isLoading={isGenerating}
                             disabled={disabled || isGenerating}
@@ -248,7 +248,7 @@ export function GenerativeField({
                         />
                     )}
                     {isGenerating && (
-                        <span className="text-xs text-[#4fc1ff] animate-text-aurora">Generating...</span>
+                        <span className="text-xs text-[var(--sw-cyan)] animate-text-aurora">Generating...</span>
                     )}
                 </div>
             )}
@@ -273,7 +273,7 @@ export function GenerativeField({
                         <div className="absolute top-2 right-2 z-10">
                             <AIGenerateIcon
                                 size={16}
-                                className="text-[#4fc1ff] hover:text-[#6fd1ff]"
+                                className="text-[var(--sw-cyan)] hover:text-[var(--sw-cyan)]"
                                 onClick={handleGenerate}
                                 isLoading={isGenerating}
                                 disabled={disabled || isGenerating}
@@ -296,8 +296,8 @@ export function GenerativeField({
                         disabled={disabled || isGenerating}
                         className={cn(
                             'pr-10',
-                            'bg-[#1a1a1a] text-[#cccccc] border-[#3e3e42]',
-                            'focus:border-[#4fc1ff] focus:ring-1 focus:ring-[#4fc1ff]/30',
+                            'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-border)]',
+                            'focus:border-[var(--sw-cyan)] focus:ring-1 focus:ring-[var(--sw-cyan)]/30',
                             'resize-y min-h-[100px]',
                             isGenerating && 'opacity-70',
                             className
@@ -306,7 +306,7 @@ export function GenerativeField({
                     <div className="absolute top-2 right-2">
                         <AIGenerateIcon
                             size={16}
-                            className="text-[#4fc1ff] hover:text-[#6fd1ff]"
+                            className="text-[var(--sw-cyan)] hover:text-[var(--sw-cyan)]"
                             onClick={handleGenerate}
                             isLoading={isGenerating}
                             disabled={disabled || isGenerating}
@@ -326,8 +326,8 @@ export function GenerativeField({
                     rows={rows}
                     disabled={disabled || isGenerating}
                     className={cn(
-                        'bg-[#1a1a1a] text-[#cccccc] border-[#3e3e42]',
-                        'focus:border-[#4fc1ff] focus:ring-1 focus:ring-[#4fc1ff]/30',
+                        'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-border)]',
+                        'focus:border-[var(--sw-cyan)] focus:ring-1 focus:ring-[var(--sw-cyan)]/30',
                         'resize-y min-h-[100px]',
                         isGenerating && 'opacity-70',
                         className
@@ -345,8 +345,8 @@ export function GenerativeField({
                     rows={rows}
                     disabled={disabled || isGenerating}
                     className={cn(
-                        'bg-[#1a1a1a] text-[#cccccc] border-[#3e3e42]',
-                        'focus:border-[#4fc1ff] focus:ring-1 focus:ring-[#4fc1ff]/30',
+                        'bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] border-[var(--color-border)]',
+                        'focus:border-[var(--sw-cyan)] focus:ring-1 focus:ring-[var(--sw-cyan)]/30',
                         'resize-y min-h-[100px]',
                         isGenerating && 'opacity-70',
                         className
@@ -361,7 +361,7 @@ export function GenerativeField({
 
             {/* Sources (optional) */}
             {showSources && lastSources && lastSources.length > 0 && (
-                <div className="text-xs text-[#858585] mt-1">
+                <div className="text-xs text-[var(--color-text-muted)] mt-1">
                     <span className="font-medium">Sources:</span>{' '}
                     {lastSources.map((s, i) => (
                         <span key={s.chunkId}>

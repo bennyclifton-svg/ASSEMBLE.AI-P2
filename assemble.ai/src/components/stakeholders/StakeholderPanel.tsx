@@ -1,20 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, X, Trash, Eye, EyeOff } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { Check, Eye, EyeOff, Minus, Plus, Trash, X } from 'lucide-react';
 import { useStakeholders } from '@/lib/hooks/use-stakeholders';
 import { useStakeholderRefresh } from '@/lib/contexts/stakeholder-refresh-context';
 import { StakeholderRow } from './StakeholderRow';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Modal } from '@/components/ui/modal';
-import { Button } from '@/components/ui/button';
+import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
 import { cn } from '@/lib/utils';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { getSubgroupsForGroup } from '@/types/stakeholder';
-import type { StakeholderGroup, StakeholderWithStatus } from '@/types/stakeholder';
+import type {
+  StakeholderGroup,
+  StakeholderWithStatus,
+  SubmissionStatus,
+  TenderStatusType,
+  UpdateStakeholderRequest,
+} from '@/types/stakeholder';
 
 interface StakeholderPanelProps {
   projectId: string;
+  projectName?: string;
+  buildingClass?: string | null;
+  projectType?: string | null;
+  profileData?: {
+    subclass?: string[];
+    scaleData?: Record<string, number>;
+    complexity?: Record<string, string | string[]>;
+    workScope?: string[];
+  };
 }
 
 const GROUP_ORDER: StakeholderGroup[] = ['client', 'authority', 'consultant', 'contractor'];
@@ -26,7 +40,91 @@ const GROUP_LABELS: Record<StakeholderGroup, string> = {
   contractor: 'Contractor',
 };
 
-export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
+const GROUP_ACCENTS: Record<StakeholderGroup, string> = {
+  client: 'var(--sw-rose)',
+  authority: 'var(--sw-cyan)',
+  consultant: 'var(--sw-lav)',
+  contractor: 'var(--sw-peach)',
+};
+
+const muted = 'var(--sw-muted)';
+
+function slugifyProjectName(projectName: string): string {
+  return projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+}
+
+function deriveProfileCompletion(args: {
+  buildingClass?: string | null;
+  projectType?: string | null;
+  profile?: StakeholderPanelProps['profileData'];
+}): number {
+  const { buildingClass, projectType, profile } = args;
+  let filled = 0;
+  if (buildingClass) filled++;
+  if (projectType) filled++;
+  if ((profile?.subclass?.length ?? 0) > 0) filled++;
+  if (profile?.scaleData?.gfa_sqm != null) filled++;
+  if (profile?.scaleData?.storeys != null) filled++;
+  if (profile?.scaleData?.units != null) filled++;
+  if (profile?.complexity && Object.keys(profile.complexity).length >= 5) filled++;
+  if ((profile?.workScope?.length ?? 0) > 0) filled++;
+  return Math.round((filled / 8) * 100);
+}
+
+function isTextEditingTarget(): boolean {
+  const activeElement = document.activeElement;
+  return activeElement?.tagName === 'INPUT' ||
+    activeElement?.tagName === 'TEXTAREA' ||
+    activeElement?.tagName === 'SELECT' ||
+    activeElement?.getAttribute('contenteditable') === 'true';
+}
+
+function StakeholderBreadcrumb({ projectName, activeCrumb }: { projectName: string; activeCrumb: string }) {
+  return (
+    <nav
+      aria-label="Breadcrumb"
+      className="flex items-center gap-2"
+      style={{
+        fontFamily: 'var(--sw-font-mono)',
+        fontSize: 12,
+        color: muted,
+      }}
+    >
+      <span>{slugifyProjectName(projectName)}</span>
+      <span style={{ opacity: 0.5 }}>/</span>
+      <span style={{ color: 'var(--sw-ink)' }}>STAKEHOLDERS</span>
+      <span style={{ opacity: 0.5 }}>/</span>
+      <span style={{ color: 'var(--sw-ink)' }}>{activeCrumb}</span>
+    </nav>
+  );
+}
+
+function StatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
+  const isDark = tone === 'dark';
+  return (
+    <span
+      style={{
+        fontFamily: 'var(--sw-font-mono)',
+        fontSize: 11,
+        padding: '4px 10px',
+        background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
+        border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
+        color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
+        letterSpacing: '0.02em',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+export function StakeholderPanel({
+  projectId,
+  projectName = 'project',
+  buildingClass,
+  projectType,
+  profileData,
+}: StakeholderPanelProps) {
   const {
     stakeholders,
     counts,
@@ -40,22 +138,15 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
   } = useStakeholders({ projectId });
 
   const { triggerRefresh } = useStakeholderRefresh();
-
-  // Loading state for generation
   const [isGenerating, setIsGenerating] = useState<StakeholderGroup | null>(null);
-
-  // Quick add state
   const [quickAddGroup, setQuickAddGroup] = useState<StakeholderGroup | null>(null);
-
-  // Selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
+  const [selectedGroups, setSelectedGroups] = useState<Set<StakeholderGroup>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  // Group delete state
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string> | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [groupToDelete, setGroupToDelete] = useState<StakeholderGroup | null>(null);
-
-  // Category visibility state (for Document Repository)
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -63,34 +154,102 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
       try {
         const res = await fetch(`/api/projects/${projectId}/category-visibility`);
         if (res.ok) setVisibility(await res.json());
-      } catch { /* ignore */ }
+      } catch {
+        // Category visibility is a convenience control; the table can still render without it.
+      }
     }
     fetchVisibility();
   }, [projectId]);
 
-  const toggleVisibility = async (categoryId: string) => {
+  const stakeholdersByGroup = useMemo(() => {
+    return GROUP_ORDER.reduce((acc, group) => {
+      acc[group] = stakeholders.filter((s) => s.stakeholderGroup === group);
+      return acc;
+    }, {} as Record<StakeholderGroup, StakeholderWithStatus[]>);
+  }, [stakeholders]);
+
+  const visibleGroups = useMemo(
+    () => selectedGroups.size === 0
+      ? GROUP_ORDER
+      : GROUP_ORDER.filter((group) => selectedGroups.has(group)),
+    [selectedGroups]
+  );
+
+  const visibleStakeholders = useMemo(
+    () => visibleGroups.flatMap((group) => stakeholdersByGroup[group]),
+    [stakeholdersByGroup, visibleGroups]
+  );
+
+  const profileCompletionPct = useMemo(
+    () => deriveProfileCompletion({ buildingClass, projectType, profile: profileData }),
+    [buildingClass, projectType, profileData]
+  );
+
+  const activeCrumb = useMemo(() => {
+    if (selectedGroups.size === 1) {
+      const [group] = Array.from(selectedGroups);
+      return GROUP_LABELS[group].toUpperCase();
+    }
+    return 'ALL';
+  }, [selectedGroups]);
+
+  const selectedCount = selectedIds.size;
+  const deleteTargetIds = pendingDeleteIds ?? selectedIds;
+  const deleteTargetCount = deleteTargetIds.size;
+
+  useEffect(() => {
+    const currentIds = new Set(stakeholders.map((stakeholder) => stakeholder.id));
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => currentIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+    setLastSelectedId((prev) => (prev && currentIds.has(prev) ? prev : null));
+  }, [stakeholders]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isTextEditingTarget()) return;
+
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a' && visibleStakeholders.length > 0) {
+        event.preventDefault();
+        setSelectedIds(new Set(visibleStakeholders.map((stakeholder) => stakeholder.id)));
+        setLastSelectedId(visibleStakeholders[visibleStakeholders.length - 1]?.id ?? null);
+        return;
+      }
+
+      if (event.key === 'Escape' && selectedIds.size > 0) {
+        setSelectedIds(new Set());
+        setLastSelectedId(null);
+        return;
+      }
+
+      if (event.key === 'Delete' && selectedIds.size > 0) {
+        setPendingDeleteIds(null);
+        setShowDeleteConfirm(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIds, visibleStakeholders]);
+
+  const toggleVisibility = useCallback(async (categoryId: string) => {
     const current = visibility[categoryId] !== false;
     const newValue = !current;
-    setVisibility(prev => ({ ...prev, [categoryId]: newValue }));
+    setVisibility((prev) => ({ ...prev, [categoryId]: newValue }));
     try {
       await fetch(`/api/projects/${projectId}/category-visibility`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryId, isVisible: newValue }),
       });
-      triggerRefresh(); // Signal doc repo to re-fetch active categories
+      triggerRefresh();
     } catch {
-      setVisibility(prev => ({ ...prev, [categoryId]: current }));
+      setVisibility((prev) => ({ ...prev, [categoryId]: current }));
     }
-  };
+  }, [projectId, triggerRefresh, visibility]);
 
-  // Group stakeholders
-  const stakeholdersByGroup = GROUP_ORDER.reduce((acc, group) => {
-    acc[group] = stakeholders.filter((s) => s.stakeholderGroup === group);
-    return acc;
-  }, {} as Record<StakeholderGroup, StakeholderWithStatus[]>);
-
-  const handleGenerateForGroup = async (group: StakeholderGroup) => {
+  const handleGenerateForGroup = useCallback(async (group: StakeholderGroup) => {
     setIsGenerating(group);
     try {
       await generateStakeholders({
@@ -103,10 +262,9 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
     } finally {
       setIsGenerating(null);
     }
-  };
+  }, [generateStakeholders]);
 
-  // Quick add handlers
-  const handleQuickAddSubmit = async (subgroup: string) => {
+  const handleQuickAddSubmit = useCallback(async (subgroup: string) => {
     if (!quickAddGroup || !subgroup) return;
     await createStakeholder({
       stakeholderGroup: quickAddGroup,
@@ -115,70 +273,139 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
       isEnabled: true,
     });
     setQuickAddGroup(null);
-  };
+  }, [createStakeholder, quickAddGroup]);
 
-  // Selection handler (click/ctrl+click/shift+click)
-  const handleSelect = (id: string, event: React.MouseEvent) => {
-    const newSelected = new Set(selectedIds);
-    const isSelected = newSelected.has(id);
-    const allStakeholders = GROUP_ORDER.flatMap((g) => stakeholdersByGroup[g]);
+  const handleSelect = useCallback((id: string, event: MouseEvent) => {
+    const next = new Set(selectedIds);
+    const isSelected = next.has(id);
 
     if (event.shiftKey && lastSelectedId) {
-      const start = allStakeholders.findIndex((s) => s.id === lastSelectedId);
-      const end = allStakeholders.findIndex((s) => s.id === id);
+      const start = visibleStakeholders.findIndex((stakeholder) => stakeholder.id === lastSelectedId);
+      const end = visibleStakeholders.findIndex((stakeholder) => stakeholder.id === id);
       if (start !== -1 && end !== -1) {
-        const [low, high] = start < end ? [start, end] : [end, start];
-        allStakeholders.slice(low, high + 1).forEach((s) => newSelected.add(s.id));
+        const low = Math.min(start, end);
+        const high = Math.max(start, end);
+        visibleStakeholders.slice(low, high + 1).forEach((stakeholder) => next.add(stakeholder.id));
       }
       setLastSelectedId(id);
     } else if (event.ctrlKey || event.metaKey) {
-      isSelected ? newSelected.delete(id) : newSelected.add(id);
+      if (isSelected) next.delete(id);
+      else next.add(id);
       setLastSelectedId(id);
+    } else if (selectedIds.size === 1 && selectedIds.has(id)) {
+      next.clear();
+      setLastSelectedId(null);
     } else {
-      if (selectedIds.size === 1 && selectedIds.has(id)) {
-        newSelected.clear();
-        setLastSelectedId(null);
+      next.clear();
+      next.add(id);
+      setLastSelectedId(id);
+    }
+
+    setSelectedIds(next);
+  }, [lastSelectedId, selectedIds, visibleStakeholders]);
+
+  const handleToggleGroupSelection = useCallback((group: StakeholderGroup) => {
+    const groupStakeholders = stakeholdersByGroup[group];
+    if (groupStakeholders.length === 0) return;
+    const allSelected = groupStakeholders.every((stakeholder) => selectedIds.has(stakeholder.id));
+
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        groupStakeholders.forEach((stakeholder) => next.delete(stakeholder.id));
       } else {
-        newSelected.clear();
-        newSelected.add(id);
-        setLastSelectedId(id);
+        groupStakeholders.forEach((stakeholder) => next.add(stakeholder.id));
       }
-    }
-    setSelectedIds(newSelected);
-  };
+      return next;
+    });
 
-  // Bulk delete handler
-  const handleBulkDelete = async () => {
-    const idsToDelete = Array.from(selectedIds);
-    for (const id of idsToDelete) {
-      await deleteStakeholder(id);
-    }
-    setSelectedIds(new Set());
-    setLastSelectedId(null);
-    setShowDeleteConfirm(false);
-  };
+    setLastSelectedId(allSelected ? null : groupStakeholders[groupStakeholders.length - 1]?.id ?? null);
+  }, [selectedIds, stakeholdersByGroup]);
 
-  // Group delete handler
-  const handleDeleteGroup = async () => {
+  const handleFilterClick = useCallback((group: StakeholderGroup, event: MouseEvent<HTMLButtonElement>) => {
+    const additive = event.ctrlKey || event.metaKey;
+    setSelectedGroups((prev) => {
+      const next = new Set(prev);
+      if (additive) {
+        if (next.has(group)) next.delete(group);
+        else next.add(group);
+      } else if (next.size === 1 && next.has(group)) {
+        next.clear();
+      } else {
+        next.clear();
+        next.add(group);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleRequestDeleteStakeholder = useCallback((id: string) => {
+    setSelectedIds(new Set([id]));
+    setLastSelectedId(id);
+    setPendingDeleteIds(new Set([id]));
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const handleRequestDeleteIds = useCallback((ids: string[]) => {
+    if (ids.length === 0) return;
+    setPendingDeleteIds(new Set(ids));
+    setShowDeleteConfirm(true);
+  }, []);
+
+  const handleBulkDelete = useCallback(async () => {
+    if (deleteTargetIds.size === 0) return;
+    const idsToDelete = Array.from(deleteTargetIds);
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(idsToDelete.map((id) => deleteStakeholder(id)));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        idsToDelete.forEach((id) => next.delete(id));
+        return next;
+      });
+      setLastSelectedId(null);
+      setPendingDeleteIds(null);
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  }, [deleteStakeholder, deleteTargetIds]);
+
+  const handleDeleteGroup = useCallback(async () => {
     if (!groupToDelete) return;
     const groupStakeholders = stakeholdersByGroup[groupToDelete];
-    for (const stakeholder of groupStakeholders) {
-      await deleteStakeholder(stakeholder.id);
+    setIsBulkDeleting(true);
+    try {
+      await Promise.all(groupStakeholders.map((stakeholder) => deleteStakeholder(stakeholder.id)));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        groupStakeholders.forEach((stakeholder) => next.delete(stakeholder.id));
+        return next;
+      });
+      setLastSelectedId(null);
+      setGroupToDelete(null);
+    } finally {
+      setIsBulkDeleting(false);
     }
-    setGroupToDelete(null);
-  };
+  }, [deleteStakeholder, groupToDelete, stakeholdersByGroup]);
 
   if (isLoading) {
     return (
-      <div className="h-full p-6 overflow-y-auto">
-        <div className="max-w-6xl mx-auto">
-          <div className="rounded-lg border border-[var(--color-border)] overflow-hidden">
-            <Skeleton className="h-10 w-full" />
-            <div className="space-y-1 p-2">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
+      <div className="flex h-full flex-col" style={{ background: 'var(--sw-paper)' }}>
+        <div className="p-4">
+          <Skeleton className="mb-3 h-8 w-48" />
+          <Skeleton className="mb-4 h-7 w-full" />
+          <div className="space-y-4">
+            {GROUP_ORDER.map((group) => (
+              <div key={group} className="border border-[var(--sw-rule)] bg-white">
+                <Skeleton className="h-10 w-full" />
+                <div className="space-y-1 p-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-9 w-full" />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -186,25 +413,89 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarGutter: 'stable both-edges' }}>
+    <div className="flex h-full flex-col overflow-hidden" style={{ background: 'var(--sw-paper)' }}>
+      <header className="shrink-0 px-4 pt-2 pb-3" style={{ borderBottom: '1px solid var(--sw-rule-2)' }}>
+        <div className="mb-2 flex items-center justify-between gap-4">
+          <StakeholderBreadcrumb projectName={projectName} activeCrumb={activeCrumb} />
+          <div className="flex gap-1.5">
+            <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
+            <StatusPill label="stage: detail design" tone="dark" />
+          </div>
+        </div>
+
+        <div className="mb-2 flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h2
+              className="text-[30px] font-bold leading-none text-[var(--sw-ink)]"
+              style={{ fontFamily: 'var(--sw-font-sans)', letterSpacing: 0 }}
+            >
+              Stakeholders
+            </h2>
+            <div className="mt-1 min-h-[18px] text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
+              {visibleStakeholders.length} visible / {stakeholders.length} total
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5">
+          <GroupFilterButton
+            label="all"
+            count={counts.total}
+            selected={selectedGroups.size === 0}
+            onClick={() => setSelectedGroups(new Set())}
+          />
+          {GROUP_ORDER.map((group) => (
+            <GroupFilterButton
+              key={group}
+              label={GROUP_LABELS[group].toLowerCase()}
+              count={counts[group]}
+              accent={GROUP_ACCENTS[group]}
+              selected={selectedGroups.has(group)}
+              onClick={(event) => handleFilterClick(group, event)}
+            />
+          ))}
+          {selectedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setPendingDeleteIds(null);
+                setShowDeleteConfirm(true);
+              }}
+              disabled={isBulkDeleting}
+              className="ml-auto inline-flex h-7 items-center gap-1.5 bg-[var(--sw-rose)] px-3 text-[11px] font-bold uppercase text-[var(--sw-ink)] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-55"
+              style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.14em' }}
+            >
+              <Trash className="h-3.5 w-3.5" />
+              Delete selected
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
-          {/* Group Cards - styled like Objectives cards */}
-          {GROUP_ORDER.map((group) => {
+          {visibleGroups.map((group) => {
             const groupStakeholders = stakeholdersByGroup[group];
+            const selectedInGroup = groupStakeholders.filter((stakeholder) => selectedIds.has(stakeholder.id)).length;
+            const allGroupSelected = groupStakeholders.length > 0 &&
+              groupStakeholders.every((stakeholder) => selectedIds.has(stakeholder.id));
+            const someGroupSelected = selectedInGroup > 0;
 
             return (
               <GroupCard
                 key={group}
                 group={group}
                 stakeholders={groupStakeholders}
+                selectedInGroup={selectedInGroup}
+                allGroupSelected={allGroupSelected}
+                someGroupSelected={someGroupSelected}
+                onToggleGroupSelection={() => handleToggleGroupSelection(group)}
                 onUpdate={updateStakeholder}
                 onUpdateTenderStatus={updateTenderStatus}
                 onUpdateSubmissionStatus={updateSubmissionStatus}
-                onDelete={deleteStakeholder}
+                onRequestDelete={handleRequestDeleteStakeholder}
                 onDeleteGroup={setGroupToDelete}
-                onDeleteSelected={() => setShowDeleteConfirm(true)}
+                onDeleteSelected={handleRequestDeleteIds}
                 onGenerate={() => handleGenerateForGroup(group)}
                 isGenerating={isGenerating === group}
                 quickAddGroup={quickAddGroup}
@@ -215,73 +506,50 @@ export function StakeholderPanel({ projectId }: StakeholderPanelProps) {
                 onSelect={handleSelect}
                 visibility={visibility}
                 onToggleVisibility={toggleVisibility}
+                isDeleting={isBulkDeleting}
               />
             );
           })}
-
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        title="Delete Selected Stakeholders"
-      >
-        <div className="space-y-4">
-          <p className="text-[var(--color-text-primary)]">
-            Are you sure you want to delete {selectedIds.size} selected stakeholder
-            {selectedIds.size !== 1 ? 's' : ''}?
-          </p>
-          <p className="text-sm text-[var(--color-text-muted)]">This action cannot be undone.</p>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleBulkDelete}>
-              Delete
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <AuroraConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={(open) => {
+          setShowDeleteConfirm(open);
+          if (!open) setPendingDeleteIds(null);
+        }}
+        onConfirm={handleBulkDelete}
+        title={`Delete ${deleteTargetCount} selected stakeholder${deleteTargetCount === 1 ? '' : 's'}?`}
+        description="This will delete the selected stakeholder rows from the register."
+        confirmLabel={isBulkDeleting ? 'Deleting...' : 'Delete'}
+      />
 
-      {/* Group Delete Confirmation Modal */}
-      <Modal
-        isOpen={groupToDelete !== null}
-        onClose={() => setGroupToDelete(null)}
-        title={`Delete All ${groupToDelete ? GROUP_LABELS[groupToDelete] : ''} Stakeholders`}
-      >
-        <div className="space-y-4">
-          <p className="text-[var(--color-text-primary)]">
-            Are you sure you want to delete all {groupToDelete ? stakeholdersByGroup[groupToDelete].length : 0}{' '}
-            {groupToDelete ? GROUP_LABELS[groupToDelete].toLowerCase() : ''} stakeholder
-            {groupToDelete && stakeholdersByGroup[groupToDelete].length !== 1 ? 's' : ''}?
-          </p>
-          <p className="text-sm text-[var(--color-text-muted)]">This action cannot be undone.</p>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setGroupToDelete(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteGroup}>
-              Delete All
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <AuroraConfirmDialog
+        open={groupToDelete !== null}
+        onOpenChange={(open) => !open && setGroupToDelete(null)}
+        onConfirm={handleDeleteGroup}
+        title={`Delete all ${groupToDelete ? GROUP_LABELS[groupToDelete].toLowerCase() : ''} stakeholders?`}
+        description={`This will delete ${groupToDelete ? stakeholdersByGroup[groupToDelete].length : 0} stakeholder rows from this table.`}
+        confirmLabel={isBulkDeleting ? 'Deleting...' : 'Delete all'}
+      />
     </div>
   );
 }
 
-// Group card component styled like Objectives cards
 interface GroupCardProps {
   group: StakeholderGroup;
   stakeholders: StakeholderWithStatus[];
-  onUpdate: (id: string, data: any) => Promise<StakeholderWithStatus | null>;
-  onUpdateTenderStatus: (id: string, statusType: any, isActive: boolean) => void;
-  onUpdateSubmissionStatus: (id: string, status: any) => void;
-  onDelete: (id: string) => Promise<boolean>;
+  selectedInGroup: number;
+  allGroupSelected: boolean;
+  someGroupSelected: boolean;
+  onToggleGroupSelection: () => void;
+  onUpdate: (id: string, data: UpdateStakeholderRequest) => Promise<StakeholderWithStatus | null>;
+  onUpdateTenderStatus: (id: string, statusType: TenderStatusType, isActive: boolean) => Promise<boolean> | void;
+  onUpdateSubmissionStatus: (id: string, status: SubmissionStatus) => Promise<boolean> | void;
+  onRequestDelete: (id: string) => void;
   onDeleteGroup: (group: StakeholderGroup) => void;
-  onDeleteSelected: () => void;
+  onDeleteSelected: (ids: string[]) => void;
   onGenerate: () => void;
   isGenerating: boolean;
   quickAddGroup: StakeholderGroup | null;
@@ -289,18 +557,23 @@ interface GroupCardProps {
   onQuickAddSubmit: (subgroup: string) => void;
   onQuickAddCancel: () => void;
   selectedIds: Set<string>;
-  onSelect: (id: string, event: React.MouseEvent) => void;
+  onSelect: (id: string, event: MouseEvent) => void;
   visibility: Record<string, boolean>;
   onToggleVisibility: (categoryId: string) => Promise<void>;
+  isDeleting: boolean;
 }
 
 function GroupCard({
   group,
   stakeholders,
+  selectedInGroup,
+  allGroupSelected,
+  someGroupSelected,
+  onToggleGroupSelection,
   onUpdate,
   onUpdateTenderStatus,
   onUpdateSubmissionStatus,
-  onDelete,
+  onRequestDelete,
   onDeleteGroup,
   onDeleteSelected,
   onGenerate,
@@ -313,173 +586,150 @@ function GroupCard({
   onSelect,
   visibility,
   onToggleVisibility,
+  isDeleting,
 }: GroupCardProps) {
-  // Count how many selected items are in this group
-  const selectedInGroup = stakeholders.filter(s => selectedIds.has(s.id)).length;
-  const hasSelectedInGroup = selectedInGroup > 0;
-
-  // Handler for trash button - delete selected if any, otherwise delete all in group
-  const handleTrashClick = () => {
-    if (hasSelectedInGroup) {
-      onDeleteSelected();
-    } else {
-      onDeleteGroup(group);
-    }
-  };
-
-  // Map group to category ID for visibility toggle (only consultant/contractor have visibility)
   const categoryId = group === 'consultant' ? 'consultants' : group === 'contractor' ? 'contractors' : null;
   const hasVisibilityToggle = categoryId !== null;
   const isVisible = categoryId ? visibility[categoryId] !== false : true;
+  const hasSelectedInGroup = selectedInGroup > 0;
+  const accent = GROUP_ACCENTS[group];
+  const selectedInGroupIds = stakeholders
+    .filter((stakeholder) => selectedIds.has(stakeholder.id))
+    .map((stakeholder) => stakeholder.id);
 
-  // Dynamic title based on whether items are selected
+  const handleTrashClick = () => {
+    if (hasSelectedInGroup) onDeleteSelected(selectedInGroupIds);
+    else onDeleteGroup(group);
+  };
+
   const trashTitle = hasSelectedInGroup
     ? `Delete ${selectedInGroup} selected stakeholder${selectedInGroup !== 1 ? 's' : ''}`
-    : `Delete all ${GROUP_LABELS[group]} stakeholders`;
+    : `Delete all ${GROUP_LABELS[group].toLowerCase()} stakeholders`;
 
   return (
-    <div className="border border-[var(--color-border)]/50 rounded overflow-hidden flex flex-col">
-      {/* Header with copper tint background - matches Objectives section */}
-      <div
-        className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
-        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
-      >
-        <div className="flex items-center gap-2">
+    <section className="flex min-w-0 flex-col overflow-hidden border border-[var(--sw-rule)] bg-white">
+      <div className="flex h-10 items-center justify-between gap-3 border-b border-[var(--sw-rule-2)] bg-white px-3">
+        <div className="flex min-w-0 items-center gap-2">
           <button
+            type="button"
             onClick={() => onQuickAdd(group)}
-            className={cn(
-              'p-1 rounded transition-colors',
-              'text-blue-500 hover:text-blue-400 hover:bg-blue-500/10'
-            )}
+            className="p-1 text-[var(--sw-rose-dk)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-ink)]"
             title={`Add ${GROUP_LABELS[group]}`}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
           </button>
-          <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
+          <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0" style={{ background: accent }} />
+          <span
+            className="truncate text-[11px] font-semibold uppercase text-[var(--sw-ink)]"
+            style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.14em' }}
+          >
             {GROUP_LABELS[group]} ({stakeholders.length})
           </span>
           {hasVisibilityToggle && categoryId && (
             <button
+              type="button"
               onClick={() => onToggleVisibility(categoryId)}
               className={cn(
-                'p-1 rounded transition-colors',
-                isVisible
-                  ? 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                  : 'text-[var(--color-text-muted)]/30 hover:text-[var(--color-text-muted)]'
+                'p-1 transition-colors hover:bg-[var(--sw-paper-2)] hover:text-[var(--sw-ink)]',
+                isVisible ? 'text-[var(--sw-muted)]' : 'text-[var(--sw-rule)]'
               )}
               title={isVisible
                 ? 'Visible in Document Repository (click to hide)'
                 : 'Hidden from Document Repository (click to show)'}
             >
-              {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              {isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
             </button>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onGenerate}
-            disabled={isGenerating}
-            className={cn(
-              'flex items-center gap-1.5 text-sm font-medium transition-all',
-              isGenerating
-                ? 'text-blue-500 cursor-wait'
-                : 'text-blue-500 hover:text-blue-400'
-            )}
-            title={isGenerating ? 'Generating...' : `Generate ${GROUP_LABELS[group]}`}
-          >
-            <DiamondIcon
-              className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
-              variant="empty"
-            />
-            <span className={isGenerating ? 'animate-text-aurora' : ''}>
-              {isGenerating ? 'Generating...' : 'Generate'}
-            </span>
-          </button>
-          <button
-            onClick={handleTrashClick}
-            className={cn(
-              'p-1 rounded transition-colors',
-              stakeholders.length > 0 || hasSelectedInGroup
-                ? 'text-[var(--color-text-muted)] hover:text-red-500 hover:bg-red-500/10'
-                : 'text-[var(--color-text-muted)]/30 cursor-not-allowed'
-            )}
-            title={trashTitle}
-            disabled={stakeholders.length === 0 && !hasSelectedInGroup}
-          >
-            <Trash className="w-4 h-4" />
-          </button>
-        </div>
+
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={isGenerating}
+          className={cn(
+            'inline-flex h-7 items-center gap-1.5 border border-[var(--sw-rule)] bg-white px-2 text-[11px] font-semibold text-[var(--sw-ink)] transition-colors hover:border-[var(--sw-ink)] hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55'
+          )}
+          style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.02em' }}
+          title={isGenerating ? 'Generating...' : `Generate ${GROUP_LABELS[group]}`}
+        >
+          <DiamondIcon
+            className={cn('h-3.5 w-3.5 text-[var(--sw-rose-dk)]', isGenerating && 'animate-diamond-spin')}
+            variant="empty"
+          />
+          {isGenerating ? 'Generating...' : 'Generate'}
+        </button>
       </div>
 
-      {/* Content area */}
-      <div
-        className="flex-1 backdrop-blur-md"
-        style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-      >
-        <table className="w-full">
+      <div className="min-h-0 overflow-x-auto">
+        <table
+          className="w-full min-w-[860px] table-fixed caption-bottom text-[11px]"
+          style={{ fontFamily: 'var(--sw-font-mono)', lineHeight: 1.1 }}
+        >
           <thead>
-            <tr className="border-b border-[var(--color-border)]/50">
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-24">
-                Group
+            <tr className="border-b border-[var(--sw-rule-2)] bg-white">
+              <StakeholderHead className="w-24">
+                <span className="inline-flex items-center gap-1.5">
+                  <SelectionToggle
+                    allSelected={allGroupSelected}
+                    someSelected={someGroupSelected}
+                    onClick={onToggleGroupSelection}
+                    title={allGroupSelected ? 'Clear table selection' : 'Select all rows in this table'}
+                  />
+                  Group
+                </span>
+              </StakeholderHead>
+              <StakeholderHead className="w-36">Subgroup</StakeholderHead>
+              <StakeholderHead className="w-44">Firm</StakeholderHead>
+              <StakeholderHead className="w-36">Name</StakeholderHead>
+              <StakeholderHead className="w-32">Phone</StakeholderHead>
+              <StakeholderHead className="w-44">Email</StakeholderHead>
+              <StakeholderHead className="w-28">Status</StakeholderHead>
+              <th className="w-8 px-1 text-right">
+                <button
+                  type="button"
+                  onClick={handleTrashClick}
+                  disabled={(stakeholders.length === 0 && !hasSelectedInGroup) || isDeleting}
+                  className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)] disabled:cursor-not-allowed disabled:opacity-35"
+                  title={trashTitle}
+                >
+                  <Trash className="h-4 w-4" />
+                </button>
               </th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-40">
-                SubGroup
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-44">
-                Firm
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-36">
-                Name
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-36">
-                Phone
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-48">
-                Email
-              </th>
-              <th className="px-3 py-2 text-left text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-24">
-                Status
-              </th>
-              <th className="px-3 py-2 w-10" />
             </tr>
           </thead>
           <tbody>
-            {/* Quick Add Row */}
             {quickAddGroup === group && (
-              <tr className="bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)]">
-                <td className="px-3 py-2 text-sm text-[var(--color-text-muted)]">
-                  {GROUP_LABELS[group]}
-                </td>
-                <td className="px-3 py-2" colSpan={5}>
+              <tr className="border-b border-[var(--sw-rule-2)] bg-[var(--sw-paper-2)]">
+                <td className="px-3 py-1 text-[var(--sw-muted)]">{GROUP_LABELS[group]}</td>
+                <td className="px-2 py-1" colSpan={5}>
                   <select
                     autoFocus
-                    className={cn(
-                      'px-2 py-1 text-sm rounded bg-[var(--color-bg-primary)] border border-[var(--color-border)]',
-                      'focus:outline-none focus:border-[var(--color-accent-copper)]'
-                    )}
-                    onChange={(e) => e.target.value && onQuickAddSubmit(e.target.value)}
+                    className="h-7 max-w-[240px] border border-[var(--sw-rule)] bg-white px-2 text-[11px] text-[var(--sw-ink)] outline-none transition-colors focus:border-[var(--sw-rose)]"
+                    style={{ fontFamily: 'var(--sw-font-mono)' }}
+                    onChange={(event) => event.target.value && onQuickAddSubmit(event.target.value)}
                     onBlur={onQuickAddCancel}
-                    onKeyDown={(e) => e.key === 'Escape' && onQuickAddCancel()}
+                    onKeyDown={(event) => event.key === 'Escape' && onQuickAddCancel()}
                   >
-                    <option value="">Select SubGroup...</option>
-                    {getSubgroupsForGroup(group).map((sg) => (
-                      <option key={sg} value={sg}>{sg}</option>
+                    <option value="">Select subgroup...</option>
+                    {getSubgroupsForGroup(group).map((subgroup) => (
+                      <option key={subgroup} value={subgroup}>{subgroup}</option>
                     ))}
                   </select>
                 </td>
-                <td className="px-3 py-2 text-[var(--color-text-muted)]">—</td>
-                <td className="px-3 py-2 w-10">
+                <td className="px-3 py-1 text-[var(--sw-muted)]">--</td>
+                <td className="px-1 py-1 text-right">
                   <button
+                    type="button"
                     onClick={onQuickAddCancel}
-                    className="p-1 text-[var(--color-text-muted)] hover:text-red-500"
+                    className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)]"
+                    title="Cancel"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                   </button>
                 </td>
               </tr>
             )}
 
-            {/* Stakeholder rows */}
             {stakeholders.map((stakeholder) => (
               <StakeholderRow
                 key={stakeholder.id}
@@ -487,55 +737,113 @@ function GroupCard({
                 onUpdate={onUpdate}
                 onUpdateTenderStatus={onUpdateTenderStatus}
                 onUpdateSubmissionStatus={onUpdateSubmissionStatus}
-                onDelete={onDelete}
+                onDelete={onRequestDelete}
                 isSelected={selectedIds.has(stakeholder.id)}
                 onSelect={onSelect}
               />
             ))}
 
-            {/* Loading skeleton rows when generating for this group */}
             {isGenerating && (
               <>
                 {[1, 2, 3].map((i) => (
-                  <tr key={`skeleton-${i}`} className="border-b border-[var(--color-border)]">
-                    <td className="px-3 py-2">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Skeleton className="h-4 w-32" />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Skeleton className="h-4 w-24" />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Skeleton className="h-4 w-28" />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Skeleton className="h-4 w-20" />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Skeleton className="h-4 w-36" />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Skeleton className="h-4 w-16" />
-                    </td>
-                    <td className="px-3 py-2 w-10" />
+                  <tr key={`skeleton-${i}`} className="h-9 border-b border-[var(--sw-rule-2)]">
+                    <td className="px-3 py-1"><Skeleton className="h-4 w-14" /></td>
+                    <td className="px-2 py-1"><Skeleton className="h-4 w-24" /></td>
+                    <td className="px-2 py-1"><Skeleton className="h-4 w-32" /></td>
+                    <td className="px-2 py-1"><Skeleton className="h-4 w-24" /></td>
+                    <td className="px-2 py-1"><Skeleton className="h-4 w-20" /></td>
+                    <td className="px-2 py-1"><Skeleton className="h-4 w-32" /></td>
+                    <td className="px-2 py-1"><Skeleton className="h-4 w-16" /></td>
+                    <td className="px-1 py-1" />
                   </tr>
                 ))}
               </>
             )}
 
-            {/* Empty state */}
             {stakeholders.length === 0 && !isGenerating && quickAddGroup !== group && (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-sm text-[var(--color-text-muted)]">
-                  No {GROUP_LABELS[group].toLowerCase()} stakeholders yet. Click + or Generate to add.
+                <td colSpan={8} className="px-4 py-6 text-center text-xs text-[var(--sw-muted)]">
+                  No {GROUP_LABELS[group].toLowerCase()} stakeholders yet. Use + or Generate to add rows.
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-    </div>
+    </section>
+  );
+}
+
+interface StakeholderHeadProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+function StakeholderHead({ children, className }: StakeholderHeadProps) {
+  return (
+    <th
+      className={cn('px-3 py-2 text-left text-[10px] font-semibold uppercase text-[var(--sw-muted)]', className)}
+      style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
+    >
+      {children}
+    </th>
+  );
+}
+
+interface SelectionToggleProps {
+  allSelected: boolean;
+  someSelected: boolean;
+  onClick: () => void;
+  title: string;
+}
+
+function SelectionToggle({ allSelected, someSelected, onClick, title }: SelectionToggleProps) {
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className={cn(
+        'flex h-3.5 w-3.5 items-center justify-center border transition-colors',
+        someSelected
+          ? 'border-[var(--sw-rose)] bg-[var(--sw-rose)] text-[var(--sw-ink)]'
+          : 'border-[var(--sw-rule)] bg-white hover:border-[var(--sw-ink)]'
+      )}
+      title={title}
+    >
+      {allSelected ? <Check className="h-2.5 w-2.5" /> : someSelected ? <Minus className="h-2.5 w-2.5" /> : null}
+    </button>
+  );
+}
+
+interface GroupFilterButtonProps {
+  label: string;
+  count: number;
+  selected: boolean;
+  accent?: string;
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+}
+
+function GroupFilterButton({ label, count, selected, accent, onClick }: GroupFilterButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex h-7 items-center gap-1.5 border px-2.5 text-[10px] font-semibold transition-colors',
+        selected
+          ? 'border-[var(--sw-ink)] bg-[var(--sw-ink)] text-[var(--sw-paper)]'
+          : 'border-[var(--sw-rule)] bg-white text-[var(--sw-muted)] hover:border-[var(--sw-ink)] hover:text-[var(--sw-ink)]'
+      )}
+      style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.02em' }}
+    >
+      {accent && <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0" style={{ background: accent }} />}
+      <span>{label}</span>
+      <span className={selected ? 'text-[rgba(232,228,218,0.72)]' : 'text-[var(--sw-muted)]'}>
+        {count}
+      </span>
+    </button>
   );
 }

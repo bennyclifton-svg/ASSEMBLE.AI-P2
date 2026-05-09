@@ -34,6 +34,10 @@ interface LinkingState {
     fromEnd: 'start' | 'end';
     mouseX: number;
     mouseY: number;
+    timelineLeft: number;
+    timelineTop: number;
+    scrollLeft: number;
+    scrollTop: number;
 }
 
 interface ProgramTableProps {
@@ -135,8 +139,8 @@ function flattenVisibleActivities(activities: ProgramActivity[]): FlatActivity[]
 function SortableNameRow({ id, children }: { id: string; children: (props: {
     sortableRef: (node: HTMLElement | null) => void;
     sortableStyle: React.CSSProperties;
-    dragHandleAttributes: Record<string, any>;
-    dragHandleListeners: Record<string, any>;
+    dragHandleAttributes: React.HTMLAttributes<HTMLDivElement>;
+    dragHandleListeners: React.HTMLAttributes<HTMLDivElement>;
 }) => React.ReactNode }) {
     const {
         attributes,
@@ -157,7 +161,7 @@ function SortableNameRow({ id, children }: { id: string; children: (props: {
                     opacity: isDragging ? 0.5 : 1,
                 },
                 dragHandleAttributes: attributes,
-                dragHandleListeners: listeners as Record<string, any>,
+                dragHandleListeners: listeners as React.HTMLAttributes<HTMLDivElement>,
             })}
         </>
     );
@@ -276,15 +280,31 @@ export function ProgramTable({
 
     // Handle starting a link drag from a bar
     const handleStartLinkDrag = useCallback((activityId: string, end: 'start' | 'end', clientX: number, clientY: number) => {
+        const timelineArea = timelineAreaRef.current;
+        const rect = timelineArea?.getBoundingClientRect();
         setLinkingState({
             fromActivityId: activityId,
             fromEnd: end,
             mouseX: clientX,
             mouseY: clientY,
+            timelineLeft: rect?.left ?? 0,
+            timelineTop: rect?.top ?? 0,
+            scrollLeft: timelineArea?.scrollLeft ?? 0,
+            scrollTop: timelineArea?.scrollTop ?? 0,
         });
 
         const handleMouseMove = (e: MouseEvent) => {
-            setLinkingState((prev) => prev ? { ...prev, mouseX: e.clientX, mouseY: e.clientY } : null);
+            const currentTimelineArea = timelineAreaRef.current;
+            const currentRect = currentTimelineArea?.getBoundingClientRect();
+            setLinkingState((prev) => prev ? {
+                ...prev,
+                mouseX: e.clientX,
+                mouseY: e.clientY,
+                timelineLeft: currentRect?.left ?? prev.timelineLeft,
+                timelineTop: currentRect?.top ?? prev.timelineTop,
+                scrollLeft: currentTimelineArea?.scrollLeft ?? prev.scrollLeft,
+                scrollTop: currentTimelineArea?.scrollTop ?? prev.scrollTop,
+            } : null);
         };
 
         const handleMouseUp = (e: MouseEvent) => {
@@ -320,9 +340,7 @@ export function ProgramTable({
 
     // Calculate line position for visual feedback during linking
     const getLinkLine = useCallback(() => {
-        if (!linkingState || !timelineAreaRef.current) return null;
-
-        const rect = timelineAreaRef.current.getBoundingClientRect();
+        if (!linkingState) return null;
         const fromActivity = visibleActivities.find((a) => a.id === linkingState.fromActivityId);
         if (!fromActivity) return null;
 
@@ -359,8 +377,8 @@ export function ProgramTable({
             }
         }
 
-        const toX = linkingState.mouseX - rect.left + timelineAreaRef.current.scrollLeft;
-        const toY = linkingState.mouseY - rect.top + timelineAreaRef.current.scrollTop;
+        const toX = linkingState.mouseX - linkingState.timelineLeft + linkingState.scrollLeft;
+        const toY = linkingState.mouseY - linkingState.timelineTop + linkingState.scrollTop;
 
         return { fromX, fromY, toX, toY };
     }, [linkingState, visibleActivities, columns, columnWidth, zoomLevel, rowHeight]);
@@ -431,42 +449,39 @@ export function ProgramTable({
     }, []);
 
     return (
-        <div className="flex h-full flex-col">
-            {/* Header */}
-            <div className="flex border-b border-[var(--color-border)]" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
-                {/* Activity column header */}
+        <div className="flex h-full min-h-0 flex-col overflow-hidden border border-[var(--sw-rule)] bg-white">
+            <div
+                className="flex border-b border-[var(--sw-rule-2)]"
+                style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.12em', textTransform: 'lowercase' }}
+            >
                 <div
-                    className="shrink-0 border-r border-[var(--color-border)] px-4 py-1.5 text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wide flex items-center"
+                    className="flex shrink-0 items-center border-r border-[var(--sw-rule-2)] px-4 py-1.5 text-[10px] font-semibold text-[var(--sw-muted)]"
                     style={{ width: activityColumnWidth }}
                 >
-                    Activity
+                    activity
                 </div>
 
-                {/* Start date column header */}
                 <div
-                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-1.5 text-xs font-bold text-[var(--color-text-primary)] text-center uppercase tracking-wide flex items-center justify-center"
+                    className="flex shrink-0 items-center justify-center border-r border-[var(--sw-rule-2)] px-2 py-1.5 text-center text-[10px] font-semibold text-[var(--sw-muted)]"
                     style={{ width: startDateColumnWidth }}
                 >
-                    Start
+                    start
                 </div>
 
-                {/* End date column header */}
                 <div
-                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-1.5 text-xs font-bold text-[var(--color-text-primary)] text-center uppercase tracking-wide flex items-center justify-center"
+                    className="flex shrink-0 items-center justify-center border-r border-[var(--sw-rule-2)] px-2 py-1.5 text-center text-[10px] font-semibold text-[var(--sw-muted)]"
                     style={{ width: endDateColumnWidth }}
                 >
-                    End
+                    end
                 </div>
 
-                {/* Timeline header */}
                 <div className="flex-1 overflow-hidden" ref={scrollContainerRef}>
                     <div className="flex flex-col" style={{ minWidth: columns.length * columnWidth }}>
-                        {/* Month row */}
-                        <div className="flex border-b border-[var(--color-border)]">
+                        <div className="flex border-b border-[var(--sw-rule-2)]">
                             {monthGroups.map((group, i) => (
                                 <div
                                     key={i}
-                                    className="shrink-0 border-r border-[var(--color-border)] px-2 py-1 text-center text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wide"
+                                    className="shrink-0 border-r border-[var(--sw-rule-2)] px-2 py-1 text-center text-[10px] font-semibold text-[var(--sw-muted)]"
                                     style={{ width: columnWidth * group.span }}
                                 >
                                     {group.month}
@@ -480,8 +495,8 @@ export function ProgramTable({
                                 {columns.map((col, i) => (
                                     <div
                                         key={i}
-                                        className={`shrink-0 border-r border-[var(--color-border)] px-1 py-1 text-center text-xs font-bold text-[var(--color-text-primary)] ${
-                                            i === todayIndex ? 'bg-[var(--color-text-primary)]/10' : ''
+                                        className={`shrink-0 border-r border-[var(--sw-rule-2)] px-1 py-1 text-center text-[10px] font-semibold text-[var(--sw-muted)] ${
+                                            i === todayIndex ? 'bg-[var(--sw-rose-tint)] text-[var(--sw-rose-dk)]' : ''
                                         }`}
                                         style={{ width: columnWidth }}
                                     >
@@ -505,8 +520,8 @@ export function ProgramTable({
                 <div className="flex flex-1 overflow-hidden">
                     {/* Activity column (sticky) - sortable */}
                     <div
-                        className="shrink-0 overflow-y-auto border-r border-[var(--color-border)]"
-                        style={{ width: activityColumnWidth, backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}
+                        className="shrink-0 overflow-y-auto border-r border-[var(--sw-rule-2)] bg-white"
+                        style={{ width: activityColumnWidth }}
                     >
                         <SortableContext items={visibleActivities.map(a => a.id)} strategy={verticalListSortingStrategy}>
                             {visibleActivities.map((activity) => (
@@ -533,7 +548,10 @@ export function ProgramTable({
                         </SortableContext>
 
                         {visibleActivities.length === 0 && (
-                            <div className="px-3 py-8 text-center text-xs text-[var(--color-text-muted)]">
+                            <div
+                                className="px-3 py-8 text-center text-xs text-[var(--sw-muted)]"
+                                style={{ fontFamily: 'var(--sw-font-mono)' }}
+                            >
                                 No activities yet. Click &quot;Add Activity&quot; or insert a template to get started.
                             </div>
                         )}
@@ -541,8 +559,8 @@ export function ProgramTable({
 
                     {/* Date columns (sticky with activity column) */}
                     <div
-                        className="shrink-0 overflow-y-auto border-r border-[var(--color-border)]"
-                        style={{ width: startDateColumnWidth + endDateColumnWidth, backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}
+                        className="shrink-0 overflow-y-auto border-r border-[var(--sw-rule-2)] bg-white"
+                        style={{ width: startDateColumnWidth + endDateColumnWidth }}
                     >
                         {visibleActivities.map((activity) => (
                             <DateColumnsRow
@@ -557,16 +575,14 @@ export function ProgramTable({
                     </div>
 
                     {/* Timeline area (scrollable) */}
-                    <div ref={timelineAreaRef} className="relative flex-1 overflow-auto" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
-                        {/* Today marker */}
+                    <div ref={timelineAreaRef} className="relative flex-1 overflow-auto bg-white">
                         {todayIndex >= 0 && (
                             <div
-                                className="absolute top-0 bottom-0 w-0.5 bg-[var(--color-accent-coral)]/50 z-10"
+                                className="absolute top-0 bottom-0 z-10 w-0.5 bg-[var(--sw-rose)]"
                                 style={{ left: todayIndex * columnWidth + columnWidth / 2 }}
                             />
                         )}
 
-                        {/* Rows */}
                         <div style={{ minWidth: columns.length * columnWidth }}>
                             {visibleActivities.map((activity) => (
                                 <ProgramRow
@@ -614,7 +630,7 @@ export function ProgramTable({
                                             y1={line.fromY}
                                             x2={line.toX}
                                             y2={line.toY}
-                                            stroke="var(--color-accent-teal)"
+                                            stroke="var(--sw-cyan)"
                                             strokeWidth="2"
                                             strokeDasharray="4,4"
                                         />
@@ -622,7 +638,7 @@ export function ProgramTable({
                                             cx={line.fromX}
                                             cy={line.fromY}
                                             r="4"
-                                            fill="var(--color-accent-teal)"
+                                            fill="var(--sw-cyan)"
                                         />
                                     </svg>
                                 );
@@ -635,10 +651,13 @@ export function ProgramTable({
                 <DragOverlay>
                     {activeActivity ? (
                         <div
-                            className="flex items-center bg-[var(--color-bg-secondary)] border border-[var(--color-accent-teal)] rounded shadow-lg px-2 py-1 opacity-90"
+                            className="flex items-center border border-[var(--sw-cyan)] bg-white px-2 py-1 opacity-90"
                             style={{ width: activityColumnWidth }}
                         >
-                            <span className="text-xs text-[var(--color-text-primary)] truncate">
+                            <span
+                                className="truncate text-xs text-[var(--sw-ink)]"
+                                style={{ fontFamily: 'var(--sw-font-mono)' }}
+                            >
                                 {activeActivity.name}
                             </span>
                         </div>

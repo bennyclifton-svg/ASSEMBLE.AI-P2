@@ -218,7 +218,7 @@ export default function EditableContentArea({
         onInput={handleInput}
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
-        className="min-h-screen max-w-4xl mx-auto prose prose-invert prose-base focus:outline-none [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h3]:text-base [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_p]:mb-1 [&_p]:leading-normal [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[var(--color-border)] [&_th]:px-4 [&_th]:py-2 [&_th]:bg-[#2d2d30] [&_th]:text-[var(--color-text-muted)] [&_th]:font-medium [&_td]:border [&_td]:border-[var(--color-border)] [&_td]:px-4 [&_td]:py-2 selection:bg-[var(--color-accent-teal)]/30"
+        className="min-h-screen max-w-4xl mx-auto prose prose-invert prose-base focus:outline-none [&_h1]:text-lg [&_h1]:font-bold [&_h1]:mb-0 [&_h1]:mt-2 [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mb-0 [&_h2]:mt-1 [&_h3]:text-base [&_h3]:font-medium [&_h3]:mb-0 [&_h3]:mt-1 [&_p]:mb-1 [&_p]:leading-normal [&_table]:w-full [&_table]:border-collapse [&_table]:my-2 [&_th]:border [&_th]:border-[var(--color-border)] [&_th]:px-4 [&_th]:py-2 [&_th]:bg-[var(--color-bg-secondary)] [&_th]:text-[var(--color-text-muted)] [&_th]:font-medium [&_td]:border [&_td]:border-[var(--color-border)] [&_td]:px-4 [&_td]:py-2 selection:bg-[var(--color-accent-teal)]/30"
         style={{
           whiteSpace: 'pre-wrap',
           wordWrap: 'break-word',

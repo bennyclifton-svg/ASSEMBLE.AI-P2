@@ -9,7 +9,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Loader2, ExternalLink } from 'lucide-react';
+import { Mail, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -48,7 +48,7 @@ export function EmailButton({
             const result = await onEmail();
 
             // If the callback returns a mailto URL, open it
-            if (result?.mailtoUrl) {
+            if (result && 'mailtoUrl' in result && result.mailtoUrl) {
                 window.open(result.mailtoUrl, '_blank');
             }
         } finally {

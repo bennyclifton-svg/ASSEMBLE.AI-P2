@@ -13,6 +13,7 @@ import { AttachmentSection } from './shared/AttachmentSection';
 import { useReportTransmittal } from '@/lib/hooks/use-reports';
 import type { Report, UpdateReportRequest, ReportContentsType } from '@/types/notes-meetings-reports';
 import { cn } from '@/lib/utils';
+import { REPORT_RECORD_ACCENT } from './RecordSectionHeading';
 
 interface ReportWithCount extends Report {
     sectionCount: number;
@@ -27,6 +28,7 @@ interface ReportContentProps {
     onCopy: () => Promise<void>;
     onSaveTransmittal?: () => void;
     onLoadTransmittal?: () => void;
+    accentColor?: string;
     className?: string;
 }
 
@@ -36,6 +38,7 @@ export function ReportContent({
     onUpdate,
     onSaveTransmittal,
     onLoadTransmittal,
+    accentColor = REPORT_RECORD_ACCENT,
     className,
 }: ReportContentProps) {
     const { documents, isLoading: transmittalLoading } = useReportTransmittal(report.id);
@@ -83,15 +86,19 @@ export function ReportContent({
                 onPreparedForChange={handlePreparedForChange}
                 onPreparedByChange={handlePreparedByChange}
                 onReportingPeriodChange={handleReportingPeriodChange}
+                accentColor={accentColor}
             />
 
             {/* Attachment section - matches RFT TransmittalSchedule style */}
-            <AttachmentSection
-                documents={documents}
-                isLoading={transmittalLoading}
-                onSave={onSaveTransmittal}
-                onLoad={onLoadTransmittal}
-            />
+            <div className="px-4 pb-4">
+                <AttachmentSection
+                    documents={documents}
+                    isLoading={transmittalLoading}
+                    onSave={onSaveTransmittal}
+                    onLoad={onLoadTransmittal}
+                    accentColor={accentColor}
+                />
+            </div>
         </div>
     );
 }

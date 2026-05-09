@@ -36,9 +36,9 @@ const BUILDING_CLASS_DISPLAY: Record<string, string> = {
 };
 
 const PROJECT_TYPE_DISPLAY: Record<string, string> = {
-  refurb: 'Refurbishment',
-  extend: 'Extension',
-  new: 'New Build',
+  refurb: 'Refurb',
+  extend: 'Extend',
+  new: 'New',
   remediation: 'Remediation',
   advisory: 'Advisory',
 };

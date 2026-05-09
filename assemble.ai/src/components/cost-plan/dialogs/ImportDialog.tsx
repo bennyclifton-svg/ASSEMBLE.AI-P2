@@ -182,52 +182,52 @@ export function ImportDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-[#3e3e42] flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <Upload className="w-5 h-5" />
               Import Cost Plan Data
             </h2>
-            <p className="text-sm text-[#858585]">
+            <p className="text-sm text-[var(--color-text-muted)]">
               Import from Excel or CSV file
             </p>
           </div>
           <button
             onClick={handleClose}
-            className="p-1 text-[#858585] hover:text-white rounded transition-colors"
+            className="p-1 text-[var(--color-text-muted)] hover:text-white rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Progress Steps */}
-        <div className="px-4 py-3 border-b border-[#3e3e42] bg-[#1e1e1e] shrink-0">
+        <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)] shrink-0">
           <div className="flex items-center gap-2 text-sm">
-            <span className={step === 'upload' ? 'text-white' : 'text-[#4ade80]'}>
+            <span className={step === 'upload' ? 'text-white' : 'text-[var(--color-success)]'}>
               1. Select File
             </span>
-            <ChevronRight className="w-4 h-4 text-[#6e6e6e]" />
+            <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" />
             <span className={
               step === 'preview' ? 'text-white' :
-              step === 'mapping' || step === 'importing' || step === 'complete' ? 'text-[#4ade80]' :
-              'text-[#6e6e6e]'
+              step === 'mapping' || step === 'importing' || step === 'complete' ? 'text-[var(--color-success)]' :
+              'text-[var(--color-text-muted)]'
             }>
               2. Preview
             </span>
-            <ChevronRight className="w-4 h-4 text-[#6e6e6e]" />
+            <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" />
             <span className={
               step === 'mapping' ? 'text-white' :
-              step === 'importing' || step === 'complete' ? 'text-[#4ade80]' :
-              'text-[#6e6e6e]'
+              step === 'importing' || step === 'complete' ? 'text-[var(--color-success)]' :
+              'text-[var(--color-text-muted)]'
             }>
               3. Map Columns
             </span>
-            <ChevronRight className="w-4 h-4 text-[#6e6e6e]" />
+            <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" />
             <span className={
               step === 'importing' || step === 'complete' ? 'text-white' :
-              'text-[#6e6e6e]'
+              'text-[var(--color-text-muted)]'
             }>
               4. Import
             </span>
@@ -249,8 +249,8 @@ export function ImportDialog({
                   border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
                   transition-colors
                   ${isDragging
-                    ? 'border-[#007acc] bg-[#007acc]/10'
-                    : 'border-[#3e3e42] hover:border-[#6e6e6e] hover:bg-[#2a2d2e]'}
+                    ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10'
+                    : 'border-[var(--color-border)] hover:border-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'}
                 `}
               >
                 <input
@@ -263,16 +263,16 @@ export function ImportDialog({
 
                 {isProcessing ? (
                   <div className="py-4">
-                    <div className="animate-spin w-8 h-8 border-2 border-[#007acc] border-t-transparent rounded-full mx-auto mb-3" />
-                    <p className="text-[#858585]">Processing file...</p>
+                    <div className="animate-spin w-8 h-8 border-2 border-[var(--color-accent-primary)] border-t-transparent rounded-full mx-auto mb-3" />
+                    <p className="text-[var(--color-text-muted)]">Processing file...</p>
                   </div>
                 ) : (
                   <>
-                    <FileSpreadsheet className="w-12 h-12 text-[#4e4e4e] mx-auto mb-3" />
-                    <p className="text-[#cccccc] mb-2">
+                    <FileSpreadsheet className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-3" />
+                    <p className="text-[var(--color-text-primary)] mb-2">
                       Drag & drop your file here, or click to browse
                     </p>
-                    <p className="text-sm text-[#6e6e6e]">
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       Supported formats: Excel (.xlsx, .xls) and CSV (.csv)
                     </p>
                   </>
@@ -281,7 +281,7 @@ export function ImportDialog({
 
               {/* Error Message */}
               {error && (
-                <div className="flex items-center gap-2 p-3 bg-[#f87171]/10 border border-[#f87171]/30 rounded text-[#f87171]">
+                <div className="flex items-center gap-2 p-3 bg-[var(--color-error)]/10 border border-[var(--color-error)]/30 rounded text-[var(--color-error)]">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   <span className="text-sm">{error}</span>
                 </div>
@@ -290,15 +290,15 @@ export function ImportDialog({
               {/* Saved Templates */}
               {savedTemplates.length > 0 && (
                 <div>
-                  <h3 className="text-sm text-[#858585] mb-2">Recent Import Templates</h3>
+                  <h3 className="text-sm text-[var(--color-text-muted)] mb-2">Recent Import Templates</h3>
                   <div className="space-y-1">
                     {savedTemplates.map((template) => (
                       <button
                         key={template.id}
                         onClick={() => onSelectTemplate?.(template.id)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-[#cccccc] hover:bg-[#37373d] rounded transition-colors"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded transition-colors"
                       >
-                        <FileText className="w-4 h-4 text-[#858585]" />
+                        <FileText className="w-4 h-4 text-[var(--color-text-muted)]" />
                         {template.name}
                       </button>
                     ))}
@@ -312,19 +312,19 @@ export function ImportDialog({
           {step === 'preview' && preview && (
             <div className="space-y-4">
               {/* File Info */}
-              <div className="flex items-center justify-between p-3 bg-[#1e1e1e] rounded">
+              <div className="flex items-center justify-between p-3 bg-[var(--color-bg-primary)] rounded">
                 <div className="flex items-center gap-3">
-                  <FileSpreadsheet className="w-8 h-8 text-[#4ade80]" />
+                  <FileSpreadsheet className="w-8 h-8 text-[var(--color-success)]" />
                   <div>
-                    <p className="text-[#cccccc] font-medium">{preview.fileName}</p>
-                    <p className="text-sm text-[#858585]">
+                    <p className="text-[var(--color-text-primary)] font-medium">{preview.fileName}</p>
+                    <p className="text-sm text-[var(--color-text-muted)]">
                       {formatFileSize(preview.fileSize)} &bull; {preview.totalRows} rows
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={handleReset}
-                  className="p-2 text-[#858585] hover:text-[#f87171] hover:bg-[#f87171]/10 rounded transition-colors"
+                  className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded transition-colors"
                   title="Remove file"
                 >
                   <Trash className="w-4 h-4" />
@@ -333,14 +333,14 @@ export function ImportDialog({
 
               {/* Column Headers */}
               <div>
-                <h3 className="text-sm text-[#858585] mb-2">
+                <h3 className="text-sm text-[var(--color-text-muted)] mb-2">
                   Detected Columns ({preview.headers.length})
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {preview.headers.map((header, i) => (
                     <span
                       key={i}
-                      className="px-2 py-1 bg-[#37373d] text-[#cccccc] text-xs rounded"
+                      className="px-2 py-1 bg-[var(--color-bg-hover)] text-[var(--color-text-primary)] text-xs rounded"
                     >
                       {header}
                     </span>
@@ -350,20 +350,20 @@ export function ImportDialog({
 
               {/* Preview Table */}
               <div>
-                <h3 className="text-sm text-[#858585] mb-2">
+                <h3 className="text-sm text-[var(--color-text-muted)] mb-2">
                   Preview (first {preview.previewRows} rows)
                 </h3>
-                <div className="border border-[#3e3e42] rounded overflow-auto max-h-[200px]">
+                <div className="border border-[var(--color-border)] rounded overflow-auto max-h-[200px]">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#1e1e1e] sticky top-0">
+                    <thead className="bg-[var(--color-bg-primary)] sticky top-0">
                       <tr>
-                        <th className="px-2 py-1 text-left text-[#858585] font-medium border-b border-[#3e3e42]">
+                        <th className="px-2 py-1 text-left text-[var(--color-text-muted)] font-medium border-b border-[var(--color-border)]">
                           #
                         </th>
                         {preview.headers.map((header, i) => (
                           <th
                             key={i}
-                            className="px-2 py-1 text-left text-[#858585] font-medium border-b border-[#3e3e42] whitespace-nowrap"
+                            className="px-2 py-1 text-left text-[var(--color-text-muted)] font-medium border-b border-[var(--color-border)] whitespace-nowrap"
                           >
                             {header}
                           </th>
@@ -372,14 +372,14 @@ export function ImportDialog({
                     </thead>
                     <tbody>
                       {preview.rows.map((row) => (
-                        <tr key={row.rowNumber} className="hover:bg-[#2a2d2e]">
-                          <td className="px-2 py-1 text-[#6e6e6e] border-b border-[#3e3e42]">
+                        <tr key={row.rowNumber} className="hover:bg-[var(--color-bg-hover)]">
+                          <td className="px-2 py-1 text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
                             {row.rowNumber}
                           </td>
                           {preview.headers.map((header, i) => (
                             <td
                               key={i}
-                              className="px-2 py-1 text-[#cccccc] border-b border-[#3e3e42] whitespace-nowrap max-w-[150px] truncate"
+                              className="px-2 py-1 text-[var(--color-text-primary)] border-b border-[var(--color-border)] whitespace-nowrap max-w-[150px] truncate"
                             >
                               {row.data[header]?.toString() || ''}
                             </td>
@@ -395,7 +395,7 @@ export function ImportDialog({
               {preview.rows.some((r) => r.errors?.length || r.warnings?.length) && (
                 <div className="space-y-2">
                   {preview.rows.filter((r) => r.errors?.length).length > 0 && (
-                    <div className="flex items-center gap-2 p-3 bg-[#f87171]/10 border border-[#f87171]/30 rounded text-[#f87171]">
+                    <div className="flex items-center gap-2 p-3 bg-[var(--color-error)]/10 border border-[var(--color-error)]/30 rounded text-[var(--color-error)]">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       <span className="text-sm">
                         {preview.rows.filter((r) => r.errors?.length).length} rows have errors
@@ -403,7 +403,7 @@ export function ImportDialog({
                     </div>
                   )}
                   {preview.rows.filter((r) => r.warnings?.length).length > 0 && (
-                    <div className="flex items-center gap-2 p-3 bg-[#fbbf24]/10 border border-[#fbbf24]/30 rounded text-[#fbbf24]">
+                    <div className="flex items-center gap-2 p-3 bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 rounded text-[var(--color-warning)]">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
                       <span className="text-sm">
                         {preview.rows.filter((r) => r.warnings?.length).length} rows have warnings
@@ -418,9 +418,9 @@ export function ImportDialog({
           {/* Mapping Step - Redirect to ColumnMappingDialog */}
           {step === 'mapping' && (
             <div className="text-center py-12">
-              <CheckCircle className="w-12 h-12 text-[#4ade80] mx-auto mb-3" />
-              <p className="text-[#cccccc] mb-2">File loaded successfully</p>
-              <p className="text-sm text-[#858585]">
+              <CheckCircle className="w-12 h-12 text-[var(--color-success)] mx-auto mb-3" />
+              <p className="text-[var(--color-text-primary)] mb-2">File loaded successfully</p>
+              <p className="text-sm text-[var(--color-text-muted)]">
                 Configure column mappings in the next step
               </p>
             </div>
@@ -429,9 +429,9 @@ export function ImportDialog({
           {/* Importing Step */}
           {step === 'importing' && (
             <div className="text-center py-12">
-              <div className="animate-spin w-12 h-12 border-3 border-[#007acc] border-t-transparent rounded-full mx-auto mb-4" />
-              <p className="text-[#cccccc]">Importing data...</p>
-              <p className="text-sm text-[#858585] mt-2">
+              <div className="animate-spin w-12 h-12 border-3 border-[var(--color-accent-primary)] border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-[var(--color-text-primary)]">Importing data...</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-2">
                 This may take a moment for large files
               </p>
             </div>
@@ -440,9 +440,9 @@ export function ImportDialog({
           {/* Complete Step */}
           {step === 'complete' && (
             <div className="text-center py-12">
-              <CheckCircle className="w-12 h-12 text-[#4ade80] mx-auto mb-3" />
-              <p className="text-[#cccccc] text-lg">Import Complete!</p>
-              <p className="text-sm text-[#858585] mt-2">
+              <CheckCircle className="w-12 h-12 text-[var(--color-success)] mx-auto mb-3" />
+              <p className="text-[var(--color-text-primary)] text-lg">Import Complete!</p>
+              <p className="text-sm text-[var(--color-text-muted)] mt-2">
                 Your cost plan data has been imported successfully
               </p>
             </div>
@@ -450,8 +450,8 @@ export function ImportDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-[#3e3e42] flex items-center justify-between shrink-0">
-          <div className="text-sm text-[#858585]">
+        <div className="px-4 py-3 border-t border-[var(--color-border)] flex items-center justify-between shrink-0">
+          <div className="text-sm text-[var(--color-text-muted)]">
             {selectedFile && step === 'preview' && (
               <span>Ready to map columns</span>
             )}
@@ -460,7 +460,7 @@ export function ImportDialog({
             {step === 'upload' && (
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-[#cccccc] hover:text-white transition-colors"
+                className="px-4 py-2 text-[var(--color-text-primary)] hover:text-white transition-colors"
               >
                 Cancel
               </button>
@@ -469,13 +469,13 @@ export function ImportDialog({
               <>
                 <button
                   onClick={handleReset}
-                  className="px-4 py-2 text-[#cccccc] hover:text-white transition-colors"
+                  className="px-4 py-2 text-[var(--color-text-primary)] hover:text-white transition-colors"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleProceedToMapping}
-                  className="px-4 py-2 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] transition-colors flex items-center gap-2"
+                  className="px-4 py-2 bg-[var(--color-accent-primary)] text-white rounded hover:bg-[var(--color-accent-primary-hover)] transition-colors flex items-center gap-2"
                 >
                   Continue to Mapping
                   <ChevronRight className="w-4 h-4" />
@@ -485,7 +485,7 @@ export function ImportDialog({
             {step === 'complete' && (
               <button
                 onClick={handleClose}
-                className="px-4 py-2 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] transition-colors"
+                className="px-4 py-2 bg-[var(--color-accent-primary)] text-white rounded hover:bg-[var(--color-accent-primary-hover)] transition-colors"
               >
                 Done
               </button>

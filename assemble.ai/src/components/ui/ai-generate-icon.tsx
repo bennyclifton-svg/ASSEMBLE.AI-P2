@@ -30,7 +30,7 @@ export function AIGenerateIcon({
             className={cn(
                 'inline-flex items-center justify-center',
                 'hover:opacity-80 transition-opacity cursor-pointer',
-                'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#0e639c] rounded',
+                'focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[var(--color-accent-primary)] rounded',
                 isLoading && 'cursor-wait',
                 disabled && !isLoading && 'opacity-50 cursor-not-allowed',
                 className

@@ -54,8 +54,47 @@ const definition: AgentToolDefinition<
             type: 'object',
             properties: {
                 userGoal: { type: 'string' },
+                inboundCorrespondenceId: {
+                    type: 'string',
+                    description:
+                        'Inbound correspondence id when this workflow starts from a contractor email or registered inbound item.',
+                },
+                contractor: {
+                    type: 'object',
+                    properties: {
+                        name: { type: 'string' },
+                        email: { type: 'string' },
+                    },
+                },
                 evidence: { type: 'array', items: { type: 'string' } },
                 assumptions: { type: 'array', items: { type: 'string' } },
+                missingInformation: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description:
+                        'Particulars needed before a contractor variation claim can be assessed.',
+                },
+                deliveryAssessment: {
+                    type: 'object',
+                    description:
+                        'Delivery assessment framing for contractor variation claims. This is draft-for-review, not a final contractual determination.',
+                    properties: {
+                        completeness: {
+                            type: 'string',
+                            enum: ['complete_enough', 'missing_information'],
+                        },
+                        summary: { type: 'string' },
+                        entitlement: { type: 'string' },
+                        quantum: { type: 'string' },
+                        recommendation: { type: 'string' },
+                        contractAssumption: { type: 'string' },
+                        missingInformation: {
+                            type: 'array',
+                            items: { type: 'string' },
+                        },
+                        confidence: { type: 'number', minimum: 0, maximum: 1 },
+                    },
+                },
                 variation: {
                     type: 'object',
                     properties: {
@@ -152,7 +191,7 @@ const definition: AgentToolDefinition<
                         title: { type: 'string' },
                         content: { type: 'string' },
                         isStarred: { type: 'boolean' },
-                        color: { type: 'string', enum: ['yellow', 'blue', 'green', 'pink', 'white'] },
+                        color: { type: 'string', enum: ['purple', 'orange', 'pink', 'blue'] },
                         type: {
                             type: 'string',
                             enum: ['rfi', 'notice', 'eot', 'defect', 'variation', 'risk', 'transmittal', 'review', 'note'],
@@ -160,6 +199,26 @@ const definition: AgentToolDefinition<
                         status: { type: 'string', enum: ['open', 'closed'] },
                         noteDate: { type: 'string', description: 'YYYY-MM-DD.' },
                         documentIds: { type: 'array', items: { type: 'string' } },
+                    },
+                },
+                outboundCorrespondence: {
+                    type: 'object',
+                    description:
+                        'Optional outbound email draft/register step. Use request_particulars for incomplete contractor claims and assessment_response when enough particulars exist for a draft assessment response.',
+                    properties: {
+                        draftType: {
+                            type: 'string',
+                            enum: ['request_particulars', 'assessment_response'],
+                        },
+                        toEmail: { type: 'string' },
+                        toName: { type: 'string' },
+                        ccEmails: { type: 'array', items: { type: 'string' } },
+                        subject: { type: 'string' },
+                        bodyText: { type: 'string' },
+                        responseRequiredBy: {
+                            type: 'string',
+                            description: 'YYYY-MM-DD.',
+                        },
                     },
                 },
             },
@@ -189,7 +248,7 @@ const definition: AgentToolDefinition<
                 projectId: ctx.projectId,
                 threadId: ctx.threadId,
                 agentRunId: ctx.runId,
-                activeAgent: 'orchestrator',
+                activeAgent: input.deliveryAssessment || input.contractor ? 'delivery' : 'orchestrator',
                 viewContext: ctx.viewContext ?? null,
             });
         } catch (err) {

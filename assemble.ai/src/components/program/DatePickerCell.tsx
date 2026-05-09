@@ -9,7 +9,7 @@
  */
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const MONTHS = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -84,13 +84,16 @@ export function DatePickerCell({
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Update view when value changes
-    useEffect(() => {
-        if (value) {
+    const handleTriggerClick = useCallback(() => {
+        if (disabled) return;
+
+        if (!isOpen && value) {
             const d = new Date(value);
             setViewDate({ year: d.getFullYear(), month: d.getMonth() });
         }
-    }, [value]);
+
+        setIsOpen((current) => !current);
+    }, [disabled, isOpen, value]);
 
     // Generate calendar days
     const calendarDays = useMemo(() => {
@@ -150,20 +153,19 @@ export function DatePickerCell({
     today.setHours(0, 0, 0, 0);
 
     return (
-        <div ref={containerRef} className={`relative ${className}`}>
-            {/* Trigger */}
+        <div ref={containerRef} className={`relative ${className}`} style={{ fontFamily: 'var(--sw-font-mono)' }}>
             <button
                 ref={triggerRef}
-                onClick={() => !disabled && setIsOpen(!isOpen)}
+                onClick={handleTriggerClick}
                 disabled={disabled}
                 className={`
                     w-full flex items-center justify-center gap-1 px-1 py-1
-                    text-xs border-r border-[var(--color-border)]
-                    ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--color-bg-tertiary)] cursor-pointer'}
-                    ${isOpen ? 'bg-[var(--color-bg-tertiary)]' : ''}
+                    text-[11px] border-r border-[var(--sw-rule-2)]
+                    ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[var(--sw-paper)] cursor-pointer'}
+                    ${isOpen ? 'bg-[var(--sw-paper)]' : ''}
                 `}
             >
-                <span className={displayValue ? 'text-[var(--color-text-secondary)]' : 'text-[var(--color-text-muted)]'}>
+                <span className={displayValue ? 'text-[var(--sw-ink)]' : 'text-[var(--sw-muted)]'}>
                     {displayValue || placeholder}
                 </span>
             </button>
@@ -171,23 +173,23 @@ export function DatePickerCell({
             {/* Dropdown - fixed position to escape overflow containers */}
             {isOpen && dropdownPosition && (
                 <div
-                    className="fixed z-[100] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg p-2 w-[220px]"
+                    className="fixed z-[100] w-[220px] border border-[var(--sw-rule)] bg-white p-2"
                     style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
                 >
                     {/* Month/Year navigation */}
                     <div className="flex items-center justify-between mb-2">
                         <button
                             onClick={handlePrevMonth}
-                            className="p-1 rounded hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+                            className="p-1 text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
                         >
                             <ChevronLeft className="w-4 h-4" />
                         </button>
-                        <span className="text-xs font-medium text-[var(--color-text-primary)]">
+                        <span className="text-xs font-semibold text-[var(--sw-ink)]">
                             {MONTHS[viewDate.month]} {viewDate.year}
                         </span>
                         <button
                             onClick={handleNextMonth}
-                            className="p-1 rounded hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)]"
+                            className="p-1 text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
                         >
                             <ChevronRight className="w-4 h-4" />
                         </button>
@@ -196,7 +198,7 @@ export function DatePickerCell({
                     {/* Day headers */}
                     <div className="grid grid-cols-7 gap-0.5 mb-1">
                         {DAYS.map(day => (
-                            <div key={day} className="text-center text-[10px] text-[var(--color-text-muted)] py-0.5">
+                            <div key={day} className="py-0.5 text-center text-[10px] text-[var(--sw-muted)]">
                                 {day}
                             </div>
                         ))}
@@ -221,12 +223,12 @@ export function DatePickerCell({
                                     key={idx}
                                     onClick={() => handleSelectDate(item.date!)}
                                     className={`
-                                        w-6 h-6 text-[10px] rounded transition-colors
+                                        w-6 h-6 text-[10px] transition-colors
                                         ${isSelected
-                                            ? 'bg-[var(--color-accent-teal)] text-white'
+                                            ? 'bg-[var(--sw-ink)] text-[var(--sw-paper)]'
                                             : isToday
-                                            ? 'bg-[var(--color-bg-tertiary)] text-[var(--color-accent-teal)] ring-1 ring-[var(--color-accent-teal)]/30'
-                                            : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)]'}
+                                            ? 'bg-[var(--sw-rose-tint)] text-[var(--sw-rose-dk)] ring-1 ring-[var(--sw-rose)]'
+                                            : 'text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]'}
                                     `}
                                 >
                                     {item.day}
@@ -236,10 +238,10 @@ export function DatePickerCell({
                     </div>
 
                     {/* Quick actions */}
-                    <div className="mt-2 pt-2 border-t border-[var(--color-border)] flex gap-2">
+                    <div className="mt-2 flex gap-2 border-t border-[var(--sw-rule-2)] pt-2">
                         <button
                             onClick={handleToday}
-                            className="flex-1 px-2 py-1 text-[10px] text-[var(--color-accent-teal)] hover:bg-[var(--color-bg-tertiary)] rounded"
+                            className="flex-1 px-2 py-1 text-[10px] text-[var(--sw-rose-dk)] hover:bg-[var(--sw-rose-tint)]"
                         >
                             Today
                         </button>
@@ -249,7 +251,7 @@ export function DatePickerCell({
                                     onChange(null);
                                     setIsOpen(false);
                                 }}
-                                className="flex-1 px-2 py-1 text-[10px] text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] rounded"
+                                className="flex-1 px-2 py-1 text-[10px] text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
                             >
                                 Clear
                             </button>

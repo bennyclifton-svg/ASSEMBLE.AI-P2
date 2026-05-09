@@ -56,6 +56,22 @@ describe('routeAgents', () => {
         expect(routeAgents('Please issue a Principal variation for about $18,750')).toEqual(['finance']);
     });
 
+    test('routes contractor variation claims to Delivery-lite', () => {
+        expect(
+            routeAgents(
+                'The contractor has submitted a variation claim for latent rock excavation and 4 days delay.'
+            )
+        ).toEqual(['delivery']);
+    });
+
+    test('routes variation assessment iteration to Delivery', () => {
+        expect(
+            routeAgents(
+                'With regards to the variation claim assessment, please add more evaluation about the geotechnical report.'
+            )
+        ).toEqual(['delivery']);
+    });
+
     test('routes multi-domain impact requests', () => {
         expect(routeAgents('What does this delay mean for completion and cost?')).toEqual([
             'finance',

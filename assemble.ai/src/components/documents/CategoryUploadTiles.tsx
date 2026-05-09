@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CategoryTile } from './CategoryTile';
 import { useActiveCategories } from '@/lib/hooks/use-active-categories';
-import { useHorizontalScroll } from '@/lib/hooks/use-horizontal-scroll';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
@@ -39,11 +38,6 @@ export function CategoryUploadTiles({
     const { categories, isLoading } = useActiveCategories(projectId);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-    // Horizontal scroll for category row
-    const categoryScroll = useHorizontalScroll<HTMLDivElement>();
-    // Horizontal scroll for subcategory row
-    const subcategoryScroll = useHorizontalScroll<HTMLDivElement>();
-
     const toggleCategory = (categoryId: string) => {
         setExpandedCategories(prev => {
             if (prev.has(categoryId)) {
@@ -55,9 +49,9 @@ export function CategoryUploadTiles({
 
     if (isLoading) {
         return (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
                 {[1, 2, 3, 4, 5, 6].map(i => (
-                    <Skeleton key={i} className="h-9 w-28 flex-shrink-0" />
+                    <Skeleton key={i} className="h-8 w-28 flex-shrink-0 rounded-none" />
                 ))}
             </div>
         );
@@ -70,46 +64,16 @@ export function CategoryUploadTiles({
         cat => expandedCategories.has(cat.id) && cat.subcategories?.length
     );
 
-    // Scroll fade mask style
-    const getFadeMaskStyle = (canScrollLeft: boolean, canScrollRight: boolean): React.CSSProperties => {
-        if (canScrollLeft && canScrollRight) {
-            return {
-                maskImage: 'linear-gradient(to right, transparent, black 48px, black calc(100% - 48px), transparent)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent, black 48px, black calc(100% - 48px), transparent)',
-            };
-        }
-        if (canScrollLeft) {
-            return {
-                maskImage: 'linear-gradient(to right, transparent, black 48px)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent, black 48px)',
-            };
-        }
-        if (canScrollRight) {
-            return {
-                maskImage: 'linear-gradient(to right, black calc(100% - 48px), transparent)',
-                WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 48px), transparent)',
-            };
-        }
-        return {};
-    };
-
     return (
         <div className="space-y-2">
-            {/* Category row — single horizontal scrolling row */}
+            {/* Category row - wrapped like the Brief chip rows. */}
             <div
-                ref={categoryScroll.scrollRef}
-                onWheel={categoryScroll.onWheel}
-                onScroll={categoryScroll.updateOverflow}
                 className={cn(
-                    'flex gap-3 overflow-x-auto',
-                    // Hide scrollbar
+                    'flex flex-wrap gap-2 overflow-visible',
                     '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-                    // Snap to tiles
-                    'snap-x snap-mandatory',
                 )}
-                style={getFadeMaskStyle(categoryScroll.canScrollLeft, categoryScroll.canScrollRight)}
             >
-                {/* All category tiles — Ingest first, Consultants/Contractors last */}
+                {/* All category tiles - Ingest first, Consultants/Contractors last */}
                 {[...categories].sort((a, b) => {
                     // Ingest (knowledge source) goes first
                     if (a.isKnowledgeSource) return -1;
@@ -129,7 +93,7 @@ export function CategoryUploadTiles({
                     );
                     const isStakeholderCategory = category.subcategorySource === 'consultants' || category.subcategorySource === 'contractors';
                     return (
-                        <div key={category.id} className="flex-shrink-0 snap-start">
+                        <div key={category.id} className="flex-shrink-0">
                             <CategoryTile
                                 category={category}
                                 onFilesDropped={onFilesDropped}
@@ -167,21 +131,16 @@ export function CategoryUploadTiles({
                 })}
             </div>
 
-            {/* Subcategory row — single horizontal scrolling row (slides in when expanded) */}
+            {/* Subcategory row - same wrapped chip treatment as the parent row. */}
             {expandedCategoryWithSubs && (
                 <div
-                        ref={subcategoryScroll.scrollRef}
-                        onWheel={subcategoryScroll.onWheel}
-                        onScroll={subcategoryScroll.updateOverflow}
                         className={cn(
-                            'flex gap-3 overflow-x-auto',
+                            'flex flex-wrap gap-2 overflow-visible',
                             '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-                            'snap-x snap-mandatory',
                         )}
-                        style={getFadeMaskStyle(subcategoryScroll.canScrollLeft, subcategoryScroll.canScrollRight)}
                     >
                         {expandedCategoryWithSubs.subcategories!.map(subcategory => (
-                            <div key={subcategory.id} className="flex-shrink-0 snap-start">
+                            <div key={subcategory.id} className="flex-shrink-0">
                                 <CategoryTile
                                     category={expandedCategoryWithSubs}
                                     subcategory={subcategory}

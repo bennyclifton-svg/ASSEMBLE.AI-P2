@@ -1,55 +1,35 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, type ReactNode } from 'react';
 import { Plus, Upload, Check, X, Trash, ChevronUp, ChevronDown } from 'lucide-react';
 import { useVariations, useVariationMutations, useCostLines } from '@/lib/hooks/cost-plan';
 import { formatCurrency } from '@/lib/calculations/cost-plan-formulas';
 import { VariationDropZone } from './VariationDropZone';
-import type { VariationStatus, VariationCategory, VariationWithCostLine, CreateVariationInput } from '@/types/variation';
+import type { VariationStatus, VariationCategory, VariationWithCostLine, CreateVariationInput, UpdateVariationInput } from '@/types/variation';
 import type { CostLineWithCalculations } from '@/types/cost-plan';
-
-// App color palette - consistent with global styles
-const COLORS = {
-    bg: {
-        primary: 'var(--color-bg-primary)',
-        secondary: 'var(--color-bg-secondary)',
-        tertiary: 'var(--color-bg-tertiary)',
-        hover: 'var(--color-bg-tertiary)',
-    },
-    text: {
-        primary: 'var(--color-text-primary)',
-        secondary: 'var(--color-text-muted)',
-        muted: 'var(--color-text-muted)',
-    },
-    border: {
-        primary: 'var(--color-border)',
-        secondary: 'var(--color-border)',
-    },
-    accent: {
-        blue: 'var(--color-accent-green)',
-        variation: 'var(--primitive-copper)',  // copper - unified accent
-    },
-    status: {
-        forecast: { bg: 'bg-yellow-900/40', text: 'text-yellow-400', border: 'border-yellow-600' },
-        approved: { bg: 'bg-green-900/40', text: 'text-green-400', border: 'border-green-600' },
-        rejected: { bg: 'bg-red-900/40', text: 'text-red-400', border: 'border-red-600' },
-        withdrawn: { bg: 'bg-gray-700/40', text: 'text-gray-400', border: 'border-gray-600' },
-    },
-    category: {
-        Principal: 'bg-blue-900/40 text-blue-400 border-blue-600',
-        Contractor: 'bg-purple-900/40 text-purple-400 border-purple-600',
-        'Lessor Works': 'bg-orange-900/40 text-orange-400 border-orange-600',
-    },
-};
 
 // Sort column type for sortable headers
 type SortColumn = 'variationNumber' | 'description' | 'costLine' | 'status' | 'forecast' | 'approved' | 'date' | 'category';
 
-interface VariationsPanelProps {
-    projectId: string;
+function SortIndicator({
+    column,
+    sortColumn,
+    sortDirection,
+}: {
+    column: SortColumn;
+    sortColumn: SortColumn | null;
+    sortDirection: 'asc' | 'desc';
+}) {
+    if (sortColumn !== column) return null;
+    return sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
 }
 
-export function VariationsPanel({ projectId }: VariationsPanelProps) {
+interface VariationsPanelProps {
+    projectId: string;
+    renderTabsList?: () => ReactNode;
+}
+
+export function VariationsPanel({ projectId, renderTabsList }: VariationsPanelProps) {
     const { variations, isLoading, error, refetch } = useVariations(projectId);
     const { createVariation, updateVariation, deleteVariation, isSubmitting } = useVariationMutations(projectId, refetch);
     const { costLines } = useCostLines(projectId);
@@ -132,7 +112,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
 
     if (error) {
         return (
-            <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
+            <div className="h-full flex items-center justify-center" style={{ background: 'var(--sw-paper)' }}>
                 <div className="text-center">
                     <p className="text-[var(--color-accent-coral)] mb-2">Failed to load variations</p>
                     <button onClick={() => refetch()} className="text-sm text-[var(--color-accent-teal)] hover:opacity-80">
@@ -143,12 +123,6 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
         );
     }
 
-    // Render sort indicator
-    const SortIndicator = ({ column }: { column: SortColumn }) => {
-        if (sortColumn !== column) return null;
-        return sortDirection === 'asc' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />;
-    };
-
     // Handle upload complete - refresh variations list
     const handleUploadComplete = () => {
         refetch();
@@ -156,19 +130,30 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
 
     return (
         <VariationDropZone projectId={projectId} onUploadComplete={handleUploadComplete}>
-            <div className="h-full flex flex-col text-xs">
+            <div className="h-full flex flex-col text-xs" style={{ background: 'var(--sw-paper)' }}>
                 {/* Toolbar */}
-                <div className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}>
-                    <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
-                        <Upload className="h-3 w-3" />
-                        Drop Variation
-                    </span>
+                <div
+                    className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
+                    style={{
+                        background: 'var(--sw-paper)',
+                        borderBottom: '1px solid var(--sw-rule)',
+                    }}
+                >
+                    <div className="min-w-0 flex-shrink-0">
+                        {renderTabsList?.()}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-[10px] text-[var(--color-text-muted)] flex items-center gap-1">
+                            <Upload className="h-3 w-3" />
+                            Drop Variation
+                        </span>
+                    </div>
                 </div>
 
                 {/* Table */}
-                <div className="flex-1 overflow-auto @container">
-                    <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed' }}>
-                        <thead className="sticky top-0 z-10 backdrop-blur-sm shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
+                <div className="flex-1 overflow-auto @container" style={{ background: 'var(--sw-paper)' }}>
+                    <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed', fontFamily: 'var(--sw-font-mono)', background: 'white' }}>
+                        <thead className="sticky top-0 z-10 shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ background: 'white' }}>
                         <tr>
                             <th
                                 className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[70px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
@@ -176,7 +161,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                             >
                                 <div className="flex items-center gap-1">
                                     Var No.
-                                    <SortIndicator column="variationNumber" />
+                                    <SortIndicator column="variationNumber" sortColumn={sortColumn} sortDirection={sortDirection} />
                                 </div>
                             </th>
                             <th
@@ -185,7 +170,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                             >
                                 <div className="flex items-center gap-1">
                                     Description
-                                    <SortIndicator column="description" />
+                                    <SortIndicator column="description" sortColumn={sortColumn} sortDirection={sortDirection} />
                                 </div>
                             </th>
                             <th
@@ -194,7 +179,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                             >
                                 <div className="flex items-center gap-1">
                                     Cost Line
-                                    <SortIndicator column="costLine" />
+                                    <SortIndicator column="costLine" sortColumn={sortColumn} sortDirection={sortDirection} />
                                 </div>
                             </th>
                             <th
@@ -203,7 +188,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                             >
                                 <div className="flex items-center gap-1">
                                     Status
-                                    <SortIndicator column="status" />
+                                    <SortIndicator column="status" sortColumn={sortColumn} sortDirection={sortDirection} />
                                 </div>
                             </th>
                             <th
@@ -212,7 +197,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                             >
                                 <div className="flex items-center justify-end gap-1">
                                     Forecast
-                                    <SortIndicator column="forecast" />
+                                    <SortIndicator column="forecast" sortColumn={sortColumn} sortDirection={sortDirection} />
                                 </div>
                             </th>
                             <th
@@ -221,7 +206,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                             >
                                 <div className="flex items-center justify-end gap-1">
                                     Approved
-                                    <SortIndicator column="approved" />
+                                    <SortIndicator column="approved" sortColumn={sortColumn} sortDirection={sortDirection} />
                                 </div>
                             </th>
                             <th
@@ -230,7 +215,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                             >
                                 <div className="flex items-center gap-1">
                                     Date
-                                    <SortIndicator column="date" />
+                                    <SortIndicator column="date" sortColumn={sortColumn} sortDirection={sortDirection} />
                                 </div>
                             </th>
                             <th
@@ -239,7 +224,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                             >
                                 <div className="flex items-center justify-center gap-1">
                                     Cat
-                                    <SortIndicator column="category" />
+                                    <SortIndicator column="category" sortColumn={sortColumn} sortDirection={sortDirection} />
                                 </div>
                             </th>
                             <th className="px-2 py-2 text-center text-[var(--color-text-primary)] font-bold w-[40px] border-b border-b-[var(--color-border)]">
@@ -257,11 +242,11 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">Loading variations...</td>
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'white' }}>Loading variations...</td>
                             </tr>
                         ) : sortedVariations.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)] bg-[var(--color-bg-primary)]">
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'white' }}>
                                     No variations yet. Click the + icon to add one.
                                 </td>
                             </tr>
@@ -307,15 +292,7 @@ export function VariationsPanel({ projectId }: VariationsPanelProps) {
 interface VariationRowProps {
     variation: VariationWithCostLine;
     costLines: CostLineWithCalculations[];
-    onUpdate: (id: string, data: Partial<{
-        status: VariationStatus;
-        category: VariationCategory;
-        description: string;
-        costLineId: string | null;
-        amountForecastCents: number;
-        amountApprovedCents: number;
-        dateSubmitted: string;
-    }>) => Promise<any>;
+    onUpdate: (id: string, data: UpdateVariationInput) => Promise<unknown>;
     onDelete: () => void;
 }
 
@@ -341,7 +318,7 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
             if (editingField === 'dateSubmitted') {
                 try {
                     (inputRef.current as HTMLInputElement).showPicker?.();
-                } catch (e) {
+                } catch {
                     // showPicker() not supported in all browsers, fallback to regular focus
                 }
             } else {
@@ -436,26 +413,29 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                 )}
             </td>
             <td className="border-x border-[var(--color-border)] px-1 py-1 w-[180px] hidden @[800px]:table-cell">
-                <select
-                    value={variation.costLineId || ''}
-                    onChange={(e) => handleCostLineChange(e.target.value)}
-                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
-                    title={variation.costLine?.activity || ''}
-                    style={{ colorScheme: 'dark' }}
-                >
-                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
-                    {sortedCostLines.map((line) => {
-                        const stakeholderName = line.stakeholder?.name || '';
-                        const label = stakeholderName
-                            ? `${stakeholderName} - ${line.activity}`
-                            : line.activity;
-                        return (
-                            <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                                {label}
-                            </option>
-                        );
-                    })}
-                </select>
+                <div className="relative min-w-0">
+                    <select
+                        value={variation.costLineId || ''}
+                        onChange={(e) => handleCostLineChange(e.target.value)}
+                        className="w-full min-w-0 truncate appearance-none pl-1 pr-5 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+                        title={variation.costLine?.activity || ''}
+                        style={{ colorScheme: 'dark' }}
+                    >
+                        <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
+                        {sortedCostLines.map((line) => {
+                            const stakeholderName = line.stakeholder?.name || '';
+                            const label = stakeholderName
+                                ? `${stakeholderName} - ${line.activity}`
+                                : line.activity;
+                            return (
+                                <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                                    {label}
+                                </option>
+                            );
+                        })}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--color-text-primary)]" />
+                </div>
             </td>
             <td className="border-x border-[var(--color-border)] px-1 py-1 w-[90px] hidden @[700px]:table-cell">
                 <select
@@ -623,26 +603,29 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                 />
             </td>
             <td className="border-x border-[var(--color-border)] px-1 py-1 hidden @[800px]:table-cell">
-                <select
-                    value={formData.costLineId}
-                    onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
-                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
-                    title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
-                    style={{ colorScheme: 'dark' }}
-                >
-                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
-                    {sortedCostLines.map((line) => {
-                        const stakeholderName = line.stakeholder?.name || '';
-                        const label = stakeholderName
-                            ? `${stakeholderName} - ${line.activity}`
-                            : line.activity;
-                        return (
-                            <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                                {label}
-                            </option>
-                        );
-                    })}
-                </select>
+                <div className="relative min-w-0">
+                    <select
+                        value={formData.costLineId}
+                        onChange={(e) => setFormData({ ...formData, costLineId: e.target.value })}
+                        className="w-full min-w-0 truncate appearance-none pl-1.5 pr-5 py-1 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+                        title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
+                        style={{ colorScheme: 'dark' }}
+                    >
+                        <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
+                        {sortedCostLines.map((line) => {
+                            const stakeholderName = line.stakeholder?.name || '';
+                            const label = stakeholderName
+                                ? `${stakeholderName} - ${line.activity}`
+                                : line.activity;
+                            return (
+                                <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                                    {label}
+                                </option>
+                            );
+                        })}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--color-text-primary)]" />
+                </div>
             </td>
             <td className="border-x border-[var(--color-border)] px-2 py-1.5 hidden @[700px]:table-cell">
                 <span className="px-1.5 py-0.5 rounded text-[10px] border bg-yellow-900/40 text-yellow-400 border-yellow-600">

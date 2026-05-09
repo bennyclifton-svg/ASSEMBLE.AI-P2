@@ -131,7 +131,7 @@ export function MergeRowsDialog({
                                     className="flex justify-between text-xs bg-[var(--color-bg-secondary)] px-2 py-1 rounded"
                                 >
                                     <span className="text-[var(--color-text-muted)] truncate">{firm.companyName}</span>
-                                    <span className="text-[#4ec9b0] font-medium">
+                                    <span className="text-[var(--color-success)] font-medium">
                                         {formatCurrency(firmTotals.get(firm.id) || 0)}
                                     </span>
                                 </div>
@@ -167,7 +167,7 @@ export function MergeRowsDialog({
                     <Button
                         onClick={handleConfirm}
                         disabled={isMerging || !description.trim()}
-                        className="bg-[var(--color-accent-green)] hover:bg-[#1177bb] text-white"
+                        className="bg-[var(--color-accent-green)] hover:bg-[var(--color-accent-primary-hover)] text-white"
                     >
                         {isMerging ? (
                             <>

@@ -32,6 +32,8 @@ interface NumberedTabsProps<T extends { id: string }> {
     entityName?: string;
     /** Delete confirmation message */
     deleteMessage?: string;
+    /** Accent colour for active underline and indicator dots */
+    accentColor?: string;
 }
 
 export function NumberedTabs<T extends { id: string }>({
@@ -45,6 +47,7 @@ export function NumberedTabs<T extends { id: string }>({
     isLoading = false,
     entityName = 'item',
     deleteMessage,
+    accentColor = 'var(--sw-rose)',
 }: NumberedTabsProps<T>) {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -71,7 +74,7 @@ export function NumberedTabs<T extends { id: string }>({
 
     return (
         <>
-            <div className="flex items-center border-b border-[var(--color-border)]">
+            <div className="flex items-center border-b border-[var(--sw-rule-2)]">
                 {items.map((item, index) => {
                     const label = String(getItemNumber(item, index)).padStart(2, '0');
                     const isActive = item.id === activeItemId;
@@ -83,18 +86,20 @@ export function NumberedTabs<T extends { id: string }>({
                             className={cn(
                                 'relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer',
                                 isActive
-                                    ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
-                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                    ? 'text-[var(--sw-ink)] border-b-[3px] -mb-px'
+                                    : 'text-[var(--sw-muted)] hover:text-[var(--sw-ink)]'
                             )}
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                borderBottomColor: isActive ? accentColor : undefined,
+                            }}
                             onClick={() => onSelectItem(item.id)}
                         >
                             <span>{label}</span>
 
                             {/* Indicator dot (e.g., for transmittal) - only when inactive */}
                             {showIndicator && !isActive && (
-                                <span
-                                    className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#3fb950]"
-                                />
+                                <span className="absolute top-1 right-1 h-1.5 w-1.5" style={{ background: accentColor }} />
                             )}
 
                             {/* Delete button - visible on active, hover on inactive */}
@@ -102,10 +107,10 @@ export function NumberedTabs<T extends { id: string }>({
                                 <button
                                     onClick={(e) => handleDeleteClick(e, item.id)}
                                     className={cn(
-                                        'ml-1 p-0.5 rounded hover:bg-[var(--color-border)] transition-all',
+                                        'ml-1 p-0.5 hover:bg-[var(--sw-paper)] transition-all',
                                         isActive
-                                            ? 'opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                            : 'opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                            ? 'opacity-100 text-[var(--sw-muted)] hover:text-[var(--sw-ink)]'
+                                            : 'opacity-0 group-hover:opacity-100 text-[var(--sw-muted)] hover:text-[var(--sw-ink)]'
                                     )}
                                     title={`Delete ${entityName} ${label}`}
                                 >
@@ -120,7 +125,7 @@ export function NumberedTabs<T extends { id: string }>({
                 <button
                     onClick={onCreateItem}
                     disabled={isLoading}
-                    className="flex items-center justify-center px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center px-3 py-1.5 text-sm text-[var(--sw-muted)] hover:text-[var(--sw-ink)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     title={`Create new ${entityName}`}
                 >
                     {isLoading ? (

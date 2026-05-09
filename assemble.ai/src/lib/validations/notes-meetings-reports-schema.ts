@@ -7,13 +7,13 @@
  */
 
 import { z } from 'zod';
-import { NOTE_STATUSES, NOTE_TYPES } from '@/types/notes-meetings-reports';
+import { NOTE_COLORS, NOTE_STATUSES, NOTE_TYPES } from '@/types/notes-meetings-reports';
 
 // ============================================================================
 // NOTES VALIDATION
 // ============================================================================
 
-export const noteColorSchema = z.enum(['yellow', 'blue', 'green', 'pink']);
+export const noteColorSchema = z.enum(NOTE_COLORS);
 export const noteTypeSchema = z.enum(NOTE_TYPES);
 export const noteStatusSchema = z.enum(NOTE_STATUSES);
 

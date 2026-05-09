@@ -130,6 +130,7 @@ const MUTATING_TOOL_NAMES = new Set([
     'update_stakeholder',
     'set_project_objectives',
     'add_tender_firms',
+    'start_issue_variation_assessment_revision_workflow',
 ]);
 const NOTE_TOOL_NAMES = new Set(['create_note', 'update_note', 'attach_documents_to_note']);
 const PROGRAM_TOOL_NAMES = new Set([

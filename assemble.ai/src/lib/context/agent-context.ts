@@ -13,6 +13,7 @@ export const AGENT_CONTEXT_MODULE_PRESETS = {
     finance: DEFAULT_AGENT_CONTEXT_MODULES,
     program: ['projectInfo', 'profile', 'program', 'milestones', 'risks', 'procurement'],
     design: ['projectInfo', 'profile', 'stakeholders', 'procurement', 'program', 'risks', 'planningCard'],
+    delivery: ['projectInfo', 'profile', 'stakeholders', 'procurement', 'program', 'risks', 'costPlan'],
     orchestrator: ['projectInfo', 'profile', 'costPlan', 'program', 'risks', 'procurement', 'stakeholders'],
 } as const satisfies Record<string, readonly ModuleName[]>;
 

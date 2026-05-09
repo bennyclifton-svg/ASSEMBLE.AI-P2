@@ -184,8 +184,8 @@ export function UserProfileSection() {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-[#2a2d2e] rounded w-32" />
-          <div className="h-20 bg-[#2a2d2e] rounded" />
+          <div className="h-6 bg-[var(--color-bg-hover)] rounded w-32" />
+          <div className="h-20 bg-[var(--color-bg-hover)] rounded" />
         </div>
       </div>
     );
@@ -194,7 +194,7 @@ export function UserProfileSection() {
   if (error || !user) {
     return (
       <div className="p-6">
-        <div className="text-center text-[#f48771]">
+        <div className="text-center text-[var(--color-error)]">
           <p>{error || 'Failed to load profile'}</p>
           <Button onClick={fetchUser} className="mt-2" variant="outline" size="sm">
             Retry
@@ -206,16 +206,16 @@ export function UserProfileSection() {
 
   return (
     <div className="p-6 space-y-6">
-      <h3 className="text-lg font-semibold text-[#cccccc]">Profile</h3>
+      <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Profile</h3>
 
       {/* User Info */}
       <div className="space-y-4">
         {/* Display Name */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <User className="w-5 h-5 text-[#808080]" />
+            <User className="w-5 h-5 text-[var(--color-text-muted)]" />
             <div>
-              <label className="text-xs text-[#808080] uppercase tracking-wide">
+              <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wide">
                 Display Name
               </label>
               {isEditingName ? (
@@ -224,7 +224,7 @@ export function UserProfileSection() {
                     type="text"
                     value={editedName}
                     onChange={(e) => setEditedName(e.target.value)}
-                    className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc] h-8 w-48"
+                    className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)] h-8 w-48"
                     disabled={isSavingName}
                     autoFocus
                     onKeyDown={(e) => {
@@ -235,7 +235,7 @@ export function UserProfileSection() {
                   <button
                     onClick={handleSaveName}
                     disabled={isSavingName}
-                    className="p-1 text-[#4ec9b0] hover:bg-[#4ec9b0]/20 rounded"
+                    className="p-1 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 rounded"
                   >
                     {isSavingName ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -246,24 +246,24 @@ export function UserProfileSection() {
                   <button
                     onClick={handleCancelEditName}
                     disabled={isSavingName}
-                    className="p-1 text-[#f48771] hover:bg-[#f48771]/20 rounded"
+                    className="p-1 text-[var(--color-error)] hover:bg-[var(--color-error)]/20 rounded"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-[#cccccc]">{user.displayName}</span>
+                  <span className="text-[var(--color-text-primary)]">{user.displayName}</span>
                   <button
                     onClick={handleStartEditName}
-                    className="p-1 text-[#808080] hover:text-[#cccccc] hover:bg-[#2a2d2e] rounded"
+                    className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)] rounded"
                   >
                     <Pencil className="w-3 h-3" />
                   </button>
                 </div>
               )}
               {nameError && (
-                <p className="text-xs text-[#f48771] mt-1">{nameError}</p>
+                <p className="text-xs text-[var(--color-error)] mt-1">{nameError}</p>
               )}
             </div>
           </div>
@@ -271,31 +271,31 @@ export function UserProfileSection() {
 
         {/* Email (read-only) */}
         <div className="flex items-center gap-3">
-          <Mail className="w-5 h-5 text-[#808080]" />
+          <Mail className="w-5 h-5 text-[var(--color-text-muted)]" />
           <div>
-            <label className="text-xs text-[#808080] uppercase tracking-wide">
+            <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wide">
               Email
             </label>
-            <p className="text-[#cccccc] mt-1">{user.email}</p>
+            <p className="text-[var(--color-text-primary)] mt-1">{user.email}</p>
           </div>
         </div>
 
         {/* Password */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Lock className="w-5 h-5 text-[#808080]" />
+            <Lock className="w-5 h-5 text-[var(--color-text-muted)]" />
             <div>
-              <label className="text-xs text-[#808080] uppercase tracking-wide">
+              <label className="text-xs text-[var(--color-text-muted)] uppercase tracking-wide">
                 Password
               </label>
-              <p className="text-[#808080] mt-1">••••••••</p>
+              <p className="text-[var(--color-text-muted)] mt-1">••••••••</p>
             </div>
           </div>
           <Button
             onClick={() => setIsPasswordModalOpen(true)}
             variant="outline"
             size="sm"
-            className="border-[#3e3e42] text-[#cccccc] hover:bg-[#2a2d2e]"
+            className="border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
           >
             Change
           </Button>
@@ -303,12 +303,12 @@ export function UserProfileSection() {
       </div>
 
       {/* Logout */}
-      <div className="pt-4 border-t border-[#3e3e42]">
+      <div className="pt-4 border-t border-[var(--color-border)]">
         <Button
           onClick={handleLogout}
           disabled={isLoggingOut}
           variant="ghost"
-          className="text-[#f48771] hover:bg-[#f48771]/10 w-full justify-start"
+          className="text-[var(--color-error)] hover:bg-[var(--color-error)]/10 w-full justify-start"
         >
           {isLoggingOut ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -331,7 +331,7 @@ export function UserProfileSection() {
       >
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#cccccc] mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
               Current Password
             </label>
             <Input
@@ -340,14 +340,14 @@ export function UserProfileSection() {
               onChange={(e) =>
                 setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
               }
-              className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc]"
+              className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)]"
               disabled={isSavingPassword}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#cccccc] mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
               New Password
             </label>
             <Input
@@ -356,14 +356,14 @@ export function UserProfileSection() {
               onChange={(e) =>
                 setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
               }
-              className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc]"
+              className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)]"
               disabled={isSavingPassword}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#cccccc] mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
               Confirm New Password
             </label>
             <Input
@@ -372,14 +372,14 @@ export function UserProfileSection() {
               onChange={(e) =>
                 setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
               }
-              className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc]"
+              className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)]"
               disabled={isSavingPassword}
               required
             />
           </div>
 
           {passwordError && (
-            <p className="text-sm text-[#f48771]">{passwordError}</p>
+            <p className="text-sm text-[var(--color-error)]">{passwordError}</p>
           )}
 
           <div className="flex justify-end gap-3 pt-4">
@@ -392,14 +392,14 @@ export function UserProfileSection() {
                 setPasswordError(null);
               }}
               disabled={isSavingPassword}
-              className="border-[#3e3e42] text-[#cccccc] hover:bg-[#2a2d2e]"
+              className="border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSavingPassword}
-              className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+              className="bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
             >
               {isSavingPassword ? (
                 <>

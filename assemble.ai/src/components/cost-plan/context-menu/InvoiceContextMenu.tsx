@@ -67,10 +67,10 @@ function MenuItem({
   success = false,
 }: MenuItemProps) {
   const getColorClass = () => {
-    if (disabled) return 'text-[#6e6e6e] cursor-not-allowed';
-    if (danger) return 'text-[#f87171] hover:bg-[#f87171]/10';
-    if (success) return 'text-[#4ade80] hover:bg-[#4ade80]/10';
-    return 'text-[#cccccc] hover:bg-[#37373d]';
+    if (disabled) return 'text-[var(--color-text-muted)] cursor-not-allowed';
+    if (danger) return 'text-[var(--color-error)] hover:bg-[var(--color-error)]/10';
+    if (success) return 'text-[var(--color-success)] hover:bg-[var(--color-success)]/10';
+    return 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]';
   };
 
   return (
@@ -87,19 +87,19 @@ function MenuItem({
       </span>
       <span className="flex-1">{label}</span>
       {shortcut && (
-        <span className="text-xs text-[#6e6e6e] ml-4">{shortcut}</span>
+        <span className="text-xs text-[var(--color-text-muted)] ml-4">{shortcut}</span>
       )}
     </button>
   );
 }
 
 function MenuDivider() {
-  return <div className="my-1 border-t border-[#3e3e42]" />;
+  return <div className="my-1 border-t border-[var(--color-border)]" />;
 }
 
 function MenuHeader({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-3 py-1 text-xs text-[#6e6e6e] font-medium uppercase tracking-wider">
+    <div className="px-3 py-1 text-xs text-[var(--color-text-muted)] font-medium uppercase tracking-wider">
       {children}
     </div>
   );
@@ -185,7 +185,7 @@ export function InvoiceContextMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-[9999] bg-[#252526] border border-[#3e3e42] rounded-lg shadow-xl py-1 min-w-[220px]"
+      className="fixed z-[9999] bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-xl py-1 min-w-[220px]"
       style={{ left: pos.x, top: pos.y }}
     >
       {/* Invoice info header */}

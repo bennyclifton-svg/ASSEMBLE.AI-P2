@@ -80,21 +80,21 @@ type ViewMode = 'all' | 'changes';
 
 const STATUS_STYLES = {
   added: {
-    bg: 'bg-[#4ade80]/10',
-    text: 'text-[#4ade80]',
-    badge: 'bg-[#4ade80]/20 text-[#4ade80]',
+    bg: 'bg-[var(--color-success)]/10',
+    text: 'text-[var(--color-success)]',
+    badge: 'bg-[var(--color-success)]/20 text-[var(--color-success)]',
     label: 'Added',
   },
   removed: {
-    bg: 'bg-[#f87171]/10',
-    text: 'text-[#f87171]',
-    badge: 'bg-[#f87171]/20 text-[#f87171]',
+    bg: 'bg-[var(--color-error)]/10',
+    text: 'text-[var(--color-error)]',
+    badge: 'bg-[var(--color-error)]/20 text-[var(--color-error)]',
     label: 'Removed',
   },
   changed: {
-    bg: 'bg-[#fbbf24]/10',
-    text: 'text-[#fbbf24]',
-    badge: 'bg-[#fbbf24]/20 text-[#fbbf24]',
+    bg: 'bg-[var(--color-warning)]/10',
+    text: 'text-[var(--color-warning)]',
+    badge: 'bg-[var(--color-warning)]/20 text-[var(--color-warning)]',
     label: 'Changed',
   },
   unchanged: {
@@ -111,21 +111,21 @@ const STATUS_STYLES = {
 
 function ChangeIndicator({ oldValue, newValue }: { oldValue: number | null; newValue: number | null }) {
   if (oldValue === null || newValue === null) {
-    return <span className="text-[#6e6e6e]">--</span>;
+    return <span className="text-[var(--color-text-muted)]">--</span>;
   }
 
   const diff = newValue - oldValue;
   if (diff === 0) {
-    return <Minus className="w-4 h-4 text-[#6e6e6e]" />;
+    return <Minus className="w-4 h-4 text-[var(--color-text-muted)]" />;
   }
 
   return diff > 0 ? (
-    <div className="flex items-center gap-1 text-[#4ade80]">
+    <div className="flex items-center gap-1 text-[var(--color-success)]">
       <TrendingUp className="w-3 h-3" />
       <span className="text-xs">+{formatCurrency(diff)}</span>
     </div>
   ) : (
-    <div className="flex items-center gap-1 text-[#f87171]">
+    <div className="flex items-center gap-1 text-[var(--color-error)]">
       <TrendingDown className="w-3 h-3" />
       <span className="text-xs">{formatCurrency(diff)}</span>
     </div>
@@ -134,10 +134,10 @@ function ChangeIndicator({ oldValue, newValue }: { oldValue: number | null; newV
 
 function ValueCell({ value, strikethrough = false }: { value: number | null; strikethrough?: boolean }) {
   if (value === null) {
-    return <span className="text-[#6e6e6e]">--</span>;
+    return <span className="text-[var(--color-text-muted)]">--</span>;
   }
   return (
-    <span className={strikethrough ? 'line-through text-[#6e6e6e]' : ''}>
+    <span className={strikethrough ? 'line-through text-[var(--color-text-muted)]' : ''}>
       {formatCurrency(value)}
     </span>
   );
@@ -302,7 +302,7 @@ export function SnapshotCompareDialog({
               <div>Description</div>
               <div className="text-right">
                 <div>Budget</div>
-                <div className="flex items-center justify-end gap-2 text-[#6e6e6e] font-normal normal-case">
+                <div className="flex items-center justify-end gap-2 text-[var(--color-text-muted)] font-normal normal-case">
                   <span>Snapshot</span>
                   <ArrowRight className="w-3 h-3" />
                   <span>Current</span>
@@ -310,7 +310,7 @@ export function SnapshotCompareDialog({
               </div>
               <div className="text-right">
                 <div>Contract</div>
-                <div className="flex items-center justify-end gap-2 text-[#6e6e6e] font-normal normal-case">
+                <div className="flex items-center justify-end gap-2 text-[var(--color-text-muted)] font-normal normal-case">
                   <span>Snapshot</span>
                   <ArrowRight className="w-3 h-3" />
                   <span>Current</span>
@@ -318,7 +318,7 @@ export function SnapshotCompareDialog({
               </div>
               <div className="text-right">
                 <div>Forecast</div>
-                <div className="flex items-center justify-end gap-2 text-[#6e6e6e] font-normal normal-case">
+                <div className="flex items-center justify-end gap-2 text-[var(--color-text-muted)] font-normal normal-case">
                   <span>Snapshot</span>
                   <ArrowRight className="w-3 h-3" />
                   <span>Current</span>

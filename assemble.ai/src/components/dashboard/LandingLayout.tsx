@@ -7,7 +7,7 @@ import { User, LogOut, ChevronDown, Loader2 } from 'lucide-react';
 import { ProjectRegister } from './ProjectRegister';
 import { SettingsPanel } from './SettingsPanel';
 import { KnowledgeLibraryRepository } from '../libraries/KnowledgeLibraryRepository';
-import { Logo } from '../brand/Logo';
+import { SitewiseWordmark } from '../brand/SitewiseWordmark';
 
 interface UserData {
   id: string;
@@ -103,30 +103,30 @@ export function LandingLayout() {
 
   if (isLoadingUser) {
     return (
-      <div className="h-screen w-full bg-[#1e1e1e] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-[#808080] animate-spin" />
+      <div className="h-screen w-full bg-[var(--color-bg-primary)] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[var(--color-text-muted)] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-full bg-[#1e1e1e] flex flex-col">
+    <div className="h-screen w-full bg-[var(--color-bg-primary)] flex flex-col">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-3 border-b border-[#3e3e42] bg-[#252526] flex-shrink-0">
-        {/* Logo */}
-        <Logo size="md" className="ml-2" />
+      <header className="flex items-center justify-between px-6 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] flex-shrink-0">
+        {/* Wordmark */}
+        <SitewiseWordmark size={20} color="var(--color-text-primary)" accent="var(--sw-rose)" className="ml-2" />
 
         {/* User Menu */}
         <div className="relative">
           <button
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-[#2a2d2e] transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-[var(--color-bg-hover)] transition-colors"
           >
-            <div className="w-7 h-7 rounded-full bg-[#3e3e42] flex items-center justify-center">
-              <User className="w-4 h-4 text-[#cccccc]" />
+            <div className="w-7 h-7 rounded-full bg-[var(--color-border)] flex items-center justify-center">
+              <User className="w-4 h-4 text-[var(--color-text-primary)]" />
             </div>
-            <span className="text-sm text-[#cccccc]">{user?.displayName || 'User'}</span>
-            <ChevronDown className="w-4 h-4 text-[#808080]" />
+            <span className="text-sm text-[var(--color-text-primary)]">{user?.displayName || 'User'}</span>
+            <ChevronDown className="w-4 h-4 text-[var(--color-text-muted)]" />
           </button>
 
           {isUserMenuOpen && (
@@ -138,17 +138,17 @@ export function LandingLayout() {
               />
 
               {/* Menu */}
-              <div className="absolute right-0 top-full mt-1 w-48 bg-[#252526] border border-[#3e3e42] rounded shadow-lg z-20">
-                <div className="p-3 border-b border-[#3e3e42]">
-                  <p className="text-sm font-medium text-[#cccccc] truncate">
+              <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg z-20">
+                <div className="p-3 border-b border-[var(--color-border)]">
+                  <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
                     {user?.displayName}
                   </p>
-                  <p className="text-xs text-[#808080] truncate">{user?.email}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] truncate">{user?.email}</p>
                 </div>
                 <button
                   onClick={handleLogout}
                   disabled={isLoggingOut}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-[#f48771] hover:bg-[#2a2d2e] transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-[var(--color-error)] hover:bg-[var(--color-bg-hover)] transition-colors"
                 >
                   {isLoggingOut ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -174,14 +174,14 @@ export function LandingLayout() {
           <ProjectRegister onSelectProject={handleSelectProject} />
         </Panel>
 
-        <PanelResizeHandle className="w-1 bg-[#3e3e42] hover:bg-[#0e639c] transition-colors cursor-col-resize" />
+        <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize" />
 
         {/* Center Panel - Settings */}
         <Panel defaultSize={panelSizes[1]} minSize={30}>
           <SettingsPanel />
         </Panel>
 
-        <PanelResizeHandle className="w-1 bg-[#3e3e42] hover:bg-[#0e639c] transition-colors cursor-col-resize" />
+        <PanelResizeHandle className="w-1 bg-[var(--color-border)] hover:bg-[var(--color-accent-primary)] transition-colors cursor-col-resize" />
 
         {/* Right Panel - Knowledge Libraries */}
         <Panel defaultSize={panelSizes[2]} minSize={20}>

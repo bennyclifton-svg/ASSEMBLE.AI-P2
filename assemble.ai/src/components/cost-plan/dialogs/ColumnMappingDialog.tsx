@@ -231,38 +231,38 @@ export function ColumnMappingDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#252526] rounded-lg shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-[#3e3e42] flex items-center justify-between shrink-0">
+        <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between shrink-0">
           <div>
             <h2 className="text-lg font-semibold text-white flex items-center gap-2">
               <FileSpreadsheet className="w-5 h-5" />
               Map Columns
             </h2>
-            <p className="text-sm text-[#858585]">
+            <p className="text-sm text-[var(--color-text-muted)]">
               Match your file columns to cost plan fields
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-[#858585] hover:text-white rounded transition-colors"
+            className="p-1 text-[var(--color-text-muted)] hover:text-white rounded transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Actions Bar */}
-        <div className="px-4 py-2 border-b border-[#3e3e42] bg-[#1e1e1e] flex items-center gap-2 shrink-0">
+        <div className="px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)] flex items-center gap-2 shrink-0">
           <button
             onClick={handleAutoMap}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#cccccc] hover:text-white hover:bg-[#37373d] rounded transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)] hover:text-white hover:bg-[var(--color-bg-hover)] rounded transition-colors"
           >
             <Wand2 className="w-4 h-4" />
             Auto-Map
           </button>
           <button
             onClick={handleReset}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#cccccc] hover:text-white hover:bg-[#37373d] rounded transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)] hover:text-white hover:bg-[var(--color-bg-hover)] rounded transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
@@ -270,7 +270,7 @@ export function ColumnMappingDialog({
           {onSaveTemplate && (
             <button
               onClick={() => setShowSaveTemplate(!showSaveTemplate)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#cccccc] hover:text-white hover:bg-[#37373d] rounded transition-colors ml-auto"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)] hover:text-white hover:bg-[var(--color-bg-hover)] rounded transition-colors ml-auto"
             >
               <Save className="w-4 h-4" />
               Save Template
@@ -280,25 +280,25 @@ export function ColumnMappingDialog({
 
         {/* Save Template Form */}
         {showSaveTemplate && (
-          <div className="px-4 py-3 border-b border-[#3e3e42] bg-[#1e1e1e] flex items-center gap-2">
+          <div className="px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-primary)] flex items-center gap-2">
             <input
               type="text"
               value={templateName}
               onChange={(e) => setTemplateName(e.target.value)}
               placeholder="Template name..."
-              className="flex-1 px-3 py-1.5 bg-[#252526] border border-[#3e3e42] rounded text-[#cccccc] placeholder-[#6e6e6e] focus:outline-none focus:border-[#007acc]"
+              className="flex-1 px-3 py-1.5 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)]"
               autoFocus
             />
             <button
               onClick={handleSaveTemplate}
               disabled={!templateName.trim()}
-              className="px-3 py-1.5 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1.5 bg-[var(--color-accent-primary)] text-white rounded hover:bg-[var(--color-accent-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Save
             </button>
             <button
               onClick={() => setShowSaveTemplate(false)}
-              className="px-3 py-1.5 text-[#858585] hover:text-white transition-colors"
+              className="px-3 py-1.5 text-[var(--color-text-muted)] hover:text-white transition-colors"
             >
               Cancel
             </button>
@@ -308,18 +308,18 @@ export function ColumnMappingDialog({
         {/* Mapping Table */}
         <div className="flex-1 overflow-auto min-h-0">
           <table className="w-full">
-            <thead className="sticky top-0 bg-[#1e1e1e]">
-              <tr className="text-xs text-[#858585] uppercase tracking-wider">
-                <th className="px-4 py-2 text-left font-medium border-b border-[#3e3e42]">
+            <thead className="sticky top-0 bg-[var(--color-bg-primary)]">
+              <tr className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th className="px-4 py-2 text-left font-medium border-b border-[var(--color-border)]">
                   Target Field
                 </th>
-                <th className="px-4 py-2 text-center font-medium border-b border-[#3e3e42] w-10">
+                <th className="px-4 py-2 text-center font-medium border-b border-[var(--color-border)] w-10">
 
                 </th>
-                <th className="px-4 py-2 text-left font-medium border-b border-[#3e3e42]">
+                <th className="px-4 py-2 text-left font-medium border-b border-[var(--color-border)]">
                   Source Column
                 </th>
-                <th className="px-4 py-2 text-left font-medium border-b border-[#3e3e42] w-32">
+                <th className="px-4 py-2 text-left font-medium border-b border-[var(--color-border)] w-32">
                   Preview
                 </th>
               </tr>
@@ -336,22 +336,22 @@ export function ColumnMappingDialog({
                   <tr
                     key={field.key}
                     className={`
-                      border-b border-[#3e3e42] hover:bg-[#2a2d2e]
-                      ${showError ? 'bg-[#f87171]/5' : ''}
+                      border-b border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]
+                      ${showError ? 'bg-[var(--color-error)]/5' : ''}
                     `}
                   >
                     {/* Target Field */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[#cccccc] ${isRequired ? 'font-medium' : ''}`}>
+                        <span className={`text-[var(--color-text-primary)] ${isRequired ? 'font-medium' : ''}`}>
                           {field.label}
                         </span>
                         {isRequired && (
-                          <span className="text-[#f87171] text-xs">*</span>
+                          <span className="text-[var(--color-error)] text-xs">*</span>
                         )}
                       </div>
                       {field.description && (
-                        <p className="text-xs text-[#6e6e6e] mt-0.5">{field.description}</p>
+                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{field.description}</p>
                       )}
                     </td>
 
@@ -359,7 +359,7 @@ export function ColumnMappingDialog({
                     <td className="px-2 py-3 text-center">
                       <ArrowRight
                         className={`w-4 h-4 mx-auto ${
-                          hasMapping ? 'text-[#4ade80]' : 'text-[#4e4e4e]'
+                          hasMapping ? 'text-[var(--color-success)]' : 'text-[var(--color-text-muted)]'
                         }`}
                       />
                     </td>
@@ -371,9 +371,9 @@ export function ColumnMappingDialog({
                           value={mapping?.sourceColumn || ''}
                           onChange={(e) => updateMapping(field.key, e.target.value || null)}
                           className={`
-                            w-full px-3 py-2 bg-[#1e1e1e] border rounded text-[#cccccc]
-                            focus:outline-none focus:border-[#007acc] appearance-none cursor-pointer
-                            ${showError ? 'border-[#f87171]' : 'border-[#3e3e42]'}
+                            w-full px-3 py-2 bg-[var(--color-bg-primary)] border rounded text-[var(--color-text-primary)]
+                            focus:outline-none focus:border-[var(--color-accent-primary)] appearance-none cursor-pointer
+                            ${showError ? 'border-[var(--color-error)]' : 'border-[var(--color-border)]'}
                           `}
                         >
                           <option value="">-- Select column --</option>
@@ -384,18 +384,18 @@ export function ColumnMappingDialog({
                             <option key={col} value={col}>{col}</option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#858585] pointer-events-none" />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)] pointer-events-none" />
                       </div>
                     </td>
 
                     {/* Preview Value */}
                     <td className="px-4 py-3">
                       {hasMapping ? (
-                        <span className="text-sm text-[#858585] font-mono truncate block max-w-[120px]">
+                        <span className="text-sm text-[var(--color-text-muted)] font-mono truncate block max-w-[120px]">
                           {getSampleValue(mapping?.sourceColumn || null)}
                         </span>
                       ) : (
-                        <span className="text-sm text-[#4e4e4e]">--</span>
+                        <span className="text-sm text-[var(--color-text-muted)]">--</span>
                       )}
                     </td>
                   </tr>
@@ -407,8 +407,8 @@ export function ColumnMappingDialog({
 
         {/* Validation Errors */}
         {validationErrors.length > 0 && (
-          <div className="px-4 py-2 border-t border-[#3e3e42] bg-[#f87171]/10 shrink-0">
-            <div className="flex items-center gap-2 text-[#f87171]">
+          <div className="px-4 py-2 border-t border-[var(--color-border)] bg-[var(--color-error)]/10 shrink-0">
+            <div className="flex items-center gap-2 text-[var(--color-error)]">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span className="text-sm">
                 {validationErrors.length === 1
@@ -420,21 +420,21 @@ export function ColumnMappingDialog({
         )}
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-[#3e3e42] flex items-center justify-between shrink-0">
-          <div className="text-sm text-[#858585]">
+        <div className="px-4 py-3 border-t border-[var(--color-border)] flex items-center justify-between shrink-0">
+          <div className="text-sm text-[var(--color-text-muted)]">
             {mappings.filter((m) => m.sourceColumn).length} of {targetFields.length} fields mapped
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-[#cccccc] hover:text-white transition-colors"
+              className="px-4 py-2 text-[var(--color-text-primary)] hover:text-white transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleConfirm}
               disabled={validationErrors.length > 0}
-              className="px-4 py-2 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-[var(--color-accent-primary)] text-white rounded hover:bg-[var(--color-accent-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Check className="w-4 h-4" />
               Confirm Mapping

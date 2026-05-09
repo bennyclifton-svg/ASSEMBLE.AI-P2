@@ -26,81 +26,185 @@
       "scaleFields": {
         "default": [
           { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "1-3" },
-          { "key": "gfa_sqm", "label": "GFA (m²)", "type": "decimal", "min": 50, "placeholder": "50-800" },
-          { "key": "units", "label": "Units", "type": "integer", "min": 1, "placeholder": "1-500" }
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "min": 50, "placeholder": "50-800" },
+          { "key": "units", "label": "Units", "type": "integer", "min": 1, "placeholder": "1-500" },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "300-2,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "0.5:1" }
         ],
         "house": [
-          { "key": "gfa_sqm", "label": "GFA (m²)", "type": "decimal", "min": 50, "placeholder": "50-800" },
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "min": 50, "placeholder": "50-800" },
           { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "max": 3, "placeholder": "1-3" },
           { "key": "bedrooms", "label": "Bedrooms", "type": "integer", "min": 1, "placeholder": "2-6" },
-          { "key": "garage_spaces", "label": "Garage Spaces", "type": "integer", "min": 0, "placeholder": "0-4" }
+          { "key": "garage_spaces", "label": "Garage Spaces", "type": "integer", "min": 0, "placeholder": "0-4" },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "300-2,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "0.5:1" }
         ],
         "apartments": [
-          { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "Low 1-3, Mid 4-12, High 13-40" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "min": 500, "placeholder": "2000-50000" },
-          { "key": "units", "label": "Units", "type": "integer", "min": 1, "placeholder": "10-500" },
-          { "key": "avg_unit_sqm", "label": "Avg Unit Size (m²)", "type": "decimal", "min": 30, "placeholder": "50-150" }
+          { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "9" },
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "min": 500, "placeholder": "9,840" },
+          { "key": "units", "label": "Units", "type": "integer", "min": 1, "placeholder": "87" },
+          { "key": "avg_unit_sqm", "label": "Avg Unit Size", "type": "decimal", "unit": "m²", "min": 30, "placeholder": "108" },
+          {
+            "key": "unit_mix", "label": "Unit Mix", "type": "composite",
+            "parts": [
+              { "key": "studio", "min": 0, "placeholder": "12" },
+              { "key": "1b",     "min": 0, "placeholder": "38" },
+              { "key": "2b",     "min": 0, "placeholder": "32" },
+              { "key": "3b",     "min": 0, "placeholder": "5"  }
+            ],
+            "partsLabel": "studio · 1B · 2B · 3B"
+          },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "94" },
+              { "key": "basement_levels", "min": 0, "placeholder": "2"  }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "2,140" },
+          { "key": "plot_ratio",    "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "4.6:1" }
         ],
         "townhouses": [
           { "key": "dwellings", "label": "Dwellings", "type": "integer", "min": 1, "placeholder": "3-50" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "500-12500" },
-          { "key": "avg_dwelling_sqm", "label": "Avg Dwelling Size (m²)", "type": "decimal", "placeholder": "120-250" }
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "500-12,500" },
+          { "key": "avg_dwelling_sqm", "label": "Avg Dwelling Size", "type": "decimal", "unit": "m²", "placeholder": "120-250" },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "50" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0"  }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "1,500-10,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "0.6:1" }
         ],
         "btr": [
           { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "10-40" },
           { "key": "units", "label": "Units", "type": "integer", "min": 50, "placeholder": "100-500" },
-          { "key": "amenity_gfa_sqm", "label": "Amenity GFA (m²)", "type": "decimal", "placeholder": "500-2500" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "10000-50000" }
+          { "key": "amenity_gfa_sqm", "label": "Amenity GFA", "type": "decimal", "unit": "m²", "placeholder": "500-2,500" },
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "10,000-50,000" },
+          {
+            "key": "unit_mix", "label": "Unit Mix", "type": "composite",
+            "parts": [
+              { "key": "studio", "min": 0, "placeholder": "0" },
+              { "key": "1b",     "min": 0, "placeholder": "0" },
+              { "key": "2b",     "min": 0, "placeholder": "0" },
+              { "key": "3b",     "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "studio · 1B · 2B · 3B"
+          },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "0" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "2,000-10,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "5:1" }
         ],
         "student_housing": [
-          { "key": "beds", "label": "Beds", "type": "integer", "min": 50, "placeholder": "200-1000" },
+          { "key": "beds", "label": "Beds", "type": "integer", "min": 50, "placeholder": "200-1,000" },
           { "key": "cluster_apartments", "label": "Cluster Apartments", "type": "integer", "placeholder": "25-200" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "5000-30000" },
-          { "key": "common_area_sqm", "label": "Common Area (m²)", "type": "decimal", "placeholder": "500-3000" }
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "5,000-30,000" },
+          { "key": "common_area_sqm", "label": "Common Area", "type": "decimal", "unit": "m²", "placeholder": "500-3,000" },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "1,500-8,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "3:1" }
         ],
         "retirement_living_ilu": [
           { "key": "ilus", "label": "ILUs (count)", "type": "integer", "min": 1, "placeholder": "20-300" },
           { "key": "serviced_apartments", "label": "Serviced Apartments", "type": "integer", "min": 0, "placeholder": "0-50" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "2000-30000" },
-          { "key": "community_facilities_sqm", "label": "Community Facilities (m²)", "type": "decimal", "placeholder": "200-2000" },
-          { "key": "avg_ilu_sqm", "label": "Avg ILU Size (m²)", "type": "decimal", "placeholder": "60-120" }
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "2,000-30,000" },
+          { "key": "community_facilities_sqm", "label": "Community Facilities", "type": "decimal", "unit": "m²", "placeholder": "200-2,000" },
+          { "key": "avg_ilu_sqm", "label": "Avg ILU Size", "type": "decimal", "unit": "m²", "placeholder": "60-120" },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "0" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "5,000-50,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "1:1" }
         ],
         "aged_care_9c": [
           { "key": "beds", "label": "Total Beds", "type": "integer", "min": 30, "placeholder": "60-150" },
           { "key": "dementia_beds", "label": "Dementia Beds", "type": "integer", "min": 0, "placeholder": "0-40" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "3000-12000" },
-          { "key": "gfa_per_bed", "label": "GFA per Bed (m²)", "type": "decimal", "placeholder": "50-80" },
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "3,000-12,000" },
+          { "key": "gfa_per_bed", "label": "GFA per Bed", "type": "decimal", "unit": "m²", "placeholder": "50-80" },
           { "key": "households", "label": "Households/Wings", "type": "integer", "min": 1, "placeholder": "4-12" },
-          { "key": "beds_per_household", "label": "Beds per Household", "type": "integer", "placeholder": "10-16" }
+          { "key": "beds_per_household", "label": "Beds per Household", "type": "integer", "placeholder": "10-16" },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "5,000-20,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "1:1" }
         ],
         "social_affordable": [
           { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "3-12" },
           { "key": "units", "label": "Units", "type": "integer", "min": 1, "placeholder": "20-200" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "1500-15000" }
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "1,500-15,000" },
+          {
+            "key": "unit_mix", "label": "Unit Mix", "type": "composite",
+            "parts": [
+              { "key": "studio", "min": 0, "placeholder": "0" },
+              { "key": "1b",     "min": 0, "placeholder": "0" },
+              { "key": "2b",     "min": 0, "placeholder": "0" },
+              { "key": "3b",     "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "studio · 1B · 2B · 3B"
+          },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "0" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "1,000-8,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "2:1" }
         ],
         "coliving": [
           { "key": "beds", "label": "Beds", "type": "integer", "min": 10, "placeholder": "20-200" },
-          { "key": "shared_spaces_sqm", "label": "Shared Spaces (m²)", "type": "decimal", "placeholder": "100-1000" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "500-10000" },
-          { "key": "common_kitchens", "label": "Common Kitchens", "type": "integer", "min": 1, "placeholder": "2-20" }
+          { "key": "shared_spaces_sqm", "label": "Shared Spaces", "type": "decimal", "unit": "m²", "placeholder": "100-1,000" },
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "500-10,000" },
+          { "key": "common_kitchens", "label": "Common Kitchens", "type": "integer", "min": 1, "placeholder": "2-20" },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "500-5,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "2:1" }
         ],
         "manufactured_modular": [
           { "key": "dwellings", "label": "Dwellings", "type": "integer", "min": 1, "placeholder": "5-200" },
-          { "key": "factory_percent", "label": "Factory Built (%)", "type": "decimal", "min": 0, "max": 100, "placeholder": "60-95" },
-          { "key": "site_percent", "label": "Site Works (%)", "type": "decimal", "min": 0, "max": 100, "placeholder": "5-40" },
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "500-20000" }
+          { "key": "factory_percent", "label": "Factory Built", "type": "decimal", "unit": "%", "min": 0, "max": 100, "placeholder": "60-95" },
+          { "key": "site_percent", "label": "Site Works", "type": "decimal", "unit": "%", "min": 0, "max": 100, "placeholder": "5-40" },
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "500-20,000" },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "1,000-15,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "1:1" }
         ],
         "caravan_park": [
           { "key": "sites", "label": "Sites", "type": "integer", "min": 10, "placeholder": "50-500" },
           { "key": "permanent_dwellings", "label": "Permanent Dwellings", "type": "integer", "placeholder": "0-100" },
           { "key": "amenity_blocks", "label": "Amenity Blocks", "type": "integer", "min": 1, "placeholder": "2-20" },
-          { "key": "site_area_ha", "label": "Site Area (ha)", "type": "decimal", "placeholder": "2-50" }
+          { "key": "site_area_ha", "label": "Site Area", "type": "decimal", "unit": "ha", "placeholder": "2-50" },
+          { "key": "site_area_sqm", "label": "Built Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "500-5,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "0.05:1" }
         ],
         "heritage_conversion": [
-          { "key": "gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "500-20000" },
-          { "key": "heritage_floor_area_sqm", "label": "Heritage Floor Area (m²)", "type": "decimal", "placeholder": "200-15000" },
-          { "key": "new_build_sqm", "label": "New Build (m²)", "type": "decimal", "placeholder": "0-5000" },
-          { "key": "units", "label": "Units", "type": "integer", "min": 1, "placeholder": "5-100" }
+          { "key": "gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "500-20,000" },
+          { "key": "heritage_floor_area_sqm", "label": "Heritage Floor Area", "type": "decimal", "unit": "m²", "placeholder": "200-15,000" },
+          { "key": "new_build_sqm", "label": "New Build", "type": "decimal", "unit": "m²", "placeholder": "0-5,000" },
+          { "key": "units", "label": "Units", "type": "integer", "min": 1, "placeholder": "5-100" },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "0" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "500-5,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "2:1" }
         ]
       },
       "complexityOptions": {
@@ -277,14 +381,35 @@
       "scaleFields": {
         "default": [
           { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "1-60" },
-          { "key": "nla_sqm", "label": "NLA (m²)", "type": "decimal", "placeholder": "1000-80000" },
-          { "key": "gfa_sqm", "label": "GFA (m²)", "type": "decimal", "placeholder": "1200-100000" }
+          { "key": "nla_sqm", "label": "NLA", "type": "decimal", "unit": "m²", "placeholder": "1,000-80,000" },
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "placeholder": "1,200-100,000" },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "0" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "500-10,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "5:1" }
         ],
         "office": [
           { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "1-60" },
-          { "key": "nla_sqm", "label": "NLA (m²)", "type": "decimal", "placeholder": "1000-80000" },
-          { "key": "floor_plate_sqm", "label": "Floor Plate (m²)", "type": "decimal", "placeholder": "500-2500" },
-          { "key": "tenancies", "label": "Tenancies", "type": "integer", "placeholder": "1-100" }
+          { "key": "nla_sqm", "label": "NLA", "type": "decimal", "unit": "m²", "placeholder": "1,000-80,000" },
+          { "key": "floor_plate_sqm", "label": "Floor Plate", "type": "decimal", "unit": "m²", "placeholder": "500-2,500" },
+          { "key": "tenancies", "label": "Tenancies", "type": "integer", "placeholder": "1-100" },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "0" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "placeholder": "1,200-100,000" },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "500-10,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "8:1" }
         ],
         "retail_shopping": [
           { "key": "gla_sqm", "label": "GLA (m²)", "type": "decimal", "placeholder": "5000-100000" },
@@ -525,9 +650,20 @@
       ],
       "scaleFields": {
         "default": [
-          { "key": "gfa_sqm", "label": "GFA (m²)", "type": "decimal", "placeholder": "2000-75000" },
-          { "key": "clear_height_m", "label": "Clear Height (m)", "type": "decimal", "placeholder": "8-15" },
-          { "key": "dock_doors", "label": "Dock Doors", "type": "integer", "placeholder": "2-50" }
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "placeholder": "2,000-75,000" },
+          { "key": "clear_height_m", "label": "Clear Height", "type": "decimal", "unit": "m", "placeholder": "8-15" },
+          { "key": "dock_doors", "label": "Dock Doors", "type": "integer", "placeholder": "2-50" },
+          { "key": "yard_sqm", "label": "Yard / Hardstand", "type": "decimal", "unit": "m²", "placeholder": "1,000-20,000" },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",   "min": 0, "placeholder": "0" },
+              { "key": "trucks", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "car bays · truck bays"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "5,000-100,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "0.5:1" }
         ],
         "warehouse": [
           { "key": "gfa_sqm", "label": "GFA (m²)", "type": "decimal", "placeholder": "2000-75000" },
@@ -777,8 +913,19 @@
       ],
       "scaleFields": {
         "default": [
-          { "key": "gfa_sqm", "label": "GFA (m²)", "type": "decimal", "placeholder": "500-50000" },
-          { "key": "capacity", "label": "Capacity", "type": "integer", "placeholder": "50-2000" }
+          { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "1-10" },
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "placeholder": "500-50,000" },
+          { "key": "capacity", "label": "Capacity", "type": "integer", "placeholder": "50-2,000" },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "0" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "1,000-50,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "1:1" }
         ],
         "education_early": [
           { "key": "places", "label": "Places", "type": "integer", "min": 20, "placeholder": "30-120" },
@@ -1013,13 +1160,22 @@
       "scaleFields": {
         "default": [
           { "key": "total_storeys", "label": "Total Storeys", "type": "integer", "placeholder": "5-80" },
-          { "key": "total_gfa_sqm", "label": "Total GFA (m²)", "type": "decimal", "placeholder": "5000-150000" },
+          { "key": "total_gfa_sqm", "label": "Total GFA", "type": "decimal", "unit": "m²", "placeholder": "5,000-150,000" },
           { "key": "podium_levels", "label": "Podium Levels", "type": "integer", "placeholder": "1-6" },
           { "key": "tower_levels", "label": "Tower Levels", "type": "integer", "placeholder": "4-70" },
           { "key": "residential_units", "label": "Residential Units", "type": "integer", "placeholder": "50-500" },
-          { "key": "commercial_nla_sqm", "label": "Commercial NLA (m²)", "type": "decimal", "placeholder": "1000-20000" },
-          { "key": "retail_gla_sqm", "label": "Retail GLA (m²)", "type": "decimal", "placeholder": "500-10000" },
-          { "key": "car_parks", "label": "Car Parks", "type": "integer", "placeholder": "100-1000" }
+          { "key": "commercial_nla_sqm", "label": "Commercial NLA", "type": "decimal", "unit": "m²", "placeholder": "1,000-20,000" },
+          { "key": "retail_gla_sqm", "label": "Retail GLA", "type": "decimal", "unit": "m²", "placeholder": "500-10,000" },
+          {
+            "key": "parking", "label": "Parking", "type": "composite",
+            "parts": [
+              { "key": "bays",            "min": 0, "placeholder": "0" },
+              { "key": "basement_levels", "min": 0, "placeholder": "0" }
+            ],
+            "partsLabel": "bays · basement levels"
+          },
+          { "key": "site_area_sqm", "label": "Site Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "2,000-20,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "6:1" }
         ],
         "hotel_residential": [
           { "key": "total_storeys", "label": "Total Storeys", "type": "integer", "placeholder": "15-60" },
@@ -1161,8 +1317,10 @@
       ],
       "scaleFields": {
         "default": [
-          { "key": "length_km", "label": "Length (km)", "type": "decimal", "placeholder": "1-100" },
-          { "key": "capacity", "label": "Capacity", "type": "integer", "placeholder": "varies" }
+          { "key": "length_km", "label": "Length", "type": "decimal", "unit": "km", "placeholder": "1-100" },
+          { "key": "capacity", "label": "Capacity", "type": "integer", "placeholder": "varies" },
+          { "key": "footprint_sqm", "label": "Footprint", "type": "decimal", "unit": "m²", "placeholder": "1,000-100,000" },
+          { "key": "site_area_ha", "label": "Site Area", "type": "decimal", "unit": "ha", "placeholder": "1-500" }
         ],
         "roads": [
           { "key": "length_km", "label": "Length (km)", "type": "decimal", "placeholder": "1-100" },
@@ -2176,8 +2334,11 @@
       ],
       "scaleFields": {
         "default": [
-          { "key": "site_area_ha", "label": "Site Area (ha)", "type": "decimal", "placeholder": "1-1000" },
-          { "key": "gfa_sqm", "label": "GFA (m²)", "type": "decimal", "placeholder": "100-10000" }
+          { "key": "site_area_ha", "label": "Site Area", "type": "decimal", "unit": "ha", "placeholder": "1-1,000" },
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "placeholder": "100-10,000" },
+          { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "1-3" },
+          { "key": "site_area_sqm", "label": "Built Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "100-5,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "0.05:1" }
         ],
         "farm_buildings": [
           { "key": "shed_sqm", "label": "Shed Area (m²)", "type": "decimal", "placeholder": "200-5000" },
@@ -2315,9 +2476,12 @@
       ],
       "scaleFields": {
         "default": [
-          { "key": "gfa_sqm", "label": "GFA (m²)", "type": "decimal", "placeholder": "1000-100000" },
-          { "key": "site_area_ha", "label": "Site Area (ha)", "type": "decimal", "placeholder": "1-500" },
-          { "key": "secure_perimeter_m", "label": "Secure Perimeter (m)", "type": "integer", "placeholder": "500-10000" }
+          { "key": "gfa_sqm", "label": "GFA", "type": "decimal", "unit": "m²", "placeholder": "1,000-100,000" },
+          { "key": "site_area_ha", "label": "Site Area", "type": "decimal", "unit": "ha", "placeholder": "1-500" },
+          { "key": "secure_perimeter_m", "label": "Secure Perimeter", "type": "integer", "unit": "m", "placeholder": "500-10,000" },
+          { "key": "storeys", "label": "Storeys", "type": "integer", "min": 1, "placeholder": "1-10" },
+          { "key": "site_area_sqm", "label": "Built Area", "type": "decimal", "unit": "m²", "min": 1, "placeholder": "1,000-50,000" },
+          { "key": "plot_ratio", "label": "Plot Ratio", "type": "decimal", "min": 0, "placeholder": "0.5:1" }
         ],
         "military_base": [
           { "key": "site_area_ha", "label": "Site Area (ha)", "type": "decimal", "placeholder": "10-5000" },
@@ -2453,9 +2617,9 @@
     }
   },
   "projectTypes": [
-    { "value": "refurb", "label": "Refurbishment" },
-    { "value": "extend", "label": "Extension" },
-    { "value": "new", "label": "New Build" },
+    { "value": "refurb", "label": "Refurb" },
+    { "value": "extend", "label": "Extend" },
+    { "value": "new", "label": "New" },
     { "value": "remediation", "label": "Remediation" },
     { "value": "advisory", "label": "Advisory" }
   ],
@@ -2494,7 +2658,7 @@
     "applicableProjectTypes": ["refurb", "remediation", "extend", "new", "advisory"],
     "remediation": {
       "envelope": {
-        "label": "Building Envelope",
+        "label": "Envelope",
         "items": [
           { "value": "facade_remediation", "label": "Facade Remediation", "consultants": ["Facade", "Structural"] },
           { "value": "roof_waterproofing", "label": "Roof Waterproofing", "consultants": ["Waterproofing"] },
@@ -2643,7 +2807,7 @@
     },
     "new": {
       "enabling_works": {
-        "label": "Enabling Works",
+        "label": "Enabling",
         "items": [
           { "value": "demolition", "label": "Demolition", "consultants": ["Demolition", "Hazmat"] },
           { "value": "site_clearance", "label": "Site Clearance", "consultants": ["Civil"] },
@@ -2654,7 +2818,7 @@
         ]
       },
       "civil_works": {
-        "label": "Civil Works",
+        "label": "Civil",
         "items": [
           { "value": "earthworks_detailed", "label": "Detailed Earthworks", "consultants": ["Civil"] },
           { "value": "site_drainage", "label": "Site Drainage", "consultants": ["Civil", "Hydraulic"] },
@@ -2675,7 +2839,7 @@
         ]
       },
       "envelope": {
-        "label": "Building Envelope",
+        "label": "Envelope",
         "items": [
           { "value": "facade_system", "label": "Facade System", "consultants": ["Facade", "Architect"] },
           { "value": "curtain_wall", "label": "Curtain Wall", "consultants": ["Facade"] },
@@ -2685,7 +2849,7 @@
         ]
       },
       "services": {
-        "label": "Building Services",
+        "label": "Services",
         "items": [
           { "value": "mechanical_hvac", "label": "Mechanical/HVAC", "consultants": ["Mechanical"] },
           { "value": "electrical_power", "label": "Electrical/Power", "consultants": ["Electrical"] },
@@ -2698,7 +2862,7 @@
         ]
       },
       "fitout": {
-        "label": "Internal Fitout",
+        "label": "Fit Out",
         "items": [
           { "value": "partitions_walls", "label": "Partitions/Internal Walls", "consultants": ["Architect"] },
           { "value": "ceilings", "label": "Ceilings", "consultants": ["Architect"] },
@@ -2708,7 +2872,7 @@
         ]
       },
       "external_works": {
-        "label": "External Works",
+        "label": "External",
         "items": [
           { "value": "landscaping", "label": "Landscaping", "consultants": ["Landscape"] },
           { "value": "car_parking", "label": "Car Parking", "consultants": ["Civil", "Traffic"] },

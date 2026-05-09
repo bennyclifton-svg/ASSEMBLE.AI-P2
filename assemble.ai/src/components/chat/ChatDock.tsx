@@ -29,6 +29,12 @@ interface ThreadShape {
     projectId: string;
 }
 
+interface OpenChatThreadDetail {
+    projectId: string;
+    threadId: string;
+    threadTitle?: string;
+}
+
 export function ChatDock({ projectId }: ChatDockProps) {
     const [collapsed, setCollapsed] = useState(true);
     const [height, setHeight] = useState(DEFAULT_HEIGHT);
@@ -216,6 +222,29 @@ export function ChatDock({ projectId }: ChatDockProps) {
         }
     }, [loadMessages, projectId, thread]);
 
+    useEffect(() => {
+        const handleOpenThread = (event: Event) => {
+            const detail = (event as CustomEvent<OpenChatThreadDetail>).detail;
+            if (!detail || detail.projectId !== projectId || !detail.threadId) return;
+            const nextThread: ThreadShape = {
+                id: detail.threadId,
+                title: detail.threadTitle || 'Project conversation',
+                projectId,
+            };
+            setThread(nextThread);
+            setCollapsed(false);
+            setError(null);
+            uiActionSinceRef.current = Date.now();
+            void loadMessages(detail.threadId);
+            schedulePostSendRehydration(detail.threadId);
+        };
+
+        window.addEventListener('assemble:open-chat-thread', handleOpenThread);
+        return () => {
+            window.removeEventListener('assemble:open-chat-thread', handleOpenThread);
+        };
+    }, [loadMessages, projectId, schedulePostSendRehydration]);
+
     // When the SSE stream reports a new assistant message, refetch the thread
     // so the canonical content (including tool-result-derived prose) shows up.
     useEffect(() => {
@@ -352,12 +381,16 @@ export function ChatDock({ projectId }: ChatDockProps) {
         [height]
     );
 
-    // Keep the center panel from being covered by the dock.
+    // Keep the center panel from being covered by the dock, including the
+    // collapsed header bar.
     // We write a CSS variable onto the anchor element so ResizableLayout can
     // reserve the right amount of space without needing prop-drilling.
     useEffect(() => {
         if (!anchorEl) return;
-        anchorEl.style.setProperty('--chat-dock-height', `${collapsed ? 0 : height}px`);
+        anchorEl.style.setProperty(
+            '--chat-dock-height',
+            `${collapsed ? COLLAPSED_HEIGHT : height}px`
+        );
 
         return () => {
             anchorEl.style.removeProperty('--chat-dock-height');

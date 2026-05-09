@@ -102,4 +102,50 @@ describe('MessageList approvals', () => {
         expect(before.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
         expect(card.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
+
+    it('hides workflow scaffold chatter after all approval cards resolve', () => {
+        const scaffold =
+            'I prepared the contractor variation workflow for review. Start with the available approval card, then the dependent steps will unlock in order.';
+
+        const { rerender } = render(
+            <MessageList
+                messages={[
+                    {
+                        id: 'scaffold',
+                        role: 'assistant',
+                        content: scaffold,
+                        agentName: 'delivery',
+                        createdAt: '2026-05-07T01:00:00.000Z',
+                    },
+                ]}
+                activeRun={null}
+                approvals={{
+                    pending: approval('pending', null, '2026-05-07T01:01:00.000Z'),
+                }}
+            />
+        );
+
+        expect(screen.getByText(scaffold)).toBeInTheDocument();
+
+        rerender(
+            <MessageList
+                messages={[
+                    {
+                        id: 'scaffold',
+                        role: 'assistant',
+                        content: scaffold,
+                        agentName: 'delivery',
+                        createdAt: '2026-05-07T01:00:00.000Z',
+                    },
+                ]}
+                activeRun={null}
+                approvals={{
+                    applied: approval('applied', { status: 'applied' }, '2026-05-07T01:01:00.000Z'),
+                }}
+            />
+        );
+
+        expect(screen.queryByText(scaffold)).not.toBeInTheDocument();
+        expect(screen.getByText('Approval applied')).toBeInTheDocument();
+    });
 });

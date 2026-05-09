@@ -1,7 +1,8 @@
 /**
  * Pricing Section Component
- * Displays subscription tiers with CTAs
- * Auth-aware: triggers Polar checkout for logged-in users, links to register for guests
+ * Displays subscription tiers with CTAs.
+ * Auth-aware: triggers Polar checkout for logged-in users, links to register for guests.
+ * Devtools Rose dialect — paper surface, mono labels, rose accent for the highlighted tier.
  */
 
 'use client';
@@ -88,7 +89,6 @@ export function PricingSection({
     onPeriodChange,
     showToggle = true,
 }: PricingSectionProps) {
-    // Internal state for when used standalone (e.g. landing page)
     const [internalPeriod, setInternalPeriod] = useState<'monthly' | 'annually'>('monthly');
     const billingPeriod = externalPeriod ?? internalPeriod;
     const handlePeriodChange = onPeriodChange ?? setInternalPeriod;
@@ -101,166 +101,360 @@ export function PricingSection({
 
     const handleCheckout = async (tier: PricingTier) => {
         if (!tier.polarProductId) return;
-
         setLoadingTier(tier.id);
         setError(null);
-
         try {
             await checkout({ slug: tier.id });
         } catch (err) {
             console.error('Checkout error:', err);
-            setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+            setError(
+                err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+            );
             setLoadingTier(null);
         }
     };
 
     return (
-        <section className="py-20 sm:py-32" id="pricing">
-            <div className="mx-auto max-w-7xl px-6 lg:px-8">
-                <div className="mx-auto max-w-2xl text-center">
-                    <h2 className="text-base font-semibold leading-7 text-blue-400">
-                        Simple Pricing
-                    </h2>
-                    <p className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                        Choose the right plan for your team
+        <section
+            id="pricing"
+            className="relative overflow-hidden py-24"
+            style={{ background: 'var(--sw-paper-2)', fontFamily: 'var(--sw-font-sans)' }}
+        >
+            <div className="relative max-w-[1280px] mx-auto px-8">
+                <div className="text-center max-w-2xl mx-auto">
+                    <p
+                        className="mb-3"
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 11,
+                            color: 'var(--sw-rose-dk)',
+                            letterSpacing: '0.18em',
+                            textTransform: 'uppercase',
+                            fontWeight: 600,
+                        }}
+                    >
+                        // Pricing
                     </p>
-                    <p className="mt-6 text-lg leading-8 text-gray-400">
+                    <h2
+                        className="m-0 text-balance"
+                        style={{
+                            fontFamily: 'var(--sw-font-sans)',
+                            fontSize: 'clamp(32px, 3.6vw, 44px)',
+                            fontWeight: 700,
+                            lineHeight: 1.1,
+                            letterSpacing: '-0.025em',
+                            color: 'var(--sw-ink)',
+                        }}
+                    >
+                        Choose the right plan for your team
+                    </h2>
+                    <p
+                        className="mt-5"
+                        style={{
+                            fontFamily: 'var(--sw-font-body)',
+                            fontSize: 17,
+                            lineHeight: 1.6,
+                            color: 'var(--sw-muted)',
+                        }}
+                    >
                         Start free and scale as you grow. All plans include a 14-day free trial.
                     </p>
                 </div>
 
-                {/* Billing toggle */}
+                {/* Billing toggle — segmented control, no rounded pill */}
                 {showToggle && (
                     <div className="mt-10 flex justify-center">
-                        <div className="inline-flex rounded-lg border border-gray-700 p-1">
-                            <button
-                                type="button"
-                                onClick={() => handlePeriodChange('monthly')}
-                                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                                    billingPeriod === 'monthly'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-400 hover:text-white'
-                                }`}
-                            >
-                                Monthly
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handlePeriodChange('annually')}
-                                className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
-                                    billingPeriod === 'annually'
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-gray-400 hover:text-white'
-                                }`}
-                            >
-                                Annually
-                                <span className="ml-1.5 text-xs text-green-400">Save 20%</span>
-                            </button>
+                        <div
+                            className="inline-flex"
+                            style={{
+                                background: 'var(--sw-paper)',
+                                border: '1px solid var(--sw-rule)',
+                                padding: 2,
+                            }}
+                        >
+                            {(['monthly', 'annually'] as const).map((period) => {
+                                const active = billingPeriod === period;
+                                return (
+                                    <button
+                                        key={period}
+                                        type="button"
+                                        onClick={() => handlePeriodChange(period)}
+                                        className="transition-colors"
+                                        style={{
+                                            fontFamily: 'var(--sw-font-mono)',
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            letterSpacing: '0.12em',
+                                            textTransform: 'uppercase',
+                                            padding: '8px 16px',
+                                            background: active ? 'var(--sw-ink)' : 'transparent',
+                                            color: active ? 'var(--sw-paper)' : 'var(--sw-muted)',
+                                            border: 'none',
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {period === 'monthly' ? 'Monthly' : 'Annually'}
+                                        {period === 'annually' && (
+                                            <span
+                                                style={{
+                                                    marginLeft: 8,
+                                                    color: active ? 'var(--sw-rose)' : 'var(--sw-rose-dk)',
+                                                }}
+                                            >
+                                                −20%
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}
 
-                {/* Error message */}
                 {error && (
-                    <div className="mx-auto mt-6 max-w-lg rounded-lg border border-red-500/30 bg-red-950/30 p-3 text-center text-sm text-red-400">
+                    <div
+                        className="mx-auto mt-6 max-w-lg p-3 text-center text-sm"
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            background: 'var(--sw-rose-tint)',
+                            border: '1px solid var(--sw-rose)',
+                            color: 'var(--sw-rose-dk)',
+                        }}
+                    >
                         {error}
                     </div>
                 )}
 
                 {/* Pricing cards */}
-                <div className="mx-auto mt-16 grid max-w-lg grid-cols-1 gap-8 lg:max-w-none lg:grid-cols-3">
+                <div className="mt-14 grid max-w-lg mx-auto grid-cols-1 gap-6 lg:max-w-none lg:grid-cols-3">
                     {pricingTiers.map((tier) => (
-                        <div
+                        <PricingCard
                             key={tier.id}
-                            className={`flex flex-col rounded-2xl border p-8 ${
-                                tier.highlighted
-                                    ? 'border-blue-500 bg-blue-950/30 ring-1 ring-blue-500'
-                                    : 'border-gray-800 bg-[#252526]'
-                            }`}
-                        >
-                            {tier.highlighted && (
-                                <p className="mb-4 text-center text-sm font-semibold text-blue-400">
-                                    Most Popular
-                                </p>
-                            )}
-                            <h3 className="text-xl font-semibold text-white">{tier.name}</h3>
-                            <p className="mt-2 text-sm text-gray-400">{tier.description}</p>
-                            <div className="mt-6 flex items-baseline gap-x-1">
-                                <span className="text-4xl font-bold tracking-tight text-white">
-                                    ${billingPeriod === 'annually' ? tier.price.annually : tier.price.monthly}
-                                </span>
-                                {tier.price.monthly > 0 && (
-                                    <span className="text-sm text-gray-400">/month</span>
-                                )}
-                            </div>
-                            {tier.price.monthly > 0 && billingPeriod === 'annually' && (
-                                <p className="mt-1 text-sm text-gray-500">
-                                    Billed as ${tier.price.annually * 12}/year
-                                </p>
-                            )}
-
-                            <ul className="mt-8 flex-1 space-y-3 text-sm leading-6 text-gray-300">
-                                {tier.features.map((feature) => (
-                                    <li key={feature} className="flex gap-x-3">
-                                        <Check className="h-5 w-5 flex-none text-blue-400" />
-                                        {feature}
-                                    </li>
-                                ))}
-                            </ul>
-
-                            {/* Auth-aware CTA: checkout for logged-in, register link for guests */}
-                            {isLoggedIn && tier.polarProductId ? (
-                                <button
-                                    onClick={() => handleCheckout(tier)}
-                                    disabled={loadingTier === tier.id}
-                                    className={`mt-8 flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors ${
-                                        tier.highlighted
-                                            ? 'bg-blue-600 text-white hover:bg-blue-500'
-                                            : 'bg-gray-700 text-white hover:bg-gray-600'
-                                    } disabled:opacity-60`}
-                                >
-                                    {loadingTier === tier.id ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Processing...
-                                        </>
-                                    ) : (
-                                        'Upgrade Now'
-                                    )}
-                                </button>
-                            ) : isLoggedIn && tier.id === 'free' ? (
-                                <Link
-                                    href="/dashboard"
-                                    className="mt-8 block rounded-lg bg-gray-700 px-4 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-gray-600"
-                                >
-                                    Go to Dashboard
-                                </Link>
-                            ) : (
-                                <Link
-                                    href={tier.id === 'free' ? '/register' : `/register?plan=${tier.id}`}
-                                    className={`mt-8 block rounded-lg px-4 py-3 text-center text-sm font-semibold transition-colors ${
-                                        tier.highlighted
-                                            ? 'bg-blue-600 text-white hover:bg-blue-500'
-                                            : 'bg-gray-700 text-white hover:bg-gray-600'
-                                    }`}
-                                >
-                                    {tier.cta}
-                                </Link>
-                            )}
-                        </div>
+                            tier={tier}
+                            billingPeriod={billingPeriod}
+                            isLoggedIn={isLoggedIn}
+                            loading={loadingTier === tier.id}
+                            onCheckout={() => handleCheckout(tier)}
+                        />
                     ))}
                 </div>
 
-                {/* Bottom note */}
-                <p className="mt-10 text-center text-sm text-gray-500">
+                <p
+                    className="mt-10 text-center"
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 11,
+                        color: 'var(--sw-muted)',
+                        letterSpacing: '0.02em',
+                    }}
+                >
                     All prices in AUD. GST included where applicable.
                     <br />
                     Need a custom enterprise plan?{' '}
-                    <a href="mailto:sales@sitewise.au" className="text-blue-400 hover:text-blue-300">
+                    <a
+                        href="mailto:sales@sitewise.au"
+                        style={{ color: 'var(--sw-rose-dk)', textDecoration: 'underline' }}
+                    >
                         Contact us
                     </a>
                 </p>
             </div>
         </section>
+    );
+}
+
+function PricingCard({
+    tier,
+    billingPeriod,
+    isLoggedIn,
+    loading,
+    onCheckout,
+}: {
+    tier: PricingTier;
+    billingPeriod: 'monthly' | 'annually';
+    isLoggedIn: boolean;
+    loading: boolean;
+    onCheckout: () => void;
+}) {
+    const price = billingPeriod === 'annually' ? tier.price.annually : tier.price.monthly;
+
+    return (
+        <div
+            className="flex flex-col p-8"
+            style={{
+                background: tier.highlighted ? 'var(--sw-ink)' : 'var(--sw-paper)',
+                color: tier.highlighted ? 'var(--sw-paper)' : 'var(--sw-ink)',
+                border: tier.highlighted
+                    ? '1px solid var(--sw-rose)'
+                    : '1px solid var(--sw-rule)',
+                borderTop: tier.highlighted ? '3px solid var(--sw-rose)' : '1px solid var(--sw-rule)',
+                position: 'relative',
+            }}
+        >
+            {tier.highlighted && (
+                <div
+                    className="absolute top-0 right-0 px-2.5 py-1"
+                    style={{
+                        transform: 'translateY(-50%)',
+                        background: 'var(--sw-rose)',
+                        color: 'var(--sw-ink)',
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.18em',
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    Most popular
+                </div>
+            )}
+
+            <h3
+                style={{
+                    fontFamily: 'var(--sw-font-sans)',
+                    fontSize: 22,
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                }}
+            >
+                {tier.name}
+            </h3>
+            <p
+                className="mt-1"
+                style={{
+                    fontFamily: 'var(--sw-font-body)',
+                    fontSize: 13,
+                    color: tier.highlighted ? 'rgba(232,228,218,0.65)' : 'var(--sw-muted)',
+                }}
+            >
+                {tier.description}
+            </p>
+
+            <div className="mt-6 flex items-baseline gap-1">
+                <span
+                    style={{
+                        fontFamily: 'var(--sw-font-sans)',
+                        fontSize: 44,
+                        fontWeight: 800,
+                        letterSpacing: '-0.04em',
+                        fontVariantNumeric: 'tabular-nums',
+                        color: tier.highlighted ? 'var(--sw-rose)' : 'var(--sw-ink)',
+                    }}
+                >
+                    ${price}
+                </span>
+                {tier.price.monthly > 0 && (
+                    <span
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 12,
+                            color: tier.highlighted ? 'rgba(232,228,218,0.55)' : 'var(--sw-muted)',
+                        }}
+                    >
+                        /month
+                    </span>
+                )}
+            </div>
+            {tier.price.monthly > 0 && billingPeriod === 'annually' && (
+                <p
+                    className="mt-1"
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 11,
+                        color: tier.highlighted ? 'rgba(232,228,218,0.45)' : 'var(--sw-muted)',
+                    }}
+                >
+                    Billed as ${tier.price.annually * 12}/year
+                </p>
+            )}
+
+            <ul className="mt-8 flex-1 space-y-2.5">
+                {tier.features.map((feature) => (
+                    <li
+                        key={feature}
+                        className="flex items-start gap-2.5"
+                        style={{
+                            fontFamily: 'var(--sw-font-body)',
+                            fontSize: 14,
+                            lineHeight: 1.5,
+                            color: tier.highlighted ? 'rgba(232,228,218,0.85)' : 'var(--sw-ink)',
+                        }}
+                    >
+                        <Check
+                            className="flex-none mt-0.5"
+                            style={{
+                                width: 16,
+                                height: 16,
+                                color: tier.highlighted ? 'var(--sw-rose)' : 'var(--sw-rose-dk)',
+                            }}
+                        />
+                        {feature}
+                    </li>
+                ))}
+            </ul>
+
+            {isLoggedIn && tier.polarProductId ? (
+                <button
+                    onClick={onCheckout}
+                    disabled={loading}
+                    className="mt-8 inline-flex items-center justify-center gap-2 transition-opacity disabled:opacity-60"
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        padding: '12px 16px',
+                        background: tier.highlighted ? 'var(--sw-rose)' : 'var(--sw-ink)',
+                        color: tier.highlighted ? 'var(--sw-ink)' : 'var(--sw-paper)',
+                        border: 'none',
+                        cursor: 'pointer',
+                    }}
+                >
+                    {loading ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Processing…
+                        </>
+                    ) : (
+                        'Upgrade now →'
+                    )}
+                </button>
+            ) : isLoggedIn && tier.id === 'free' ? (
+                <Link
+                    href="/dashboard"
+                    className="mt-8 inline-flex items-center justify-center"
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        padding: '12px 16px',
+                        background: 'var(--sw-ink)',
+                        color: 'var(--sw-paper)',
+                    }}
+                >
+                    Go to dashboard →
+                </Link>
+            ) : (
+                <Link
+                    href={tier.id === 'free' ? '/register' : `/register?plan=${tier.id}`}
+                    className="mt-8 inline-flex items-center justify-center transition-opacity hover:opacity-90"
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        padding: '12px 16px',
+                        background: tier.highlighted ? 'var(--sw-rose)' : 'var(--sw-ink)',
+                        color: tier.highlighted ? 'var(--sw-ink)' : 'var(--sw-paper)',
+                    }}
+                >
+                    {tier.cta} →
+                </Link>
+            )}
+        </div>
     );
 }

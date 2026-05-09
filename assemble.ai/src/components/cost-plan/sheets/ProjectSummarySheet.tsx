@@ -37,8 +37,8 @@ const Workbook = dynamic(
 
 function SheetLoading() {
   return (
-    <div className="h-full flex items-center justify-center bg-[#1e1e1e]">
-      <div className="text-sm text-[#858585]">Loading spreadsheet...</div>
+    <div className="h-full flex items-center justify-center bg-[var(--color-bg-primary)]">
+      <div className="text-sm text-[var(--color-text-muted)]">Loading spreadsheet...</div>
     </div>
   );
 }
@@ -180,14 +180,14 @@ export function ProjectSummarySheet({
       />
       <style jsx global>{`
         .fortune-sheet-container {
-          --fortune-sheet-bg: #1e1e1e;
+          --fortune-sheet-bg: var(--color-bg-primary);
         }
         .fortune-sheet-container .luckysheet {
-          background-color: #1e1e1e !important;
+          background-color: var(--color-bg-primary) !important;
         }
         .fortune-sheet-container .luckysheet-cell-input {
-          background-color: #252526 !important;
-          color: #cccccc !important;
+          background-color: var(--color-bg-secondary) !important;
+          color: var(--color-text-primary) !important;
         }
       `}</style>
     </div>

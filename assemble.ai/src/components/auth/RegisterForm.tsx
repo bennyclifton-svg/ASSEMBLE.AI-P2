@@ -90,7 +90,7 @@ export function RegisterForm() {
       )}
 
       <div>
-        <label htmlFor="displayName" className="block text-sm text-[#cccccc] mb-1">
+        <label htmlFor="displayName" className="block text-sm text-[var(--color-text-primary)] mb-1">
           Display Name
         </label>
         <input
@@ -98,8 +98,8 @@ export function RegisterForm() {
           type="text"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
-          className={`w-full px-3 py-2 bg-[#3c3c3c] border rounded text-[#cccccc] focus:outline-none focus:border-[#007acc] ${
-            fieldErrors.displayName ? 'border-red-500' : 'border-[#3e3e42]'
+          className={`w-full px-3 py-2 bg-[var(--color-bg-secondary)] border rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] ${
+            fieldErrors.displayName ? 'border-red-500' : 'border-[var(--color-border)]'
           }`}
           placeholder="Your name"
           required
@@ -112,7 +112,7 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label htmlFor="email" className="block text-sm text-[#cccccc] mb-1">
+        <label htmlFor="email" className="block text-sm text-[var(--color-text-primary)] mb-1">
           Email
         </label>
         <input
@@ -120,8 +120,8 @@ export function RegisterForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={`w-full px-3 py-2 bg-[#3c3c3c] border rounded text-[#cccccc] focus:outline-none focus:border-[#007acc] ${
-            fieldErrors.email ? 'border-red-500' : 'border-[#3e3e42]'
+          className={`w-full px-3 py-2 bg-[var(--color-bg-secondary)] border rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] ${
+            fieldErrors.email ? 'border-red-500' : 'border-[var(--color-border)]'
           }`}
           placeholder="you@example.com"
           required
@@ -133,7 +133,7 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm text-[#cccccc] mb-1">
+        <label htmlFor="password" className="block text-sm text-[var(--color-text-primary)] mb-1">
           Password
         </label>
         <input
@@ -141,8 +141,8 @@ export function RegisterForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className={`w-full px-3 py-2 bg-[#3c3c3c] border rounded text-[#cccccc] focus:outline-none focus:border-[#007acc] ${
-            fieldErrors.password ? 'border-red-500' : 'border-[#3e3e42]'
+          className={`w-full px-3 py-2 bg-[var(--color-bg-secondary)] border rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] ${
+            fieldErrors.password ? 'border-red-500' : 'border-[var(--color-border)]'
           }`}
           placeholder="Minimum 8 characters"
           required
@@ -155,7 +155,7 @@ export function RegisterForm() {
       </div>
 
       <div>
-        <label htmlFor="confirmPassword" className="block text-sm text-[#cccccc] mb-1">
+        <label htmlFor="confirmPassword" className="block text-sm text-[var(--color-text-primary)] mb-1">
           Confirm Password
         </label>
         <input
@@ -163,8 +163,8 @@ export function RegisterForm() {
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className={`w-full px-3 py-2 bg-[#3c3c3c] border rounded text-[#cccccc] focus:outline-none focus:border-[#007acc] ${
-            fieldErrors.confirmPassword ? 'border-red-500' : 'border-[#3e3e42]'
+          className={`w-full px-3 py-2 bg-[var(--color-bg-secondary)] border rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] ${
+            fieldErrors.confirmPassword ? 'border-red-500' : 'border-[var(--color-border)]'
           }`}
           placeholder="Confirm your password"
           required
@@ -178,14 +178,14 @@ export function RegisterForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full py-2 px-4 bg-[#0e639c] hover:bg-[#1177bb] disabled:bg-[#3c3c3c] disabled:cursor-not-allowed rounded text-white font-medium transition-colors"
+        className="w-full py-2 px-4 bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] disabled:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed rounded text-white font-medium transition-colors"
       >
         {isLoading ? 'Creating account...' : 'Create Account'}
       </button>
 
-      <p className="text-sm text-center text-[#808080]">
+      <p className="text-sm text-center text-[var(--color-text-muted)]">
         Already have an account?{' '}
-        <Link href="/login" className="text-[#569cd6] hover:underline">
+        <Link href="/login" className="text-[var(--sw-cyan)] hover:underline">
           Sign in
         </Link>
       </p>

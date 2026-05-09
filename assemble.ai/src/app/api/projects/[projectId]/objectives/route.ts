@@ -91,15 +91,15 @@ export async function GET(
       .where(eq(profilerObjectives.projectId, projectId))
       .limit(1);
 
-    let hasAttachedDocuments = false;
+    let attachedDocumentCount = 0;
     if (objectivesAnchor) {
-      const [transmittal] = await db
+      const transmittals = await db
         .select({ id: objectivesTransmittals.documentId })
         .from(objectivesTransmittals)
-        .where(eq(objectivesTransmittals.objectivesId, objectivesAnchor.id))
-        .limit(1);
-      hasAttachedDocuments = Boolean(transmittal);
+        .where(eq(objectivesTransmittals.objectivesId, objectivesAnchor.id));
+      attachedDocumentCount = transmittals.length;
     }
+    const hasAttachedDocuments = attachedDocumentCount > 0;
 
     return NextResponse.json({
       success: true,
@@ -107,6 +107,7 @@ export async function GET(
       snapshots,
       projectType: profileRow?.projectType ?? null,
       hasAttachedDocuments,
+      attachedDocumentCount,
     });
   } catch (error) {
     console.error('Failed to fetch objectives:', error);

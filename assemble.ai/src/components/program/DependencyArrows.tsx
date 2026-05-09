@@ -156,7 +156,7 @@ export function DependencyArrows({
                     orient="auto"
                     markerUnits="strokeWidth"
                 >
-                    <polygon points="0 0, 8 3, 0 6" fill="var(--color-text-muted)" />
+                    <polygon points="0 0, 8 3, 0 6" fill="var(--sw-muted)" />
                 </marker>
                 <marker
                     id="arrowhead-hover"
@@ -167,7 +167,7 @@ export function DependencyArrows({
                     orient="auto"
                     markerUnits="strokeWidth"
                 >
-                    <polygon points="0 0, 8 3, 0 6" fill="var(--color-accent-coral)" />
+                    <polygon points="0 0, 8 3, 0 6" fill="var(--sw-rose-dk)" />
                 </marker>
             </defs>
             {arrows.map((arrow) => {
@@ -243,7 +243,7 @@ export function DependencyArrows({
                     }
                 }
 
-                const lineColor = isHovered ? 'var(--color-accent-coral)' : 'var(--color-text-muted)';
+                const lineColor = isHovered ? 'var(--sw-rose-dk)' : 'var(--sw-muted)';
 
                 return (
                     <g key={arrow.id}>

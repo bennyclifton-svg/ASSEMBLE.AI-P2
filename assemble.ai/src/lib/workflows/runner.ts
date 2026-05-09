@@ -30,6 +30,10 @@ export interface CreateWorkflowFromPlanArgs {
     preferences?: WorkflowPreferencesSnapshot;
 }
 
+export interface MaterializeWorkflowRunFromPlanArgs extends CreateWorkflowFromPlanArgs {
+    workflowRunId: string;
+}
+
 interface InsertedStep {
     id: string;
     stepKey: string;
@@ -79,12 +83,42 @@ export async function createWorkflowFromPlan(
         })
         .returning({ id: workflowRuns.id });
 
+    return createWorkflowStepsForRun({
+        ...args,
+        workflowRunId: run.id,
+    });
+}
+
+export async function materializeWorkflowRunFromPlan(
+    args: MaterializeWorkflowRunFromPlanArgs
+): Promise<CreatedWorkflowRun> {
+    const preferences = args.preferences ?? DEFAULT_WORKFLOW_PREFERENCES;
+    await db
+        .update(workflowRuns)
+        .set({
+            status: 'previewed',
+            threadId: args.threadId,
+            actorUserId: args.userId,
+            activeAgent: args.activeAgent ?? 'orchestrator',
+            preferenceSnapshot: preferences,
+            plan: args.plan as unknown as object,
+            summary: args.plan.summary,
+            updatedAt: new Date(),
+        })
+        .where(eq(workflowRuns.id, args.workflowRunId));
+
+    return createWorkflowStepsForRun(args);
+}
+
+async function createWorkflowStepsForRun(
+    args: MaterializeWorkflowRunFromPlanArgs
+): Promise<CreatedWorkflowRun> {
     const insertedSteps: InsertedStep[] = [];
     for (const [index, planStep] of args.plan.steps.entries()) {
         const [step] = await db
             .insert(workflowSteps)
             .values({
-                workflowRunId: run.id,
+                workflowRunId: args.workflowRunId,
                 stepKey: planStep.stepKey,
                 title: planStep.title,
                 actionId: planStep.actionId,
@@ -157,7 +191,7 @@ export async function createWorkflowFromPlan(
             organizationId: args.organizationId,
             projectId: args.projectId,
             actorKind: 'workflow',
-            actorId: run.id,
+            actorId: args.workflowRunId,
             threadId: args.threadId,
             runId: args.agentRunId,
             workflowStepId: insertedStep.id,
@@ -170,7 +204,7 @@ export async function createWorkflowFromPlan(
                 action,
                 ctx: actionCtx,
                 input: parsedInput,
-                toolUseId: `workflow:${run.id}:${insertedStep.id}`,
+                toolUseId: `workflow:${args.workflowRunId}:${insertedStep.id}`,
                 emit: dependencyStepIds.length === 0,
             });
 
@@ -238,10 +272,10 @@ export async function createWorkflowFromPlan(
             currentStepIds: activeStepIds,
             updatedAt: new Date(),
         })
-        .where(eq(workflowRuns.id, run.id));
+        .where(eq(workflowRuns.id, args.workflowRunId));
 
     return {
-        workflowRunId: run.id,
+        workflowRunId: args.workflowRunId,
         workflowKey: args.plan.workflowKey,
         status,
         executionBrief: args.plan.executionBrief,

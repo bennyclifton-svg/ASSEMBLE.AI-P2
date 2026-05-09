@@ -66,7 +66,7 @@ export function SyncIndicator({
 
       {/* Last saved time */}
       {status === 'saved' && relativeTime && (
-        <span className="text-[#6e6e6e]">
+        <span className="text-[var(--color-text-muted)]">
           · {relativeTime}
         </span>
       )}
@@ -75,7 +75,7 @@ export function SyncIndicator({
       {status === 'error' && onRetry && (
         <button
           onClick={onRetry}
-          className="ml-1 text-[#0e639c] hover:text-[#1177bb] hover:underline"
+          className="ml-1 text-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary-hover)] hover:underline"
         >
           Retry
         </button>
@@ -90,36 +90,36 @@ function getStatusConfig(status: SyncStatus) {
     case 'saved':
       return {
         icon: <Check className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#4ade80]',
-        textClass: 'text-[#858585]',
+        iconClass: 'text-[var(--color-success)]',
+        textClass: 'text-[var(--color-text-muted)]',
         label: 'Saved',
       };
     case 'saving':
       return {
         icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
-        iconClass: 'text-[#0e639c]',
-        textClass: 'text-[#858585]',
+        iconClass: 'text-[var(--color-accent-primary)]',
+        textClass: 'text-[var(--color-text-muted)]',
         label: 'Saving...',
       };
     case 'error':
       return {
         icon: <AlertCircle className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#f87171]',
-        textClass: 'text-[#f87171]',
+        iconClass: 'text-[var(--color-error)]',
+        textClass: 'text-[var(--color-error)]',
         label: 'Save failed',
       };
     case 'offline':
       return {
         icon: <CloudOff className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#f59e0b]',
-        textClass: 'text-[#f59e0b]',
+        iconClass: 'text-[var(--color-warning)]',
+        textClass: 'text-[var(--color-warning)]',
         label: 'Offline',
       };
     default:
       return {
         icon: <Cloud className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#858585]',
-        textClass: 'text-[#858585]',
+        iconClass: 'text-[var(--color-text-muted)]',
+        textClass: 'text-[var(--color-text-muted)]',
         label: 'Unknown',
       };
   }

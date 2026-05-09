@@ -59,7 +59,7 @@ export function InvoiceDialog({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#252536] rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+      <div className="bg-[var(--color-bg-secondary)] rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
           <div>
@@ -121,7 +121,7 @@ export function InvoiceDialog({
                         value={formData.invoiceNumber || ''}
                         onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
                         placeholder="INV-001"
-                        className="w-full px-3 py-2 bg-[#1e1e2e] border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                         autoFocus
                       />
                     </div>
@@ -133,7 +133,7 @@ export function InvoiceDialog({
                         value={(formData.amountCents || 0) / 100}
                         onChange={(e) => setFormData({ ...formData, amountCents: Math.round(parseFloat(e.target.value || '0') * 100) })}
                         placeholder="0.00"
-                        className="w-full px-3 py-2 bg-[#1e1e2e] border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-gray-600 rounded text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
@@ -143,7 +143,7 @@ export function InvoiceDialog({
                         <select
                           value={formData.periodMonth}
                           onChange={(e) => setFormData({ ...formData, periodMonth: parseInt(e.target.value) })}
-                          className="flex-1 px-3 py-2 bg-[#1e1e2e] border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
+                          className="flex-1 px-3 py-2 bg-[var(--color-bg-primary)] border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
                         >
                           {Array.from({ length: 12 }, (_, i) => (
                             <option key={i + 1} value={i + 1}>
@@ -155,7 +155,7 @@ export function InvoiceDialog({
                           type="number"
                           value={formData.periodYear}
                           onChange={(e) => setFormData({ ...formData, periodYear: parseInt(e.target.value) })}
-                          className="w-24 px-3 py-2 bg-[#1e1e2e] border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
+                          className="w-24 px-3 py-2 bg-[var(--color-bg-primary)] border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
                     </div>
@@ -165,7 +165,7 @@ export function InvoiceDialog({
                       <select
                         value={formData.status}
                         onChange={(e) => setFormData({ ...formData, status: e.target.value as Invoice['status'] })}
-                        className="w-full px-3 py-2 bg-[#1e1e2e] border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
+                        className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-gray-600 rounded text-white focus:outline-none focus:border-blue-500"
                       >
                         <option value="Draft">Draft</option>
                         <option value="Submitted">Submitted</option>
@@ -227,7 +227,7 @@ function InvoiceRow({ invoice }: { invoice: Invoice }) {
   const periodLabel = `${new Date(2000, invoice.periodMonth - 1).toLocaleString('default', { month: 'short' })} ${invoice.periodYear}`;
 
   return (
-    <div className="flex items-center justify-between p-3 bg-[#1e1e2e] rounded">
+    <div className="flex items-center justify-between p-3 bg-[var(--color-bg-primary)] rounded">
       <div className="flex items-center gap-4">
         <FileText className="w-5 h-5 text-gray-500" />
         <div>

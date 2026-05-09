@@ -146,9 +146,9 @@ export default function ProjectsIndexPage() {
             <div className="flex-shrink-0 px-6">
               <div className="w-full flex justify-start items-end border-b border-[var(--color-border)] h-auto p-0 gap-1.5 pl-[20%]">
                 <div className={tabClassName}>Cost Planning</div>
-                <div className={tabClassName}>Program</div>
+                <div className={tabClassName}>Programme</div>
                 <div className={tabClassName}>Procurement</div>
-                <div className={tabClassName}>Notes</div>
+                <div className={tabClassName}>Records</div>
                 <div className={`${tabClassName} text-center !px-2 !py-2`}>
                   <span className="flex flex-col leading-none gap-0.5">
                     <span>Meetings</span>

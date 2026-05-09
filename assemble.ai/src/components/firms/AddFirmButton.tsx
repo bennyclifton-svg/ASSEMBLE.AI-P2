@@ -49,10 +49,10 @@ export function AddFirmButton({ onAdd, onFileDrop }: Omit<AddFirmButtonProps, 'i
   return (
     <div
       className={`
-        flex items-center justify-center px-3 py-2 cursor-pointer
-        border-2 border-dashed transition-all duration-150 shadow-md
-        ${isDragOver || isHovered ? 'border-[var(--color-accent-teal)] bg-[var(--color-card-firm-hover)]' : 'border-[var(--color-border-strong)] bg-[var(--color-card-firm)]'}
-        w-[220px] flex-shrink-0 self-stretch min-h-[66px]
+        flex items-center justify-center gap-1.5 px-3 py-2 cursor-pointer
+        border transition-colors duration-150
+        ${isDragOver || isHovered ? 'border-[var(--sw-rose-dk)] bg-[var(--sw-rose-dk)]' : 'border-[var(--sw-rose)] bg-[var(--sw-rose)]'}
+        w-[200px] flex-shrink-0 self-stretch min-h-[56px]
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -65,14 +65,19 @@ export function AddFirmButton({ onAdd, onFileDrop }: Omit<AddFirmButtonProps, 'i
       <Plus
         className={`
           w-5 h-5 transition-colors
-          ${isDragOver || isHovered ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)]'}
+          ${isDragOver || isHovered ? 'text-white' : 'text-[var(--sw-ink)]'}
         `}
       />
       <span
         className={`
-          text-sm font-medium transition-colors
-          ${isDragOver || isHovered ? 'text-[var(--color-accent-teal)]' : 'text-[var(--color-text-muted)]'}
+          text-[10px] font-medium transition-colors
+          ${isDragOver || isHovered ? 'text-white' : 'text-[var(--sw-ink)]'}
         `}
+        style={{
+          fontFamily: 'var(--sw-font-mono)',
+          letterSpacing: '0.08em',
+          textTransform: 'lowercase',
+        }}
       >
         New Firm
       </span>

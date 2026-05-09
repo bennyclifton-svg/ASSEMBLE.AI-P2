@@ -1,19 +1,14 @@
 /**
  * Landing Page Components
- * Public-facing marketing components
+ * Public-facing marketing components — Sitewise / Field Console (Devtools Rose).
  */
 
-// Shared components
-export { Button } from './shared/Button';
-export { AnimatedDotGrid } from './shared/AnimatedDotGrid';
-export { DotGridPattern } from './shared/DotGridPattern';
-export { SectionContainer } from './shared/SectionContainer';
+// Shared
 export { ScrollReveal } from './shared/ScrollReveal';
 
-// Section components
+// Sections
 export { NavBar } from './NavBar';
 export { HeroSection } from './HeroSection';
-export { LogoBar } from './LogoBar';
 export { StatsSection } from './StatsSection';
 export { AISection } from './AISection';
 export { ProblemSection } from './ProblemSection';
@@ -25,5 +20,6 @@ export { HowItWorksSection } from './HowItWorksSection';
 export { CTABannerSection } from './CTABannerSection';
 export { FAQSection } from './FAQSection';
 export { FinalCTASection } from './FinalCTASection';
+export { AboutAuthorSection } from './AboutAuthorSection';
 export { FooterSection } from './FooterSection';
 export { PricingSection, pricingTiers, type PricingTier } from './PricingSection';

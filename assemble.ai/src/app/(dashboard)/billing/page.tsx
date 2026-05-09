@@ -15,8 +15,8 @@ function BillingContent() {
 export default function BillingPage() {
     return (
         <Suspense fallback={
-            <div className="h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
-                <div className="animate-pulse text-[var(--color-text-muted)]">Loading...</div>
+            <div className="h-screen flex items-center justify-center bg-[var(--sw-paper)]">
+                <div className="animate-pulse font-mono text-[var(--sw-muted)]">Loading...</div>
             </div>
         }>
             <BillingContent />

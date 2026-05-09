@@ -27,7 +27,7 @@ interface UpdateNoteInput extends Record<string, unknown> {
     title?: string;
     content?: string | null;
     isStarred?: boolean;
-    color?: 'yellow' | 'blue' | 'green' | 'pink' | 'white';
+    color?: 'purple' | 'orange' | 'pink' | 'blue';
     type?: 'rfi' | 'notice' | 'eot' | 'defect' | 'variation' | 'risk' | 'transmittal' | 'review' | 'note';
     status?: 'open' | 'closed';
     noteDate?: string | null;
@@ -35,7 +35,7 @@ interface UpdateNoteInput extends Record<string, unknown> {
     _toolUseId?: string;
 }
 
-const NOTE_COLORS = ['yellow', 'blue', 'green', 'pink', 'white'] as const;
+const NOTE_COLORS = ['purple', 'orange', 'pink', 'blue'] as const;
 const NOTE_TYPES = ['rfi', 'notice', 'eot', 'defect', 'variation', 'risk', 'transmittal', 'review', 'note'] as const;
 const NOTE_STATUSES = ['open', 'closed'] as const;
 const TOOL = 'update_note';

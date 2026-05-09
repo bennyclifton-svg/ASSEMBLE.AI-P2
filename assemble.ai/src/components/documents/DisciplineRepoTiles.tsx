@@ -33,7 +33,7 @@ const brightenColor = (hex: string, amount: number = 80) => {
 // Color constants matching category tile colors
 const TILE_COLORS = {
     sources: 'var(--color-accent-green)',      // Blue - matches accent
-    transmittal: '#2e7d32',  // Green
+    transmittal: 'var(--color-success)',  // Green
 };
 
 // Default organization ID until organization management is implemented

@@ -16,7 +16,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { Trash, Plus, AlertTriangle, Merge, GripVertical, Upload } from 'lucide-react';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import type { EvaluationRow, EvaluationFirm, EvaluationRowSource } from '@/types/evaluation';
-import { EVALUATION_TABLE_COLUMNS, getEvaluationTableWidth } from '@/types/evaluation';
+import { EVALUATION_TABLE_COLUMNS } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
 
 interface EvaluationSheetProps {
@@ -39,6 +39,8 @@ interface EvaluationSheetProps {
     title: string;
     // Whether to show firm names in header (default: true)
     showFirmHeaders?: boolean;
+    accentColor?: string;
+    surface?: 'procurement' | 'record';
     // Row reordering
     onRowReorder?: (rowId: string, newIndex: number) => void;
 }
@@ -59,6 +61,8 @@ export function EvaluationSheet({
     subtotals,
     title,
     showFirmHeaders = true,
+    accentColor = 'var(--color-accent-copper)',
+    surface = 'procurement',
     onRowReorder,
 }: EvaluationSheetProps) {
     const [editingCell, setEditingCell] = useState<{ rowId: string; firmId: string } | null>(null);
@@ -324,12 +328,12 @@ export function EvaluationSheet({
         return description;
     };
 
-    // Calculate fixed table width to ensure alignment with Grand Total
-    const tableWidth = getEvaluationTableWidth(firms.length);
+    const accentCssVar = { '--evaluation-accent': accentColor } as React.CSSProperties;
 
     return (
         <div
-            className="relative overflow-x-auto w-full"
+            className={`relative overflow-x-auto w-full ${surface === 'record' ? 'bg-white' : ''}`}
+            style={accentCssVar}
             onDragEnter={handleContainerDragEnter}
             onDragLeave={handleContainerDragLeave}
             onDragOver={handleContainerDragOver}
@@ -361,7 +365,7 @@ export function EvaluationSheet({
                         >
                             <button
                                 onClick={onAddRow}
-                                className="p-1 rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/15 hover:scale-110 transition-all duration-150"
+                                className="p-1 rounded-full text-[var(--color-text-muted)] hover:text-[var(--evaluation-accent)] hover:bg-[var(--evaluation-accent)]/15 hover:scale-110 transition-all duration-150"
                                 title="Add row"
                             >
                                 <Plus className="w-3.5 h-3.5" />
@@ -369,10 +373,11 @@ export function EvaluationSheet({
                         </th>
                         {/* Title / description column header */}
                         <th
-                            className="px-3 text-left text-xs font-semibold text-[var(--color-text-primary)] uppercase tracking-wide"
-                            style={{ height: cellHeight }}
+                            className="px-3 text-left text-xs font-semibold"
+                            style={{ height: cellHeight, color: accentColor }}
                         >
                             <div className="flex items-center gap-2">
+                                <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0" style={{ background: accentColor }} />
                                 <span>{title}</span>
                                 {/* T098-T100: Merge button when 2+ rows selected */}
                                 {selectedRowIds.size >= 2 && onMergeClick && (
@@ -380,7 +385,8 @@ export function EvaluationSheet({
                                         variant="ghost"
                                         size="sm"
                                         onClick={onMergeClick}
-                                        className="h-5 px-1.5 text-[10px] text-[var(--color-accent-copper)] hover:text-[var(--color-accent-copper)] hover:bg-[var(--color-accent-copper)]/10"
+                                        className="h-5 px-1.5 text-[10px] hover:bg-[var(--evaluation-accent)]/10"
+                                        style={{ color: accentColor }}
                                     >
                                         <Merge className="w-3 h-3 mr-1" />
                                         Merge ({selectedRowIds.size})
@@ -396,25 +402,25 @@ export function EvaluationSheet({
                                     key={firm.id}
                                     data-firm-id={firm.id}
                                     className={`p-0 relative ${
-                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' :
-                                        isFileDragActive ? 'bg-[var(--color-accent-copper)]/5' : ''
+                                        isColumnDragOver ? 'bg-[var(--evaluation-accent)]/20' :
+                                        isFileDragActive ? 'bg-[var(--evaluation-accent)]/5' : ''
                                     }`}
                                     style={{ height: cellHeight }}
                                 >
                                     <div
-                                        className="px-3 text-right text-xs font-medium text-[var(--color-text-primary)] flex items-center justify-end"
-                                        style={{ height: cellHeight }}
+                                        className="px-3 text-right text-xs font-medium flex items-center justify-end"
+                                        style={{ height: cellHeight, color: accentColor }}
                                     >
                                         <span className="truncate">{firm.companyName}</span>
                                     </div>
                                     {/* Column drop zone borders + upload indicator */}
                                     {isColumnDragOver && (
                                         <>
-                                            <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
                                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                <Upload className="w-3.5 h-3.5 text-[var(--color-accent-copper)]" />
+                                                <Upload className="w-3.5 h-3.5" style={{ color: accentColor }} />
                                             </div>
                                         </>
                                     )}
@@ -424,16 +430,16 @@ export function EvaluationSheet({
                                     key={firm.id}
                                     data-firm-id={firm.id}
                                     className={`p-0 relative ${
-                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' :
-                                        isFileDragActive ? 'bg-[var(--color-accent-copper)]/5' : ''
+                                        isColumnDragOver ? 'bg-[var(--evaluation-accent)]/20' :
+                                        isFileDragActive ? 'bg-[var(--evaluation-accent)]/5' : ''
                                     }`}
                                     style={{ height: cellHeight }}
                                 >
                                     {isColumnDragOver && (
                                         <>
-                                            <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
                                         </>
                                     )}
                                 </th>
@@ -471,13 +477,13 @@ export function EvaluationSheet({
                                     <td
                                         key={firm.id}
                                         data-firm-id={firm.id}
-                                        className={`relative ${isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''}`}
+                                        className={`relative ${isColumnDragOver ? 'bg-[var(--evaluation-accent)]/20' : ''}`}
                                         style={{ height: cellHeight }}
                                     >
                                         {isColumnDragOver && (
                                             <>
-                                                <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                                <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                                <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                                <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
                                             </>
                                         )}
                                     </td>
@@ -491,7 +497,7 @@ export function EvaluationSheet({
                             <td style={{ height: cellHeight }} />
                         </tr>
                     ) : (
-                        rows.map((row, rowIndex) => {
+                        rows.map((row) => {
                             const isSelected = selectedRowIds.has(row.id);
                             const isAIRow = isAIGeneratedRow(row.source);
                             const isEditingDescription = editingDescriptionRowId === row.id;
@@ -502,12 +508,12 @@ export function EvaluationSheet({
                                 <tr
                                     key={row.id}
                                     className={`group cursor-pointer ${
-                                        // T093: Visual highlight for selected rows
-                                        isSelected
-                                            ? 'bg-[var(--color-accent-copper-tint)]'
-                                            : 'hover:bg-[var(--color-text-primary)]/5'
+                                        isSelected ? '' : 'hover:bg-[var(--color-text-primary)]/5'
                                     } ${isDragging ? 'opacity-50' : ''}`}
-                                    style={isDragOver ? { boxShadow: 'inset 0 2px 0 var(--color-accent-copper)' } : undefined}
+                                    style={{
+                                        ...(isSelected ? { background: `color-mix(in srgb, ${accentColor} 14%, transparent)` } : {}),
+                                        ...(isDragOver ? { boxShadow: `inset 0 2px 0 ${accentColor}` } : {}),
+                                    }}
                                     onClick={(e) => onRowSelect(row.id, e)}
                                     onDragOver={(e) => handleRowDragOver(e, row.id)}
                                     onDrop={(e) => handleRowDrop(e, row.id)}
@@ -572,7 +578,7 @@ export function EvaluationSheet({
                                                     isAI && lowConfidence
                                                         ? 'border-l-2 border-l-yellow-500/50'
                                                         : ''
-                                                } ${isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''}`}
+                                                } ${isColumnDragOver ? 'bg-[var(--evaluation-accent)]/20' : ''}`}
                                                 style={{ height: cellHeight }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -614,8 +620,8 @@ export function EvaluationSheet({
                                                 {/* Column drag - left/right borders for unified rectangle */}
                                                 {isColumnDragOver && (
                                                     <>
-                                                        <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                                        <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                                        <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                                        <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
                                                     </>
                                                 )}
                                             </td>
@@ -630,7 +636,7 @@ export function EvaluationSheet({
                                     >
                                         {isAIRow && (
                                             <span title="AI-generated row">
-                                                <DiamondIcon variant="empty" className="w-3 h-3 text-[var(--color-accent-copper)] mx-auto" />
+                                                <DiamondIcon variant="empty" className="w-3 h-3 text-[var(--evaluation-accent)] mx-auto" />
                                             </span>
                                         )}
                                     </td>
@@ -672,18 +678,18 @@ export function EvaluationSheet({
                                 <td
                                     key={firm.id}
                                     data-firm-id={firm.id}
-                                    className={`px-3 text-right text-sm font-semibold text-[var(--color-accent-copper)] relative ${
-                                        isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                    className={`px-3 text-right text-sm font-semibold relative ${
+                                        isColumnDragOver ? 'bg-[var(--evaluation-accent)]/20' : ''
                                     }`}
-                                    style={{ height: cellHeight }}
+                                    style={{ height: cellHeight, color: accentColor }}
                                 >
                                     {formatCurrency(subtotals[firm.id] || 0)}
                                     {/* Bottom border and left/right borders for unified rectangle */}
                                     {isColumnDragOver && (
                                         <>
-                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                            <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
                                         </>
                                     )}
                                 </td>

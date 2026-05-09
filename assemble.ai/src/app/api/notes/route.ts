@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
             title: title || 'New Note',
             content: content || null,
             isStarred: false,
-            color: color || 'yellow',
+            color: color || 'purple',
             type: type || 'note',
             status: status || 'open',
             createdAt: now,

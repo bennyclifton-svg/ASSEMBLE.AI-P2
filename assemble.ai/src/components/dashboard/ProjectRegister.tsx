@@ -181,25 +181,25 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
-        return 'text-[#4ec9b0]';
+        return 'text-[var(--color-success)]';
       case 'pending':
-        return 'text-[#dcdcaa]';
+        return 'text-[var(--sw-amber)]';
       case 'archived':
-        return 'text-[#808080]';
+        return 'text-[var(--color-text-muted)]';
       default:
-        return 'text-[#808080]';
+        return 'text-[var(--color-text-muted)]';
     }
   };
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="h-full flex flex-col bg-[#1e1e1e]">
-        <div className="p-4 border-b border-[#3e3e42]">
-          <h2 className="text-lg font-semibold text-[#cccccc]">Project Register</h2>
+      <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
+        <div className="p-4 border-b border-[var(--color-border)]">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Project Register</h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-6 h-6 text-[#808080] animate-spin" />
+          <Loader2 className="w-6 h-6 text-[var(--color-text-muted)] animate-spin" />
         </div>
       </div>
     );
@@ -208,16 +208,16 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
   // Error state
   if (error) {
     return (
-      <div className="h-full flex flex-col bg-[#1e1e1e]">
-        <div className="p-4 border-b border-[#3e3e42]">
-          <h2 className="text-lg font-semibold text-[#cccccc]">Project Register</h2>
+      <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
+        <div className="p-4 border-b border-[var(--color-border)]">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Project Register</h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center p-4">
-            <p className="text-[#f48771] mb-4">{error}</p>
+            <p className="text-[var(--color-error)] mb-4">{error}</p>
             <Button
               onClick={fetchProjects}
-              className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+              className="bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
             >
               Retry
             </Button>
@@ -230,18 +230,18 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
   // Empty state
   if (projects.length === 0) {
     return (
-      <div className="h-full flex flex-col bg-[#1e1e1e]">
-        <div className="p-4 border-b border-[#3e3e42]">
-          <h2 className="text-lg font-semibold text-[#cccccc]">Project Register</h2>
+      <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
+        <div className="p-4 border-b border-[var(--color-border)]">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Project Register</h2>
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center p-8">
-            <FolderOpen className="w-16 h-16 text-[#4e4e52] mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-[#cccccc] mb-2">No projects yet</h3>
-            <p className="text-[#808080] mb-6">Create your first project to get started</p>
+            <FolderOpen className="w-16 h-16 text-[var(--color-border)] mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">No projects yet</h3>
+            <p className="text-[var(--color-text-muted)] mb-6">Create your first project to get started</p>
             <Button
               onClick={() => setIsModalOpen(true)}
-              className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+              className="bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
               Create Project
@@ -269,15 +269,15 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
 
   // Projects list
   return (
-    <div className="h-full flex flex-col bg-[#1e1e1e]">
+    <div className="h-full flex flex-col bg-[var(--color-bg-primary)]">
       {/* Header */}
-      <div className="p-4 border-b border-[#3e3e42] flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-[#cccccc]">Project Register</h2>
+      <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Project Register</h2>
         <Button
           onClick={() => setIsModalOpen(true)}
           variant="ghost"
           size="sm"
-          className="text-[#cccccc] hover:bg-[#2a2d2e]"
+          className="text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
         >
           <Plus className="w-4 h-4" />
         </Button>
@@ -289,7 +289,7 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
           <div
             key={project.id}
             onClick={() => handleProjectClick(project)}
-            className="w-full p-4 text-left hover:bg-[#2a2d2e] border-b border-[#3e3e42] transition-colors group cursor-pointer"
+            className="w-full p-4 text-left hover:bg-[var(--color-bg-hover)] border-b border-[var(--color-border)] transition-colors group cursor-pointer"
           >
             <div className="flex items-start justify-between">
               <div className="flex-1 min-w-0">
@@ -301,35 +301,35 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
                       value={editingName}
                       onChange={(e) => setEditingName(e.target.value)}
                       onKeyDown={(e) => handleEditKeyDown(e, project.id)}
-                      className="flex-1 px-2 py-1 bg-[#1e1e1e] border border-[#0e639c] rounded text-[#cccccc] text-sm focus:outline-none focus:ring-1 focus:ring-[#0e639c]"
+                      className="flex-1 px-2 py-1 bg-[var(--color-bg-primary)] border border-[var(--color-accent-primary)] rounded text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-accent-primary)]"
                       autoFocus
                       disabled={isSavingEdit}
                     />
                     <button
                       onClick={(e) => handleSaveEdit(e, project.id)}
                       disabled={isSavingEdit || !editingName.trim()}
-                      className="p-1 hover:bg-[#3e3e42] rounded disabled:opacity-50"
+                      className="p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50"
                       title="Save"
                     >
                       {isSavingEdit ? (
-                        <Loader2 className="w-4 h-4 text-[#0e639c] animate-spin" />
+                        <Loader2 className="w-4 h-4 text-[var(--color-accent-primary)] animate-spin" />
                       ) : (
-                        <Check className="w-4 h-4 text-[#4ec9b0]" />
+                        <Check className="w-4 h-4 text-[var(--color-success)]" />
                       )}
                     </button>
                     <button
                       onClick={handleCancelEdit}
                       disabled={isSavingEdit}
-                      className="p-1 hover:bg-[#3e3e42] rounded disabled:opacity-50"
+                      className="p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50"
                       title="Cancel"
                     >
-                      <X className="w-4 h-4 text-[#f48771]" />
+                      <X className="w-4 h-4 text-[var(--color-error)]" />
                     </button>
                   </div>
                 ) : (
                   // Display mode
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-[#cccccc] truncate">
+                    <span className="font-medium text-[var(--color-text-primary)] truncate">
                       {project.name}
                     </span>
                     <span className={`text-xs ${getStatusColor(project.status)}`}>
@@ -337,24 +337,24 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
                     </span>
                     <button
                       onClick={(e) => handleStartEdit(e, project)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#3e3e42] rounded transition-opacity"
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--color-border)] rounded transition-opacity"
                       title="Edit project name"
                     >
-                      <Pencil className="w-3 h-3 text-[#808080]" />
+                      <Pencil className="w-3 h-3 text-[var(--color-text-muted)]" />
                     </button>
                   </div>
                 )}
                 {project.code && (
-                  <p className="text-sm text-[#808080] mt-1 truncate">
+                  <p className="text-sm text-[var(--color-text-muted)] mt-1 truncate">
                     {project.code}
                   </p>
                 )}
-                <div className="flex items-center gap-1 mt-2 text-xs text-[#6e6e6e]">
+                <div className="flex items-center gap-1 mt-2 text-xs text-[var(--color-text-muted)]">
                   <Calendar className="w-3 h-3" />
                   <span>Updated {formatDate(project.updatedAt)}</span>
                 </div>
               </div>
-              <ChevronRight className="w-4 h-4 text-[#4e4e52] group-hover:text-[#cccccc] transition-colors flex-shrink-0 ml-2" />
+              <ChevronRight className="w-4 h-4 text-[var(--color-border)] group-hover:text-[var(--color-text-primary)] transition-colors flex-shrink-0 ml-2" />
             </div>
           </div>
         ))}
@@ -407,7 +407,7 @@ function CreateProjectForm({
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-[#cccccc] mb-1">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
           Project Name *
         </label>
         <Input
@@ -415,7 +415,7 @@ function CreateProjectForm({
           placeholder="Enter project name"
           value={formData.name}
           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-          className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc] focus:border-[#007acc]"
+          className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]"
           disabled={isCreating}
           required
           autoFocus
@@ -423,7 +423,7 @@ function CreateProjectForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[#cccccc] mb-1">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
           Project Code
         </label>
         <Input
@@ -431,13 +431,13 @@ function CreateProjectForm({
           placeholder="Enter project code (optional)"
           value={formData.code}
           onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
-          className="bg-[#1e1e1e] border-[#3e3e42] text-[#cccccc] focus:border-[#007acc]"
+          className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]"
           disabled={isCreating}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-[#cccccc] mb-1">
+        <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">
           Status
         </label>
         <select
@@ -448,7 +448,7 @@ function CreateProjectForm({
               status: e.target.value as 'active' | 'pending' | 'archived',
             }))
           }
-          className="w-full px-3 py-2 bg-[#1e1e1e] border border-[#3e3e42] rounded text-[#cccccc] focus:border-[#007acc] focus:outline-none"
+          className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
           disabled={isCreating}
         >
           <option value="active">Active</option>
@@ -463,14 +463,14 @@ function CreateProjectForm({
           variant="outline"
           onClick={onCancel}
           disabled={isCreating}
-          className="border-[#3e3e42] text-[#cccccc] hover:bg-[#2a2d2e]"
+          className="border-[var(--color-border)] text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
         >
           Cancel
         </Button>
         <Button
           type="submit"
           disabled={isCreating || !formData.name.trim()}
-          className="bg-[#0e639c] hover:bg-[#1177bb] text-white"
+          className="bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
         >
           {isCreating ? (
             <>

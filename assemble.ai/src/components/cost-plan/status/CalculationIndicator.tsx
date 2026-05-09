@@ -54,7 +54,7 @@ export function CalculationIndicator({
     <div
       className={`
         inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs
-        bg-[#252526] border border-[#3e3e42]
+        bg-[var(--color-bg-secondary)] border border-[var(--color-border)]
         animate-in fade-in slide-in-from-bottom-2 duration-200
         ${className}
       `}
@@ -75,23 +75,23 @@ function getStatusConfig(status: CalculationStatus) {
     case 'calculating':
       return {
         icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
-        iconClass: 'text-[#0e639c]',
-        textClass: 'text-[#858585]',
+        iconClass: 'text-[var(--color-accent-primary)]',
+        textClass: 'text-[var(--color-text-muted)]',
         label: 'Calculating...',
       };
     case 'complete':
       return {
         icon: <Check className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#4ade80]',
-        textClass: 'text-[#4ade80]',
+        iconClass: 'text-[var(--color-success)]',
+        textClass: 'text-[var(--color-success)]',
         label: 'Updated',
       };
     case 'idle':
     default:
       return {
         icon: <Calculator className="w-3.5 h-3.5" />,
-        iconClass: 'text-[#858585]',
-        textClass: 'text-[#858585]',
+        iconClass: 'text-[var(--color-text-muted)]',
+        textClass: 'text-[var(--color-text-muted)]',
         label: 'Ready',
       };
   }
@@ -108,8 +108,8 @@ export function CalculationIndicatorInline({
   if (!isCalculating) return null;
 
   return (
-    <span className={`inline-flex items-center gap-1 text-xs text-[#858585] ${className}`}>
-      <Loader2 className="w-3 h-3 animate-spin text-[#0e639c]" />
+    <span className={`inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)] ${className}`}>
+      <Loader2 className="w-3 h-3 animate-spin text-[var(--color-accent-primary)]" />
       <span>Updating...</span>
     </span>
   );
@@ -167,44 +167,44 @@ export function StatusBar({
         <span
           className={`
             w-2 h-2 rounded-full
-            ${connectionStatus === 'connected' ? 'bg-[#4ade80] animate-pulse' : ''}
-            ${connectionStatus === 'disconnected' ? 'bg-[#f87171]' : ''}
-            ${connectionStatus === 'reconnecting' ? 'bg-[#f59e0b]' : ''}
+            ${connectionStatus === 'connected' ? 'bg-[var(--color-success)] animate-pulse' : ''}
+            ${connectionStatus === 'disconnected' ? 'bg-[var(--color-error)]' : ''}
+            ${connectionStatus === 'reconnecting' ? 'bg-[var(--color-warning)]' : ''}
           `}
         />
         {connectionStatus !== 'connected' && (
-          <span className="text-[#858585]">
+          <span className="text-[var(--color-text-muted)]">
             {connectionStatus === 'reconnecting' ? 'Reconnecting...' : 'Offline'}
           </span>
         )}
       </div>
 
       {/* Divider */}
-      <span className="text-[#3e3e42]">|</span>
+      <span className="text-[var(--color-border)]">|</span>
 
       {/* Sync status */}
       <div className="flex items-center gap-1.5">
         {syncStatus === 'saving' && (
           <>
-            <Loader2 className="w-3 h-3 animate-spin text-[#0e639c]" />
-            <span className="text-[#858585]">Saving...</span>
+            <Loader2 className="w-3 h-3 animate-spin text-[var(--color-accent-primary)]" />
+            <span className="text-[var(--color-text-muted)]">Saving...</span>
           </>
         )}
         {syncStatus === 'saved' && (
           <>
-            <Check className="w-3 h-3 text-[#4ade80]" />
-            <span className="text-[#858585]">
+            <Check className="w-3 h-3 text-[var(--color-success)]" />
+            <span className="text-[var(--color-text-muted)]">
               Saved{lastSaved && ` · ${formatTime(lastSaved)}`}
             </span>
           </>
         )}
         {syncStatus === 'error' && (
           <>
-            <span className="text-[#f87171]">Save failed</span>
+            <span className="text-[var(--color-error)]">Save failed</span>
             {onRetry && (
               <button
                 onClick={onRetry}
-                className="text-[#0e639c] hover:text-[#1177bb] hover:underline"
+                className="text-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary-hover)] hover:underline"
               >
                 Retry
               </button>
@@ -216,10 +216,10 @@ export function StatusBar({
       {/* Calculation status */}
       {isCalculating && (
         <>
-          <span className="text-[#3e3e42]">|</span>
+          <span className="text-[var(--color-border)]">|</span>
           <div className="flex items-center gap-1.5">
-            <Loader2 className="w-3 h-3 animate-spin text-[#0e639c]" />
-            <span className="text-[#858585]">Calculating...</span>
+            <Loader2 className="w-3 h-3 animate-spin text-[var(--color-accent-primary)]" />
+            <span className="text-[var(--color-text-muted)]">Calculating...</span>
           </div>
         </>
       )}

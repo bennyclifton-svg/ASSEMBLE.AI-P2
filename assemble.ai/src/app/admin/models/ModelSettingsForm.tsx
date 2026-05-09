@@ -41,7 +41,7 @@ const PROVIDER_LABELS: Record<Provider, string> = {
     openrouter: 'OpenRouter',
 };
 
-export function ModelSettingsForm({ initialSettings, catalog: _catalog, groupLabels }: Props) {
+export function ModelSettingsForm({ initialSettings, groupLabels }: Props) {
     const router = useRouter();
 
     const initialRows = useMemo<RowState[]>(() => {
@@ -149,7 +149,7 @@ export function ModelSettingsForm({ initialSettings, catalog: _catalog, groupLab
                     onSave={() => save(row.featureGroup)}
                 />
             ))}
-            <p className="pt-2 text-[11px] text-[var(--color-text-muted)]">
+            <p className="pt-2 font-mono text-[11px] text-[var(--sw-muted)]">
                 Prices are approximate references for cost comparison only — confirm current rates with the provider before relying on them for billing decisions.
             </p>
         </div>
@@ -172,21 +172,21 @@ function FeatureGroupRow({ row, onSelectProvider, onSelectModel, onSave }: RowPr
     const selectedInfo = rankedModels.find((m) => m.modelId === row.modelId);
 
     return (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-5">
+        <div className="sitewise-card p-5">
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
                 {/* Title + description */}
                 <div className="lg:col-span-4">
-                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                    <div className="sitewise-section-label">
                         {row.meta.title}
-                    </h3>
-                    <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-secondary)]">
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-[var(--sw-muted)]">
                         {row.meta.description}
                     </p>
                 </div>
 
                 {/* Provider — stacked toggle, no dropdown */}
                 <div className="lg:col-span-3">
-                    <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                    <div className="sitewise-section-label mb-2">
                         Provider
                     </div>
                     <div className="flex flex-col gap-1.5">
@@ -199,10 +199,10 @@ function FeatureGroupRow({ row, onSelectProvider, onSelectModel, onSave }: RowPr
                                     onClick={() => onSelectProvider(p)}
                                     aria-pressed={active}
                                     className={cn(
-                                        'rounded-md border px-3 py-2 text-left text-sm font-medium transition-colors',
+                                        'border px-3 py-2 text-left font-mono text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors',
                                         active
-                                            ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary-tint)] text-[var(--color-text-primary)]'
-                                            : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]'
+                                            ? 'border-[var(--sw-rose)] bg-[var(--sw-rose-tint)] text-[var(--sw-rose-dk)]'
+                                            : 'border-[var(--sw-rule)] bg-white text-[var(--sw-muted)] hover:border-[var(--sw-rose)] hover:text-[var(--sw-ink)]'
                                     )}
                                 >
                                     {PROVIDER_LABELS[p]}
@@ -215,10 +215,10 @@ function FeatureGroupRow({ row, onSelectProvider, onSelectModel, onSave }: RowPr
                 {/* Model — full ranked column, no dropdown */}
                 <div className="lg:col-span-4">
                     <div className="mb-1.5 flex items-center justify-between">
-                        <div className="text-[10px] font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
+                        <div className="sitewise-section-label">
                             Model
                         </div>
-                        <div className="text-[10px] text-[var(--color-text-muted)]">
+                        <div className="font-mono text-[10px] text-[var(--sw-muted)]">
                             cheapest → most expensive
                         </div>
                     </div>
@@ -232,14 +232,14 @@ function FeatureGroupRow({ row, onSelectProvider, onSelectModel, onSave }: RowPr
                                     onClick={() => onSelectModel(m.modelId)}
                                     aria-pressed={active}
                                     className={cn(
-                                        'flex items-center justify-between gap-3 rounded-md border px-3 py-1.5 text-left text-xs transition-colors',
+                                        'flex items-center justify-between gap-3 border px-3 py-1.5 text-left text-xs transition-colors',
                                         active
-                                            ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary-tint)] text-[var(--color-text-primary)]'
-                                            : 'border-[var(--color-border)] bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-text-primary)]'
+                                            ? 'border-[var(--sw-rose)] bg-[var(--sw-rose-tint)] text-[var(--sw-rose-dk)]'
+                                            : 'border-[var(--sw-rule)] bg-white text-[var(--sw-muted)] hover:border-[var(--sw-rose)] hover:text-[var(--sw-ink)]'
                                     )}
                                 >
                                     <span className="truncate font-medium">{m.label}</span>
-                                    <span className="flex-shrink-0 text-[10px] text-[var(--color-text-muted)]">
+                                    <span className="flex-shrink-0 font-mono text-[10px] text-[var(--sw-muted)]">
                                         ${m.inputPer1M}/${m.outputPer1M}
                                     </span>
                                 </button>
@@ -255,12 +255,12 @@ function FeatureGroupRow({ row, onSelectProvider, onSelectModel, onSave }: RowPr
                         onClick={onSave}
                         disabled={!row.dirty || row.saveState === 'saving' || !row.modelId}
                         className={cn(
-                            'flex items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors',
+                            'sitewise-button w-full',
                             row.saveState === 'saved'
-                                ? 'bg-[var(--color-accent-green)] text-white'
+                                ? 'bg-[#5c7a4a] !text-white'
                                 : row.dirty && row.modelId
-                                  ? 'bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary-hover)]'
-                                  : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] cursor-not-allowed'
+                                  ? 'sitewise-button-primary'
+                                  : 'sitewise-button-muted cursor-not-allowed'
                         )}
                     >
                         {row.saveState === 'saving' ? (
@@ -279,12 +279,12 @@ function FeatureGroupRow({ row, onSelectProvider, onSelectModel, onSave }: RowPr
 
             {/* Notes / errors */}
             {selectedInfo?.notes && (
-                <p className="mt-3 border-t border-[var(--color-border-subtle)] pt-2 text-xs italic text-[var(--color-text-secondary)]">
+                <p className="mt-3 border-t border-[var(--sw-rule-2)] pt-2 text-xs italic text-[var(--sw-muted)]">
                     {selectedInfo.notes}
                 </p>
             )}
             {row.error && (
-                <p className="mt-2 text-xs text-red-400">{row.error}</p>
+                <p className="mt-2 text-xs text-[var(--sw-rose-dk)]">{row.error}</p>
             )}
         </div>
     );

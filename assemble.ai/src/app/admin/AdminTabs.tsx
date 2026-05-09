@@ -6,9 +6,9 @@ import { Users, Cpu, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const TABS = [
-    { href: '/admin/users', label: 'Users', icon: Users },
-    { href: '/admin/models', label: 'AI Models', icon: Cpu },
-    { href: '/admin/products', label: 'Products', icon: Package },
+    { href: '/admin/users', label: 'users', icon: Users },
+    { href: '/admin/models', label: 'ai models', icon: Cpu },
+    { href: '/admin/products', label: 'products', icon: Package },
 ] as const;
 
 /**
@@ -20,7 +20,7 @@ export function AdminTabs() {
     const pathname = usePathname();
 
     return (
-        <nav className="flex w-full items-end gap-1.5 border-b border-[var(--color-border)] pl-[5%]">
+        <nav className="flex w-full items-end gap-1.5 border-b border-[var(--sw-rule)] pl-[5%]">
             {TABS.map(({ href, label, icon: Icon }) => {
                 const active = pathname === href || pathname.startsWith(`${href}/`);
                 return (
@@ -30,11 +30,11 @@ export function AdminTabs() {
                         data-state={active ? 'active' : 'inactive'}
                         aria-current={active ? 'page' : undefined}
                         className={cn(
-                            'relative flex items-center gap-2 rounded-none px-4 py-3 text-[15px] font-medium transition-all duration-200 ease-out',
+                            'relative flex items-center gap-2 rounded-none px-4 py-3 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] transition-all duration-200 ease-out',
                             'tab-aurora-main',
                             active
-                                ? 'text-[var(--color-text-primary)]'
-                                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                ? 'text-[var(--sw-ink)]'
+                                : 'text-[var(--sw-muted)] hover:text-[var(--sw-ink)]'
                         )}
                     >
                         <Icon className="h-4 w-4" />

@@ -7,28 +7,38 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useEvaluationPrice, type EvaluationPriceInstance } from '@/lib/hooks/use-evaluation-price';
+import { useEvaluationPrice } from '@/lib/hooks/use-evaluation-price';
 import { useEvaluationPriceSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { EvaluationPriceTabs } from './EvaluationPriceTabs';
 import { EvaluationPriceTab } from './EvaluationPriceTab';
-import { FileText, MoreHorizontal, MoreVertical, Loader2 } from 'lucide-react';
-import { CornerBracketIcon } from '@/components/ui/corner-bracket-icon';
-import { Button } from '@/components/ui/button';
+import { Loader2 } from 'lucide-react';
 import { PdfIcon, DocxIcon, XlsxIcon } from '@/components/ui/file-type-icons';
-
-// Procurement section accent color (copper from design system)
-const SECTION_ACCENT = 'var(--primitive-copper-darker)';
+import {
+    ProcurementIconButton,
+    ProcurementSectionShell,
+    ProcurementToolbarDivider,
+} from '@/components/procurement';
+import { EVALUATION_PRICE_ACCENT_COLOR } from './EvaluationReportChrome';
 
 interface EvaluationPriceSectionProps {
     projectId: string;
     stakeholderId?: string;
     stakeholderName?: string;
+    displayMode?: 'accordion' | 'detail';
+}
+
+function formatDetailDate(value: string | null | undefined): string {
+    if (!value) return '';
+    const date = new Date(value.includes('T') ? value : `${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export function EvaluationPriceSection({
     projectId,
     stakeholderId,
     stakeholderName,
+    displayMode = 'accordion',
 }: EvaluationPriceSectionProps) {
     const [isExporting, setIsExporting] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
@@ -143,121 +153,91 @@ export function EvaluationPriceSection({
         }
     };
 
-    return (
-        <div className="mt-2">
-            {/* Header - Segmented white ribbons with grey surround */}
-            <div className="flex items-stretch gap-0.5 p-2">
-                {/* Evaluation Price segment */}
-                <div className="flex items-center w-fit h-11 px-3 py-1.5 border border-[var(--color-border)] shadow-sm rounded-l-md" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
-                    <FileText className="w-4 h-4" style={{ color: SECTION_ACCENT }} />
-                    <span className="ml-1 text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                        Evaluation Price
-                    </span>
-                </div>
-                {/* Corner bracket segment - square, points out to expand, in to collapse */}
-                <button
-                    onClick={handleExpandToggle}
-                    className="flex items-center justify-center w-11 h-11 border border-[var(--color-border)] shadow-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}
-                    title={isExpanded ? 'Collapse' : 'Expand'}
-                >
-                    <CornerBracketIcon
-                        direction={isExpanded ? 'right' : 'left'}
-                        className="w-4 h-4"
-                    />
-                </button>
-                {/* More options segment - expandable to show tabs and export buttons */}
-                <div className="flex items-center h-11 border border-[var(--color-border)] shadow-sm rounded-r-md transition-all" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
-                    <button
-                        onClick={() => setIsMenuExpanded(!isMenuExpanded)}
-                        className="flex items-center justify-center w-11 h-11 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
-                        title={isMenuExpanded ? 'Hide options' : 'Show options'}
-                    >
-                        {isMenuExpanded ? <MoreHorizontal className="w-4 h-4" /> : <MoreVertical className="w-4 h-4" />}
-                    </button>
-                    {/* Expanded content: tabs and export buttons */}
-                    {isMenuExpanded && (
-                        <>
-                            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
-                            <EvaluationPriceTabs
-                                evaluationPrices={evaluationPrices}
-                                activeEvaluationPriceId={activeEvaluationPrice?.id || null}
-                                onSelectEvaluationPrice={handleSelectEvaluationPrice}
-                                onCreateEvaluationPrice={handleCreateEvaluationPrice}
-                                onDeleteEvaluationPrice={handleDeleteEvaluationPrice}
-                                isLoading={isCreating}
-                            />
-                            <div className="mx-2 h-5 w-px bg-[var(--color-border)]" />
-                            <div className="flex items-center gap-1">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleExport('pdf')}
-                                    disabled={!activeEvaluationPrice || isExporting}
-                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
-                                    title="Export PDF"
-                                >
-                                    {isExporting ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : (
-                                        <PdfIcon size={20} />
-                                    )}
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleExport('docx')}
-                                    disabled={!activeEvaluationPrice || isExporting}
-                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
-                                    title="Export Word"
-                                >
-                                    <DocxIcon size={20} />
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleExport('xlsx')}
-                                    disabled={!activeEvaluationPrice || isExporting}
-                                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
-                                    title="Export Excel"
-                                >
-                                    <XlsxIcon size={20} />
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
+    const sectionExpanded = displayMode === 'detail' || isExpanded;
+    const detailDate = activeEvaluationPrice
+        ? formatDetailDate(activeEvaluationPrice.createdAt ?? activeEvaluationPrice.updatedAt)
+        : '';
+    const sectionLabel = displayMode === 'detail' ? 'evaluation price record' : 'evaluation price';
+    const sectionMeta = displayMode === 'detail'
+        ? `evaluation price / ${detailDate || 'no date'}`
+        : `${evaluationPrices.length} reports`;
 
-            {/* Content Area */}
-            <div>
-                {/* Tab Content - only shown when expanded */}
-                {isExpanded && (
-                    <div className="mx-2 p-4 rounded-md shadow-sm" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 50%, transparent)' }}>
-                        {isLoading ? (
-                            <div className="p-8 text-center text-[var(--color-text-muted)]">
-                                <p>Loading evaluations...</p>
-                            </div>
-                        ) : evaluationPrices.length === 0 ? (
-                            <div className="p-8 text-center text-[var(--color-text-muted)]">
-                                <p>No evaluations yet. Click + to create one.</p>
-                            </div>
-                        ) : activeEvaluationPrice ? (
-                            <EvaluationPriceTab
-                                projectId={projectId}
-                                stakeholderId={stakeholderId}
-                                stakeholderName={stakeholderName}
-                                evaluationPriceId={activeEvaluationPrice.id}
-                                evaluationPriceNumber={activeEvaluationPrice.evaluationPriceNumber}
-                            />
-                        ) : (
-                            <div className="p-8 text-center text-[var(--color-text-muted)]">
-                                <p>Unable to load evaluation</p>
-                            </div>
-                        )}
+    return (
+        <div className={displayMode === 'detail' ? '' : 'mt-2'}>
+            <ProcurementSectionShell
+                label={sectionLabel}
+                meta={sectionMeta}
+                accentColor={displayMode === 'detail' ? EVALUATION_PRICE_ACCENT_COLOR : undefined}
+                isExpanded={sectionExpanded}
+                onToggleExpanded={handleExpandToggle}
+                isMenuExpanded={isMenuExpanded}
+                onToggleMenu={() => setIsMenuExpanded(!isMenuExpanded)}
+                displayMode={displayMode}
+                menuContent={
+                    <>
+                        <EvaluationPriceTabs
+                            evaluationPrices={evaluationPrices}
+                            activeEvaluationPriceId={activeEvaluationPrice?.id || null}
+                            onSelectEvaluationPrice={handleSelectEvaluationPrice}
+                            onCreateEvaluationPrice={handleCreateEvaluationPrice}
+                            onDeleteEvaluationPrice={handleDeleteEvaluationPrice}
+                            isLoading={isCreating}
+                        />
+                        <ProcurementToolbarDivider />
+                        <div className="flex items-center gap-1">
+                            <ProcurementIconButton
+                                title="Export PDF"
+                                onClick={() => handleExport('pdf')}
+                                disabled={!activeEvaluationPrice || isExporting}
+                            >
+                                {isExporting ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <PdfIcon size={20} />
+                                )}
+                            </ProcurementIconButton>
+                            <ProcurementIconButton
+                                title="Export Word"
+                                onClick={() => handleExport('docx')}
+                                disabled={!activeEvaluationPrice || isExporting}
+                            >
+                                <DocxIcon size={20} />
+                            </ProcurementIconButton>
+                            <ProcurementIconButton
+                                title="Export Excel"
+                                onClick={() => handleExport('xlsx')}
+                                disabled={!activeEvaluationPrice || isExporting}
+                            >
+                                <XlsxIcon size={20} />
+                            </ProcurementIconButton>
+                        </div>
+                    </>
+                }
+            >
+                {isLoading ? (
+                    <div className="p-8 text-center text-[var(--sw-muted)]">
+                        <p>Loading evaluations...</p>
+                    </div>
+                ) : evaluationPrices.length === 0 ? (
+                    <div className="p-8 text-center text-[var(--sw-muted)]">
+                        <p>No evaluations yet. Click + to create one.</p>
+                    </div>
+                ) : activeEvaluationPrice ? (
+                    <EvaluationPriceTab
+                        projectId={projectId}
+                        stakeholderId={stakeholderId}
+                        stakeholderName={stakeholderName}
+                        evaluationPriceId={activeEvaluationPrice.id}
+                        evaluationPriceNumber={activeEvaluationPrice.evaluationPriceNumber}
+                        issuedDate={activeEvaluationPrice.createdAt}
+                        surface={displayMode === 'detail' ? 'record' : 'procurement'}
+                    />
+                ) : (
+                    <div className="p-8 text-center text-[var(--sw-muted)]">
+                        <p>Unable to load evaluation</p>
                     </div>
                 )}
-            </div>
+            </ProcurementSectionShell>
         </div>
     );
 }

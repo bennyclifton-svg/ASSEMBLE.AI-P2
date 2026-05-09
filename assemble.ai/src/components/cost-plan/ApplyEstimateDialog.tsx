@@ -277,9 +277,9 @@ export function ApplyEstimateDialog({
             max={estimateHighCents}
             value={totalBudgetCents}
             onChange={handleSliderChange}
-            className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-[#1776c1]"
+            className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-[var(--color-accent-primary)]"
             style={{
-              background: `linear-gradient(to right, #1776c1 ${((totalBudgetCents - estimateLowCents) / (estimateHighCents - estimateLowCents)) * 100}%, var(--color-border) ${((totalBudgetCents - estimateLowCents) / (estimateHighCents - estimateLowCents)) * 100}%)`,
+              background: `linear-gradient(to right, var(--color-accent-primary) ${((totalBudgetCents - estimateLowCents) / (estimateHighCents - estimateLowCents)) * 100}%, var(--color-border) ${((totalBudgetCents - estimateLowCents) / (estimateHighCents - estimateLowCents)) * 100}%)`,
             }}
           />
           <div className="flex justify-between mt-1">
@@ -300,7 +300,7 @@ export function ApplyEstimateDialog({
                       checked={allSuggestedSelected}
                       ref={(el) => { if (el) el.indeterminate = someSuggestedSelected && !allSuggestedSelected; }}
                       onChange={handleSelectAllSuggested}
-                      className="w-3 h-3 accent-[#1776c1] cursor-pointer"
+                      className="w-3 h-3 accent-[var(--color-accent-primary)] cursor-pointer"
                       title={allSuggestedSelected ? 'Deselect all suggested lines' : 'Select all suggested lines'}
                     />
                   )}
@@ -376,7 +376,7 @@ export function ApplyEstimateDialog({
                               type="checkbox"
                               checked={checkedLines.has(index)}
                               onChange={() => handleLineToggle(index)}
-                              className="w-3 h-3 accent-[#1776c1] cursor-pointer"
+                              className="w-3 h-3 accent-[var(--color-accent-primary)] cursor-pointer"
                               title={line.matchStatus === 'suggested'
                                 ? 'Include this suggested discipline'
                                 : 'Include this existing line'}
@@ -388,7 +388,7 @@ export function ApplyEstimateDialog({
                             <div className="flex items-center gap-1.5">
                               <span>{line.activity}</span>
                               {line.matchStatus === 'suggested' && (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-[#1776c1]/10 text-[#1776c1]">
+                                <span className="inline-flex items-center gap-0.5 text-[9px] px-1 py-0.5 rounded bg-[var(--color-accent-primary)]/10 text-[var(--color-accent-primary)]">
                                   <Plus className="w-2.5 h-2.5" /> suggested
                                 </span>
                               )}
@@ -440,7 +440,7 @@ export function ApplyEstimateDialog({
                                 onClick={() => handleLockToggle(index)}
                                 className={`p-0.5 rounded transition-colors ${
                                   line.locked
-                                    ? 'text-[#1776c1]'
+                                    ? 'text-[var(--color-accent-primary)]'
                                     : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
                                 }`}
                                 title={line.locked ? 'Unlock percentage' : 'Lock percentage'}
@@ -492,7 +492,7 @@ export function ApplyEstimateDialog({
             <button
               onClick={handleApply}
               disabled={isApplying}
-              className="px-4 py-1.5 text-xs bg-[#1776c1] text-white rounded hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-1.5 text-xs bg-[var(--color-accent-primary)] text-white rounded hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isApplying ? 'Applying...' : 'Apply to Cost Plan'}
             </button>

@@ -38,7 +38,7 @@ export function ExportButtonGroup({
                     size="sm"
                     onClick={onExportPdf}
                     disabled={isDisabled}
-                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
+                    className="h-7 w-7 rounded-none border border-[var(--sw-rule)] bg-transparent p-0 text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
                     title="Export PDF"
                 >
                     <PdfIcon size={20} />
@@ -50,7 +50,7 @@ export function ExportButtonGroup({
                     size="sm"
                     onClick={onExportDocx}
                     disabled={isDisabled}
-                    className="h-7 w-7 p-0 hover:bg-[var(--color-border)]"
+                    className="h-7 w-7 rounded-none border border-[var(--sw-rule)] bg-transparent p-0 text-[var(--sw-muted)] hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
                     title="Export Word"
                 >
                     <DocxIcon size={20} />

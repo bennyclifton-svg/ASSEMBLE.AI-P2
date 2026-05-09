@@ -96,7 +96,7 @@ export default function TransmittalTableEditor({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#2d2d2d] border-b border-gray-700">
+            <tr className="bg-[var(--color-bg-secondary)] border-b border-gray-700">
               <th className="text-left px-4 py-2 text-gray-400 font-medium w-10">#</th>
               <th className="text-left px-4 py-2 text-gray-400 font-medium w-24">DWG #</th>
               <th className="text-left px-4 py-2 text-gray-400 font-medium">Name</th>

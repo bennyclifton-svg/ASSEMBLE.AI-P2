@@ -27,20 +27,29 @@ export default async function AdminProductsPage() {
     const productList = await getProducts();
 
     return (
-        <div className="mx-auto max-w-6xl px-6 py-8">
-            <div className="mb-8">
-                <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Product Management</h1>
-                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                    Manage subscription products and their Polar product IDs.
-                </p>
+        <div className="sitewise-page-frame">
+            <div className="sitewise-page-header">
+                <div>
+                    <div className="sitewise-page-kicker">admin / products</div>
+                    <h1 className="mt-2">Products</h1>
+                    <p className="sitewise-page-subtitle">
+                        Manage subscription products, plan availability, and Polar product IDs.
+                    </p>
+                </div>
+                <div className="flex flex-wrap justify-end gap-2">
+                    <span className="sitewise-status-pill">{productList.length} products</span>
+                    <span className="sitewise-status-pill sitewise-status-pill-dark">
+                        {process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'}
+                    </span>
+                </div>
             </div>
 
             {/* Info Box */}
-            <div className="mb-8 rounded-lg border border-[var(--color-accent-primary)] bg-[var(--color-accent-primary-tint)] p-4">
-                <h3 className="font-medium text-[var(--color-text-primary)]">How to set up products</h3>
-                <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-[var(--color-text-secondary)]">
+            <div className="sitewise-info-card mb-8 p-4">
+                <h3>How to set up products</h3>
+                <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-[var(--sw-ink)]">
                     <li>Create products in your <a href="https://polar.sh" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-primary)] hover:underline">Polar dashboard</a></li>
-                    <li>Copy the product ID from Polar (starts with <code className="rounded bg-[var(--color-bg-primary)] px-1 text-[var(--color-text-primary)]">prod_</code>)</li>
+                    <li>Copy the product ID from Polar (starts with <code className="sitewise-code">prod_</code>)</li>
                     <li>Paste the product ID below for the corresponding plan</li>
                     <li>Use different product IDs for sandbox vs production</li>
                 </ol>
@@ -48,12 +57,12 @@ export default async function AdminProductsPage() {
 
             {/* Products Table */}
             {productList.length === 0 ? (
-                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-8 text-center">
-                    <p className="text-[var(--color-text-secondary)]">No products found.</p>
-                    <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+                <div className="sitewise-card p-8 text-center">
+                    <p className="text-[var(--sw-muted)]">No products found.</p>
+                    <p className="mt-2 text-sm text-[var(--sw-muted)]">
                         Run the database migration to create initial products:
                     </p>
-                    <code className="mt-2 block rounded bg-[var(--color-bg-tertiary)] p-2 text-sm text-[var(--color-text-primary)]">
+                    <code className="sitewise-code mt-2 block p-2">
                         npx drizzle-kit push
                     </code>
                 </div>
@@ -62,18 +71,18 @@ export default async function AdminProductsPage() {
             )}
 
             {/* Environment Info */}
-            <div className="mt-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4">
-                <h3 className="font-medium text-[var(--color-text-primary)]">Current Environment</h3>
+            <div className="sitewise-card mt-8 p-4">
+                <div className="sitewise-section-label">Current Environment</div>
                 <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                     <div>
-                        <span className="text-[var(--color-text-secondary)]">Mode:</span>{' '}
-                        <span className={process.env.NODE_ENV === 'production' ? 'text-green-300' : 'text-yellow-300'}>
+                        <span className="text-[var(--sw-muted)]">Mode:</span>{' '}
+                        <span className={process.env.NODE_ENV === 'production' ? 'text-[#4b653c]' : 'text-[#8a5a16]'}>
                             {process.env.NODE_ENV === 'production' ? 'Production' : 'Sandbox'}
                         </span>
                     </div>
                     <div>
-                        <span className="text-[var(--color-text-secondary)]">Polar Configured:</span>{' '}
-                        <span className={process.env.POLAR_ACCESS_TOKEN ? 'text-green-300' : 'text-red-300'}>
+                        <span className="text-[var(--sw-muted)]">Polar Configured:</span>{' '}
+                        <span className={process.env.POLAR_ACCESS_TOKEN ? 'text-[#4b653c]' : 'text-[var(--sw-rose-dk)]'}>
                             {process.env.POLAR_ACCESS_TOKEN ? 'Yes' : 'No'}
                         </span>
                     </div>

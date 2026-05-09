@@ -161,7 +161,7 @@ export function SnapshotDialog({
             <div className="space-y-3">
               {/* Name input */}
               <div>
-                <label className="block text-sm text-[#858585] mb-1">
+                <label className="block text-sm text-[var(--color-text-muted)] mb-1">
                   Snapshot Name
                 </label>
                 <input
@@ -169,7 +169,7 @@ export function SnapshotDialog({
                   value={snapshotName}
                   onChange={(e) => setSnapshotName(e.target.value)}
                   placeholder="e.g., REV A, Tender Award"
-                  className="w-full px-3 py-2 bg-[#252526] border border-[#3e3e42] rounded text-[#cccccc] placeholder-[#6e6e6e] focus:outline-none focus:border-[#007acc]"
+                  className="w-full px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)]"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && snapshotName.trim()) {
@@ -181,7 +181,7 @@ export function SnapshotDialog({
 
               {/* Quick select buttons */}
               <div>
-                <label className="block text-sm text-[#858585] mb-2">
+                <label className="block text-sm text-[var(--color-text-muted)] mb-2">
                   Suggestions
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -194,8 +194,8 @@ export function SnapshotDialog({
                       className={`
                         px-2 py-1 text-xs rounded border transition-colors
                         ${snapshotName === name
-                          ? 'border-[#007acc] bg-[#094771] text-white'
-                          : 'border-[#3e3e42] text-[#858585] hover:border-[#6e6e6e] hover:text-[#cccccc]'}
+                          ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary-tint)] text-white'
+                          : 'border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
                       `}
                     >
                       {name}
@@ -211,14 +211,14 @@ export function SnapshotDialog({
                     setShowCreateForm(false);
                     setSnapshotName('');
                   }}
-                  className="px-4 py-2 text-[#cccccc] hover:text-white transition-colors"
+                  className="px-4 py-2 text-[var(--color-text-primary)] hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCreate}
                   disabled={!snapshotName.trim() || isCreating}
-                  className="px-4 py-2 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-[var(--color-accent-primary)] text-white rounded hover:bg-[var(--color-accent-primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <Camera className="w-4 h-4" />
                   {isCreating ? 'Creating...' : 'Create Snapshot'}
@@ -231,49 +231,49 @@ export function SnapshotDialog({
         {/* Snapshot List */}
         <div className="flex-1 overflow-auto min-h-0">
           {isLoading ? (
-            <div className="text-center py-12 text-[#858585]">
+            <div className="text-center py-12 text-[var(--color-text-muted)]">
               Loading snapshots...
             </div>
           ) : snapshots.length === 0 && !showCreateForm ? (
             <div className="text-center py-12">
-              <History className="w-12 h-12 text-[#4e4e4e] mx-auto mb-3" />
-              <p className="text-[#858585] mb-4">No snapshots created yet</p>
-              <p className="text-sm text-[#6e6e6e] mb-6 max-w-md mx-auto">
+              <History className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-3" />
+              <p className="text-[var(--color-text-muted)] mb-4">No snapshots created yet</p>
+              <p className="text-sm text-[var(--color-text-muted)] mb-6 max-w-md mx-auto">
                 Snapshots capture the current state of your cost plan for future comparison.
                 Create a snapshot before major changes.
               </p>
               <button
                 onClick={() => setShowCreateForm(true)}
-                className="px-4 py-2 bg-[#0e639c] text-white rounded hover:bg-[#1177bb] transition-colors inline-flex items-center gap-2"
+                className="px-4 py-2 bg-[var(--color-accent-primary)] text-white rounded hover:bg-[var(--color-accent-primary-hover)] transition-colors inline-flex items-center gap-2"
               >
                 <Camera className="w-4 h-4" />
                 Create First Snapshot
               </button>
             </div>
           ) : (
-            <div className="divide-y divide-[#3e3e42]">
+            <div className="divide-y divide-[var(--color-border)]">
               {snapshots.map((snapshot) => (
                 <div
                   key={snapshot.id}
-                  className="px-4 py-3 hover:bg-[#2a2d2e] transition-colors"
+                  className="px-4 py-3 hover:bg-[var(--color-bg-hover)] transition-colors"
                 >
                   {deleteConfirmId === snapshot.id ? (
                     // Delete confirmation
                     <div className="flex items-center justify-between">
-                      <span className="text-[#f87171]">
+                      <span className="text-[var(--color-error)]">
                         Delete "{snapshot.snapshotName}"?
                       </span>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setDeleteConfirmId(null)}
-                          className="px-3 py-1 text-sm text-[#cccccc] hover:text-white transition-colors"
+                          className="px-3 py-1 text-sm text-[var(--color-text-primary)] hover:text-white transition-colors"
                         >
                           Cancel
                         </button>
                         <button
                           onClick={() => handleDelete(snapshot.id)}
                           disabled={isDeleting}
-                          className="px-3 py-1 text-sm bg-[#f87171] text-white rounded hover:bg-[#ef4444] transition-colors disabled:opacity-50"
+                          className="px-3 py-1 text-sm bg-[var(--color-error)] text-white rounded hover:bg-[var(--color-error)] transition-colors disabled:opacity-50"
                         >
                           {isDeleting ? 'Deleting...' : 'Delete'}
                         </button>
@@ -284,12 +284,12 @@ export function SnapshotDialog({
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <Camera className="w-4 h-4 text-[#858585] shrink-0" />
-                          <span className="text-[#cccccc] font-medium truncate">
+                          <Camera className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
+                          <span className="text-[var(--color-text-primary)] font-medium truncate">
                             {snapshot.snapshotName}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-[#858585]">
+                        <div className="flex items-center gap-4 mt-1 text-sm text-[var(--color-text-muted)]">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
                             {formatDate(snapshot.snapshotDate)}
@@ -301,13 +301,13 @@ export function SnapshotDialog({
                         </div>
                         {snapshot.totals && (
                           <div className="flex items-center gap-4 mt-2 text-xs">
-                            <span className="text-[#858585]">
-                              Budget: <span className="text-[#cccccc]">{formatCurrency(snapshot.totals.budgetCents)}</span>
+                            <span className="text-[var(--color-text-muted)]">
+                              Budget: <span className="text-[var(--color-text-primary)]">{formatCurrency(snapshot.totals.budgetCents)}</span>
                             </span>
-                            <span className="text-[#858585]">
-                              Forecast: <span className="text-[#cccccc]">{formatCurrency(snapshot.totals.finalForecastCents)}</span>
+                            <span className="text-[var(--color-text-muted)]">
+                              Forecast: <span className="text-[var(--color-text-primary)]">{formatCurrency(snapshot.totals.finalForecastCents)}</span>
                             </span>
-                            <span className={snapshot.totals.varianceCents >= 0 ? 'text-[#4ade80]' : 'text-[#f87171]'}>
+                            <span className={snapshot.totals.varianceCents >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'}>
                               Variance: {formatCurrency(snapshot.totals.varianceCents)}
                             </span>
                           </div>
@@ -320,7 +320,7 @@ export function SnapshotDialog({
                           <button
                             onClick={() => onCompare(snapshot.id)}
                             title="Compare with current"
-                            className="p-2 text-[#858585] hover:text-white hover:bg-[#37373d] rounded transition-colors"
+                            className="p-2 text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-bg-hover)] rounded transition-colors"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -329,7 +329,7 @@ export function SnapshotDialog({
                           <button
                             onClick={() => onExport(snapshot.id)}
                             title="Export snapshot"
-                            className="p-2 text-[#858585] hover:text-white hover:bg-[#37373d] rounded transition-colors"
+                            className="p-2 text-[var(--color-text-muted)] hover:text-white hover:bg-[var(--color-bg-hover)] rounded transition-colors"
                           >
                             <Download className="w-4 h-4" />
                           </button>
@@ -338,7 +338,7 @@ export function SnapshotDialog({
                           <button
                             onClick={() => setDeleteConfirmId(snapshot.id)}
                             title="Delete snapshot"
-                            className="p-2 text-[#858585] hover:text-[#f87171] hover:bg-[#f87171]/10 rounded transition-colors"
+                            className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-error)] hover:bg-[var(--color-error)]/10 rounded transition-colors"
                           >
                             <Trash className="w-4 h-4" />
                           </button>
@@ -354,14 +354,14 @@ export function SnapshotDialog({
 
         {/* Footer */}
         {(snapshots.length > 0 || showCreateForm) && (
-          <div className="px-4 py-3 border-t border-[#3e3e42] flex items-center justify-between shrink-0">
-            <div className="text-sm text-[#858585]">
+          <div className="px-4 py-3 border-t border-[var(--color-border)] flex items-center justify-between shrink-0">
+            <div className="text-sm text-[var(--color-text-muted)]">
               {snapshots.length} snapshot{snapshots.length !== 1 ? 's' : ''}
             </div>
             {!showCreateForm && (
               <button
                 onClick={() => setShowCreateForm(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-[#cccccc] hover:text-white hover:bg-[#37373d] rounded transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-[var(--color-text-primary)] hover:text-white hover:bg-[var(--color-bg-hover)] rounded transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 New Snapshot

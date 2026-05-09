@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload, Download } from 'lucide-react';
+import { Loader2, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload, Download, Check } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { useSyncStatus, SyncStatus } from '@/lib/hooks/use-sync-status';
 import { useRenderLoopGuard, useStableArray } from '@/lib/hooks/use-render-loop-guard';
@@ -45,8 +45,8 @@ function SyncStatusDiamond({ status }: { status: SyncStatus | null }) {
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             className={cn(color, 'flex-shrink-0', isProcessing && 'animate-diamond-spin')}
-            title={`RAG: ${status.status.charAt(0).toUpperCase() + status.status.slice(1)}`}
         >
+            <title>{`RAG: ${status.status.charAt(0).toUpperCase() + status.status.slice(1)}`}</title>
             {isFilled ? (
                 <path d="M5 0.5L9.5 5L5 9.5L0.5 5L5 0.5Z" fill="currentColor" />
             ) : (
@@ -578,14 +578,14 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
     if (loading) {
         return (
             <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-text-muted)]" />
+                <Loader2 className="w-7 h-7 animate-spin text-[var(--sw-muted)]" />
             </div>
         );
     }
 
     return (
         <div
-            className="space-y-4 relative"
+            className="relative min-h-full"
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
             onDragOver={handleDragOver}
@@ -593,10 +593,13 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         >
             {/* Drag-and-drop overlay */}
             {isDragOver && (
-                <div className="absolute inset-0 z-20 rounded-md border-2 border-dashed border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)] flex items-center justify-center pointer-events-none">
+                <div className="absolute inset-0 z-20 border border-dashed border-[var(--sw-ink)] bg-[var(--sw-rose-tint)] flex items-center justify-center pointer-events-none">
                     <div className="flex flex-col items-center gap-2">
-                        <Upload className="w-8 h-8 text-[var(--color-accent-copper)]" />
-                        <span className="text-sm font-medium text-[var(--color-accent-copper)]">
+                        <Upload className="w-8 h-8 text-[var(--sw-ink)]" />
+                        <span
+                            className="text-xs font-semibold uppercase"
+                            style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.16em', color: 'var(--sw-ink)' }}
+                        >
                             Drop files to upload
                         </span>
                     </div>
@@ -605,14 +608,14 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
 
             {/* Processing Banner */}
             {isProcessing && processingCount && processingCount > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-md">
+                <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-[var(--sw-rule-2)]">
                     <svg
                         width={16}
                         height={16}
                         viewBox="0 0 16 16"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="animate-diamond-spin text-[var(--color-accent-copper)]"
+                        className="animate-diamond-spin text-[var(--sw-rose)]"
                     >
                         <path
                             d="M8 1L15 8L8 15L1 8L8 1Z"
@@ -625,7 +628,7 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                             fill="currentColor"
                         />
                     </svg>
-                    <span className="text-sm text-[var(--color-text-primary)]">
+                    <span className="text-xs text-[var(--sw-ink)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
                         Processing {processingCount} file{processingCount !== 1 ? 's' : ''}...
                     </span>
                 </div>
@@ -633,14 +636,14 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
 
             {/* RAG Ingestion Banner */}
             {ingestingCount > 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-accent-green-tint)] border border-[var(--color-accent-green)] rounded-md">
+                <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-[var(--sw-rule-2)]">
                     <svg
                         width={16}
                         height={16}
                         viewBox="0 0 16 16"
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
-                        className="animate-diamond-spin text-[var(--color-accent-green)] flex-shrink-0"
+                        className="animate-diamond-spin text-[var(--sw-cyan)] flex-shrink-0"
                     >
                         <path
                             d="M8 1L15 8L8 15L1 8L8 1Z"
@@ -649,23 +652,26 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                             fill="none"
                         />
                     </svg>
-                    <span className="text-sm text-[var(--color-accent-green)]">
-                        Ingestion in progress — {ingestingCount} document{ingestingCount !== 1 ? 's' : ''} syncing to AI knowledge base
+                    <span className="text-xs text-[var(--sw-ink)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
+                        Ingestion in progress - {ingestingCount} document{ingestingCount !== 1 ? 's' : ''} syncing to AI knowledge base
                     </span>
                 </div>
             )}
 
             {/* Empty State */}
             {filteredDocuments.length === 0 ? (
-                <div className="border border-dashed border-[var(--color-border)] rounded-md flex flex-col items-center justify-center h-32 gap-2" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
+                <div
+                    className="m-4 border border-dashed flex flex-col items-center justify-center h-32 gap-2"
+                    style={{ borderColor: 'var(--sw-rule)', background: 'white' }}
+                >
                     {filterBySyncedOnly || filterCategoryId ? (
-                        <p className="text-sm text-[var(--color-text-muted)]">
+                        <p className="text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
                             {filterBySyncedOnly ? 'No documents synced to Ingest.' : 'No documents in this category.'}
                         </p>
                     ) : (
                         <>
-                            <Upload className="w-6 h-6 text-[var(--color-text-muted)]" />
-                            <p className="text-sm text-[var(--color-text-muted)]">
+                            <Upload className="w-6 h-6 text-[var(--sw-muted)]" />
+                            <p className="text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
                                 Drop files here to upload
                             </p>
                         </>
@@ -676,14 +682,21 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             /* Table View */
             <>
             {/* Table Toolbar */}
-            <div className="flex items-center justify-between gap-2 mb-1">
-                <div className="text-xs font-medium text-[var(--color-accent-yellow)]">
+            <div
+                className="flex items-center justify-between gap-2 px-4 py-3"
+                style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
+            >
+                <div
+                    className="text-sm font-semibold"
+                    style={{ fontFamily: 'var(--sw-font-mono)', color: 'var(--sw-ink)' }}
+                >
                     {selectedIds.size > 0 ? `${selectedIds.size} selected` : null}
                 </div>
                 <button
                     onClick={handleDownload}
                     disabled={selectedIds.size === 0 || isDownloading}
-                    className="flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-border)] transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-[var(--sw-muted)] hover:text-[var(--sw-ink)] transition-colors disabled:opacity-45"
+                    style={{ fontFamily: 'var(--sw-font-mono)' }}
                     title={selectedIds.size === 0 ? 'Select documents to download' : `Download ${selectedIds.size} document${selectedIds.size !== 1 ? 's' : ''}`}
                 >
                     {isDownloading ? (
@@ -694,34 +707,40 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                     {isDownloading ? 'Downloading...' : 'Download'}
                 </button>
             </div>
-            <div className="border border-[var(--color-border)] rounded-md overflow-hidden @container" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
+            <div className="overflow-hidden @container" style={{ background: 'white' }}>
                 <div className="relative w-full">
-                    <table className="w-full caption-bottom text-sm table-fixed">
+                    <table
+                        className="w-full caption-bottom text-[11px] table-fixed"
+                        style={{ fontFamily: 'var(--sw-font-mono)', lineHeight: 1.1 }}
+                    >
                         <TableHeader>
-                            <TableRow className="border-[var(--color-border)]" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}>
+                            <TableRow className="border-[var(--sw-rule-2)]" style={{ background: 'white' }}>
                                 <TableHead
-                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-16 !px-2 cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                    className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase w-16 !px-4 cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
+                                    style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
                                     onClick={() => handleSort('drawingNumber')}
                                 >
                                     #<SortIndicator column="drawingNumber" />
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider min-w-[40%] !px-2 cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                    className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase min-w-[40%] !px-2 cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
+                                    style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
                                     onClick={() => handleSort('name')}
                                 >
                                     <div className="flex items-center gap-1.5">
                                         <div className="w-2 flex-shrink-0" />
                                         <span>Name</span>
                                         {selectedIds.size > 0 ? (
-                                            <span className="text-[var(--color-accent-yellow)]">({selectedIds.size})</span>
+                                            <span className="text-[var(--sw-rose)]">({selectedIds.size})</span>
                                         ) : (
-                                            <span className="text-[var(--color-text-primary)]">({filteredDocuments.length})</span>
+                                            <span className="text-[var(--sw-muted)]">({filteredDocuments.length})</span>
                                         )}
                                         <SortIndicator column="name" />
                                     </div>
                                 </TableHead>
                                 <TableHead
-                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-10 !px-2 cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                    className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase w-10 !px-2 cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
+                                    style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
                                     onClick={() => handleSort('drawingRevision')}
                                 >
                                     Rev<SortIndicator column="drawingRevision" />
@@ -739,10 +758,10 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                             });
                                         }}
                                         className={cn(
-                                            "p-1 rounded transition-colors",
+                                            "p-1 transition-colors",
                                             showCategory
-                                                ? "text-[var(--color-text-primary)] bg-[var(--color-bg-hover)]"
-                                                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
+                                                ? "text-[var(--sw-ink)] bg-[var(--sw-rose-tint)]"
+                                                : "text-[var(--sw-muted)] hover:text-[var(--sw-ink)] hover:bg-[var(--sw-rose-tint)]"
                                         )}
                                         title={showCategory ? "Hide category column" : "Show category column"}
                                     >
@@ -751,7 +770,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                 </TableHead>
                                 {showCategory && (
                                     <TableHead
-                                        className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-16 @2xl:w-20 @3xl:w-24 !pl-1 !pr-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                        className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase w-16 @2xl:w-20 @3xl:w-24 !pl-1 !pr-2 @lg:table-cell hidden cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
+                                        style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
                                         onClick={() => handleSort('category')}
                                     >
                                         <span className="@3xl:hidden">Cat</span>
@@ -760,7 +780,8 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     </TableHead>
                                 )}
                                 <TableHead
-                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-28 @2xl:w-32 @3xl:w-36 !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                    className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase w-28 @2xl:w-32 @3xl:w-36 !pl-2 !pr-1 @md:table-cell hidden cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
+                                    style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
                                     onClick={() => handleSort('subcategory')}
                                 >
                                     <span className="@3xl:hidden">Subcat</span>
@@ -780,10 +801,10 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                             });
                                         }}
                                         className={cn(
-                                            "p-1 rounded transition-colors",
+                                            "p-1 transition-colors",
                                             showFileName
-                                                ? "text-[var(--color-text-primary)] bg-[var(--color-bg-hover)]"
-                                                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
+                                                ? "text-[var(--sw-ink)] bg-[var(--sw-rose-tint)]"
+                                                : "text-[var(--sw-muted)] hover:text-[var(--sw-ink)] hover:bg-[var(--sw-rose-tint)]"
                                         )}
                                         title={showFileName ? "Hide file name column" : "Show file name column"}
                                     >
@@ -792,14 +813,16 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                 </TableHead>
                                 {showFileName && (
                                     <TableHead
-                                        className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                        className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase w-28 @4xl:w-auto !pl-1 !pr-2 @3xl:table-cell hidden cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
+                                        style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
                                         onClick={() => handleSort('fileName')}
                                     >
                                         File Name<SortIndicator column="fileName" />
                                     </TableHead>
                                 )}
                                 <TableHead
-                                    className="text-xs font-bold text-[var(--color-text-primary)] uppercase tracking-wider w-8 !px-1 @lg:table-cell hidden cursor-pointer hover:text-[var(--color-text-primary)] select-none transition-colors"
+                                    className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase w-8 !px-1 @lg:table-cell hidden cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
+                                    style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
                                     onClick={() => handleSort('version')}
                                 >
                                     V<SortIndicator column="version" />
@@ -808,32 +831,34 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                     {selectedIds.size > 0 ? (
                                         <button
                                             onClick={() => setShowDeleteConfirm(true)}
-                                            className="p-1 hover:bg-[var(--color-border)] rounded"
+                                            className="p-1 hover:bg-[var(--sw-rose-tint)]"
                                             title={`Delete ${selectedIds.size} selected document${selectedIds.size > 1 ? 's' : ''}`}
                                         >
-                                            <Trash className="w-4 h-4 text-[var(--color-accent-coral)]" />
+                                            <Trash className="w-4 h-4 text-[var(--sw-rose-dk)]" />
                                         </button>
                                     ) : (
                                         <button
                                             onClick={() => setShowDeleteAllConfirm(true)}
                                             disabled={documents.length === 0}
-                                            className="p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                            className="p-1 hover:bg-[var(--sw-rose-tint)] disabled:opacity-30 disabled:cursor-not-allowed"
                                             title="Delete all documents"
                                         >
-                                            <Trash className="w-4 h-4 text-[var(--color-text-muted)]" />
+                                            <Trash className="w-4 h-4 text-[var(--sw-muted)]" />
                                         </button>
                                     )}
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredDocuments.map((doc) => (
+                            {filteredDocuments.map((doc) => {
+                                const isRowSelected = selectedIds.has(doc.id);
+                                return (
                                     <TableRow
                                         key={doc.id}
                                         className={cn(
-                                            "border-[var(--color-border)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer select-none h-9",
-                                            selectedIds.has(doc.id) &&
-                                                "bg-[var(--color-accent-yellow-tint)] hover:bg-[var(--color-accent-yellow-tint)] shadow-[inset_3px_0_0_var(--color-accent-yellow)]"
+                                            "border-[var(--sw-rule-2)] hover:bg-[var(--sw-rose-tint)] transition-colors cursor-pointer select-none h-8",
+                                            isRowSelected &&
+                                                "bg-[var(--sw-rose-tint)] hover:bg-[var(--sw-rose-tint)]"
                                         )}
                                         onMouseEnter={() => setHoveredRowId(doc.id)}
                                         onMouseLeave={() => setHoveredRowId(null)}
@@ -844,121 +869,139 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         }}
                                         onClick={(e) => handleSelect(doc.id, e)}
                                     >
-                                        <TableCell className="text-[var(--color-text-primary)] w-16 !px-2 !py-1.5">
-                                            {doc.drawingExtractionStatus === 'PROCESSING' ? (
-                                                <Loader2 className="w-4 h-4 animate-spin text-[var(--color-text-muted)]" />
-                                            ) : doc.drawingNumber ? (
-                                                <span className="truncate block" title={doc.drawingNumber}>
-                                                    {doc.drawingNumber}
-                                                </span>
-                                            ) : (
-                                                <span className="text-[var(--color-text-muted)]">—</span>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-[var(--color-text-primary)] min-w-[40%] !px-2 !py-1.5">
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                <div className="w-2 flex-shrink-0 flex items-center justify-center">
-                                                    <SyncStatusDiamond status={syncStatuses[doc.id] || null} />
-                                                </div>
-                                                {doc.drawingExtractionStatus === 'PROCESSING' ? (
-                                                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                                                        <Loader2 className="w-3 h-3 animate-spin text-[var(--color-text-muted)] flex-shrink-0" />
-                                                        <span className="truncate text-[var(--color-text-muted)] italic">Extracting...</span>
-                                                    </div>
-                                                ) : (
-                                                    <span
-                                                        className="truncate flex-1"
-                                                        title={doc.drawingName || doc.originalName || 'Untitled'}
-                                                    >
-                                                        {doc.drawingName || doc.originalName || (
-                                                            <span className="text-[var(--color-text-muted)] italic">Untitled Document</span>
-                                                        )}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-[var(--color-text-primary)] w-10 !px-2 !py-1.5">
-                                            {doc.drawingRevision ? (
-                                                <span title={doc.drawingRevision}>{doc.drawingRevision}</span>
-                                            ) : (
-                                                <span className="text-[var(--color-text-muted)]">—</span>
-                                            )}
-                                        </TableCell>
+                                         <TableCell
+                                             className="w-16 !px-4 !py-1 text-[11px]"
+                                             style={{
+                                                 fontFamily: 'var(--sw-font-mono)',
+                                                 color: doc.drawingNumber ? 'var(--sw-lav)' : 'var(--sw-muted)',
+                                             }}
+                                         >
+                                             {doc.drawingExtractionStatus === 'PROCESSING' ? (
+                                                 <Loader2 className="w-4 h-4 animate-spin text-[var(--sw-muted)]" />
+                                             ) : doc.drawingNumber ? (
+                                                 <span className="truncate block" title={doc.drawingNumber}>
+                                                     {doc.drawingNumber}
+                                                 </span>
+                                             ) : (
+                                                 <span>-</span>
+                                             )}
+                                         </TableCell>
+                                         <TableCell className="text-[var(--sw-ink)] min-w-[40%] !px-2 !py-1">
+                                             <div className="flex items-center gap-1.5 min-w-0">
+                                                 <div className="w-2 flex-shrink-0 flex items-center justify-center">
+                                                     <SyncStatusDiamond status={syncStatuses[doc.id] || null} />
+                                                 </div>
+                                                 {doc.drawingExtractionStatus === 'PROCESSING' ? (
+                                                     <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                                         <Loader2 className="w-3 h-3 animate-spin text-[var(--sw-muted)] flex-shrink-0" />
+                                                         <span className="truncate text-[var(--sw-muted)] italic">Extracting...</span>
+                                                     </div>
+                                                 ) : (
+                                                     <span
+                                                         className={cn("truncate flex-1", isRowSelected && "font-semibold")}
+                                                         title={doc.drawingName || doc.originalName || 'Untitled'}
+                                                     >
+                                                         {doc.drawingName || doc.originalName || (
+                                                             <span className="text-[var(--sw-muted)] italic">Untitled Document</span>
+                                                         )}
+                                                     </span>
+                                                 )}
+                                             </div>
+                                         </TableCell>
+                                         <TableCell
+                                             className="w-10 !px-2 !py-1"
+                                             style={{ color: isRowSelected ? 'var(--sw-peach)' : 'var(--sw-ink)' }}
+                                         >
+                                             {doc.drawingRevision ? (
+                                                 <span title={doc.drawingRevision}>{doc.drawingRevision}</span>
+                                             ) : (
+                                                 <span className="text-[var(--sw-muted)]">-</span>
+                                             )}
+                                         </TableCell>
                                         {/* Spacer cell for category toggle column */}
-                                        <TableCell className="w-6 !px-0 @lg:table-cell hidden !py-1.5" />
+                                        <TableCell className="w-6 !px-0 @lg:table-cell hidden !py-1" />
                                         {showCategory && (
-                                            <TableCell className="w-16 @2xl:w-20 @3xl:w-24 @lg:table-cell hidden !pl-1 !pr-2 !py-1.5">
-                                                <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
-                                                    {doc.categoryName ? (
-                                                        <>
-                                                            <Folder
-                                                                className="w-3 h-3 flex-shrink-0 fill-current text-[var(--color-text-muted)]"
-                                                            />
-                                                            <span
-                                                                className="truncate @3xl:overflow-visible text-[var(--color-text-muted)] text-xs"
-                                                                title={doc.categoryName}
-                                                            >
-                                                                {doc.categoryName}
-                                                            </span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="text-[var(--color-text-muted)]">—</span>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                        )}
-                                        <TableCell className="w-28 @2xl:w-32 @3xl:w-36 @md:table-cell hidden !pl-2 !pr-1 !py-1.5">
+                                         <TableCell className="w-16 @2xl:w-20 @3xl:w-24 @lg:table-cell hidden !pl-1 !pr-2 !py-1">
+                                                 <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
+                                                     {doc.categoryName ? (
+                                                         <>
+                                                             <span className="w-2 h-2 flex-shrink-0 bg-[var(--sw-rule)]" />
+                                                             <span
+                                                                 className="truncate @3xl:overflow-visible text-[var(--sw-muted)] text-[11px]"
+                                                                 title={doc.categoryName}
+                                                             >
+                                                                 {doc.categoryName}
+                                                             </span>
+                                                         </>
+                                                     ) : (
+                                                         <span className="text-[var(--sw-muted)]">-</span>
+                                                     )}
+                                                 </div>
+                                             </TableCell>
+                                         )}
+                                        <TableCell className="w-28 @2xl:w-32 @3xl:w-36 @md:table-cell hidden !pl-2 !pr-1 !py-1">
                                             {doc.subcategoryName ? (
-                                                <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
-                                                    <Folder
-                                                        className="w-3 h-3 flex-shrink-0 fill-current text-[var(--color-text-muted)]"
-                                                    />
-                                                    <span
-                                                        className="truncate @3xl:overflow-visible text-[var(--color-text-muted)] text-xs"
-                                                        title={doc.subcategoryName}
-                                                    >
+                                                 <div className="flex items-center gap-1 min-w-0 @3xl:min-w-max">
+                                                     <span
+                                                         className="w-2 h-2 flex-shrink-0"
+                                                         style={{ background: isRowSelected ? 'var(--sw-peach)' : 'var(--sw-rule)' }}
+                                                     />
+                                                     <span
+                                                         className="truncate @3xl:overflow-visible text-[var(--sw-muted)] text-[11px]"
+                                                         title={doc.subcategoryName}
+                                                     >
                                                         {doc.subcategoryName}
                                                     </span>
                                                 </div>
-                                            ) : (
-                                                <span className="text-[var(--color-text-muted)]">—</span>
-                                            )}
-                                        </TableCell>
+                                             ) : (
+                                                 <span className="text-[var(--sw-muted)]">-</span>
+                                             )}
+                                         </TableCell>
                                         {/* Spacer cell for file name toggle column */}
-                                        <TableCell className="w-6 !px-0 @md:table-cell hidden !py-1.5" />
+                                        <TableCell className="w-6 !px-0 @md:table-cell hidden !py-1" />
                                         {showFileName && (
-                                            <TableCell className="text-[var(--color-text-muted)] w-28 @4xl:w-auto @3xl:table-cell hidden !pl-1 !pr-2 !py-1.5">
+                                             <TableCell className="text-[var(--sw-muted)] w-28 @4xl:w-auto @3xl:table-cell hidden !pl-1 !pr-2 !py-1">
                                                 <span
-                                                    className="truncate @4xl:overflow-visible block text-xs"
+                                                    className="truncate @4xl:overflow-visible block text-[11px]"
                                                     title={doc.originalName || 'Unknown'}
                                                 >
                                                     {doc.originalName || <span className="italic">Unknown</span>}
                                                 </span>
                                             </TableCell>
                                         )}
-                                        <TableCell className="text-[var(--color-text-muted)] w-8 @lg:table-cell hidden !px-1 !py-1.5 text-xs">v{doc.versionNumber}</TableCell>
-                                        <TableCell className="w-8 @sm:table-cell hidden !px-1 !py-1.5">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteSingle(doc.id);
-                                                }}
-                                                disabled={deletingId === doc.id}
-                                                className={cn(
-                                                    "p-1 hover:bg-[var(--color-border)] rounded disabled:opacity-50",
-                                                    hoveredRowId !== doc.id && deletingId !== doc.id && "invisible"
-                                                )}
-                                                title="Delete document"
-                                            >
-                                                {deletingId === doc.id ? (
-                                                    <Loader2 className="w-4 h-4 text-[var(--color-text-muted)] animate-spin" />
-                                                ) : (
-                                                    <Trash className="w-4 h-4 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)]" />
-                                                )}
-                                            </button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                         <TableCell
+                                             className="text-[var(--sw-muted)] w-8 @lg:table-cell hidden !px-1 !py-1 text-[11px]"
+                                             style={{ fontFamily: 'var(--sw-font-mono)' }}
+                                         >
+                                             v{doc.versionNumber}
+                                         </TableCell>
+                                         <TableCell className="w-8 @sm:table-cell hidden !px-1 !py-1">
+                                             {isRowSelected && hoveredRowId !== doc.id && deletingId !== doc.id ? (
+                                                 <Check className="w-4 h-4 mx-auto text-[var(--sw-rose)]" />
+                                             ) : (
+                                                 <button
+                                                     onClick={(e) => {
+                                                         e.stopPropagation();
+                                                         handleDeleteSingle(doc.id);
+                                                     }}
+                                                     disabled={deletingId === doc.id}
+                                                     className={cn(
+                                                         "p-1 hover:bg-[var(--sw-rose-tint)] disabled:opacity-50",
+                                                         hoveredRowId !== doc.id && deletingId !== doc.id && "invisible"
+                                                     )}
+                                                     title="Delete document"
+                                                 >
+                                                     {deletingId === doc.id ? (
+                                                         <Loader2 className="w-4 h-4 text-[var(--sw-muted)] animate-spin" />
+                                                     ) : (
+                                                         <Trash className="w-4 h-4 text-[var(--sw-muted)] hover:text-[var(--sw-rose-dk)]" />
+                                                     )}
+                                                 </button>
+                                             )}
+                                         </TableCell>
+                                     </TableRow>
+                                );
+                            })}
                         </TableBody>
                     </table>
                 </div>

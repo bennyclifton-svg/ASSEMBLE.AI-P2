@@ -9,15 +9,15 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 import type { NoteColor } from '@/types/notes-meetings-reports';
 
-const COLORS: { value: NoteColor; label: string; bgClass: string; ringClass: string }[] = [
-    { value: 'yellow', label: 'Yellow', bgClass: 'bg-yellow-300/50', ringClass: 'ring-yellow-400' },
-    { value: 'blue', label: 'Blue', bgClass: 'bg-blue-300/50', ringClass: 'ring-blue-400' },
-    { value: 'green', label: 'Green', bgClass: 'bg-green-300/50', ringClass: 'ring-green-400' },
-    { value: 'pink', label: 'Pink', bgClass: 'bg-pink-300/50', ringClass: 'ring-pink-400' },
+const COLORS: { value: NoteColor; label: string; accent: string; tint: string }[] = [
+    { value: 'purple', label: 'Purple', accent: 'var(--sw-lav)', tint: 'rgba(168, 156, 217, 0.18)' },
+    { value: 'orange', label: 'Orange', accent: 'var(--sw-peach)', tint: 'rgba(245, 164, 114, 0.18)' },
+    { value: 'pink', label: 'Pink', accent: 'var(--sw-rose)', tint: 'rgba(248, 101, 122, 0.18)' },
+    { value: 'blue', label: 'Blue', accent: 'var(--sw-cyan)', tint: 'rgba(122, 184, 194, 0.18)' },
 ];
 
 interface NoteColorPickerProps {
@@ -60,6 +60,13 @@ export function NoteColorPicker({
         }
     };
 
+    const colorButtonStyle = (color: (typeof COLORS)[number], isSelected: boolean): CSSProperties => ({
+        background: color.accent,
+        boxShadow: isSelected
+            ? `0 0 0 2px var(--sw-paper), 0 0 0 3px ${color.accent}`
+            : undefined,
+    });
+
     // Default mode: show all 4 dots
     if (!compact) {
         return (
@@ -70,11 +77,9 @@ export function NoteColorPicker({
                         onClick={() => onColorChange(color.value)}
                         className={cn(
                             'w-3 h-3 rounded-full transition-all',
-                            color.bgClass,
-                            selectedColor === color.value
-                                ? `ring-1 ring-offset-1 ring-offset-[var(--color-bg-secondary)] ${color.ringClass}`
-                                : 'hover:scale-125',
+                            selectedColor !== color.value && 'hover:scale-125',
                         )}
+                        style={colorButtonStyle(color, selectedColor === color.value)}
                         title={color.label}
                         aria-label={`Set note color to ${color.label}`}
                     />
@@ -90,10 +95,9 @@ export function NoteColorPicker({
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={cn(
-                    'w-3 h-3 rounded-full transition-all',
-                    selectedColorData.bgClass,
-                    `ring-1 ring-offset-1 ring-offset-[var(--color-bg-secondary)] ${selectedColorData.ringClass}`,
+                    'w-3 h-3 rounded-full transition-all hover:scale-110',
                 )}
+                style={colorButtonStyle(selectedColorData, true)}
                 title={`Color: ${selectedColorData.label} (click to change)`}
                 aria-label={`Current color: ${selectedColorData.label}. Click to change.`}
             />
@@ -107,11 +111,9 @@ export function NoteColorPicker({
                             onClick={() => handleColorSelect(color.value)}
                             className={cn(
                                 'w-3.5 h-3.5 rounded-full transition-all',
-                                color.bgClass,
-                                selectedColor === color.value
-                                    ? `ring-1 ring-offset-1 ring-offset-[var(--color-bg-primary)] ${color.ringClass}`
-                                    : 'hover:scale-125',
+                                selectedColor !== color.value && 'hover:scale-125',
                             )}
+                            style={colorButtonStyle(color, selectedColor === color.value)}
                             title={color.label}
                             aria-label={`Set note color to ${color.label}`}
                         />

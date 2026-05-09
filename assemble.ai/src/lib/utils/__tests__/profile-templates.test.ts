@@ -93,8 +93,8 @@ describe('Profile Templates JSON Structure', () => {
                 expect(field).toHaveProperty('type');
                 expect(typeof field.key).toBe('string');
                 expect(typeof field.label).toBe('string');
-                // Allow integer, decimal, boolean, and select types
-                expect(['integer', 'decimal', 'boolean', 'select']).toContain(field.type);
+                // Allow integer, decimal, boolean, select, and composite types
+                expect(['integer', 'decimal', 'boolean', 'select', 'composite']).toContain(field.type);
               });
             }
           });

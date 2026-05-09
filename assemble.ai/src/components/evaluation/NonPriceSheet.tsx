@@ -34,6 +34,8 @@ interface NonPriceSheetProps {
     isParsing?: boolean;
     parsingFirmId?: string | null;
     firmType: 'consultant' | 'contractor';
+    accentColor?: string;
+    surface?: 'procurement' | 'record';
 }
 
 export function NonPriceSheet({
@@ -45,6 +47,8 @@ export function NonPriceSheet({
     isParsing = false,
     parsingFirmId = null,
     firmType,
+    accentColor = 'var(--color-accent-copper)',
+    surface = 'procurement',
 }: NonPriceSheetProps) {
     // Fixed cell height to match PRICE table styling
     const cellHeight = 28;
@@ -144,8 +148,13 @@ export function NonPriceSheet({
     // Sort criteria by order index
     const sortedCriteria = [...criteria].sort((a, b) => a.orderIndex - b.orderIndex);
 
+    const accentCssVar = { '--evaluation-accent': accentColor } as React.CSSProperties;
+
     return (
-        <div className="overflow-hidden w-full">
+        <div
+            className={`overflow-hidden w-full ${surface === 'record' ? 'bg-white' : ''}`}
+            style={accentCssVar}
+        >
             {/* Table */}
             <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
@@ -160,10 +169,13 @@ export function NonPriceSheet({
                     <thead>
                         <tr className="border-b border-[var(--color-border)]">
                             <th
-                                className="px-3 text-left text-xs font-semibold text-[var(--color-text-primary)] uppercase tracking-wide"
-                                style={{ height: cellHeight }}
+                                className="px-3 text-left text-xs font-semibold"
+                                style={{ height: cellHeight, color: accentColor }}
                             >
-                                Criteria
+                                <div className="flex items-center gap-2">
+                                    <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0" style={{ background: accentColor }} />
+                                    <span>Criteria</span>
+                                </div>
                             </th>
                             {firms.map(firm => {
                                 const isColumnDragOver = dragOverFirmId === firm.id;
@@ -172,7 +184,7 @@ export function NonPriceSheet({
                                     <th
                                         key={firm.id}
                                         className={`p-0 relative ${
-                                            isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                            isColumnDragOver ? 'bg-[var(--evaluation-accent)]/20' : ''
                                         }`}
                                         style={{ height: cellHeight }}
                                         onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
@@ -181,10 +193,10 @@ export function NonPriceSheet({
                                         onDrop={(e) => handleColumnDrop(e, firm.id)}
                                     >
                                         <div
-                                            className={`px-3 text-right text-xs font-medium text-[var(--color-text-primary)] flex items-center justify-end ${
+                                            className={`px-3 text-right text-xs font-medium flex items-center justify-end ${
                                                 isProcessing ? 'opacity-50' : ''
                                             }`}
-                                            style={{ height: cellHeight }}
+                                            style={{ height: cellHeight, color: accentColor }}
                                             title={onFileDrop ? `Drop PDF to parse tender for ${firm.companyName}` : undefined}
                                         >
                                             <span className="truncate">{firm.companyName}</span>
@@ -192,15 +204,15 @@ export function NonPriceSheet({
                                         {/* Top and left/right borders of column drop zone */}
                                         {isColumnDragOver && (
                                             <>
-                                                <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                                <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
-                                                <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none" />
+                                                <div className="absolute inset-x-0 top-0 h-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                                <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
+                                                <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none" />
                                             </>
                                         )}
                                         {/* Processing indicator */}
                                         {isProcessing && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-primary)]/80 pointer-events-none">
-                                                <Loader2 className="w-4 h-4 text-[var(--color-accent-copper)] animate-spin" />
+                                                <Loader2 className="w-4 h-4 animate-spin" style={{ color: accentColor }} />
                                             </div>
                                         )}
                                     </th>
@@ -241,7 +253,7 @@ export function NonPriceSheet({
                                             <td
                                                 key={firm.id}
                                                 className={`p-0 align-top relative ${
-                                                    isColumnDragOver ? 'bg-[var(--color-accent-copper)]/20' : ''
+                                                    isColumnDragOver ? 'bg-[var(--evaluation-accent)]/20' : ''
                                                 }`}
                                                 onDragEnter={(e) => handleColumnDragEnter(e, firm.id)}
                                                 onDragLeave={(e) => handleColumnDragLeave(e, firm.id)}
@@ -261,10 +273,10 @@ export function NonPriceSheet({
                                                 {/* Column drag - left/right borders for unified rectangle, bottom on last row */}
                                                 {isColumnDragOver && (
                                                     <>
-                                                        <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none z-10" />
-                                                        <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--color-accent-copper)] pointer-events-none z-10" />
+                                                        <div className="absolute inset-y-0 left-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none z-10" />
+                                                        <div className="absolute inset-y-0 right-0 w-0.5 bg-[var(--evaluation-accent)] pointer-events-none z-10" />
                                                         {isLastRow && (
-                                                            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[var(--color-accent-copper)] pointer-events-none z-10" />
+                                                            <div className="absolute inset-x-0 bottom-0 h-0.5 bg-[var(--evaluation-accent)] pointer-events-none z-10" />
                                                         )}
                                                     </>
                                                 )}
@@ -281,7 +293,7 @@ export function NonPriceSheet({
             {/* Legend */}
             <div className="flex items-center gap-4 px-3 py-2 border-t border-[var(--color-border)]">
                 <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">
-                    <span className="text-[var(--color-accent-copper)]">&#10024;</span>
+                    <span style={{ color: accentColor }}>&#10024;</span>
                     <span>AI-extracted</span>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)]">

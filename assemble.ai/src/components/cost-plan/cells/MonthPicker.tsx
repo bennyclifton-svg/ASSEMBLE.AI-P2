@@ -104,14 +104,14 @@ export function MonthPicker({
         disabled={disabled}
         className={`
           w-full flex items-center justify-between gap-2 px-3 py-1.5
-          bg-[#3c3c3c] border border-[#3e3e42] rounded text-sm
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[#4e4e52] cursor-pointer'}
-          ${isOpen ? 'border-[#007acc]' : ''}
+          bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-sm
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-border)] cursor-pointer'}
+          ${isOpen ? 'border-[var(--color-accent-primary)]' : ''}
         `}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <Calendar className="w-4 h-4 flex-shrink-0 text-[#858585]" />
-          <span className={formattedValue ? 'text-[#cccccc]' : 'text-[#6e6e6e]'}>
+          <Calendar className="w-4 h-4 flex-shrink-0 text-[var(--color-text-muted)]" />
+          <span className={formattedValue ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'}>
             {formattedValue || placeholder}
           </span>
         </div>
@@ -120,34 +120,34 @@ export function MonthPicker({
           {showClear && value && (
             <button
               onClick={handleClear}
-              className="p-0.5 hover:bg-[#4e4e52] rounded"
+              className="p-0.5 hover:bg-[var(--color-border)] rounded"
             >
-              <span className="text-[#858585] hover:text-[#cccccc] text-xs">×</span>
+              <span className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-xs">×</span>
             </button>
           )}
           <ChevronDown
-            className={`w-4 h-4 text-[#858585] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-[var(--color-text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
       </button>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg p-3 w-[240px]">
+        <div className="absolute z-50 mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg p-3 w-[240px]">
           {/* Year selector */}
           <div className="flex items-center justify-between mb-3">
             <button
               onClick={() => canGoPrevYear && setViewYear(viewYear - 1)}
               disabled={!canGoPrevYear}
-              className={`p-1 rounded ${canGoPrevYear ? 'hover:bg-[#37373d] text-[#cccccc]' : 'text-[#4e4e52] cursor-not-allowed'}`}
+              className={`p-1 rounded ${canGoPrevYear ? 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-primary)]' : 'text-[var(--color-border)] cursor-not-allowed'}`}
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-medium text-[#cccccc]">{viewYear}</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)]">{viewYear}</span>
             <button
               onClick={() => canGoNextYear && setViewYear(viewYear + 1)}
               disabled={!canGoNextYear}
-              className={`p-1 rounded ${canGoNextYear ? 'hover:bg-[#37373d] text-[#cccccc]' : 'text-[#4e4e52] cursor-not-allowed'}`}
+              className={`p-1 rounded ${canGoNextYear ? 'hover:bg-[var(--color-bg-hover)] text-[var(--color-text-primary)]' : 'text-[var(--color-border)] cursor-not-allowed'}`}
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -169,10 +169,10 @@ export function MonthPicker({
                   className={`
                     px-2 py-2 text-xs rounded transition-colors
                     ${isSelected
-                      ? 'bg-[#0e639c] text-white'
+                      ? 'bg-[var(--color-accent-primary)] text-white'
                       : isCurrent
-                      ? 'bg-[#37373d] text-[#4fc3f7] ring-1 ring-[#4fc3f7]/30'
-                      : 'text-[#cccccc] hover:bg-[#37373d]'}
+                      ? 'bg-[var(--color-bg-hover)] text-[var(--sw-cyan)] ring-1 ring-[var(--sw-cyan)]/30'
+                      : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]'}
                   `}
                 >
                   {month}
@@ -182,14 +182,14 @@ export function MonthPicker({
           </div>
 
           {/* Quick actions */}
-          <div className="mt-3 pt-2 border-t border-[#3e3e42] flex gap-2">
+          <div className="mt-3 pt-2 border-t border-[var(--color-border)] flex gap-2">
             <button
               onClick={() => {
                 const now = new Date();
                 onChange({ year: now.getFullYear(), month: now.getMonth() + 1 });
                 setIsOpen(false);
               }}
-              className="flex-1 px-2 py-1 text-xs text-[#4fc3f7] hover:bg-[#37373d] rounded"
+              className="flex-1 px-2 py-1 text-xs text-[var(--sw-cyan)] hover:bg-[var(--color-bg-hover)] rounded"
             >
               This Month
             </button>
@@ -203,7 +203,7 @@ export function MonthPicker({
                 });
                 setIsOpen(false);
               }}
-              className="flex-1 px-2 py-1 text-xs text-[#858585] hover:bg-[#37373d] rounded"
+              className="flex-1 px-2 py-1 text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] rounded"
             >
               Last Month
             </button>
@@ -261,12 +261,12 @@ export function MonthDisplay({
   className?: string;
 }) {
   if (!year || !month) {
-    return <span className={`text-[#6e6e6e] ${className}`}>-</span>;
+    return <span className={`text-[var(--color-text-muted)] ${className}`}>-</span>;
   }
 
   const monthNames = format === 'long' ? FULL_MONTHS : MONTHS;
   return (
-    <span className={`text-[#cccccc] ${className}`}>
+    <span className={`text-[var(--color-text-primary)] ${className}`}>
       {monthNames[month - 1]} {year}
     </span>
   );

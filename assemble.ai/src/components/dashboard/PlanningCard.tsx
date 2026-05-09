@@ -1,11 +1,11 @@
 'use client';
 
-import { Box } from 'lucide-react';
-import { BriefSection } from './planning/BriefSection';
-import { StakeholderNav } from '@/components/stakeholders/StakeholderNav';
-import { KnowledgeNav } from '@/components/knowledge/KnowledgeNav';
-import { ProjectSwitcher } from './ProjectSwitcher';
-
+import {
+    SitewiseNavGroup,
+    SitewiseNavItem,
+    SitewiseProjectSwitcherCard,
+    SitewiseAskCard,
+} from './nav';
 
 interface Project {
     id: string;
@@ -15,66 +15,82 @@ interface Project {
 }
 
 interface PlanningCardProps {
-    projectId: string;
-    onStakeholderNavigate?: () => void;
-    onKnowledgeNavigate?: () => void;
-    onShowBrief?: () => void;
     activeMainTab?: string;
     refreshKey?: number;
     selectedProject?: Project | null;
     onSelectProject?: (project: Project | null) => void;
+    onMainTabChange?: (tab: string) => void;
+    // Retained for API compatibility with existing callers; the wireframe
+    // routes navigation exclusively through onMainTabChange.
+    projectId?: string;
+    onStakeholderNavigate?: () => void;
+    onKnowledgeNavigate?: () => void;
+    onShowBrief?: () => void;
 }
 
+const WORKFLOW_ITEMS: Array<{ tab: string; label: string; kbd: string }> = [
+    { tab: 'brief',            label: 'Brief',          kbd: '⌥1' },
+    { tab: 'cost-planning',    label: 'Cost Planning',  kbd: '⌥2' },
+    { tab: 'program',          label: 'Programme',        kbd: '⌥3' },
+    { tab: 'procurement',      label: 'Procurement',    kbd: '⌥4' },
+    { tab: 'notes',            label: 'Records',        kbd: '⌥5' },
+    { tab: 'correspondence',   label: 'Correspondence', kbd: '⌥6' },
+    { tab: 'meetings-reports', label: 'Meet & Report',  kbd: '⌥7' },
+];
+
+const REFERENCE_ITEMS: Array<{ tab: string; label: string; kbd: string }> = [
+    { tab: 'stakeholders', label: 'Stakeholders', kbd: '⌥8' },
+    { tab: 'knowledge',    label: 'Knowledge',    kbd: '⌥9' },
+];
+
 export function PlanningCard({
-    projectId,
-    onStakeholderNavigate,
-    onKnowledgeNavigate,
-    onShowBrief,
     activeMainTab,
     refreshKey,
     selectedProject,
     onSelectProject,
+    onMainTabChange,
 }: PlanningCardProps) {
     return (
-        <div className="h-full overflow-y-auto section-planning">
-            <div className="nav-panel-unified pt-[60px]">
-                <BriefSection
-                    isActive={activeMainTab === 'brief'}
-                    onShowBrief={onShowBrief}
+        <aside
+            className="flex flex-col h-full p-4 gap-4 overflow-hidden"
+            style={{ background: 'var(--sw-paper-2)', borderRight: '1px solid var(--sw-rule)' }}
+        >
+            {selectedProject && onSelectProject && (
+                <SitewiseProjectSwitcherCard
+                    selectedProject={selectedProject}
+                    onSelectProject={onSelectProject}
+                    refreshTrigger={refreshKey}
                 />
+            )}
 
-                <StakeholderNav
-                    projectId={projectId}
-                    onNavigate={onStakeholderNavigate}
-                    isActive={activeMainTab === 'stakeholders'}
-                />
+            <SitewiseNavGroup>
+                {WORKFLOW_ITEMS.map(item => (
+                    <SitewiseNavItem
+                        key={item.tab}
+                        label={item.label}
+                        kbd={item.kbd}
+                        active={activeMainTab === item.tab}
+                        onClick={() => onMainTabChange?.(item.tab)}
+                    />
+                ))}
+            </SitewiseNavGroup>
 
-                <KnowledgeNav
-                    projectId={projectId}
-                    onNavigate={onKnowledgeNavigate}
-                    isActive={activeMainTab === 'knowledge'}
-                />
+            <SitewiseNavGroup label="Reference" showDivider>
+                {REFERENCE_ITEMS.map(item => (
+                    <SitewiseNavItem
+                        key={item.tab}
+                        label={item.label}
+                        kbd={item.kbd}
+                        active={activeMainTab === item.tab}
+                        onClick={() => onMainTabChange?.(item.tab)}
+                    />
+                ))}
+            </SitewiseNavGroup>
 
-                {/* Project Switcher */}
-                {onSelectProject && selectedProject && (
-                    <div className="nav-panel-section py-3 overflow-hidden">
-                        <div className="nav-panel-header w-full overflow-hidden">
-                            <ProjectSwitcher
-                                selectedProject={selectedProject}
-                                onSelectProject={onSelectProject}
-                                refreshTrigger={refreshKey}
-                            >
-                                <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
-                                    <Box className="w-5 h-5 text-[var(--color-text-secondary)] flex-shrink-0" />
-                                    <span className="text-base font-medium text-[var(--color-text-primary)] truncate">
-                                        {selectedProject.name}
-                                    </span>
-                                </div>
-                            </ProjectSwitcher>
-                        </div>
-                    </div>
-                )}
+            <div className="mt-auto">
+                <SitewiseAskCard onActivate={() => { /* TODO: focus ChatDock */ }} />
             </div>
-        </div>
+        </aside>
     );
 }
+

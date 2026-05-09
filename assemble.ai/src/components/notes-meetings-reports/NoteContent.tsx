@@ -17,6 +17,7 @@ import { NoteEditor } from './NoteEditor';
 import { NoteColorPicker } from './NoteColorPicker';
 import { AttachmentSection } from './shared/AttachmentSection';
 import { useNoteTransmittal } from '@/lib/hooks/use-notes';
+import type { RichTextToolbarVariant } from '@/components/ui/RichTextEditor';
 import {
     findFirstInstruction,
     refindInstruction,
@@ -28,8 +29,13 @@ import {
 import { toast } from 'sonner';
 import type { Editor } from '@tiptap/react';
 import type { Note, NoteColor, GenerateNoteContentResponse } from '@/types/notes-meetings-reports';
-import { getNoteColor, getNoteColorStyles } from '@/types/notes-meetings-reports';
+import { getNoteColor, getNoteColorStyles, getNoteType } from '@/types/notes-meetings-reports';
 import { cn } from '@/lib/utils';
+import {
+    getRecordTitleEditStyle,
+    getRecordTypeAccent,
+    RECORD_TITLE_EDIT_INPUT_CLASS,
+} from './record-style';
 
 interface NoteWithCount extends Note {
     transmittalCount: number;
@@ -45,6 +51,12 @@ interface NoteContentProps {
     hideTitle?: boolean;
     /** Hide the toolbar icons (when shown in header instead) */
     hideToolbar?: boolean;
+    /** Surface treatment for row-register expansion vs legacy coloured note surface */
+    surface?: 'colored' | 'sitewise';
+    /** Reduce the editor toolbar for the Records shell */
+    editorToolbarVariant?: RichTextToolbarVariant;
+    /** Show AI generation/instruction actions in the editor toolbar */
+    showAiToolbar?: boolean;
     className?: string;
 }
 
@@ -56,6 +68,9 @@ export function NoteContent({
     onLoadTransmittal,
     hideTitle = false,
     hideToolbar = false,
+    surface = 'colored',
+    editorToolbarVariant = 'full',
+    showAiToolbar = true,
     className,
 }: NoteContentProps) {
     const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -223,15 +238,19 @@ export function NoteContent({
 
     const noteColor = getNoteColor(note.color);
     const colorStyles = getNoteColorStyles(note.color);
+    const usesSitewiseSurface = surface === 'sitewise';
+    const recordTitleAccent = usesSitewiseSurface
+        ? getRecordTypeAccent(getNoteType(note.type))
+        : 'var(--color-accent-copper)';
 
     return (
         <div
             className={cn('px-4 pb-4 transition-colors note-colored-scrollbar note-dark-text', hideTitle && hideToolbar ? 'pt-0' : 'pt-2', className)}
             style={{
-                backgroundColor: colorStyles.bg,
-                color: colorStyles.text,
+                backgroundColor: usesSitewiseSurface ? 'white' : colorStyles.bg,
+                color: usesSitewiseSurface ? 'var(--sw-ink)' : colorStyles.text,
                 '--note-scrollbar-thumb': colorStyles.scrollbar,
-                '--note-scrollbar-track': colorStyles.bg,
+                '--note-scrollbar-track': usesSitewiseSurface ? 'white' : colorStyles.bg,
             } as React.CSSProperties}
         >
             {/* Toolbar with title, color picker, and actions (hidden when both hideTitle and hideToolbar are true) */}
@@ -247,7 +266,13 @@ export function NoteContent({
                                     onBlur={handleTitleBlur}
                                     onKeyDown={handleTitleKeyDown}
                                     autoFocus
-                                    className="h-8 text-lg font-semibold bg-transparent border-[var(--color-border)] focus:border-[var(--color-accent-copper)]"
+                                    className={cn(
+                                        'h-8 text-lg font-semibold',
+                                        usesSitewiseSurface
+                                            ? `rounded-none ${RECORD_TITLE_EDIT_INPUT_CLASS}`
+                                            : 'bg-transparent border-[var(--color-border)] focus:border-[var(--color-accent-copper)]'
+                                    )}
+                                    style={usesSitewiseSurface ? getRecordTitleEditStyle(recordTitleAccent) : undefined}
                                 />
                             ) : (
                                 <h2
@@ -279,7 +304,7 @@ export function NoteContent({
                                 className={cn(
                                     'p-1 rounded transition-colors',
                                     note.isStarred
-                                        ? 'text-yellow-500 hover:text-yellow-600'
+                                        ? 'text-[var(--sw-amber)] hover:opacity-80'
                                         : 'opacity-60 hover:opacity-100'
                                 )}
                                 title={note.isStarred ? 'Unstar note' : 'Star note'}
@@ -314,8 +339,9 @@ export function NoteContent({
                     onContentChange={handleContentChange}
                     onEditorReady={handleEditorReady}
                     transparentBg={true}
+                    toolbarVariant={editorToolbarVariant}
                     className="h-full"
-                    toolbarExtra={
+                    toolbarExtra={showAiToolbar ? (
                         <div className="flex items-center gap-3">
                             {hasInstruction && (
                                 <button
@@ -362,7 +388,7 @@ export function NoteContent({
                                 </span>
                             </button>
                         </div>
-                    }
+                    ) : undefined}
                 />
             </div>
 

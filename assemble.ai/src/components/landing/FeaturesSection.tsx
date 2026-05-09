@@ -1,28 +1,40 @@
 import Image from 'next/image';
-import { SectionContainer } from './shared/SectionContainer';
 import { ScrollReveal } from './shared/ScrollReveal';
 import { featuresContent } from './data/landing-data';
 
-// Map each feature index to the matching screenshot
 const featureImages = [
-    { src: '/images/Landing-03.png', alt: 'Project objectives and requirements setup' },      // Project Setup
-    { src: '/images/Landing-02.png', alt: 'Cost planning and program overview' },               // Cost Planning
-    { src: '/images/Landing-01.png', alt: 'Procurement evaluation and tender management' },     // Procurement
-    { src: '/images/Landing-05.png', alt: 'Notes, meetings, and automated reporting' },          // Reporting
-    { src: '/images/Landing-04.png', alt: 'Stakeholder and document management' },               // Documents
+    { src: '/images/Landing-03.png', alt: 'Project objectives and requirements setup' },
+    { src: '/images/Landing-02.png', alt: 'Cost planning and program overview' },
+    { src: '/images/Landing-01.png', alt: 'Procurement evaluation and tender management' },
+    { src: '/images/Landing-05.png', alt: 'Notes, meetings, and automated reporting' },
+    { src: '/images/Landing-04.png', alt: 'Stakeholder and document management' },
+];
+
+const FEATURE_TAGS = [
+    { code: 'F-01', accent: 'var(--sw-rose)' },
+    { code: 'F-02', accent: 'var(--sw-peach)' },
+    { code: 'F-03', accent: 'var(--sw-lav)' },
+    { code: 'F-04', accent: 'var(--sw-cyan)' },
+    { code: 'F-05', accent: 'var(--sw-amber)' },
 ];
 
 function FeatureMockup({ index }: { index: number }) {
     const image = featureImages[index % featureImages.length];
-
     return (
-        <div className="w-full rounded-2xl shadow-xl overflow-hidden border border-[var(--gray-200)]">
+        <div
+            className="w-full overflow-hidden"
+            style={{
+                border: '1px solid var(--sw-rule)',
+                background: 'var(--sw-paper-2)',
+                boxShadow: '0 12px 32px -16px rgba(14,16,20,0.25)',
+            }}
+        >
             <Image
                 src={image.src}
                 alt={image.alt}
                 width={1320}
                 height={840}
-                className="w-full h-auto"
+                className="w-full h-auto block"
             />
         </div>
     );
@@ -30,52 +42,120 @@ function FeatureMockup({ index }: { index: number }) {
 
 export function FeaturesSection() {
     return (
-        <SectionContainer id="features" background="bg-white" className="py-24">
-            <ScrollReveal>
-                <div className="text-center mb-20">
-                    <p className="text-[var(--gray-500)] text-sm font-medium mb-3">
-                        {featuresContent.label}
-                    </p>
-                    <h2 className="serif text-[clamp(36px,4vw,52px)] leading-[1.1] text-[var(--gray-800)]">
-                        {featuresContent.headline}
-                    </h2>
-                </div>
-            </ScrollReveal>
+        <section
+            id="features"
+            className="relative overflow-hidden py-24"
+            style={{ background: 'var(--sw-paper)', fontFamily: 'var(--sw-font-sans)' }}
+        >
+            <div className="relative max-w-[1280px] mx-auto px-8">
+                <ScrollReveal>
+                    <div className="text-center mb-20">
+                        <p
+                            className="mb-3"
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 11,
+                                color: 'var(--sw-rose-dk)',
+                                letterSpacing: '0.18em',
+                                textTransform: 'uppercase',
+                                fontWeight: 600,
+                            }}
+                        >
+                            // {featuresContent.label}
+                        </p>
+                        <h2
+                            className="m-0 text-balance"
+                            style={{
+                                fontFamily: 'var(--sw-font-sans)',
+                                fontSize: 'clamp(36px, 4vw, 52px)',
+                                fontWeight: 700,
+                                lineHeight: 1.1,
+                                letterSpacing: '-0.03em',
+                                color: 'var(--sw-ink)',
+                            }}
+                        >
+                            {featuresContent.headline}
+                        </h2>
+                    </div>
+                </ScrollReveal>
 
-            <div className="space-y-24">
-                {featuresContent.features.map((feature, index) => {
-                    const isReversed = index % 2 === 1;
-                    return (
-                        <ScrollReveal key={feature.title} delay={index * 100}>
-                            <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center ${isReversed ? 'lg:flex-row-reverse' : ''}`}>
-                                {/* Text content */}
-                                <div className={`${isReversed ? 'lg:order-2' : 'lg:order-1'}`}>
-                                    <h3 className="serif text-[28px] lg:text-[32px] text-[var(--gray-800)] mb-4">
-                                        {feature.title}
-                                    </h3>
-                                    <p className="text-[var(--gray-600)] text-base lg:text-lg mb-6 leading-relaxed">
-                                        {feature.description}
-                                    </p>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-6 h-6 rounded-full bg-[var(--primary)] flex items-center justify-center">
-                                            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                            </svg>
+                <div className="space-y-24">
+                    {featuresContent.features.map((feature, index) => {
+                        const isReversed = index % 2 === 1;
+                        const tag = FEATURE_TAGS[index % FEATURE_TAGS.length];
+                        return (
+                            <ScrollReveal key={feature.title} delay={index * 100}>
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+                                    {/* Text */}
+                                    <div className={isReversed ? 'lg:order-2' : 'lg:order-1'}>
+                                        <div
+                                            className="inline-flex items-center gap-2 mb-4 px-2 py-1"
+                                            style={{
+                                                fontFamily: 'var(--sw-font-mono)',
+                                                fontSize: 10,
+                                                color: tag.accent,
+                                                background: `${tag.accent}15`,
+                                                border: `1px solid ${tag.accent}33`,
+                                                letterSpacing: '0.18em',
+                                                textTransform: 'uppercase',
+                                                fontWeight: 700,
+                                            }}
+                                        >
+                                            {tag.code}
                                         </div>
-                                        <span className="text-[var(--gray-700)] font-medium">
-                                            {feature.benefit}
-                                        </span>
+                                        <h3
+                                            className="mb-4"
+                                            style={{
+                                                fontFamily: 'var(--sw-font-sans)',
+                                                fontSize: 'clamp(28px, 3vw, 36px)',
+                                                fontWeight: 700,
+                                                lineHeight: 1.15,
+                                                letterSpacing: '-0.025em',
+                                                color: 'var(--sw-ink)',
+                                            }}
+                                        >
+                                            {feature.title}
+                                        </h3>
+                                        <p
+                                            className="mb-6"
+                                            style={{
+                                                fontFamily: 'var(--sw-font-body)',
+                                                fontSize: 17,
+                                                lineHeight: 1.6,
+                                                color: 'var(--sw-muted)',
+                                            }}
+                                        >
+                                            {feature.description}
+                                        </p>
+                                        <div className="flex items-center gap-3">
+                                            <span
+                                                className="inline-block w-3 h-3"
+                                                style={{ background: tag.accent }}
+                                                aria-hidden="true"
+                                            />
+                                            <span
+                                                style={{
+                                                    fontFamily: 'var(--sw-font-mono)',
+                                                    fontSize: 13,
+                                                    fontWeight: 500,
+                                                    color: 'var(--sw-ink)',
+                                                    letterSpacing: '0.01em',
+                                                }}
+                                            >
+                                                {feature.benefit}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {/* Mockup */}
+                                    <div className={isReversed ? 'lg:order-1' : 'lg:order-2'}>
+                                        <FeatureMockup index={index} />
                                     </div>
                                 </div>
-                                {/* Mockup */}
-                                <div className={`${isReversed ? 'lg:order-1' : 'lg:order-2'}`}>
-                                    <FeatureMockup index={index} />
-                                </div>
-                            </div>
-                        </ScrollReveal>
-                    );
-                })}
+                            </ScrollReveal>
+                        );
+                    })}
+                </div>
             </div>
-        </SectionContainer>
+        </section>
     );
 }

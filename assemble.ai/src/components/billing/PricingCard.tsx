@@ -48,53 +48,54 @@ export function PricingCard({ plan, isCurrentPlan, currentPlanId = 'free' }: Pri
 
     return (
         <div
-            className={`flex flex-col rounded-lg border p-6 ${
-                isCurrentPlan
-                    ? 'border-[var(--color-accent-teal)] bg-[var(--color-accent-teal-tint)] ring-2 ring-[var(--color-accent-teal)]'
+            className="sitewise-card flex flex-col p-6"
+            style={{
+                borderLeft: isCurrentPlan
+                    ? '3px solid var(--sw-cyan)'
                     : isHighlighted
-                        ? 'border-[var(--color-accent-copper)] bg-[var(--color-accent-copper-tint)]'
-                        : 'border-[var(--color-border)] bg-[var(--color-bg-secondary)]'
-            }`}
+                        ? '3px solid var(--sw-peach)'
+                        : '1px solid var(--sw-rule)',
+            }}
         >
             {isCurrentPlan && (
-                <span className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-[var(--color-accent-teal-tint)] px-2 py-0.5 text-xs font-medium text-[var(--color-accent-teal)]">
+                <span className="sitewise-chip sitewise-chip-green mb-3 w-fit">
                     <Check className="h-3 w-3" />
                     Current Plan
                 </span>
             )}
 
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{plan.name}</h3>
-            <p className="mt-1 text-sm text-[var(--color-text-muted)]">{plan.description}</p>
+            <h3 className="text-lg font-semibold text-[var(--sw-ink)]">{plan.name}</h3>
+            <p className="mt-1 text-sm text-[var(--sw-muted)]">{plan.description}</p>
 
             <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-[var(--color-text-primary)]">${plan.priceMonthly}</span>
-                {isPaidPlan && <span className="text-[var(--color-text-muted)]">/month</span>}
+                <span className="text-3xl font-bold text-[var(--sw-ink)]">${plan.priceMonthly}</span>
+                {isPaidPlan && <span className="text-[var(--sw-muted)]">/month</span>}
             </div>
 
             <ul className="mt-6 flex-1 space-y-3">
                 {getFeatureList(plan).map((feature, index) => (
                     <li key={index} className="flex items-start gap-2 text-sm">
-                        <Check className="mt-0.5 h-4 w-4 flex-none text-[var(--color-accent-teal)]" />
-                        <span className="text-[var(--color-text-secondary)]">{feature}</span>
+                        <Check className="mt-0.5 h-4 w-4 flex-none text-[#5c7a4a]" />
+                        <span className="text-[var(--sw-muted)]">{feature}</span>
                     </li>
                 ))}
             </ul>
 
             {error && (
-                <p className="mt-4 text-sm text-red-400">{error}</p>
+                <p className="mt-4 text-sm text-[var(--sw-rose-dk)]">{error}</p>
             )}
 
             <button
                 onClick={handleCheckout}
                 disabled={isCurrentPlan || !canCheckout || isLoading}
-                className={`mt-6 flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+                className={`sitewise-button mt-6 w-full ${
                     isCurrentPlan
-                        ? 'cursor-default bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'
+                        ? 'cursor-default sitewise-button-muted'
                         : !canCheckout
-                            ? 'cursor-default bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'
+                            ? 'cursor-default sitewise-button-muted'
                             : isHighlighted
-                                ? 'bg-[var(--color-accent-copper)] text-[var(--color-text-inverse)] hover:bg-[var(--color-accent-copper-light)]'
-                                : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] hover:bg-[var(--color-border)]'
+                                ? 'sitewise-button-primary'
+                                : 'bg-white text-[var(--sw-ink)]'
                 }`}
             >
                 {isLoading ? (

@@ -68,7 +68,7 @@ export function LibraryUploadTiles({
         {[1, 2, 3, 4, 5, 6].map((i) => (
           <div
             key={i}
-            className="h-16 bg-[#2a2d2e] rounded animate-pulse"
+            className="h-16 bg-[var(--color-bg-hover)] rounded animate-pulse"
           />
         ))}
       </div>
@@ -104,10 +104,10 @@ export function LibraryUploadTiles({
               min-h-[64px] text-center
               ${
                 isSelected
-                  ? 'border-[#0e639c] bg-[#0e639c]/20'
+                  ? 'border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/20'
                   : isDragOver
-                  ? 'border-[#0e639c] bg-[#1e1e1e] scale-105'
-                  : 'border-[#3e3e42] bg-[#252526] hover:bg-[#2a2d2e]'
+                  ? 'border-[var(--color-accent-primary)] bg-[var(--color-bg-primary)] scale-105'
+                  : 'border-[var(--color-border)] bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)]'
               }
             `}
           >
@@ -118,21 +118,21 @@ export function LibraryUploadTiles({
             />
 
             {isDragOver ? (
-              <Upload className="w-5 h-5 text-[#0e639c] mb-1" />
+              <Upload className="w-5 h-5 text-[var(--color-accent-primary)] mb-1" />
             ) : (
-              <span className="text-sm font-medium text-[#cccccc] truncate w-full">
+              <span className="text-sm font-medium text-[var(--color-text-primary)] truncate w-full">
                 {library.name}
               </span>
             )}
 
             {!isDragOver && (
-              <span className="text-xs text-[#808080] mt-1">
+              <span className="text-xs text-[var(--color-text-muted)] mt-1">
                 {library.documentCount} {library.documentCount === 1 ? 'doc' : 'docs'}
               </span>
             )}
 
             {isDragOver && (
-              <span className="text-xs text-[#0e639c]">Drop to upload</span>
+              <span className="text-xs text-[var(--color-accent-primary)]">Drop to upload</span>
             )}
           </button>
         );

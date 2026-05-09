@@ -115,37 +115,37 @@ export function ProductsTable({ products: initialProducts }: ProductsTableProps)
     };
 
     return (
-        <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+        <div className="sitewise-card overflow-hidden">
             {error && (
-                <div className="border-b border-red-800/60 bg-red-950/40 px-4 py-2 text-sm text-red-300">
+                <div className="border-b border-[var(--sw-rule)] bg-[var(--sw-rose-tint)] px-4 py-2 text-sm text-[var(--sw-rose-dk)]">
                     {error}
                 </div>
             )}
             <table className="w-full">
-                <thead className="border-b border-[var(--color-border)]">
+                <thead className="border-b border-[var(--sw-rule-2)]">
                     <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Product</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Price</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Polar Product ID</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Active</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">Actions</th>
+                        <th className="px-4 py-3 text-left">Product</th>
+                        <th className="px-4 py-3 text-left">Price</th>
+                        <th className="px-4 py-3 text-left">Polar Product ID</th>
+                        <th className="px-4 py-3 text-left">Active</th>
+                        <th className="px-4 py-3 text-left">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {products.map((product) => (
                         <tr
                             key={product.id}
-                            className="border-b border-[var(--color-border-subtle)] last:border-0 hover:bg-[var(--color-bg-hover)]"
+                            className="border-b border-[var(--sw-rule-2)] last:border-0"
                         >
                             <td className="px-4 py-4">
                                 <div>
-                                    <div className="font-medium text-[var(--color-text-primary)]">{product.name}</div>
-                                    <div className="text-sm text-[var(--color-text-secondary)]">{product.slug}</div>
+                                    <div className="font-medium text-[var(--sw-ink)]">{product.name}</div>
+                                    <div className="font-mono text-xs text-[var(--sw-muted)]">{product.slug}</div>
                                 </div>
                             </td>
                             <td className="px-4 py-4">
-                                <div className="font-medium text-[var(--color-text-primary)]">{formatPrice(product.priceCents)}</div>
-                                <div className="text-sm text-[var(--color-text-secondary)]">/{product.billingInterval}</div>
+                                <div className="font-medium text-[var(--sw-ink)]">{formatPrice(product.priceCents)}</div>
+                                <div className="font-mono text-xs text-[var(--sw-muted)]">/{product.billingInterval}</div>
                             </td>
                             <td className="px-4 py-4">
                                 {editingId === product.id ? (
@@ -154,14 +154,14 @@ export function ProductsTable({ products: initialProducts }: ProductsTableProps)
                                             type="text"
                                             value={editValue}
                                             onChange={(e) => setEditValue(e.target.value)}
-                                            className="w-64 rounded border border-[var(--color-border)] bg-[var(--color-bg-primary)] px-2 py-1 text-sm text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+                                            className="w-64 border px-2 py-1 text-sm"
                                             placeholder="prod_..."
                                             autoFocus
                                         />
                                         <button
                                             onClick={() => saveProduct(product.id)}
                                             disabled={saving === product.id}
-                                            className="rounded p-1 text-[var(--color-accent-green)] hover:bg-[var(--color-accent-green-tint)]"
+                                            className="sitewise-icon-button text-[#4b653c]"
                                         >
                                             {saving === product.id ? (
                                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -171,23 +171,23 @@ export function ProductsTable({ products: initialProducts }: ProductsTableProps)
                                         </button>
                                         <button
                                             onClick={cancelEditing}
-                                            className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+                                            className="sitewise-icon-button"
                                         >
                                             <X className="h-4 w-4" />
                                         </button>
                                     </div>
                                 ) : (
                                     <div className="flex items-center gap-2">
-                                        <code className={`rounded px-2 py-1 text-sm ${
+                                        <code className={`sitewise-code ${
                                             product.polarProductId.startsWith('REPLACE')
-                                                ? 'bg-[var(--color-accent-coral-tint)] text-[var(--color-accent-coral)]'
-                                                : 'bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)]'
+                                                ? 'bg-[var(--sw-rose-tint)] text-[var(--sw-rose-dk)]'
+                                                : 'text-[var(--sw-muted)]'
                                         }`}>
                                             {product.polarProductId}
                                         </code>
                                         <button
                                             onClick={() => startEditing(product)}
-                                            className="rounded p-1 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
+                                            className="sitewise-icon-button"
                                         >
                                             <Edit2 className="h-4 w-4" />
                                         </button>
@@ -198,10 +198,10 @@ export function ProductsTable({ products: initialProducts }: ProductsTableProps)
                                 <button
                                     onClick={() => toggleActive(product)}
                                     disabled={saving === product.id}
-                                    className={`flex items-center gap-1 rounded px-2 py-1 text-sm ${
+                                    className={`sitewise-chip ${
                                         product.isActive
-                                            ? 'bg-[var(--color-accent-green-tint)] text-[var(--color-accent-green)]'
-                                            : 'bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)]'
+                                            ? 'sitewise-chip-green'
+                                            : 'text-[var(--sw-muted)]'
                                     }`}
                                 >
                                     {saving === product.id ? (
@@ -219,7 +219,7 @@ export function ProductsTable({ products: initialProducts }: ProductsTableProps)
                                     href={`https://polar.sh`}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-sm text-[var(--color-accent-primary)] hover:underline"
+                                    className="font-mono text-xs text-[var(--sw-rose-dk)] hover:underline"
                                 >
                                     View in Polar
                                 </a>

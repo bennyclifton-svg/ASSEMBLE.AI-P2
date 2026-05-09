@@ -459,7 +459,7 @@ export function ReportsSection({
                                                 <>
                                                     <button
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-xs text-white rounded hover:brightness-110 disabled:opacity-50"
-                                                        style={{ backgroundColor: '#7b4bb3' }}
+                                                        style={{ backgroundColor: 'var(--sw-lav)' }}
                                                         onClick={() => handleStartWithMode('data_only')}
                                                         disabled={startingGeneration}
                                                         title="Generate Short RFT (Data Only)"

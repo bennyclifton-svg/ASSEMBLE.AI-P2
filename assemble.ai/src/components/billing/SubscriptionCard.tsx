@@ -38,47 +38,41 @@ export function SubscriptionCard({
         if (status === 'active' && !cancelAtPeriodEnd) {
             return {
                 label: 'Active',
-                color: 'text-[var(--color-accent-teal)]',
-                bgColor: 'bg-[var(--color-accent-teal-tint)]',
+                chipClass: 'sitewise-chip-green',
                 icon: Check,
             };
         }
         if (status === 'active' && cancelAtPeriodEnd) {
             return {
                 label: 'Canceling',
-                color: 'text-[var(--color-accent-yellow)]',
-                bgColor: 'bg-[var(--color-accent-yellow)]/10',
+                chipClass: 'sitewise-chip-amber',
                 icon: Clock,
             };
         }
         if (status === 'past_due') {
             return {
                 label: 'Past Due',
-                color: 'text-[var(--color-accent-coral)]',
-                bgColor: 'bg-[var(--color-accent-coral)]/10',
+                chipClass: 'sitewise-chip-rose',
                 icon: AlertCircle,
             };
         }
         if (status === 'trialing') {
             return {
                 label: 'Trial',
-                color: 'text-[var(--color-accent-teal)]',
-                bgColor: 'bg-[var(--color-accent-teal)]/10',
+                chipClass: 'sitewise-chip-cyan',
                 icon: Clock,
             };
         }
         if (status === 'canceled') {
             return {
                 label: 'Canceled',
-                color: 'text-[var(--color-text-muted)]',
-                bgColor: 'bg-[var(--color-text-muted)]/10',
+                chipClass: 'text-[var(--sw-muted)]',
                 icon: AlertCircle,
             };
         }
         return {
             label: 'Free',
-            color: 'text-[var(--color-text-muted)]',
-            bgColor: 'bg-[var(--color-text-muted)]/10',
+            chipClass: 'text-[var(--sw-muted)]',
             icon: Check,
         };
     };
@@ -87,37 +81,37 @@ export function SubscriptionCard({
     const StatusIcon = statusDisplay.icon;
 
     return (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6">
+        <div className="sitewise-card p-6">
             <div className="flex items-start justify-between">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">{planName}</h3>
+                        <h3 className="text-xl font-semibold text-[var(--sw-ink)]">{planName}</h3>
                         <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusDisplay.bgColor} ${statusDisplay.color}`}
+                            className={`sitewise-chip ${statusDisplay.chipClass}`}
                         >
                             <StatusIcon className="h-3 w-3" />
                             {statusDisplay.label}
                         </span>
                     </div>
-                    <p className="mt-1 text-[var(--color-text-muted)]">{plan?.description}</p>
+                    <p className="mt-1 text-[var(--sw-muted)]">{plan?.description}</p>
                 </div>
                 {plan && plan.priceMonthly > 0 && (
                     <div className="text-right">
-                        <span className="text-2xl font-bold text-[var(--color-text-primary)]">${plan.priceMonthly}</span>
-                        <span className="text-[var(--color-text-muted)]">/month</span>
+                        <span className="text-2xl font-bold text-[var(--sw-ink)]">${plan.priceMonthly}</span>
+                        <span className="text-[var(--sw-muted)]">/month</span>
                     </div>
                 )}
             </div>
 
             {/* Period info */}
             {formattedDate && (
-                <div className="mt-4 rounded-lg bg-[var(--color-bg-tertiary)] p-4">
+                <div className="mt-4 border border-[var(--sw-rule-2)] bg-[var(--sw-paper)] p-4">
                     {cancelAtPeriodEnd ? (
                         <p className="text-sm text-[var(--color-accent-yellow)]">
                             Your subscription will end on {formattedDate}. You will retain access until then.
                         </p>
                     ) : status === 'active' ? (
-                        <p className="text-sm text-[var(--color-text-muted)]">
+                        <p className="text-sm text-[var(--sw-muted)]">
                             Next billing date: {formattedDate}
                         </p>
                     ) : status === 'trialing' ? (
@@ -165,9 +159,9 @@ export function SubscriptionCard({
 
 function FeatureItem({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between rounded-lg bg-[var(--color-bg-tertiary)] px-3 py-2">
-            <span className="text-sm text-[var(--color-text-muted)]">{label}</span>
-            <span className="text-sm font-medium text-[var(--color-text-primary)]">{value}</span>
+        <div className="flex justify-between border border-[var(--sw-rule-2)] bg-[var(--sw-paper)] px-3 py-2">
+            <span className="font-mono text-[11px] text-[var(--sw-muted)]">{label}</span>
+            <span className="text-sm font-medium text-[var(--sw-ink)]">{value}</span>
         </div>
     );
 }

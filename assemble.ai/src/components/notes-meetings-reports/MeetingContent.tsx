@@ -13,6 +13,7 @@ import { AttachmentSection } from './shared/AttachmentSection';
 import { useMeetingTransmittal } from '@/lib/hooks/use-meetings';
 import type { Meeting, UpdateMeetingRequest, MeetingAgendaType } from '@/types/notes-meetings-reports';
 import { cn } from '@/lib/utils';
+import { MEETING_RECORD_ACCENT } from './RecordSectionHeading';
 
 interface MeetingWithCount extends Meeting {
     sectionCount: number;
@@ -27,6 +28,7 @@ interface MeetingContentProps {
     onCopy: () => Promise<void>;
     onSaveTransmittal?: () => void;
     onLoadTransmittal?: () => void;
+    accentColor?: string;
     className?: string;
 }
 
@@ -36,6 +38,7 @@ export function MeetingContent({
     onUpdate,
     onSaveTransmittal,
     onLoadTransmittal,
+    accentColor = MEETING_RECORD_ACCENT,
     className,
 }: MeetingContentProps) {
     const { documents, isLoading: transmittalLoading } = useMeetingTransmittal(meeting.id);
@@ -64,15 +67,19 @@ export function MeetingContent({
                 onTitleChange={handleTitleChange}
                 onAgendaTypeChange={handleAgendaTypeChange}
                 onMeetingDateChange={handleMeetingDateChange}
+                accentColor={accentColor}
             />
 
             {/* Attachment section - matches RFT TransmittalSchedule style */}
-            <AttachmentSection
-                documents={documents}
-                isLoading={transmittalLoading}
-                onSave={onSaveTransmittal}
-                onLoad={onLoadTransmittal}
-            />
+            <div className="px-4 pb-4">
+                <AttachmentSection
+                    documents={documents}
+                    isLoading={transmittalLoading}
+                    onSave={onSaveTransmittal}
+                    onLoad={onLoadTransmittal}
+                    accentColor={accentColor}
+                />
+            </div>
         </div>
     );
 }

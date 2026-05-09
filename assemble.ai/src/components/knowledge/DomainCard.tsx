@@ -15,9 +15,9 @@ interface DomainCardProps {
 
 function getStatusColor(domain: KnowledgeDomainDTO): { dot: string; label: string } {
     const isActive = domain.source?.isActive !== false;
-    if (!isActive) return { dot: 'bg-[#808080]', label: 'Inactive' };
-    if (domain.chunkCount === 0) return { dot: 'bg-[#e5a645]', label: 'Empty' };
-    return { dot: 'bg-[#4ade80]', label: 'Active' };
+    if (!isActive) return { dot: 'bg-[var(--color-text-muted)]', label: 'Inactive' };
+    if (domain.chunkCount === 0) return { dot: 'bg-[var(--sw-amber)]', label: 'Empty' };
+    return { dot: 'bg-[var(--color-success)]', label: 'Active' };
 }
 
 function isStale(lastVerifiedAt: string | null): boolean {
@@ -40,34 +40,34 @@ export function DomainCard({ domain, onToggle, onDelete, isToggling }: DomainCar
     return (
         <div
             className={`
-                border border-[#3e3e42] rounded-lg p-4 transition-colors
-                ${isActive ? 'bg-[#1e1e1e]' : 'bg-[#1e1e1e]/50 opacity-60'}
+                border border-[var(--color-border)] rounded-lg p-4 transition-colors
+                ${isActive ? 'bg-[var(--color-bg-primary)]' : 'bg-[var(--color-bg-primary)]/50 opacity-60'}
             `}
         >
             {/* Header row */}
             <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <BookOpen className="w-4 h-4 text-[#0e639c] flex-shrink-0" />
-                    <h4 className="text-sm font-medium text-[#cccccc] truncate">
+                    <BookOpen className="w-4 h-4 text-[var(--color-accent-primary)] flex-shrink-0" />
+                    <h4 className="text-sm font-medium text-[var(--color-text-primary)] truncate">
                         {domain.name}
                     </h4>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                     {/* Type badge */}
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[#0e639c]/20 text-[#569cd6]">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--color-accent-primary)]/20 text-[var(--sw-cyan)]">
                         {typeLabel}
                     </span>
                     {/* Status dot */}
                     <div className="flex items-center gap-1">
                         <div className={`w-2 h-2 rounded-full ${status.dot}`} />
-                        <span className="text-[10px] text-[#808080]">{status.label}</span>
+                        <span className="text-[10px] text-[var(--color-text-muted)]">{status.label}</span>
                     </div>
                 </div>
             </div>
 
             {/* Description */}
             {domain.description && (
-                <p className="text-xs text-[#808080] mb-3 line-clamp-2">
+                <p className="text-xs text-[var(--color-text-muted)] mb-3 line-clamp-2">
                     {domain.description}
                 </p>
             )}
@@ -81,8 +81,8 @@ export function DomainCard({ domain, onToggle, onDelete, isToggling }: DomainCar
                             className={`
                                 inline-flex items-center px-1.5 py-0.5 rounded text-[10px]
                                 ${isKnownTag(tag)
-                                    ? 'bg-[#0e639c]/15 text-[#569cd6]'
-                                    : 'bg-[#3e3e42] text-[#808080]'
+                                    ? 'bg-[var(--color-accent-primary)]/15 text-[var(--sw-cyan)]'
+                                    : 'bg-[var(--color-border)] text-[var(--color-text-muted)]'
                                 }
                             `}
                         >
@@ -93,7 +93,7 @@ export function DomainCard({ domain, onToggle, onDelete, isToggling }: DomainCar
             )}
 
             {/* Meta row: chunk count, version, staleness */}
-            <div className="flex items-center gap-3 mb-3 text-[10px] text-[#808080]">
+            <div className="flex items-center gap-3 mb-3 text-[10px] text-[var(--color-text-muted)]">
                 <div className="flex items-center gap-1">
                     <Database className="w-3 h-3" />
                     <span>{domain.chunkCount} chunks</span>
@@ -102,7 +102,7 @@ export function DomainCard({ domain, onToggle, onDelete, isToggling }: DomainCar
                     <span>v{domain.source.sourceVersion}</span>
                 )}
                 {stale && (
-                    <div className="flex items-center gap-1 text-[#e5a645]">
+                    <div className="flex items-center gap-1 text-[var(--sw-amber)]">
                         <AlertTriangle className="w-3 h-3" />
                         <span>Stale</span>
                     </div>
@@ -110,7 +110,7 @@ export function DomainCard({ domain, onToggle, onDelete, isToggling }: DomainCar
             </div>
 
             {/* Actions row: toggle + delete */}
-            <div className="flex items-center justify-between pt-2 border-t border-[#3e3e42]">
+            <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
                 <div className="flex items-center gap-2">
                     <Switch
                         checked={isActive}
@@ -118,14 +118,14 @@ export function DomainCard({ domain, onToggle, onDelete, isToggling }: DomainCar
                         disabled={isToggling}
                         className="scale-75 origin-left"
                     />
-                    <span className="text-[11px] text-[#808080]">
+                    <span className="text-[11px] text-[var(--color-text-muted)]">
                         {isActive ? 'Enabled' : 'Disabled'}
                     </span>
                 </div>
                 {!isPrebuilt && onDelete && (
                     <button
                         onClick={() => onDelete(domain.id)}
-                        className="p-1 rounded hover:bg-[#f48771]/20 text-[#808080] hover:text-[#f48771] transition-colors"
+                        className="p-1 rounded hover:bg-[var(--color-error)]/20 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors"
                         title="Delete custom domain"
                     >
                         <Trash2 className="w-3.5 h-3.5" />

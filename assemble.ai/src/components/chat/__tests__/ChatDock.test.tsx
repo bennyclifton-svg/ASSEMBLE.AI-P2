@@ -92,6 +92,23 @@ describe('ChatDock approvals', () => {
         }
     });
 
+    it('reserves space for the collapsed dock so content can scroll above it', async () => {
+        const anchor = document.createElement('div');
+        anchor.setAttribute('data-chat-dock-anchor', 'center');
+        document.body.appendChild(anchor);
+
+        try {
+            render(<ChatDock projectId="proj-1" />);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('chat-dock').parentElement).toBe(anchor);
+                expect(anchor.style.getPropertyValue('--chat-dock-height')).toBe('44px');
+            });
+        } finally {
+            anchor.remove();
+        }
+    });
+
     it('hydrates pending approval cards from the thread response', async () => {
         render(<ChatDock projectId="proj-1" />);
 

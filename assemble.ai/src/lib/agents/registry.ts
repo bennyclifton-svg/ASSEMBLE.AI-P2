@@ -7,6 +7,7 @@
 
 import type { AgentSpec } from './types';
 import design from './specialists/design';
+import delivery from './specialists/delivery';
 import finance from './specialists/finance';
 import orchestrator from './specialists/orchestrator';
 import program from './specialists/program';
@@ -16,6 +17,7 @@ const agents = new Map<string, AgentSpec>([
     [finance.name, finance],
     [design.name, design],
     [program.name, program],
+    [delivery.name, delivery],
 ]);
 
 export function getAgent(name: string): AgentSpec {

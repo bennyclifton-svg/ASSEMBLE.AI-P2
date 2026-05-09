@@ -53,7 +53,7 @@ export function RFTTabs({
 
     return (
         <>
-            <div className="flex items-center border-b border-[var(--color-border)]">
+            <div className="procurement-instance-tabs">
                 {rfts.map((rft) => {
                     const label = String(rft.rftNumber).padStart(2, '0');
                     const isActive = rft.id === activeRftId;
@@ -62,12 +62,8 @@ export function RFTTabs({
                     return (
                         <div
                             key={rft.id}
-                            className={cn(
-                                'relative group flex items-center gap-1 px-3 py-1.5 text-sm transition-colors cursor-pointer',
-                                isActive
-                                    ? 'text-[var(--color-text-primary)] border-b-[3px] border-[var(--color-accent-copper)] -mb-px'
-                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                            )}
+                            className="procurement-instance-tab group"
+                            data-state={isActive ? 'active' : 'inactive'}
                             onClick={() => onSelectRft(rft.id)}
                         >
                             <span>{label}</span>
@@ -76,7 +72,7 @@ export function RFTTabs({
                             {hasTransmittal && !isActive && (
                                 <span
                                     className={cn(
-                                        'absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#3fb950]'
+                                        'absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[var(--color-success)]'
                                     )}
                                 />
                             )}
@@ -86,10 +82,10 @@ export function RFTTabs({
                                 <button
                                     onClick={(e) => handleDeleteClick(e, rft.id)}
                                     className={cn(
-                                        'ml-1 p-0.5 rounded hover:bg-[var(--color-border)] transition-all',
+                                        'ml-1 p-0.5 transition-all hover:bg-[var(--sw-paper)]',
                                         isActive
-                                            ? 'opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
-                                            : 'opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
+                                            ? 'opacity-100 text-[var(--sw-muted)] hover:text-[var(--sw-ink)]'
+                                            : 'opacity-0 group-hover:opacity-100 text-[var(--sw-muted)] hover:text-[var(--sw-ink)]'
                                     )}
                                     title={`Delete RFT ${label}`}
                                 >
@@ -104,7 +100,7 @@ export function RFTTabs({
                 <button
                     onClick={onCreateRft}
                     disabled={isLoading}
-                    className="flex items-center justify-center px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="procurement-instance-create"
                     title="Create new RFT"
                 >
                     {isLoading ? (

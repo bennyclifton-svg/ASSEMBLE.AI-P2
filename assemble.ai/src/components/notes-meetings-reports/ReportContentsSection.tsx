@@ -28,6 +28,7 @@ interface ReportContentsSectionProps {
     isGenerating?: boolean;
     isPolishing?: boolean;
     isExecuting?: boolean;
+    accentColor?: string;
     level?: number;
     className?: string;
 }
@@ -44,21 +45,16 @@ export function ReportContentsSection({
     isGenerating = false,
     isPolishing = false,
     isExecuting = false,
+    accentColor = 'var(--sw-lav)',
     level = 0,
     className,
 }: ReportContentsSectionProps) {
     const [isExpanded, setIsExpanded] = useState(true);
-    const [localContent, setLocalContent] = useState(section.content || '');
     const [hasInstruction, setHasInstruction] = useState(false);
     const [isEditingLabel, setIsEditingLabel] = useState(false);
     const [editLabel, setEditLabel] = useState(section.sectionLabel);
     const labelInputRef = useRef<HTMLInputElement>(null);
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Update local content when section changes
-    useEffect(() => {
-        setLocalContent(section.content || '');
-    }, [section.content]);
 
     // Auto-save with debounce
     const debouncedSave = useCallback((content: string) => {
@@ -71,7 +67,6 @@ export function ReportContentsSection({
     }, [section.id, onUpdateContent]);
 
     const handleContentChange = useCallback((newContent: string) => {
-        setLocalContent(newContent);
         debouncedSave(newContent);
     }, [debouncedSave]);
 
@@ -117,27 +112,34 @@ export function ReportContentsSection({
     };
 
     const hasChildren = childSections.length > 0;
-    const hasContent = localContent.trim().length > 0;
+    const hasContent = (section.content || '').trim().length > 0;
     const isParent = level === 0;
 
     const ChevronIcon = isExpanded ? ChevronDown : ChevronRight;
 
+    const accent = isParent ? accentColor : 'var(--sw-cyan)';
+
     return (
-        <div className={cn('border-b border-[var(--color-border)] last:border-b-0', className)}>
+        <div className={cn('border-b border-[var(--sw-rule-2)] last:border-b-0', className)}>
             {/* Section Header */}
             <div
                 className={cn(
-                    'flex items-center justify-between py-2 px-3',
-                    isParent ? 'bg-[var(--color-bg-secondary)]' : 'bg-transparent',
+                    'flex items-center justify-between border-l-2 px-3 py-2',
+                    isParent ? 'bg-[var(--sw-paper)]' : 'bg-transparent',
                     hasChildren && 'cursor-pointer'
                 )}
                 onClick={hasChildren ? () => setIsExpanded(!isExpanded) : undefined}
-                style={{ paddingLeft: `${12 + level * 16}px` }}
+                style={{ paddingLeft: `${12 + level * 16}px`, borderLeftColor: accent }}
             >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     {hasChildren && (
-                        <ChevronIcon className="h-4 w-4 text-[var(--color-text-muted)] flex-shrink-0" />
+                        <ChevronIcon className="h-4 w-4 text-[var(--sw-muted)] flex-shrink-0" />
                     )}
+                    <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 shrink-0"
+                        style={{ background: accent }}
+                    />
                     {isEditingLabel ? (
                         <input
                             ref={labelInputRef}
@@ -147,15 +149,17 @@ export function ReportContentsSection({
                             onBlur={handleLabelBlur}
                             onKeyDown={handleLabelKeyDown}
                             onClick={(e) => e.stopPropagation()}
-                            className="flex-1 min-w-0 bg-transparent border-b border-[var(--color-accent-primary)] text-[var(--color-text-primary)] font-medium focus:outline-none text-sm"
+                            className="min-w-0 flex-1 border-b bg-transparent text-sm font-medium text-[var(--sw-ink)] focus:outline-none"
+                            style={{ borderBottomColor: accent }}
                         />
                     ) : (
                         <span
                             className={cn(
-                                'font-medium text-sm truncate',
-                                isParent ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-secondary)]',
-                                onUpdateLabel && 'hover:text-[var(--color-accent-primary)] cursor-text'
+                                'truncate text-sm font-medium',
+                                isParent ? 'text-[var(--sw-ink)]' : 'text-[var(--sw-muted)]',
+                                onUpdateLabel && 'cursor-text hover:text-[var(--sw-rose-dk)]'
                             )}
+                            style={{ fontFamily: isParent ? 'var(--sw-font-mono)' : undefined }}
                             onDoubleClick={handleLabelDoubleClick}
                         >
                             {section.sectionLabel}
@@ -173,10 +177,10 @@ export function ReportContentsSection({
                                 className={cn(
                                     'flex items-center gap-1.5 text-sm font-medium transition-all',
                                     isExecuting
-                                        ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                        ? 'text-[var(--sw-rose-dk)] cursor-wait'
                                         : (isGenerating || isPolishing)
-                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                            ? 'text-[var(--sw-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--sw-rose-dk)] hover:opacity-80'
                                 )}
                                 title="Execute // instruction"
                             >
@@ -196,10 +200,10 @@ export function ReportContentsSection({
                                 className={cn(
                                     'flex items-center gap-1.5 text-sm font-medium transition-all',
                                     isGenerating
-                                        ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                        ? 'text-[var(--sw-rose-dk)] cursor-wait'
                                         : (isPolishing || isExecuting)
-                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                            ? 'text-[var(--sw-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--sw-rose-dk)] hover:opacity-80'
                                 )}
                                 title="Generate content"
                             >
@@ -219,10 +223,10 @@ export function ReportContentsSection({
                                 className={cn(
                                     'flex items-center gap-1.5 text-sm font-medium transition-all',
                                     isPolishing
-                                        ? 'text-[var(--color-accent-copper)] cursor-wait'
+                                        ? 'text-[var(--sw-rose-dk)] cursor-wait'
                                         : (isGenerating || isExecuting)
-                                            ? 'text-[var(--color-text-muted)] cursor-not-allowed opacity-50'
-                                            : 'text-[var(--color-accent-copper)] hover:opacity-80'
+                                            ? 'text-[var(--sw-muted)] cursor-not-allowed opacity-50'
+                                            : 'text-[var(--sw-rose-dk)] hover:opacity-80'
                                 )}
                                 title="Polish content"
                             >
@@ -243,7 +247,7 @@ export function ReportContentsSection({
             {isExpanded && !hasChildren && (
                 <div className="pb-1" style={{ paddingLeft: `${12 + level * 16}px` }}>
                     <RichTextEditor
-                        content={localContent}
+                        content={section.content || ''}
                         onChange={handleContentChange}
                         onEditorReady={handleEditorReady}
                         placeholder="Enter content..."
@@ -251,7 +255,7 @@ export function ReportContentsSection({
                         toolbarVariant="mini"
                         transparentBg
                         className="border-0 rounded-none"
-                        editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors"
+                        editorClassName="bg-white hover:bg-[var(--sw-paper)] transition-colors"
                     />
                 </div>
             )}
@@ -273,6 +277,7 @@ export function ReportContentsSection({
                             isGenerating={isGenerating}
                             isPolishing={isPolishing}
                             isExecuting={isExecuting}
+                            accentColor={accentColor}
                             level={level + 1}
                         />
                     ))}

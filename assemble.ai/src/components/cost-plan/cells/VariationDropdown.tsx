@@ -43,16 +43,16 @@ interface VariationDropdownProps {
 
 // Category colors matching VariationsSheet
 const CATEGORY_COLORS: Record<VariationCategory, string> = {
-  Principal: '#6B9BD1',
-  Contractor: '#D4A574',
-  'Lessor Works': '#9F7AEA',
+  Principal: 'var(--sw-cyan)',
+  Contractor: 'var(--sw-peach)',
+  'Lessor Works': 'var(--sw-lav)',
 };
 
 const STATUS_COLORS: Record<VariationStatus, string> = {
-  Forecast: '#f59e0b',
-  Approved: '#4ade80',
-  Rejected: '#f87171',
-  Withdrawn: '#858585',
+  Forecast: 'var(--color-warning)',
+  Approved: 'var(--color-success)',
+  Rejected: 'var(--color-error)',
+  Withdrawn: 'var(--color-text-muted)',
 };
 
 export function VariationDropdown({
@@ -151,13 +151,13 @@ export function VariationDropdown({
         disabled={disabled}
         className={`
           w-full flex items-center justify-between gap-2 px-3 py-1.5
-          bg-[#3c3c3c] border border-[#3e3e42] rounded text-sm
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[#4e4e52] cursor-pointer'}
-          ${isOpen ? 'border-[#007acc]' : ''}
+          bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded text-sm
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-[var(--color-border)] cursor-pointer'}
+          ${isOpen ? 'border-[var(--color-accent-primary)]' : ''}
         `}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <GitBranch className="w-4 h-4 flex-shrink-0 text-[#858585]" />
+          <GitBranch className="w-4 h-4 flex-shrink-0 text-[var(--color-text-muted)]" />
           {selectedVariation ? (
             <>
               <span
@@ -169,12 +169,12 @@ export function VariationDropdown({
               >
                 {selectedVariation.variationNumber}
               </span>
-              <span className="truncate text-[#cccccc]">
+              <span className="truncate text-[var(--color-text-primary)]">
                 {selectedVariation.description}
               </span>
             </>
           ) : (
-            <span className="text-[#6e6e6e]">{placeholder}</span>
+            <span className="text-[var(--color-text-muted)]">{placeholder}</span>
           )}
         </div>
 
@@ -182,38 +182,38 @@ export function VariationDropdown({
           {showClear && selectedVariation && (
             <button
               onClick={handleClear}
-              className="p-0.5 hover:bg-[#4e4e52] rounded"
+              className="p-0.5 hover:bg-[var(--color-border)] rounded"
             >
-              <span className="text-[#858585] hover:text-[#cccccc] text-xs">×</span>
+              <span className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] text-xs">×</span>
             </button>
           )}
           <ChevronDown
-            className={`w-4 h-4 text-[#858585] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-[var(--color-text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
       </button>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute z-50 w-full min-w-[350px] mt-1 bg-[#252526] border border-[#3e3e42] rounded shadow-lg">
+        <div className="absolute z-50 w-full min-w-[350px] mt-1 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded shadow-lg">
           {/* Search input */}
-          <div className="p-2 border-b border-[#3e3e42]">
+          <div className="p-2 border-b border-[var(--color-border)]">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#858585]" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search variations..."
-                className="w-full bg-[#3c3c3c] border border-[#3e3e42] rounded pl-8 pr-3 py-1.5 text-sm text-[#cccccc] placeholder:text-[#6e6e6e] focus:outline-none focus:border-[#007acc]"
+                className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded pl-8 pr-3 py-1.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent-primary)]"
               />
             </div>
           </div>
 
           {/* Status filters */}
-          <div className="px-2 py-1.5 border-b border-[#3e3e42] flex items-center gap-1">
-            <Filter className="w-3.5 h-3.5 text-[#858585] mr-1" />
+          <div className="px-2 py-1.5 border-b border-[var(--color-border)] flex items-center gap-1">
+            <Filter className="w-3.5 h-3.5 text-[var(--color-text-muted)] mr-1" />
             {VARIATION_STATUS_OPTIONS.map((status) => (
               <button
                 key={status}
@@ -222,7 +222,7 @@ export function VariationDropdown({
                   px-2 py-0.5 rounded text-xs transition-colors
                   ${activeStatusFilter.includes(status)
                     ? 'text-white'
-                    : 'text-[#858585] hover:text-[#cccccc]'}
+                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'}
                 `}
                 style={{
                   backgroundColor: activeStatusFilter.includes(status)
@@ -245,8 +245,8 @@ export function VariationDropdown({
                       onClick={() => handleSelect(v.id)}
                       className={`
                         w-full flex items-center gap-2 px-3 py-2 text-left text-sm
-                        hover:bg-[#37373d] transition-colors
-                        ${v.id === value ? 'bg-[#094771]' : ''}
+                        hover:bg-[var(--color-bg-hover)] transition-colors
+                        ${v.id === value ? 'bg-[var(--color-accent-primary-tint)]' : ''}
                       `}
                     >
                       {/* Variation number badge */}
@@ -262,7 +262,7 @@ export function VariationDropdown({
 
                       {/* Description */}
                       <div className="flex-1 min-w-0">
-                        <div className={`truncate ${v.id === value ? 'text-white' : 'text-[#cccccc]'}`}>
+                        <div className={`truncate ${v.id === value ? 'text-white' : 'text-[var(--color-text-primary)]'}`}>
                           {v.description}
                         </div>
                       </div>
@@ -270,7 +270,7 @@ export function VariationDropdown({
                       {/* Status & Amount */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {showAmount && (
-                          <span className="text-xs text-[#858585]">
+                          <span className="text-xs text-[var(--color-text-muted)]">
                             {formatCurrency(getAmount(v))}
                           </span>
                         )}
@@ -281,7 +281,7 @@ export function VariationDropdown({
                           {v.status}
                         </span>
                         {v.id === value && (
-                          <Check className="w-4 h-4 text-[#4fc3f7]" />
+                          <Check className="w-4 h-4 text-[var(--sw-cyan)]" />
                         )}
                       </div>
                     </button>
@@ -289,7 +289,7 @@ export function VariationDropdown({
                 ))}
               </ul>
             ) : (
-              <div className="px-3 py-4 text-center text-sm text-[#858585]">
+              <div className="px-3 py-4 text-center text-sm text-[var(--color-text-muted)]">
                 {search
                   ? 'No matching variations'
                   : activeStatusFilter.length > 0

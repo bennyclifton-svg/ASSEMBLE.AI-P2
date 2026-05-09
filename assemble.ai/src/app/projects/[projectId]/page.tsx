@@ -55,7 +55,7 @@ export default function ProjectWorkspace() {
   const [centerActiveTab, setCenterActiveTabState] = useState(searchParams.get('tab') ?? 'brief');
 
   // Sub-tab state (only meaningful when centerActiveTab === 'brief'). URL is the source of truth.
-  const VALID_BRIEF_SUBS = ['lot', 'building', 'objectives'] as const;
+  const VALID_BRIEF_SUBS = ['lot', 'building'] as const;
   const rawSub = searchParams.get('sub');
   const centerActiveSubTab = (VALID_BRIEF_SUBS as readonly string[]).includes(rawSub ?? '')
     ? (rawSub as string)
@@ -74,9 +74,11 @@ export default function ProjectWorkspace() {
   // Legacy URL redirect: map old tab values to brief + matching sub.
   // Runs once when an old value is detected; guarded so it never loops.
   useEffect(() => {
+    // Inferred objectives now live inside the Building sub-tab — fold the
+    // retired Objectives tab back into Building for any bookmarked URLs.
     const LEGACY_TO_SUB: Record<string, string> = {
       profiler: 'building',
-      objectives: 'objectives',
+      objectives: 'building',
       'project-details': 'lot',
     };
     const tabParam = searchParams.get('tab');
@@ -305,6 +307,7 @@ export default function ProjectWorkspace() {
               onKnowledgeNavigate={handleKnowledgeNavigate}
               onShowBrief={handleShowBrief}
               activeMainTab={centerActiveTab}
+              onMainTabChange={setCenterActiveTab}
               refreshKey={refreshTrigger}
               selectedProject={project}
               onSelectProject={handleSelectProject}
@@ -313,6 +316,7 @@ export default function ProjectWorkspace() {
           centerContent={
             <ProcurementCard
               projectId={project.id}
+              projectName={project.name}
               selectedDocumentIds={Array.from(selectedDocumentIds)}
               onSetSelectedDocumentIds={handleSetSelectedDocumentIds}
               buildingClass={profileBuildingClass}

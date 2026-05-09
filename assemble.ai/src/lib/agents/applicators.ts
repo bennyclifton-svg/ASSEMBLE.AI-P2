@@ -67,6 +67,7 @@ async function ensureActionsRegistered(): Promise<void> {
     await Promise.all([
         import('@/lib/actions/definitions/add-tender-firms'),
         import('@/lib/actions/definitions/create-note'),
+        import('@/lib/actions/definitions/create-outbound-correspondence'),
         import('@/lib/actions/definitions/create-report'),
         import('@/lib/actions/definitions/create-program-activity'),
         import('@/lib/actions/definitions/create-program-milestone'),

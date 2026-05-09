@@ -32,7 +32,7 @@ import { DisciplineDropdown } from './cells/DisciplineDropdown';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { ProgramActivitySelector } from './ProgramActivitySelector';
 import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
-import type { CostLineSection, CostLineWithCalculations, GroupedLine, GroupedLineTotals } from '@/types/cost-plan';
+import type { CostLineSection, CostLineWithCalculations, CostPlanTotals, GroupedLine, GroupedLineTotals } from '@/types/cost-plan';
 import type { ProgramActivity } from '@/types/program';
 
 // App color palette - Aurora theme with explicit colors
@@ -53,16 +53,16 @@ const COLORS = {
         secondary: 'var(--color-border)',
     },
     accent: {
-        blue: '#0080FF',           // Aurora Blue
-        cyan: '#1776c1',           // Aurora Cyan (primary accent)
-        teal: '#14B8A6',           // Aurora Teal
-        costPlan: '#1776c1',       // Aurora Cyan - unified accent
-        variation: '#1776c1',      // Aurora Cyan - unified accent
-        invoice: '#1776c1',        // Aurora Cyan - unified accent
+        blue: 'var(--color-accent-primary)',           // Aurora Blue
+        cyan: 'var(--color-accent-primary)',           // Aurora Cyan (primary accent)
+        teal: 'var(--sw-cyan)',           // Aurora Teal
+        costPlan: 'var(--color-accent-primary)',       // Aurora Cyan - unified accent
+        variation: 'var(--color-accent-primary)',      // Aurora Cyan - unified accent
+        invoice: 'var(--color-accent-primary)',        // Aurora Cyan - unified accent
     },
     status: {
-        positive: '#4ade80',
-        negative: '#f87171',
+        positive: 'var(--color-success)',
+        negative: 'var(--color-error)',
     },
 };
 
@@ -75,61 +75,392 @@ const SECTION_NAMES: Record<CostLineSection, string> = {
 
 const SECTIONS: CostLineSection[] = ['FEES', 'CONSULTANTS', 'CONSTRUCTION', 'CONTINGENCY'];
 
+type CostPlanningTab = 'cost-plan' | 'variations' | 'invoices' | 'payment-schedule';
+
+const subTabClassName =
+    'tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]';
+
+const muted = 'var(--sw-muted)';
+
+const COST_TAB_META: Record<CostPlanningTab, { title: string; crumb: string }> = {
+    'cost-plan': {
+        title: 'Cost Plan',
+        crumb: 'cost plan',
+    },
+    variations: {
+        title: 'Variation',
+        crumb: 'variation',
+    },
+    invoices: {
+        title: 'Invoice',
+        crumb: 'invoice',
+    },
+    'payment-schedule': {
+        title: 'Payment Schedule',
+        crumb: 'payment schedule',
+    },
+};
+
 interface CostPlanPanelProps {
     projectId: string;
+    projectName: string;
+    buildingClass?: string | null;
+    projectType?: string | null;
+    profileData?: {
+        subclass?: string[];
+        scaleData?: Record<string, number>;
+        complexity?: Record<string, string | string[]>;
+        workScope?: string[];
+    };
 }
 
-export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
-    const [activeTab, setActiveTab] = useState('cost-plan');
+function slugifyProjectName(projectName: string): string {
+    return projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
+}
+
+function deriveProfileCompletion(args: {
+    buildingClass?: string | null;
+    projectType?: string | null;
+    profile?: CostPlanPanelProps['profileData'];
+}): number {
+    const { buildingClass, projectType, profile } = args;
+    let filled = 0;
+    if (buildingClass) filled++;
+    if (projectType) filled++;
+    if ((profile?.subclass?.length ?? 0) > 0) filled++;
+    if (profile?.scaleData?.gfa_sqm != null) filled++;
+    if (profile?.scaleData?.storeys != null) filled++;
+    if (profile?.scaleData?.units != null) filled++;
+    if (profile?.complexity && Object.keys(profile.complexity).length >= 5) filled++;
+    if ((profile?.workScope?.length ?? 0) > 0) filled++;
+    return Math.round((filled / 8) * 100);
+}
+
+function Breadcrumb({
+    projectName,
+    activeTab,
+}: {
+    projectName: string;
+    activeTab: CostPlanningTab;
+}) {
+    return (
+        <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-2"
+            style={{
+                fontFamily: 'var(--sw-font-mono)',
+                fontSize: 12,
+                color: muted,
+            }}
+        >
+            <span>{slugifyProjectName(projectName)}</span>
+            <span style={{ opacity: 0.5 }}>/</span>
+            <span style={{ color: 'var(--sw-ink)' }}>cost planning</span>
+            <span style={{ opacity: 0.5 }}>/</span>
+            <span style={{ color: 'var(--sw-ink)' }}>{COST_TAB_META[activeTab].crumb}</span>
+        </nav>
+    );
+}
+
+function StatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
+    const isDark = tone === 'dark';
+    return (
+        <span
+            style={{
+                fontFamily: 'var(--sw-font-mono)',
+                fontSize: 11,
+                padding: '4px 10px',
+                background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
+                border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
+                color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
+                letterSpacing: '0.02em',
+            }}
+        >
+            {label}
+        </span>
+    );
+}
+
+function SubTabContent({
+    label,
+    active,
+}: {
+    label: string;
+    active: boolean;
+}) {
+    return (
+        <div className="flex items-center py-1">
+            <span
+                style={{
+                    fontFamily: 'var(--sw-font-mono)',
+                    fontSize: 11,
+                    color: active ? 'var(--sw-ink)' : muted,
+                    fontWeight: active ? 600 : 400,
+                    letterSpacing: '0.12em',
+                }}
+            >
+                {label}
+            </span>
+        </div>
+    );
+}
+
+const chromeButtonStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: '1px solid var(--sw-rule)',
+    padding: '8px 14px',
+    fontFamily: 'var(--sw-font-mono)',
+    fontSize: 11,
+    letterSpacing: '0.15em',
+    textTransform: 'uppercase',
+    color: 'var(--sw-ink)',
+    cursor: 'pointer',
+};
+
+const chromeButtonDisabledStyle: React.CSSProperties = {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+};
+
+function formatSummaryCurrency(cents: number): string {
+    const value = cents / 100;
+    const abs = Math.abs(value);
+    const sign = value < 0 ? '-' : '';
+
+    if (abs >= 1_000_000) {
+        return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
+    }
+
+    if (abs >= 1_000) {
+        return `${sign}$${Math.round(abs / 1_000)}K`;
+    }
+
+    return `${sign}$${Math.round(abs).toLocaleString()}`;
+}
+
+function CostPlanningTabs({ activeTab }: { activeTab: CostPlanningTab }) {
+    return (
+        <TabsList className="w-auto justify-start bg-transparent rounded-none h-auto p-0">
+            <TabsTrigger value="cost-plan" className={subTabClassName}>
+                <SubTabContent label="Cost Plan" active={activeTab === 'cost-plan'} />
+            </TabsTrigger>
+            <TabsTrigger value="variations" className={subTabClassName}>
+                <SubTabContent label="Variation" active={activeTab === 'variations'} />
+            </TabsTrigger>
+            <TabsTrigger value="invoices" className={subTabClassName}>
+                <SubTabContent label="Invoice" active={activeTab === 'invoices'} />
+            </TabsTrigger>
+            <TabsTrigger value="payment-schedule" className={subTabClassName}>
+                <SubTabContent label="Payment Schedule" active={activeTab === 'payment-schedule'} />
+            </TabsTrigger>
+        </TabsList>
+    );
+}
+
+function SummaryTile({
+    label,
+    value,
+    detail,
+    tone,
+    progressPct,
+    isLast,
+}: {
+    label: string;
+    value: string;
+    detail: string;
+    tone?: 'rose';
+    progressPct?: number;
+    isLast?: boolean;
+}) {
+    const pct = Math.max(0, Math.min(progressPct ?? 0, 100));
 
     return (
-        <div className="h-full flex flex-col">
+        <div
+            className="px-3 py-2 min-w-0"
+            style={{
+                background: tone === 'rose' ? 'var(--sw-rose-tint)' : 'white',
+                borderRight: isLast ? 'none' : '1px solid var(--sw-rule)',
+            }}
+        >
+            <div
+                style={{
+                    fontFamily: 'var(--sw-font-mono)',
+                    fontSize: 9,
+                    letterSpacing: '0.24em',
+                    textTransform: 'uppercase',
+                    color: muted,
+                    fontWeight: 700,
+                    marginBottom: 4,
+                }}
+            >
+                {label}
+            </div>
+            <div
+                style={{
+                    fontFamily: 'var(--sw-font-sans)',
+                    fontSize: 24,
+                    lineHeight: 1,
+                    fontWeight: 800,
+                    color: 'var(--sw-ink)',
+                    letterSpacing: 0,
+                }}
+            >
+                {value}
+            </div>
+            <div
+                style={{
+                    fontFamily: 'var(--sw-font-mono)',
+                    fontSize: 10,
+                    color: tone === 'rose' ? 'var(--sw-rose-dk)' : muted,
+                    marginTop: 4,
+                    minHeight: 14,
+                }}
+            >
+                {detail}
+            </div>
+            {progressPct != null && (
+                <div
+                    style={{
+                        marginTop: 6,
+                        height: 2,
+                        background: 'var(--sw-rule-2)',
+                        position: 'relative',
+                    }}
+                >
+                    <div
+                        style={{
+                            width: `${pct}%`,
+                            height: '100%',
+                            background: 'var(--sw-ink)',
+                        }}
+                    />
+                </div>
+            )}
+        </div>
+    );
+}
+
+function CostSummaryStrip({
+    totals,
+}: {
+    totals: CostPlanTotals | null;
+}) {
+    const budgetCents = totals?.budgetCents ?? 0;
+    const contractCents = totals?.approvedContractCents ?? 0;
+    const forecastCents = totals?.finalForecastCents ?? 0;
+    const contractPct = budgetCents > 0 ? (contractCents / budgetCents) * 100 : 0;
+    const forecastDeltaCents = forecastCents - budgetCents;
+    const forecastDetail =
+        forecastDeltaCents === 0
+            ? 'on budget'
+            : `${forecastDeltaCents > 0 ? '+' : '-'}${formatSummaryCurrency(Math.abs(forecastDeltaCents))} ${forecastDeltaCents > 0 ? 'over' : 'under'}`;
+
+    return (
+        <section
+            className="grid flex-shrink-0 mx-2 mb-2"
+            style={{
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                border: '1px solid var(--sw-rule)',
+                background: 'white',
+                width: '66%',
+                minWidth: 520,
+                maxWidth: 760,
+            }}
+            aria-label="Cost planning summary"
+        >
+            <SummaryTile
+                label="Budget"
+                value={formatSummaryCurrency(budgetCents)}
+                detail="baseline · approved Mar 26"
+            />
+            <SummaryTile
+                label="Contract"
+                value={formatSummaryCurrency(contractCents)}
+                detail={`${contractPct.toFixed(1)}% of budget`}
+                progressPct={contractPct}
+            />
+            <SummaryTile
+                label="Forecast"
+                value={formatSummaryCurrency(forecastCents)}
+                detail={forecastDetail}
+                tone="rose"
+                isLast
+            />
+        </section>
+    );
+}
+
+export function CostPlanPanel({
+    projectId,
+    projectName,
+    buildingClass,
+    projectType,
+    profileData,
+}: CostPlanPanelProps) {
+    const [activeTab, setActiveTab] = useState<CostPlanningTab>('cost-plan');
+    const { totals: summaryTotals } = useCostPlan(projectId);
+    const profileCompletionPct = useMemo(
+        () => deriveProfileCompletion({ buildingClass, projectType, profile: profileData }),
+        [buildingClass, projectType, profileData]
+    );
+    const renderTabsList = useCallback(
+        () => <CostPlanningTabs activeTab={activeTab} />,
+        [activeTab]
+    );
+
+    return (
+        <div className="h-full flex flex-col" style={{ background: 'var(--sw-paper)' }}>
+            <header className="flex-shrink-0 px-2 pt-2">
+                <div className="flex items-center justify-between mb-2">
+                    <Breadcrumb projectName={projectName} activeTab={activeTab} />
+                    <div className="flex gap-1.5">
+                        <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
+                        <StatusPill label="stage: detail design" tone="dark" />
+                    </div>
+                </div>
+
+                <div className="flex items-end justify-between mb-2">
+                    <div>
+                        <h1
+                            style={{
+                                fontFamily: 'var(--sw-font-sans)',
+                                fontSize: 30,
+                                fontWeight: 700,
+                                letterSpacing: 0,
+                                margin: 0,
+                                lineHeight: 1.1,
+                                color: 'var(--sw-ink)',
+                            }}
+                        >
+                            {COST_TAB_META[activeTab].title}
+                        </h1>
+                    </div>
+                </div>
+            </header>
+
+            <CostSummaryStrip
+                totals={summaryTotals}
+            />
+
             <Tabs
                 value={activeTab}
-                onValueChange={setActiveTab}
+                onValueChange={(value) => setActiveTab(value as CostPlanningTab)}
                 className="flex-1 flex flex-col min-h-0"
             >
-                <TabsList className="w-full justify-start bg-transparent border-b border-[var(--color-border)]/50 rounded-none h-auto p-0 pl-[20%]">
-                    <TabsTrigger
-                        value="cost-plan"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]"
-                    >
-                        Cost Plan
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="variations"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]"
-                    >
-                        Variations
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="invoices"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]"
-                    >
-                        Invoices
-                    </TabsTrigger>
-                    <TabsTrigger
-                        value="payment-schedule"
-                        className="tab-aurora-sub rounded-none px-4 py-2 text-[var(--color-text-muted)] text-xs font-medium transition-all duration-200 hover:text-[var(--color-text-primary)] hover:bg-white/10 data-[state=active]:bg-transparent data-[state=active]:text-[var(--color-text-primary)]"
-                    >
-                        Payment Schedule
-                    </TabsTrigger>
-                </TabsList>
-
                 <TabsContent value="cost-plan" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
-                    <CostPlanSpreadsheet projectId={projectId} />
+                    <CostPlanSpreadsheet projectId={projectId} renderTabsList={renderTabsList} />
                 </TabsContent>
 
                 <TabsContent value="variations" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
-                    <VariationsPanel projectId={projectId} />
+                    <VariationsPanel projectId={projectId} renderTabsList={renderTabsList} />
                 </TabsContent>
 
                 <TabsContent value="invoices" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
-                    <InvoicesPanel projectId={projectId} />
+                    <InvoicesPanel projectId={projectId} renderTabsList={renderTabsList} />
                 </TabsContent>
 
                 <TabsContent value="payment-schedule" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
-                    <PaymentSchedulePanel projectId={projectId} />
+                    <PaymentSchedulePanel projectId={projectId} renderTabsList={renderTabsList} />
                 </TabsContent>
             </Tabs>
         </div>
@@ -138,9 +469,10 @@ export function CostPlanPanel({ projectId }: CostPlanPanelProps) {
 
 interface CostPlanSpreadsheetProps {
     projectId: string;
+    renderTabsList: () => React.ReactNode;
 }
 
-function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
+function CostPlanSpreadsheet({ projectId, renderTabsList }: CostPlanSpreadsheetProps) {
     // Month selector state - defaults to current month
     const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number }>({
         year: new Date().getFullYear(),
@@ -876,15 +1208,25 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
         <div className="flex-1 flex flex-col min-h-0">
             {/* Toolbar */}
             <div
-                className="flex items-center justify-end px-4 py-2 border-b border-[var(--color-border)]/50 backdrop-blur-sm flex-shrink-0"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-tertiary) 30%, transparent)' }}
+                className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
+                style={{
+                    background: 'var(--sw-paper)',
+                    borderBottom: '1px solid var(--sw-rule)',
+                }}
             >
+                <div className="min-w-0 flex-shrink-0">
+                    {renderTabsList()}
+                </div>
                 {/* Right side - Apply Estimate + Clear All + Month Selector */}
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center flex-shrink-0">
                     <button
                         onClick={() => setEstimateDialogOpen(true)}
                         disabled={!profilerData}
-                        className="text-xs bg-[#1776c1] text-white px-3 py-1.5 rounded hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#1776c1] focus:ring-opacity-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40"
+                        style={{
+                            ...chromeButtonStyle,
+                            ...(!profilerData ? chromeButtonDisabledStyle : {}),
+                        }}
                         title={!profilerData ? 'Complete the building profiler first to generate an estimate' : 'Distribute budget estimate across cost plan items'}
                     >
                         Apply Budget Estimate
@@ -892,26 +1234,41 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
                     <button
                         onClick={handleClearAllClick}
                         disabled={isLoadingTemplate || costLines.length === 0}
-                        className="text-xs bg-[var(--color-accent-coral)] text-white px-3 py-1.5 rounded hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent-coral)] focus:ring-opacity-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40"
+                        style={{
+                            ...chromeButtonStyle,
+                            background: 'var(--sw-rose)',
+                            borderColor: 'var(--sw-rose)',
+                            fontWeight: 700,
+                            ...((isLoadingTemplate || costLines.length === 0) ? chromeButtonDisabledStyle : {}),
+                        }}
                         title="Clear all cost plan items"
                     >
                         Clear All
                     </button>
                     <select
-                    value={`${selectedMonth.year}-${String(selectedMonth.month).padStart(2, '0')}`}
-                    onChange={(e) => {
-                        const [year, month] = e.target.value.split('-').map(Number);
-                        setSelectedMonth({ year, month });
-                    }}
-                    className="text-xs text-[var(--primary-foreground)] bg-[var(--color-accent-green)] px-2.5 py-1.5 rounded font-medium hover:bg-[var(--primitive-green-dark)] focus:outline-none transition-colors cursor-pointer"
-                    title="Select reporting month"
-                >
-                    {monthOptions.map(option => (
-                        <option key={option.value} value={option.value} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                            {option.label}
-                        </option>
-                    ))}
-                </select>
+                        value={`${selectedMonth.year}-${String(selectedMonth.month).padStart(2, '0')}`}
+                        onChange={(e) => {
+                            const [year, month] = e.target.value.split('-').map(Number);
+                            setSelectedMonth({ year, month });
+                        }}
+                        className="focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40 transition-opacity hover:opacity-90 cursor-pointer"
+                        style={{
+                            ...chromeButtonStyle,
+                            background: 'var(--sw-ink)',
+                            borderColor: 'var(--sw-ink)',
+                            color: 'var(--sw-paper)',
+                            fontWeight: 700,
+                            paddingRight: 28,
+                        }}
+                        title="Select reporting month"
+                    >
+                        {monthOptions.map(option => (
+                            <option key={option.value} value={option.value} className="bg-[var(--sw-paper)] text-[var(--sw-ink)]">
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
@@ -924,12 +1281,12 @@ function CostPlanSpreadsheet({ projectId }: CostPlanSpreadsheetProps) {
             >
                 <div
                     className="cost-plan-container flex-1 h-0 overflow-x-auto overflow-y-auto"
-                    style={{ scrollbarGutter: 'stable', backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 40%, transparent)' }}
+                    style={{ scrollbarGutter: 'stable', background: 'var(--sw-paper)' }}
                 >
-                    <table className="border-collapse text-xs w-full select-none">
+                    <table className="border-collapse text-xs w-full select-none" style={{ fontFamily: 'var(--sw-font-mono)', background: 'white' }}>
                         <thead
-                            className="sticky top-0 z-10 backdrop-blur-sm shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]"
-                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 50%, transparent)' }}
+                            className="sticky top-0 z-10 shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]"
+                            style={{ background: 'white' }}
                         >
                             <tr>
                                 <th className="px-0 py-1.5 w-8 border-b border-b-[var(--color-border)]" rowSpan={2}>

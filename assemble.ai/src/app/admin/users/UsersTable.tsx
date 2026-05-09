@@ -91,29 +91,26 @@ export function UsersTable({ initialUsers }: { initialUsers: AdminUserRow[] }) {
     }
 
     return (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+        <div className="sitewise-card overflow-hidden">
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3 border-b border-[var(--sw-rule-2)] px-4 py-3">
                 <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--sw-muted)]" />
                     <input
                         type="text"
                         placeholder="Search email or name…"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] py-2 pl-9 pr-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-accent-primary)] focus:outline-none"
+                        className="w-full border py-2 pl-9 pr-3 text-sm placeholder-[var(--sw-muted)]"
                     />
                 </div>
-                <div className="flex gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-1 text-xs">
+                <div className="sitewise-segmented">
                     {(['all', 'active', 'suspended'] as StatusFilter[]).map((s) => (
                         <button
                             key={s}
                             onClick={() => setStatusFilter(s)}
-                            className={`rounded px-3 py-1 capitalize transition-colors ${
-                                statusFilter === s
-                                    ? 'bg-[var(--color-accent-primary)] text-white'
-                                    : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]'
-                            }`}
+                            aria-pressed={statusFilter === s}
+                            className="capitalize transition-colors"
                         >
                             {s}
                         </button>
@@ -122,13 +119,13 @@ export function UsersTable({ initialUsers }: { initialUsers: AdminUserRow[] }) {
             </div>
 
             {error && (
-                <div className="border-b border-red-800/60 bg-red-950/40 px-4 py-2 text-sm text-red-300">{error}</div>
+                <div className="border-b border-[var(--sw-rule)] bg-[var(--sw-rose-tint)] px-4 py-2 text-sm text-[var(--sw-rose-dk)]">{error}</div>
             )}
 
             {/* Table */}
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                    <thead className="border-b border-[var(--color-border)] text-xs uppercase tracking-wider text-[var(--color-text-muted)]">
+                    <thead className="border-b border-[var(--sw-rule-2)]">
                         <tr>
                             <Th onClick={() => toggleSort('email')} active={sortKey === 'email'} dir={sortDir}>Email</Th>
                             <Th onClick={() => toggleSort('name')} active={sortKey === 'name'} dir={sortDir}>Name</Th>
@@ -142,7 +139,7 @@ export function UsersTable({ initialUsers }: { initialUsers: AdminUserRow[] }) {
                     <tbody>
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={7} className="px-4 py-8 text-center text-sm text-[var(--color-text-secondary)]">
+                                <td colSpan={7} className="px-4 py-8 text-center text-sm text-[var(--sw-muted)]">
                                     No users match.
                                 </td>
                             </tr>
@@ -150,27 +147,27 @@ export function UsersTable({ initialUsers }: { initialUsers: AdminUserRow[] }) {
                         {filtered.map((u) => (
                             <tr
                                 key={u.id}
-                                className="border-b border-[var(--color-border-subtle)] last:border-0 hover:bg-[var(--color-bg-hover)]"
+                                className="border-b border-[var(--sw-rule-2)] last:border-0"
                             >
-                                <td className="px-3 py-2 text-[var(--color-text-primary)]">
+                                <td className="px-3 py-2 text-[var(--sw-ink)]">
                                     {u.email}
                                     {u.isSuperAdmin && (
-                                        <span className="ml-2 rounded-full bg-[var(--color-accent-primary-tint)] px-1.5 py-0.5 text-[9px] font-semibold uppercase text-[var(--color-accent-primary)]">
+                                        <span className="sitewise-chip sitewise-chip-cyan ml-2">
                                             Super-admin
                                         </span>
                                     )}
                                 </td>
-                                <td className="px-3 py-2 text-[var(--color-text-secondary)]">{u.name}</td>
-                                <td className="px-3 py-2 text-[var(--color-text-secondary)]">{formatDate(u.createdAt)}</td>
-                                <td className="px-3 py-2 text-[var(--color-text-secondary)]">{u.lastSeen ? formatDate(u.lastSeen) : '—'}</td>
-                                <td className="px-3 py-2 text-[var(--color-text-secondary)]">{u.planStatus || '—'}</td>
+                                <td className="px-3 py-2 text-[var(--sw-muted)]">{u.name}</td>
+                                <td className="px-3 py-2 text-[var(--sw-muted)]">{formatDate(u.createdAt)}</td>
+                                <td className="px-3 py-2 text-[var(--sw-muted)]">{u.lastSeen ? formatDate(u.lastSeen) : '—'}</td>
+                                <td className="px-3 py-2 text-[var(--sw-muted)]">{u.planStatus || '—'}</td>
                                 <td className="px-3 py-2">
                                     {u.suspendedAt ? (
-                                        <span className="rounded-full bg-[var(--color-accent-coral-tint)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-accent-coral)]">
+                                        <span className="sitewise-chip sitewise-chip-rose">
                                             Suspended
                                         </span>
                                     ) : (
-                                        <span className="rounded-full bg-[var(--color-accent-green-tint)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--color-accent-green)]">
+                                        <span className="sitewise-chip sitewise-chip-green">
                                             Active
                                         </span>
                                     )}
@@ -216,34 +213,34 @@ export function UsersTable({ initialUsers }: { initialUsers: AdminUserRow[] }) {
             {/* Reset link modal */}
             {resetLink && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-                    <div className="w-full max-w-2xl rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-6 shadow-2xl">
+                    <div className="sitewise-card w-full max-w-2xl p-6">
                         <div className="mb-4 flex items-start justify-between">
                             <div>
-                                <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Password reset link generated</h3>
-                                <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                                    For <span className="font-mono text-[var(--color-accent-primary)]">{resetLink.email}</span>. Send this link to the user manually.
+                                <div className="sitewise-section-label">Password reset link generated</div>
+                                <p className="mt-2 text-sm text-[var(--sw-muted)]">
+                                    For <span className="font-mono text-[var(--sw-rose-dk)]">{resetLink.email}</span>. Send this link to the user manually.
                                 </p>
                             </div>
                             <button
                                 onClick={() => setResetLink(null)}
-                                className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
+                                className="sitewise-icon-button"
                             >
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
-                        <div className="mb-3 rounded border border-[var(--color-border)] bg-[var(--color-bg-primary)] p-3">
-                            <code className="break-all text-xs text-[var(--color-text-primary)]">{resetLink.resetUrl}</code>
+                        <div className="mb-3 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-3">
+                            <code className="break-all text-xs text-[var(--sw-ink)]">{resetLink.resetUrl}</code>
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                            <p className="text-xs text-[var(--color-text-secondary)]">
+                            <p className="text-xs text-[var(--sw-muted)]">
                                 Expires {formatDate(resetLink.expiresAt)} (1 hour from now). Single-use.
                             </p>
                             <button
                                 onClick={copyResetUrl}
-                                className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                                className={`sitewise-button ${
                                     copied
-                                        ? 'bg-[var(--color-accent-green)] text-white'
-                                        : 'bg-[var(--color-accent-primary)] text-white hover:bg-[var(--color-accent-primary-hover)]'
+                                        ? 'bg-[#5c7a4a] !text-white'
+                                        : 'sitewise-button-primary'
                                 }`}
                             >
                                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
@@ -271,7 +268,7 @@ function Th({
     return (
         <th
             onClick={onClick}
-            className="cursor-pointer select-none px-3 py-2 text-left font-semibold transition-colors hover:text-[var(--color-text-primary)]"
+            className="cursor-pointer select-none px-3 py-2 text-left font-semibold transition-colors hover:text-[var(--sw-ink)]"
         >
             <span className="inline-flex items-center gap-1">
                 {children}
@@ -299,16 +296,16 @@ function ActionButton({
     disabled?: boolean;
 }) {
     const colors = {
-        red: 'border-[var(--color-border)] text-[var(--color-accent-coral)] hover:bg-[var(--color-accent-coral-tint)]',
-        green: 'border-[var(--color-border)] text-[var(--color-accent-green)] hover:bg-[var(--color-accent-green-tint)]',
-        gray: 'border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]',
+        red: 'text-[var(--sw-rose-dk)] hover:bg-[var(--sw-rose-tint)]',
+        green: 'text-[#4b653c] hover:bg-[rgba(92,122,74,0.10)]',
+        gray: 'text-[var(--sw-muted)] hover:bg-[var(--sw-paper)]',
     }[variant];
     return (
         <button
             onClick={onClick}
             disabled={busy || disabled}
             title={title}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors ${colors} disabled:opacity-40 disabled:cursor-not-allowed`}
+            className={`sitewise-button min-h-[28px] px-2 py-1 text-[10px] ${colors} disabled:opacity-40 disabled:cursor-not-allowed`}
         >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : icon}
             {label}

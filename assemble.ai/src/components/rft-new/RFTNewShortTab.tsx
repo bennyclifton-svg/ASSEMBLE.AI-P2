@@ -19,6 +19,8 @@ import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { ObjectivesReadOnlyList } from '@/components/profiler/objectives/ObjectivesReadOnlyList';
 import type { ObjectiveRow } from '@/components/profiler/objectives/ObjectivesWorkspace';
 
+const RFT_HIGHLIGHT_COLOR = 'var(--sw-cyan)';
+
 function formatDisplayDate(dateString: string): string {
     if (!dateString) return '';
     const [year, month, day] = dateString.split('-');
@@ -75,6 +77,7 @@ interface RFTNewShortTabProps {
     hasTransmittal?: boolean;
     documentCount?: number;
     isDownloading?: boolean;
+    surface?: 'procurement' | 'record';
 }
 
 // Helper to get week start (Monday) for a date
@@ -198,17 +201,10 @@ function ProgramGanttSection({
     const activitiesWithDates = visibleActivities.filter(a => a.startDate && a.endDate);
 
     const headerRow = (
-        <div className="flex items-center gap-2">
-            <h3
-                className={cn(
-                    'text-sm font-semibold uppercase tracking-wide transition-colors',
-                    visible
-                        ? 'text-[var(--color-text-primary)]'
-                        : 'text-[var(--color-text-muted)]'
-                )}
-            >
+        <div className="flex items-center gap-2 px-4">
+            <RFTSectionHeading muted={!visible}>
                 Program
-            </h3>
+            </RFTSectionHeading>
             <button
                 type="button"
                 onClick={() => onToggleVisible?.(!visible)}
@@ -463,6 +459,26 @@ interface BriefSub {
     viewMode: 'short' | 'long';
 }
 
+function RFTSectionHeading({
+    children,
+    muted = false,
+}: {
+    children: React.ReactNode;
+    muted?: boolean;
+}) {
+    return (
+        <h3
+            className={cn(
+                'flex items-center gap-2 text-sm font-semibold transition-colors',
+                muted ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)]'
+            )}
+        >
+            <span aria-hidden="true" className="h-1.5 w-1.5 bg-[var(--sw-cyan)]" />
+            {children}
+        </h3>
+    );
+}
+
 function BriefSubSection({
     field, label, sub, isGenerating, isAnyGenerating, counterStart, isLast,
     onChange, onSave, onRefresh, onToggle,
@@ -497,19 +513,20 @@ function BriefSubSection({
                 <div className="flex items-center gap-2">
                     {/* Segmented Short/Long toggle */}
                     <div
-                        className="inline-flex items-center rounded border border-[var(--color-border)]/50 overflow-hidden text-xs font-medium"
+                        className="inline-flex items-center overflow-hidden border border-[var(--sw-rule)] text-[10px]"
+                        style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.05em' }}
                         role="group"
                         aria-label="View mode"
                     >
                         <button
                             type="button"
                             onClick={() => onToggle(field, 'short')}
-                            className={cn(
-                                'px-2.5 py-1 transition-colors',
-                                sub.viewMode === 'short'
-                                    ? 'bg-[var(--color-accent-copper)]/20 text-[var(--color-accent-copper)]'
-                                    : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]',
-                            )}
+                            className="px-2 py-1 transition-colors"
+                            style={{
+                                background: sub.viewMode === 'short' ? 'var(--sw-ink)' : 'transparent',
+                                color: sub.viewMode === 'short' ? 'var(--sw-paper)' : 'var(--sw-muted)',
+                                borderRight: '1px solid var(--sw-rule)',
+                            }}
                         >
                             Short
                         </button>
@@ -517,14 +534,15 @@ function BriefSubSection({
                             type="button"
                             onClick={() => onToggle(field, 'long')}
                             title={!hasLongContent && hasShortText ? 'Long view is empty — click the diamond to polish' : undefined}
-                            className={cn(
-                                'px-2.5 py-1 transition-colors',
-                                sub.viewMode === 'long'
-                                    ? 'bg-[var(--color-accent-copper)]/20 text-[var(--color-accent-copper)]'
+                            className={cn('px-2 py-1 transition-colors', !hasLongContent && hasShortText && sub.viewMode !== 'long' && 'italic')}
+                            style={{
+                                background: sub.viewMode === 'long' ? 'var(--sw-ink)' : 'transparent',
+                                color: sub.viewMode === 'long'
+                                    ? 'var(--sw-paper)'
                                     : !hasLongContent && hasShortText
-                                        ? 'text-[var(--color-text-muted)]/60 hover:text-[var(--color-text-primary)] italic'
-                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]',
-                            )}
+                                        ? 'rgba(107,105,98,0.62)'
+                                        : 'var(--sw-muted)',
+                            }}
                         >
                             Long
                         </button>
@@ -537,10 +555,10 @@ function BriefSubSection({
                         disabled={isAnyGenerating}
                         title={`Regenerate ${sub.viewMode} content`}
                         className={cn(
-                            'p-1 rounded transition-colors',
+                            'inline-flex items-center border border-[var(--sw-rule)] bg-transparent px-1.5 py-1 transition-colors',
                             isAnyGenerating
-                                ? 'text-[var(--color-text-muted)]/40 cursor-not-allowed'
-                                : 'text-[var(--color-accent-copper)] hover:bg-[var(--color-bg-tertiary)]',
+                                ? 'cursor-not-allowed text-[var(--sw-muted)]/40'
+                                : 'text-[var(--sw-rose-dk)] hover:bg-[var(--sw-rose-tint)]',
                         )}
                     >
                         <DiamondIcon
@@ -596,6 +614,7 @@ export function RFTNewShortTab({
     hasTransmittal,
     documentCount,
     isDownloading,
+    surface = 'procurement',
 }: RFTNewShortTabProps) {
     const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
     const [objectives, setObjectives] = useState<ProfilerObjectives>({ planning: [], functional: [], quality: [], compliance: [] });
@@ -886,6 +905,7 @@ export function RFTNewShortTab({
 
     const rftNum = String(rftNew.rftNumber).padStart(2, '0');
     const rftLabel = `Request For Tender, ${contextName} ${rftNum}`;
+    const usesRecordSurface = surface === 'record';
 
     // Edits route to the currently-visible version (short or long) so toggling
     // does not clobber the off-screen variant.
@@ -922,21 +942,33 @@ export function RFTNewShortTab({
     };
 
     return (
-        <div className="space-y-6">
+        <div
+            className={cn('space-y-6', usesRecordSurface && 'pb-4')}
+            style={usesRecordSurface ? { backgroundColor: 'white', color: 'var(--color-text-primary)' } : undefined}
+        >
             {/* 1. Project Information Table */}
-            <div className="overflow-hidden rounded-lg">
+            <div
+                className={usesRecordSurface ? 'overflow-hidden' : 'overflow-hidden rounded-lg'}
+                style={usesRecordSurface ? { borderBottom: '1px solid var(--sw-rule-2)' } : undefined}
+            >
                 <table className="w-full text-sm">
                     <tbody>
-                        <tr className="border-b border-[var(--color-border)]">
-                            <td className="w-36 px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                        <tr
+                            className={usesRecordSurface ? undefined : 'border-b border-[var(--color-border)]'}
+                            style={usesRecordSurface ? { borderBottom: '1px solid var(--sw-rule-2)' } : undefined}
+                        >
+                            <td className="w-36 px-4 py-2.5 font-medium" style={{ color: RFT_HIGHLIGHT_COLOR }}>
                                 Project Name
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
                                 {projectDetails?.projectName || 'Loading...'}
                             </td>
                         </tr>
-                        <tr className="border-b border-[var(--color-border)]">
-                            <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                        <tr
+                            className={usesRecordSurface ? undefined : 'border-b border-[var(--color-border)]'}
+                            style={usesRecordSurface ? { borderBottom: '1px solid var(--sw-rule-2)' } : undefined}
+                        >
+                            <td className="px-4 py-2.5 font-medium" style={{ color: RFT_HIGHLIGHT_COLOR }}>
                                 Address
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)]" colSpan={2}>
@@ -944,14 +976,15 @@ export function RFTNewShortTab({
                             </td>
                         </tr>
                         <tr>
-                            <td className="px-4 py-2.5 text-[var(--color-document-header)] font-medium">
+                            <td className="px-4 py-2.5 font-medium" style={{ color: RFT_HIGHLIGHT_COLOR }}>
                                 Document
                             </td>
                             <td className="px-4 py-2.5 text-[var(--color-text-primary)] font-semibold">
                                 {rftLabel}
                             </td>
                             <td
-                                className="w-44 px-4 py-2.5 text-[var(--color-document-header)] font-medium cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative text-right"
+                                className="w-44 px-4 py-2.5 font-medium cursor-pointer hover:bg-[var(--color-bg-tertiary)] transition-colors relative text-right"
+                                style={{ color: RFT_HIGHLIGHT_COLOR }}
                                 onClick={handleDateClick}
                             >
                                 <span className="select-none">Issued {formatDisplayDate(rftDate)}</span>
@@ -971,17 +1004,10 @@ export function RFTNewShortTab({
 
             {/* 2. Objectives Section */}
             <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                    <h3
-                        className={cn(
-                            'text-sm font-semibold uppercase tracking-wide transition-colors',
-                            rftNew.objectivesVisible
-                                ? 'text-[var(--color-text-primary)]'
-                                : 'text-[var(--color-text-muted)]'
-                        )}
-                    >
+                <div className="flex items-center gap-2 px-4">
+                    <RFTSectionHeading muted={!rftNew.objectivesVisible}>
                         Objectives
-                    </h3>
+                    </RFTSectionHeading>
                     <button
                         type="button"
                         onClick={() => onToggleObjectivesVisible?.(!rftNew.objectivesVisible)}
@@ -1010,9 +1036,11 @@ export function RFTNewShortTab({
                 Objectives SectionGroup pattern: segmented Short/Long toggle +
                 single DiamondIcon refresh in each sub-section header. */}
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                    Brief
-                </h3>
+                <div className="px-4">
+                    <RFTSectionHeading>
+                        Brief
+                    </RFTSectionHeading>
+                </div>
                 <div className="rounded border border-[var(--color-border)]/50 overflow-hidden">
                     <BriefSubSection
                         field="services"
@@ -1055,9 +1083,11 @@ export function RFTNewShortTab({
 
             {/* 5. Fee Section */}
             <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] uppercase tracking-wide">
-                    Fee
-                </h3>
+                <div className="px-4">
+                    <RFTSectionHeading>
+                        Fee
+                    </RFTSectionHeading>
+                </div>
                 <div className="overflow-hidden rounded-lg">
                     {costLines.length > 0 ? (
                         <table className="w-full text-sm table-fixed">

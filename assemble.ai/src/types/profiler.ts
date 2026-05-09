@@ -238,13 +238,27 @@ export interface SubclassOption {
   label: string;
 }
 
+export interface ScaleFieldPart {
+  key: string;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  type?: 'integer' | 'decimal';
+}
+
 export interface ScaleField {
   key: string;
   label: string;
-  type: 'integer' | 'decimal';
+  type?: 'integer' | 'decimal' | 'composite';
+  unit?: string;
+  note?: string;
+  noteAccent?: string;
   min?: number;
   max?: number;
   placeholder?: string;
+  parts?: ScaleFieldPart[];
+  partsSeparator?: string;
+  partsLabel?: string;
 }
 
 export interface ComplexityOption {
