@@ -2254,6 +2254,67 @@ textarea:-webkit-autofill:active {
   width: 100%;
 }
 
+/* Sitewise icon nav: compact state used when the document repository is expanded */
+.left-panel-collapsed .sitewise-left-nav {
+  align-items: center;
+  gap: 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 4px;
+}
+
+.left-panel-collapsed .sitewise-nav-group {
+  align-items: center;
+  width: 100%;
+}
+
+.left-panel-collapsed .sitewise-nav-item {
+  height: 32px;
+  width: 32px;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+}
+
+.left-panel-collapsed .sitewise-nav-icon-grid,
+.left-panel-collapsed .sitewise-project-icon-grid,
+.left-panel-collapsed .sitewise-ask-icon-grid {
+  display: flex;
+  height: 28px;
+  width: 28px;
+}
+
+.left-panel-collapsed .sitewise-nav-label,
+.left-panel-collapsed .sitewise-nav-kbd,
+.left-panel-collapsed .sitewise-nav-group-label,
+.left-panel-collapsed .sitewise-nav-divider,
+.left-panel-collapsed .sitewise-project-label,
+.left-panel-collapsed .project-switcher-chevron,
+.left-panel-collapsed .sitewise-ask-label,
+.left-panel-collapsed .sitewise-ask-copy,
+.left-panel-collapsed .sitewise-ask-footer {
+  display: none;
+}
+
+.left-panel-collapsed .sitewise-project-switcher-card,
+.left-panel-collapsed .sitewise-ask-card {
+  align-items: center;
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+  width: 32px;
+}
+
+.left-panel-collapsed .sitewise-project-switcher-card > div,
+.left-panel-collapsed .sitewise-project-switcher-card button {
+  width: auto;
+}
+
+.left-panel-collapsed .sitewise-project-switcher-card button {
+  justify-content: center;
+}
+
 /* ============================================
    PRECISION THEME ANIMATIONS & MICRO-INTERACTIONS
    ============================================ */
