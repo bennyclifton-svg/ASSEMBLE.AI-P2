@@ -1,6 +1,17 @@
 'use client';
 
 import {
+    BadgeDollarSign,
+    Brain,
+    CalendarClock,
+    ClipboardList,
+    Handshake,
+    Mail,
+    StickyNote,
+    UsersRound,
+    WandSparkles,
+} from 'lucide-react';
+import {
     SitewiseNavGroup,
     SitewiseNavItem,
     SitewiseProjectSwitcherCard,
@@ -43,6 +54,18 @@ const REFERENCE_ITEMS: Array<{ tab: string; label: string; kbd: string }> = [
     { tab: 'knowledge',    label: 'Knowledge',    kbd: '⌥9' },
 ];
 
+const NAV_VISUALS = {
+    brief: { icon: WandSparkles, color: '#C93F6A', bg: 'rgba(201, 63, 106, 0.14)' },
+    'cost-planning': { icon: BadgeDollarSign, color: '#0F9F6E', bg: 'rgba(15, 159, 110, 0.14)' },
+    program: { icon: CalendarClock, color: '#2563EB', bg: 'rgba(37, 99, 235, 0.13)' },
+    procurement: { icon: Handshake, color: '#D97706', bg: 'rgba(217, 119, 6, 0.15)' },
+    notes: { icon: StickyNote, color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.13)' },
+    correspondence: { icon: Mail, color: '#0891B2', bg: 'rgba(8, 145, 178, 0.14)' },
+    'meetings-reports': { icon: ClipboardList, color: '#E11D48', bg: 'rgba(225, 29, 72, 0.12)' },
+    stakeholders: { icon: UsersRound, color: '#0E7490', bg: 'rgba(14, 116, 144, 0.14)' },
+    knowledge: { icon: Brain, color: '#9333EA', bg: 'rgba(147, 51, 234, 0.13)' },
+} as const;
+
 export function PlanningCard({
     activeMainTab,
     refreshKey,
@@ -52,7 +75,7 @@ export function PlanningCard({
 }: PlanningCardProps) {
     return (
         <aside
-            className="flex flex-col h-full p-4 gap-4 overflow-hidden"
+            className="sitewise-left-nav flex flex-col h-full p-4 gap-4 overflow-hidden"
             style={{ background: 'var(--sw-paper-2)', borderRight: '1px solid var(--sw-rule)' }}
         >
             {selectedProject && onSelectProject && (
@@ -69,6 +92,9 @@ export function PlanningCard({
                         key={item.tab}
                         label={item.label}
                         kbd={item.kbd}
+                        icon={NAV_VISUALS[item.tab as keyof typeof NAV_VISUALS].icon}
+                        iconColor={NAV_VISUALS[item.tab as keyof typeof NAV_VISUALS].color}
+                        iconBackground={NAV_VISUALS[item.tab as keyof typeof NAV_VISUALS].bg}
                         active={activeMainTab === item.tab}
                         onClick={() => onMainTabChange?.(item.tab)}
                     />
@@ -81,6 +107,9 @@ export function PlanningCard({
                         key={item.tab}
                         label={item.label}
                         kbd={item.kbd}
+                        icon={NAV_VISUALS[item.tab as keyof typeof NAV_VISUALS].icon}
+                        iconColor={NAV_VISUALS[item.tab as keyof typeof NAV_VISUALS].color}
+                        iconBackground={NAV_VISUALS[item.tab as keyof typeof NAV_VISUALS].bg}
                         active={activeMainTab === item.tab}
                         onClick={() => onMainTabChange?.(item.tab)}
                     />

@@ -8,10 +8,10 @@ interface SitewiseNavGroupProps {
 
 export function SitewiseNavGroup({ label, showDivider, children }: SitewiseNavGroupProps) {
     return (
-        <div className="flex flex-col gap-px">
-            {showDivider && <div style={{ height: 1, background: 'var(--sw-rule)', margin: '8px 0' }} />}
+        <div className="sitewise-nav-group flex flex-col gap-px">
+            {showDivider && <div className="sitewise-nav-divider" style={{ height: 1, background: 'var(--sw-rule)', margin: '8px 0' }} />}
             {label && (
-                <div style={{
+                <div className="sitewise-nav-group-label" style={{
                     fontFamily: 'var(--sw-font-mono)',
                     fontSize: 10,
                     color: 'var(--sw-muted)',

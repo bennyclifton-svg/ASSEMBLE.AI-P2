@@ -31,8 +31,8 @@ const COLORS = {
         invoice: 'var(--primitive-copper)',  // copper - unified accent
     },
     status: {
-        unpaid: 'bg-[var(--color-accent-coral)] hover:bg-[var(--color-accent-coral)]/80 text-white',
-        paid: 'bg-[var(--color-accent-green)] hover:bg-[var(--color-accent-green)]/80 text-white',
+        unpaid: 'bg-[var(--sw-rose)] hover:bg-[var(--sw-rose-dk)] text-white',
+        paid: 'bg-[var(--sw-cyan)] hover:bg-[var(--sw-cyan)]/80 text-white',
         partial: { bg: 'bg-orange-900/40', text: 'text-orange-400', border: 'border-orange-600' },
     },
 };

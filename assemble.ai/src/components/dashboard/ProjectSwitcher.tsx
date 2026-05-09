@@ -200,7 +200,7 @@ export function ProjectSwitcher({ selectedProject, onSelectProject, refreshTrigg
                 {children}
                 <ChevronsRight
                     className={cn(
-                        'w-5 h-5 text-[var(--color-text-secondary)] flex-shrink-0',
+                        'project-switcher-chevron w-5 h-5 text-[var(--color-text-secondary)] flex-shrink-0',
                         isOpen && 'text-[var(--color-text-primary)]'
                     )}
                 />
