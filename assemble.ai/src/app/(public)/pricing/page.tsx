@@ -42,31 +42,31 @@ const faqs = [
     {
         question: 'Can I change my plan later?',
         answer:
-            'Yes, you can upgrade or downgrade your plan at any time. When upgrading, you\'ll be charged the prorated difference. When downgrading, the new rate will apply at the start of your next billing cycle.',
+            'Yes. Upgrade or downgrade at any time. Upgrades are prorated; downgrades take effect at the next billing cycle. Your project data and agent history move with the plan.',
     },
     {
         question: 'What payment methods do you accept?',
         answer:
-            'We accept all major credit cards (Visa, Mastercard, American Express) and bank transfers for annual plans. All payments are processed securely through our payment partner.',
+            'All major credit cards (Visa, Mastercard, American Express). Annual plans also support bank transfer. Payments are processed securely through Polar.',
     },
     {
         question: 'Is there a free trial?',
         answer:
-            'Yes! All paid plans come with a 14-day free trial. No credit card required to start. You\'ll only be charged after the trial ends if you decide to continue.',
+            'Yes — every paid plan starts with a 14-day free trial of the full agent team. No credit card required to start. You\'re only charged after the trial if you decide to continue.',
     },
     {
         question: 'What happens to my data if I cancel?',
         answer:
-            'Your data remains accessible in read-only mode for 30 days after cancellation. After that, it will be permanently deleted. You can export your data at any time before then.',
+            'Your projects stay accessible in read-only mode for 30 days after cancellation. Export at any time before then. After 30 days, project data is permanently deleted.',
     },
     {
-        question: 'Do you offer discounts for non-profits or education?',
+        question: 'Which agents do I get on each plan?',
         answer:
-            'Yes, we offer special pricing for registered non-profit organizations and educational institutions. Contact our sales team for more information.',
+            'Free includes the Procurement Agent in a limited form. Starter adds the Correspondence Agent. Professional unlocks the full team — Feasibility, Design, Procurement, Delivery, Finance, Program and Correspondence — across unlimited projects.',
     },
     {
-        question: 'Is GST included in the prices?',
+        question: 'Is Sitewise for head contractors?',
         answer:
-            'Yes, all prices shown include GST for Australian customers. For customers outside Australia, local taxes may apply.',
+            'No — Sitewise is built for the client side of the table. Architects, project managers and in-house developer teams running building projects on behalf of an owner. Head contractors have their own tools.',
     },
 ];
