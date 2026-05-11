@@ -15,7 +15,6 @@ type Agent = {
     role: string;
     icon: typeof Compass;
     accent: string;
-    crossCutting?: boolean;
 };
 
 const PHASE_AGENTS: Agent[] = [
@@ -56,7 +55,6 @@ const ALWAYS_ON_AGENTS: Agent[] = [
         role: 'Cost plan, cashflow, contingency, monthly reporting.',
         icon: Calculator,
         accent: 'var(--sw-amber)',
-        crossCutting: true,
     },
     {
         code: '06',
@@ -64,7 +62,6 @@ const ALWAYS_ON_AGENTS: Agent[] = [
         role: 'Master programme, milestones, delays, EOT support.',
         icon: Calendar,
         accent: 'var(--sw-amber)',
-        crossCutting: true,
     },
     {
         code: '07',
@@ -72,7 +69,6 @@ const ALWAYS_ON_AGENTS: Agent[] = [
         role: 'Emails, letters, RFIs, transmittals, register.',
         icon: Mail,
         accent: 'var(--sw-amber)',
-        crossCutting: true,
     },
 ];
 
