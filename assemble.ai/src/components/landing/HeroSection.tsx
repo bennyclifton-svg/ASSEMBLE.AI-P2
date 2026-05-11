@@ -231,6 +231,7 @@ function HeroAgentRoster() {
                                     {agent.role}
                                 </span>
                             </div>
+                            {agent.active && <span className="sr-only">Active</span>}
                             <span
                                 style={{
                                     width: 7,
