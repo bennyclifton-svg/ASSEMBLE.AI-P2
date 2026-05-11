@@ -14,6 +14,18 @@ import { assessmentWaitlist } from '@/lib/db/pg-schema';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const ALL_PILLAR_NAMES = ['scope', 'field', 'process', 'design', 'procure', 'deliver'] as const;
+type PillarName = (typeof ALL_PILLAR_NAMES)[number];
+
+function normaliseWeakestPillar(value: unknown): PillarName | null {
+    if (typeof value !== 'string' || value.length === 0) return null;
+    if ((ALL_PILLAR_NAMES as readonly string[]).includes(value)) {
+        return value as PillarName;
+    }
+    console.warn(`[assessment-waitlist] unknown weakestPillar value: ${value}`);
+    return null;
+}
+
 export async function POST(req: NextRequest) {
     let body: unknown;
     try {
@@ -59,7 +71,6 @@ export async function POST(req: NextRequest) {
     const cleanSource = typeof source === 'string' && source.trim().length > 0
         ? source.trim()
         : 'assessment_landing';
-    const ALL_PILLAR_NAMES = ['scope', 'field', 'process', 'design', 'procure', 'deliver'];
     const resultFields = {
         overallScore: toScore(overallScore),
         scopeScore: toScore(scopeScore),
@@ -68,10 +79,7 @@ export async function POST(req: NextRequest) {
         designScore: toScore(designScore),
         procureScore: toScore(procureScore),
         deliverScore: toScore(deliverScore),
-        weakestPillar:
-            typeof weakestPillar === 'string' && ALL_PILLAR_NAMES.includes(weakestPillar)
-                ? weakestPillar
-                : null,
+        weakestPillar: normaliseWeakestPillar(weakestPillar),
         answers: isAnswerMap(answers) ? answers : null,
     };
 

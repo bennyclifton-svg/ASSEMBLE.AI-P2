@@ -2151,9 +2151,10 @@ export const workflowSteps = pgTable('workflow_steps', {
 // ============================================================================
 // MARKETING — ASSESSMENT WAITLIST
 // ============================================================================
-// Captures email signups from /assessment while the Tender Readiness Health
-// Check quiz is being built. Convert to live quiz lead capture once the Tally
-// form is wired through.
+// Assessment Waitlist — live capture for the Project Health Check.
+// Stores email signups and per-pillar scores. Legacy scope/field/process
+// columns are preserved for historical data; new submissions write to the
+// design/procure/deliver columns.
 
 export const assessmentWaitlist = pgTable('assessment_waitlist', {
     id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
