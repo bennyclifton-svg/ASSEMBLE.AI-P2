@@ -717,6 +717,14 @@ export const evaluationRows = pgTable('evaluation_rows', {
     costLineId: text('cost_line_id').references(() => costLines.id),
     source: text('source').default('cost_plan'),
     sourceSubmissionId: text('source_submission_id').references(() => tenderSubmissions.id),
+    aiStableKey: text('ai_stable_key'),
+    isLocked: boolean('is_locked').default(false),
+    category: text('category'),
+    sourceDocumentId: text('source_document_id').references(() => documents.id, { onDelete: 'set null' }),
+    sourceFileAssetId: text('source_file_asset_id').references(() => fileAssets.id, { onDelete: 'set null' }),
+    vmAdoptionStatus: text('vm_adoption_status'),
+    vmEmbeddedInBase: boolean('vm_embedded_in_base').default(false),
+    vmOrigin: text('vm_origin'),
     createdAt: timestamp('created_at').defaultNow(),
 });
 
@@ -728,6 +736,7 @@ export const evaluationCells = pgTable('evaluation_cells', {
     firmId: text('firm_id').notNull(),
     firmType: text('firm_type').notNull(),
     amountCents: integer('amount_cents').default(0),
+    valueType: text('value_type').default('amount'),
     source: text('source').default('manual'),
     confidence: integer('confidence'),
     createdAt: timestamp('created_at').defaultNow(),
@@ -2151,6 +2160,17 @@ export const assessmentWaitlist = pgTable('assessment_waitlist', {
     email: text('email').notNull().unique(),
     name: text('name'),
     source: text('source').default('assessment_landing'),
+    overallScore: integer('overall_score'),
+    // legacy tender pillars — preserved for historical data, no longer written
+    scopeScore: integer('scope_score'),
+    fieldScore: integer('field_score'),
+    processScore: integer('process_score'),
+    // new lifecycle pillars
+    designScore: integer('design_score'),
+    procureScore: integer('procure_score'),
+    deliverScore: integer('deliver_score'),
+    weakestPillar: text('weakest_pillar'),
+    answers: jsonb('answers'),
     createdAt: timestamp('created_at').defaultNow(),
 }, (table) => [
     index('idx_assessment_waitlist_created').on(table.createdAt),
