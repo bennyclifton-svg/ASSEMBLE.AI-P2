@@ -225,16 +225,6 @@ export const aboutAuthorContent = {
     ],
 };
 
-export const finalCtaContent = {
-    headline: {
-        gray: 'Ready to',
-        accent: 'evolve your workflow?',
-    },
-    subtitle: 'Join AEC firms using AI that actually understands construction.',
-    cta: 'Start my free trial',
-    note: 'No credit card required. Set up in minutes.',
-};
-
 export const footerContent = {
     copyright: '2026 SITEWISE',
 };
