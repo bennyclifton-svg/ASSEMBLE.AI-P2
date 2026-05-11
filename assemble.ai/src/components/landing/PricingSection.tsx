@@ -30,12 +30,12 @@ export const pricingTiers: PricingTier[] = [
     {
         id: 'free',
         name: 'Free',
-        description: 'For individuals exploring the platform',
+        description: 'Try the workspace solo, on one project',
         price: { monthly: 0, annually: 0 },
         features: [
             '1 active project',
-            '100 documents',
-            'Basic document management',
+            'Procurement Agent (limited)',
+            'Document workspace',
             'Manual data entry',
             'Community support',
         ],
@@ -44,14 +44,13 @@ export const pricingTiers: PricingTier[] = [
     {
         id: 'starter',
         name: 'Starter',
-        description: 'For small firms getting started',
+        description: 'For architects and PMs running a few projects at a time',
         price: { monthly: 49, annually: 39 },
         features: [
             '5 active projects',
-            '1,000 documents',
+            'Procurement Agent + Correspondence Agent',
             'AI document processing',
             '100 AI queries/month',
-            'Procurement automation',
             'Email support',
         ],
         cta: 'Start Free Trial',
@@ -60,17 +59,15 @@ export const pricingTiers: PricingTier[] = [
     {
         id: 'professional',
         name: 'Professional',
-        description: 'For growing construction firms',
+        description: 'For practices and in-house teams running multiple projects with a full agent team',
         price: { monthly: 149, annually: 119 },
         features: [
             'Unlimited projects',
-            'Unlimited documents',
-            'Advanced AI features',
+            'All seven agents — Feasibility, Design, Procurement, Delivery, Finance, Program, Correspondence',
             'Unlimited AI queries',
-            'Cost planning module',
-            'TRR report generation',
+            'Cost planning + cashflow',
+            'TRR + tender award reports',
             'Priority support',
-            'Custom integrations',
         ],
         highlighted: true,
         cta: 'Start Free Trial',
@@ -146,7 +143,7 @@ export function PricingSection({
                             color: 'var(--sw-ink)',
                         }}
                     >
-                        Choose the right plan for your team
+                        Pick the team that matches your project load.
                     </h2>
                     <p
                         className="mt-5"
@@ -157,7 +154,7 @@ export function PricingSection({
                             color: 'var(--sw-muted)',
                         }}
                     >
-                        Start free and scale as you grow. All plans include a 14-day free trial.
+                        Start free. All paid plans include a 14-day trial and the agent team that fits your practice.
                     </p>
                 </div>
 
