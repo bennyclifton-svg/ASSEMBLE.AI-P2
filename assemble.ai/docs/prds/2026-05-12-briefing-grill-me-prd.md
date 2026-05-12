@@ -11,23 +11,27 @@
 
 Today, users build their project brief by filling out a profiler (building class, subclass, project type, scale, complexity dimensions, work scope), then trigger a generation step that turns those selections into draft objectives via a rule-based inference engine plus an LLM polish.
 
-This breaks down in two ways the user feels directly:
+This breaks down in three ways the user feels directly:
 
 1. **Users don't know what they don't know.** They make selections in the profiler that they're confident about and either guess or skip the rest. Detail that should belong in the brief — services scope, programming, performance targets, compliance constraints — is omitted upfront and only surfaces later during design. By then it's hard to fold back into the consultants brief without rework.
 
 2. **The current two-stage pipeline (rules + LLM) is hard to maintain and asks too much of the user.** The user must complete the profile *before* anything useful happens, and the inference rules can only ask about gaps that someone wrote a rule for. The user is left filling in fields they don't have an answer for, just to unblock the next step.
 
+3. **Existing source documents are ignored.** Users often arrive with material that already contains briefing information — a client letter, a feasibility report, a draft scope-of-services, planning correspondence. The current flow has nowhere to feed these documents in, so the same content gets re-typed into the profiler (badly) or omitted entirely.
+
 The result is briefs that look complete but aren't, and consultants briefs that get amended mid-design.
 
 ## Solution
 
-Replace the inference-engine + objectives-generate pipeline with a single **Briefing session**: a chat-style streaming interview, kicked off by a "Start Briefing" button at the top of the objectives table, that an LLM agent runs against the user's partially-filled profile.
+Replace the inference-engine + objectives-generate pipeline with a single **Briefing session**: a chat-style streaming interview, kicked off by a "Start Briefing" button at the top of the objectives table, that an LLM agent runs against the user's partially-filled profile **and any briefing documents the user has attached**.
 
-The user configures only what they know in the profiler — skipping anything uncertain — and saves. They click **Start Briefing**, and a side panel opens. The agent reads the saved profile plus any existing objective drafts, treats them as facts, and asks one targeted question at a time. Each question comes with a **recommended answer** pre-filled in an editable text box. The user can **Accept**, **Edit & send**, or **Skip** ("I don't know — make a reasonable assumption and continue").
+The user configures only what they know in the profiler — skipping anything uncertain — and saves. If they have source material (client letters, feasibility reports, draft scopes, planning correspondence), they upload them to the document repository and attach them to the brief via a new "Attach documents" module at the bottom of the objectives workspace — the same pattern already used at the bottom of notes, meetings, reports, RFT and TRR. The doc-worker OCRs and RAG-indexes each document on ingest.
+
+They click **Start Briefing**, and a side panel opens. The agent reads the saved profile plus any existing objective drafts plus the metadata of attached documents, treats them as facts, and asks one targeted question at a time. When a question would benefit from material in an attached document, the agent searches the attached documents via the existing RAG layer and references what it finds in the question's rationale ("In the attached feasibility report, the architect mentioned a 6-storey envelope — should planning objectives target that height?"). Each question comes with a **recommended answer** pre-filled in an editable text box. The user can **Accept**, **Edit & send**, or **Skip** ("I don't know — make a reasonable assumption and continue").
 
 As the user answers, the agent commits writes to the schema in real time via explicit tool calls — to profile fields the user originally skipped, and to draft rows in `projectObjectives` across the four objective types (planning, functional, quality, compliance). A small toast confirms each write so the user sees exactly where their answer landed. The session is resumable; the agent marks each objective category covered as the conversation progresses, and the session ends when all four are covered (or when the user clicks End Briefing).
 
-The result: less upfront effort, richer briefs, and one pipeline instead of two.
+The result: less upfront effort, richer briefs informed by the user's actual source material, and one pipeline instead of two.
 
 ## User Stories
 
@@ -66,6 +70,15 @@ The result: less upfront effort, richer briefs, and one pipeline instead of two.
 33. As a developer, I want every schema write the agent performs to be an explicit, named tool call, so that the agent can never silently change data via free-text and every write is auditable.
 34. As a developer, I want the agent's writes restricted to a permitted-field allowlist (profile fields and `projectObjectives` columns only), so that scope creep into other tables is impossible in v1.
 35. As a developer, I want a clear retirement plan for the inference engine (ship behind flag → migrate UI → delete code), so that the old pipeline doesn't linger indefinitely.
+36. As a project director, I want an "Attach documents" module at the bottom of the objectives workspace — visually consistent with the one at the bottom of notes, meetings, reports and RFT — so that it feels native and I don't have to learn a new pattern.
+37. As a project director, I want to upload a briefing document (client letter, feasibility report, draft scope) to the document repository, click an Ingest button, and attach it to the brief, so that the AI can use it as context.
+38. As a project director, I want to see a visible indicator that an attached document has been ingested (OCR'd and indexed) before I start a Briefing session, so that I know the agent will be able to read it.
+39. As a project director, I want to detach a document from the brief without deleting it from the repository, so that I can manage what the agent considers without losing my source material.
+40. As a project director, I want the Briefing agent to acknowledge attached documents in its first message ("I can see you've attached the feasibility report and the client letter — I'll reference these as we go"), so that I know my uploads are being used.
+41. As a project director, I want the agent's recommended answers to cite the attached document and section when an answer is drawn from one ("In the feasibility report, page 4, the architect mentioned…"), so that I can trust the recommendation and check the source.
+42. As a project director, I want the agent's questions to be shaped by the attached documents — asking *fewer* questions when the documents already answer them, and *more targeted* questions where the documents are ambiguous, so that the interview gets shorter and sharper as I add source material.
+43. As a developer, I want attached briefing documents to be exposed to the agent only via a read-only RAG search tool (not as a free-text load of the full document), so that token costs stay bounded regardless of how large the attachments are.
+44. As a developer, I want the briefing-attachments storage to reuse the existing `documents` + `file_assets` + `versions` tables — adding only a thin join table — so that we don't duplicate the document repository.
 
 ## Implementation Decisions
 
@@ -73,15 +86,17 @@ The result: less upfront effort, richer briefs, and one pipeline instead of two.
 
 **Module breakdown.** The implementation is structured around deep, isolatable modules with stable interfaces:
 
-- **`briefing-prompt-builder`** — pure functions that assemble the system prompt from profile + objectives + retired-inference-rules-as-checklist + message history, and return the tool definitions. Snapshot-testable.
-- **`briefing-tool-handlers`** — executes each tool call against the DB; returns structured success/error. Encapsulates write invariants and the permitted-field allowlist. Three tools:
+- **`briefing-prompt-builder`** — pure functions that assemble the system prompt from profile + objectives + retired-inference-rules-as-checklist + **attached-document metadata** + message history, and return the tool definitions. Snapshot-testable.
+- **`briefing-tool-handlers`** — executes each tool call against the DB; returns structured success/error. Encapsulates write invariants and the permitted-field allowlist. **Four** tools:
   - `updateProfileField(field, value, rationale)` — writes to `projectProfiles` / `projectDetails`
   - `upsertObjective(category, text, rationale)` — writes a draft row to `projectObjectives` with `status='draft'` and `source='briefing'`
   - `markCategoryCovered(category)` — flips a coverage flag on the session
+  - `searchBriefingDocuments(query)` — **read-only**; wraps the existing `search-rag` agent tool, scoped to documents attached to this project's brief. Returns ranked chunks with document title + page reference for citation in the agent's next question.
 - **`briefing-session-service`** — owns the "one active session per project" invariant and all message/lifecycle DB ops (`getActive`, `start`, `loadWithMessages`, `appendMessage`, `end`).
 - **`briefing-coverage-judge`** — pure module: `isComplete(coverage)` and `updateCoverage(current, category)`.
 - **`briefing-agent`** — orchestrator composing the four above with the model client from `getModelFor('chat')`. Interface: `runTurn(context, userMessage) → AsyncIterable<TurnEvent>` emitting text-delta, tool-call-result, and done events.
 - **SSE route handlers** — thin glue at `/api/projects/[id]/briefing/{start, messages, end}` and `GET /briefing`. Parses request, calls service + agent, pipes events to a Web standard SSE Response.
+- **Brief attachments — reuse, not rebuild.** A new "Attach documents" module is added to the bottom of `ObjectivesWorkspace`, reusing the existing `AttachmentSection` + `AttachmentTable` components from `src/components/notes-meetings-reports/shared/`. Upload + ingest goes through the existing document-repository endpoints and the existing doc-worker pipeline (OCR + RAG indexing). The only new schema is the join table.
 
 **Model selection.** Briefing inherits the **chat** feature group from the existing model registry at `src/lib/ai/registry.ts`, configurable from `/admin/models` without redeploy. No new admin row required.
 
@@ -89,6 +104,7 @@ The result: less upfront effort, richer briefs, and one pipeline instead of two.
 - `briefing_sessions` — `id`, `project_id`, `status` (`active` / `completed` / `abandoned`), `coverage` (jsonb keyed by objective type), `started_at`, `completed_at`, `ended_by`. Partial unique index on `(project_id) WHERE status = 'active'` enforces one active session per project.
 - `briefing_messages` — `id`, `session_id`, `role` (`system` / `assistant` / `user` / `tool`), `content`, `tool_calls` (jsonb, nullable, for assistant turns that emitted tool calls), `created_at`. Index on `(session_id, created_at)`.
 - `project_objectives.source` — new enum column (`manual` / `inference` / `briefing`), default `'manual'`. Existing rows backfilled to `'inference'`.
+- `brief_attachments` — thin join table: `id`, `project_id`, `document_id` (fk → `documents`), `attached_by` (fk → `users`), `attached_at`. Unique constraint on `(project_id, document_id)` prevents duplicate attachment. Existing `documents` / `file_assets` / `versions` tables are reused as-is.
 
 **API contracts.** All endpoints under `/api/projects/[projectId]/briefing`, all reusing existing `requireProjectAccess(projectId, userId)`:
 
@@ -97,7 +113,9 @@ The result: less upfront effort, richer briefs, and one pipeline instead of two.
 - `POST /briefing/messages` body `{ content, action: 'accept' | 'edit' | 'skip' }` → SSE stream of one full agent turn (text deltas + tool-call results + done).
 - `POST /briefing/end` body `{ reason: 'user' | 'agent' }` → flips status to `completed` or `abandoned`, returns final session state.
 
-**UX interactions.** Side panel (not modal) so the brief preview stays visible. Each assistant question renders with a short rationale, a pre-filled editable recommended-answer textbox, and three actions: Accept / Edit & send / Skip. A free-text composer is always available for the user to ask back. A progress strip shows the four objective-type coverage pills. Toasts confirm each write.
+**UX interactions.** Side panel (not modal) so the brief preview stays visible. Each assistant question renders with a short rationale, a pre-filled editable recommended-answer textbox, and three actions: Accept / Edit & send / Skip. A free-text composer is always available for the user to ask back. A progress strip shows the four objective-type coverage pills. Toasts confirm each write. When the agent's rationale or recommended answer draws on an attached briefing document, the source document title and page reference are inlined in the rationale.
+
+**Attached-document flow.** The "Attach documents" module at the bottom of `ObjectivesWorkspace` shows the current attachments (title, type, ingest status). Upload triggers the existing doc-worker pipeline (OCR + RAG indexing). The agent reads attached documents only via `searchBriefingDocuments(query)` — never by inlining full document text into the prompt — so token cost is bounded regardless of attachment size. The system prompt at session start lists attached-document **metadata only** (title, type, page count) so the agent knows what's available to search.
 
 **Existing-content policy.** When a session starts, the agent treats all existing profile fields and `projectObjectives` rows as facts. It only probes gaps. If the agent's reasoning surfaces an apparent inconsistency with an existing value, it flags it conversationally — never overwrites silently.
 
@@ -132,7 +150,9 @@ The result: less upfront effort, richer briefs, and one pipeline instead of two.
 
 **Use case #2 — DA submission checklist.** Soon after the brief is established, a separate AI flow will extend the consultant list and prepare a schedule of deliverables for DA lodgement. This is intentionally deferred to its own PRD because (a) it writes to `consultantDisciplines` and a new DA-deliverables table, (b) it triggers off a post-brief milestone, not a chat, and (c) folding it in would muddy this PRD's scope. Once Briefing has shipped, its tool-call + session pattern becomes the template for that work.
 
-**Writes beyond profile + objectives.** The Briefing interview may *discuss* programming, cost, budget, consultants, and programme to inform its objective questions — but the agent only writes to (a) `projectProfiles` / `projectDetails` and (b) `projectObjectives` in v1. No writes to `consultantDisciplines.briefServices/briefDeliverables/briefFee/briefProgram`, cost plan, cashflow, or programme. v2 candidates.
+**Writes beyond profile + objectives.** The Briefing interview may *discuss* programming, cost, budget, consultants, and programme to inform its objective questions — but the agent only writes to (a) `projectProfiles` / `projectDetails`, (b) `projectObjectives`, and (c) `briefing_sessions` / `briefing_messages` in v1. No writes to `consultantDisciplines.briefServices/briefDeliverables/briefFee/briefProgram`, cost plan, cashflow, or programme. v2 candidates.
+
+**Agent-side writes to documents.** The agent can *read* attached briefing documents via `searchBriefingDocuments` but cannot upload, modify, delete, or re-categorise documents. Document management remains exclusively a user action through the existing repository UI.
 
 **Polishing.** The existing Polish step (which rewrites a draft `text` into `textPolished` prose) is unchanged. Briefing produces drafts; Polish remains the bullet-to-prose stage. Short-form and long-form objective rendering remain a *maturity* distinction (`text` vs `textPolished` gated by `status`), not redundant with Briefing.
 

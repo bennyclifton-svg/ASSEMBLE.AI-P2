@@ -15,7 +15,7 @@ Briefs are filled in upfront by users who don't know what they don't know. Scope
 
 ### What Briefing does
 
-The user configures only what they know in the profiler (skipping anything uncertain), saves, then clicks **"Start Briefing"** at the top of the objectives table. A chat-style streaming Q&A panel opens. The LLM reads the saved profile and any existing objective drafts, then walks the user through one targeted question at a time — each with a recommended answer pre-filled. The user accepts, edits, or replaces. Answers are written back to profile fields and `projectObjectives` rows in real time. The session is resumable; it ends when the agent judges every objective category (planning, functional, quality, compliance) adequately covered, or when the user clicks "End interview."
+The user configures only what they know in the profiler (skipping anything uncertain) and optionally **attaches briefing documents** (client letters, feasibility reports, draft scopes) to the brief via a new "Attach documents" module at the bottom of the objectives workspace, then clicks **"Start Briefing"** at the top of the objectives table. A chat-style streaming Q&A panel opens. The LLM reads the saved profile, any existing objective drafts, and the metadata of attached documents, then walks the user through one targeted question at a time — each with a recommended answer pre-filled. When an answer would benefit from material in an attached document, the agent searches those documents via a read-only RAG tool and cites the source in its rationale. The user accepts, edits, or replaces. Answers are written back to profile fields and `projectObjectives` rows in real time. The session is resumable; it ends when the agent judges every objective category (planning, functional, quality, compliance) adequately covered, or when the user clicks "End interview."
 
 ### What it replaces
 
@@ -37,6 +37,17 @@ The "Start Briefing" button lives at the top of the objectives table inside `src
 - No session yet → **"Start Briefing"**
 - Session in progress → **"Resume Briefing"** with subtext "n questions answered"
 - Session completed → **"Review Briefing"** (read-only history)
+
+### Attach documents module (new — bottom of objectives workspace)
+
+A new "Attach documents" module is added at the bottom of `ObjectivesWorkspace.tsx`, reusing the existing `AttachmentSection` + `AttachmentTable` components from `src/components/notes-meetings-reports/shared/` — the same pattern used at the bottom of notes, meetings, reports, RFT and TRR. The module:
+
+- Lists currently attached briefing documents (title, type, ingest status, attached-by, attached-at)
+- Provides an "Attach document" action that opens the existing document picker (choose from repository or upload new)
+- On upload, hands off to the existing doc-worker pipeline (OCR + RAG indexing); the row shows a "Processing…" badge until ingestion completes
+- Provides a "Detach" action per row (removes the `brief_attachments` join row; does NOT delete the document from the repository)
+
+The module is functional independently of Briefing — users can attach documents at any time. Attached documents are read by the Briefing agent when a session is started or resumed.
 
 ### Chat panel
 
@@ -71,18 +82,20 @@ System prompt assembled from:
 - The full saved profile (JSON)
 - Current `projectObjectives` rows (treated as facts; only gaps are probed)
 - The retired inference rules, serialised as a **gap checklist** ("for this project class, likely gaps are X, Y, Z…")
+- **Attached-document metadata** — for each row in `brief_attachments`, the document's title, type, page count, and ingest status. The agent knows *what's available to search* but does **not** receive the full text inline.
 - Conversation history (all prior `briefing_messages` for this session)
 - Tool definitions (below)
 
-### Tool-call writes
+### Tool-call writes and the search tool
 
-The agent uses Anthropic tool use to commit answers. Three tools:
+The agent uses Anthropic tool use to interact with the project. **Four** tools — three writers and one read-only searcher:
 
 - `updateProfileField(field, value, rationale)` — writes to `projectProfiles` / `projectDetails`
 - `upsertObjective(category, text, rationale)` — writes a draft row to `projectObjectives` (`status='draft'`)
 - `markCategoryCovered(category)` — flips a coverage flag on the session
+- `searchBriefingDocuments(query)` — **read-only**; wraps the existing `src/lib/agents/tools/search-rag.ts` tool, scoped to documents currently in `brief_attachments` for this project. Returns ranked chunks with document title and page reference so the agent can cite the source in its next question's rationale.
 
-When the agent emits a tool call, the API executes the write inside a transaction, streams the result back as a confirmation event, and the client shows a toast. The agent never writes via free-text — every write is an explicit, traceable tool call.
+When the agent emits a *write* tool call, the API executes the write inside a transaction, streams the result back as a confirmation event, and the client shows a toast. When it emits the *search* tool call, the result is returned to the agent only (no toast) and the chunks influence the next question. The agent never writes via free-text — every write is an explicit, traceable tool call.
 
 ### Turn cycle
 
@@ -135,6 +148,20 @@ source  enum('manual','inference','briefing')  default 'manual'
 ```
 
 Adds provenance — useful for analytics and to inform agent prompts on re-runs. Backfill existing rows to `'inference'` since they were generated by the old pipeline. Cheap to add now, painful to add later.
+
+### `brief_attachments` (new join table)
+
+```
+id           uuid pk
+project_id   uuid fk → projects (NOT NULL)
+document_id  uuid fk → documents (NOT NULL)
+attached_by  uuid fk → users (NOT NULL)
+attached_at  timestamptz default now()
+```
+
+Unique constraint on `(project_id, document_id)` — a document can be attached to a brief only once. Index on `project_id` for fast lookup when assembling the agent's system prompt.
+
+No changes to `documents`, `file_assets`, or `versions` — the existing repository tables are reused as-is. Ingestion is unchanged: upload → doc-worker → OCR + RAG index, exactly as for any other document.
 
 ### No changes to `project_profiles` / `project_details`
 
@@ -226,3 +253,6 @@ Soon after the brief is established, an AI flow that extends the consultant list
 | Overwrite policy | **Treat existing content as facts; only fill gaps** | Matches user's mental model |
 | Model selection | **`getModelFor('chat')` from existing registry** | Inherits admin/models config; no new surface |
 | Short/long form objectives | **Retained** | They are a maturity distinction (`text` vs `textPolished`), not redundant with Briefing |
+| Briefing document upload location | **Bottom of `ObjectivesWorkspace`, reusing `AttachmentSection`** | Visually consistent with notes / meetings / reports / RFT / TRR; zero new UI patterns |
+| Agent access to attached documents | **Read-only `searchBriefingDocuments` tool via existing `search-rag`** | Token cost bounded; reuses existing RAG infrastructure; agent cites sources by title + page |
+| Attachment schema | **Thin `brief_attachments` join table; reuse `documents` / `file_assets` / `versions`** | No duplication of the document repository |
