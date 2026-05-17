@@ -16,7 +16,7 @@ interface ProjectCardProps {
 /**
  * ProjectCard Component
  *
- * Displays project summary information in a precision-themed card.
+ * Displays project summary information in a Sitewise-themed card.
  * Used in planning sections for project overview.
  *
  * @param name - Project name

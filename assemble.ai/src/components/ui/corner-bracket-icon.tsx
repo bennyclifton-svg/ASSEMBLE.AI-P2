@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 interface CornerBracketIconProps {
@@ -11,18 +10,11 @@ interface CornerBracketIconProps {
     gradient?: boolean;
 }
 
-// Aurora gradient colors for each theme
+// Aurora gradient colors (light-only app).
 const GRADIENT_COLORS = {
-    dark: {
-        start: '#0080FF',
-        mid: '#1776c1',
-        end: '#8B5CF6',
-    },
-    light: {
-        start: '#0066CC',
-        mid: '#0891B2',
-        end: '#6D28D9',
-    },
+    start: '#0066CC',
+    mid: '#0891B2',
+    end: '#6D28D9',
 };
 
 /**
@@ -33,25 +25,7 @@ export function CornerBracketIcon({ className, direction = 'left', gradient = fa
     // Unique ID for gradient to avoid conflicts when multiple icons are rendered
     const gradientId = `corner-bracket-gradient-${Math.random().toString(36).substr(2, 9)}`;
 
-    // Detect theme for gradient colors
-    const [isLightTheme, setIsLightTheme] = useState(false);
-
-    useEffect(() => {
-        const checkTheme = () => {
-            const theme = document.documentElement.getAttribute('data-theme');
-            setIsLightTheme(theme === 'precision-light');
-        };
-
-        checkTheme();
-
-        // Watch for theme changes
-        const observer = new MutationObserver(checkTheme);
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-
-        return () => observer.disconnect();
-    }, []);
-
-    const colors = isLightTheme ? GRADIENT_COLORS.light : GRADIENT_COLORS.dark;
+    const colors = GRADIENT_COLORS;
 
     return (
         <svg
