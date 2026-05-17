@@ -33,11 +33,6 @@ export function UserAvatar({ name, email, size = 'md', className }: UserAvatarPr
     return '?';
   };
 
-  // Use consistent teal accent color
-  const getColorClass = (): string => {
-    return 'bg-[var(--color-accent-teal)]';
-  };
-
   const sizeClasses = {
     sm: 'w-7 h-7 text-xs',
     md: 'w-9 h-9 text-sm',
@@ -45,19 +40,21 @@ export function UserAvatar({ name, email, size = 'md', className }: UserAvatarPr
   };
 
   const initials = getInitials();
-  const colorClass = getColorClass();
 
   return (
     <div
       className={cn(
         'inline-flex items-center justify-center rounded-full',
-        'font-medium text-white',
+        'font-medium',
         'select-none',
-        colorClass,
         sizeClasses[size],
         className
       )}
-      style={{ clipPath: 'polygon(30% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 30%)' }}
+      style={{
+        clipPath: 'polygon(30% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 30%)',
+        backgroundColor: '#f6fbfb',
+        color: 'var(--sw-ink)',
+      }}
       aria-label={name || email || 'User avatar'}
       role="img"
     >

@@ -11,6 +11,69 @@ applicableStates: [NSW, VIC, QLD, WA, SA, TAS, ACT, NT]
 
 # NCC Reference Guide
 
+## Procurement Brief Service Catalogue
+
+Use this catalogue when generating BCA Consultant, Building Certifier, Access Consultant, or Compliance Consultant services for procurement briefs. Services should describe NCC/BCA assessment, compliance advice, certification inputs, access compliance, fire and life-safety coordination, inspection support, and approval pathway support within the active compliance discipline.
+
+Core services:
+- Establish the NCC/BCA compliance strategy, building classification, type of construction, fire resistance requirements, egress strategy, accessibility requirements, sanitary facilities, weatherproofing, energy efficiency interfaces, and performance solution pathway where applicable.
+- Review architectural, structural, services, fire, access, acoustic, and facade design inputs for NCC/BCA compliance implications.
+- Prepare BCA assessment reports, compliance markups, certification checklists, and design advice for DA, Construction Certificate, Occupation Certificate, and tender documentation stages where required.
+- Coordinate with the certifier, fire engineer, access consultant, services consultants, architect, structural engineer, and authority stakeholders on compliance pathways and documentation gaps.
+- Review performance solution requirements, fire engineering interfaces, essential safety measures, accessibility requirements, and state-specific certification requirements.
+- Review construction-stage submissions, inspection records, compliance evidence, defects, non-conformances, and close-out records where included in the appointment.
+- Provide compliance inputs to handover, occupation, fire safety schedules, essential services records, and post-completion obligations.
+
+For multi-residential apartment projects, emphasise Class 2 classification, Type A construction where applicable, fire resistance, compartmentation, egress, accessibility, sanitary facilities, energy efficiency interfaces, facade/fire safety interfaces, CC/OC evidence, inspection records, and compliance close-out.
+
+## Procurement Brief Deliverables
+
+Use this catalogue when generating BCA Consultant deliverables. Deliverables must be issued artifacts such as reports, matrices, schedules, markups, certificates, registers, checklists, inspection records, or compliance evidence packs.
+
+Core deliverables:
+- NCC/BCA compliance strategy note
+- Building classification and type of construction advice
+- BCA assessment report
+- Accessibility compliance review report where included in the appointment
+- Fire resistance and compartmentation compliance matrix
+- Egress and access compliance markups
+- Construction Certificate compliance checklist
+- Occupation Certificate compliance evidence checklist
+- Fire safety schedule inputs
+- Essential safety measures schedule inputs
+- Performance solution interface register
+- Compliance issues register
+- Design compliance markups
+- Authority, certifier, and consultant response records
+- BCA inspection reports where included
+- Compliance close-out register
+- Handover compliance evidence pack
+
+## Discipline Boundaries
+
+BCA Consultant scope must stay inside NCC/BCA assessment, compliance advice, certification inputs, compliance coordination, and compliance close-out.
+
+Boundary rules:
+- Do not make the BCA Consultant responsible for architectural design, structural design, services design, fire engineering design, town planning strategy, BASIX certification, acoustic certification, or cost planning.
+- Do not make the BCA Consultant responsible for obtaining DA, CC, or OC approvals unless the stakeholder is explicitly the appointed certifier. Use wording such as "provide BCA assessment, compliance responses, and certification inputs".
+- Do not assign fire engineering performance solution design unless the context explicitly identifies the consultant as a fire engineer or combined BCA/fire appointment.
+- Describe other disciplines' design work only as compliance review, markups, comments, or coordination interfaces.
+
+## Common Exclusions
+
+Avoid these items unless the project facts, fee schedule, project documents, or user input specifically include them:
+- Architectural design documentation
+- Structural engineering design or certification
+- Building services design
+- Fire engineering performance solution design
+- Town planning advice
+- BASIX or NatHERS certification
+- Acoustic testing or certification
+- Quantity surveying or cost planning
+- Principal certifier appointment duties
+
+When one of these items is relevant but not confirmed, qualify it with "compliance review", "BCA input", or "where applicable" rather than assuming full design, certification, or approval responsibility.
+
 ## NCC Overview and Regulatory Framework
 
 ### The NCC and State Adoption

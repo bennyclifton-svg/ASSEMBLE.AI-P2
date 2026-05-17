@@ -128,7 +128,7 @@ export function NotesRow({
             }}
             onClick={onSelect}
             className={cn(
-                'relative h-9 cursor-pointer select-none border-[var(--sw-rule-2)] border-l-2 transition-colors',
+                'relative h-8 cursor-pointer select-none border-[var(--sw-rule-2)] border-l-2 transition-colors',
                 isActive
                     ? 'border-l-4 bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-ink)]'
                     : 'hover:bg-[var(--sw-paper-2)]',

@@ -19,7 +19,7 @@ export interface ProfilerData {
   projectType?: string;
   region?: string;
   scaleData?: Record<string, number | string>;
-  complexity?: Record<string, string>;
+  complexity?: Record<string, string | string[]>;
   workScope?: string[];
 }
 
@@ -84,8 +84,12 @@ export type ContentType =
   | 'stakeholders_contractor';
 
 // Condition Evaluation
-function matchesValue(expected: string | string[], actual: string | undefined): boolean {
+function matchesValue(expected: string | string[], actual: string | string[] | undefined): boolean {
   if (!actual) return false;
+  if (Array.isArray(actual)) {
+    const expectedValues = Array.isArray(expected) ? expected : [expected];
+    return expectedValues.some(value => actual.includes(value));
+  }
   if (Array.isArray(expected)) {
     return expected.includes(actual);
   }
@@ -154,7 +158,12 @@ function evaluateCondition(condition: Condition, data: ProjectData): boolean {
     if (pc.scale && profiler.scaleData) {
       for (const [key, range] of Object.entries(pc.scale)) {
         const value = profiler.scaleData[key];
-        if (typeof value === 'number' && !matchesRange(range, value)) {
+        const numericValue = typeof value === 'number'
+          ? value
+          : typeof value === 'string'
+            ? Number(value)
+            : undefined;
+        if (typeof numericValue !== 'number' || !Number.isFinite(numericValue) || !matchesRange(range, numericValue)) {
           return false;
         }
       }

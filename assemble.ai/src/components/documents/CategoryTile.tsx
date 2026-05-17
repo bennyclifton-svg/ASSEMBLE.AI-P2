@@ -4,6 +4,7 @@ import React from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Loader2, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFilesFromDropEvent } from '@/lib/utils/folder-drop';
 import type { ActiveCategory, Subcategory } from '@/lib/constants/categories';
 
 /**
@@ -88,6 +89,7 @@ export function CategoryTile({
             // For categories with subcategories, don't accept drops directly (need to expand first)
         },
         noClick: true, // We handle clicks separately
+        getFilesFromEvent: getFilesFromDropEvent,
     });
 
     const handleClick = (event: React.MouseEvent) => {
@@ -147,15 +149,15 @@ export function CategoryTile({
 
     const isActive = isSelected || isExpanded || isFiltered || hasActiveSubcategoryFilter || isKnowledgeCategory;
     const accent = isKnowledgeCategory
-        ? 'var(--sw-cyan)'
+        ? 'var(--color-accent-gold)'
         : isStakeholderCategory
             ? 'var(--sw-muted)'
             : 'var(--sw-rose)';
     const tileStyle: React.CSSProperties = {
         fontFamily: 'var(--sw-font-mono)',
         fontSize: isSubcategory ? 13 : 14,
-        background: isDragActive ? 'var(--sw-rose-tint)' : isActive ? 'white' : 'transparent',
-        borderColor: isActive ? 'var(--sw-ink)' : 'var(--sw-rule)',
+        background: isDragActive ? 'var(--sw-rose-tint)' : isActive ? '#E6E9EE' : 'transparent',
+        borderColor: isActive ? 'var(--sw-ink)' : 'var(--sw-rule-dk-2)',
         color: isActive ? 'var(--sw-ink)' : 'var(--sw-muted)',
         letterSpacing: '0.01em',
     };
@@ -170,9 +172,11 @@ export function CategoryTile({
                 'flex items-center justify-center text-center overflow-hidden whitespace-nowrap',
                 isSubcategory ? 'h-8 px-2.5 py-1' : 'h-8 px-3 py-1',
                 // Upload tile special styling - dashed border
-                isUploadTile && 'border border-dashed hover:bg-white',
-                // All category tiles - base styling
-                !isUploadTile && 'border hover:border-[var(--sw-ink)] hover:bg-white',
+                isUploadTile && 'border border-dashed hover:bg-[#2F363E] hover:text-[var(--sw-paper)]',
+                // All category tiles - base styling. Active tiles keep their light fill;
+                // inactive tiles get the dark nav-style wash on hover.
+                !isUploadTile && isActive && 'border hover:bg-[#E6E9EE]',
+                !isUploadTile && !isActive && 'border hover:bg-[#2F363E] hover:text-[var(--sw-paper)] hover:border-[var(--sw-paper)]',
                 // Drag active state - ring
                 isDragActive && !isUploadTile && 'ring-1 ring-[var(--sw-ink)]'
             )}

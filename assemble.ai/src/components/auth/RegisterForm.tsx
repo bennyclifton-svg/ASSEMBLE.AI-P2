@@ -9,13 +9,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/auth-client';
+import { PUBLIC_SAAS_TRIAL, getPlanById } from '@/lib/subscription/plan-catalog';
+import type { TrialPlanIntent } from '@/lib/subscription/trial';
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  planIntent: TrialPlanIntent;
+}
+
+export function RegisterForm({ planIntent }: RegisterFormProps) {
   const router = useRouter();
+  const selectedPlan = getPlanById(planIntent.planId);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -41,13 +49,22 @@ export function RegisterForm() {
       return;
     }
 
+    if (!acceptedTerms) {
+      setError('You must accept the Terms and Privacy Policy to create an account.');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
+      const consentTimestamp = new Date().toISOString();
       const result = await signUp.email({
         email,
         password,
         name: displayName,
+        trialPlanId: planIntent.planId,
+        termsAcceptedAt: consentTimestamp,
+        privacyAcceptedAt: consentTimestamp,
       });
 
       if (result.error) {
@@ -83,6 +100,20 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3">
+        <p className="text-sm font-medium text-[var(--color-text-primary)]">
+          {selectedPlan?.name ?? 'Starter'} trial
+        </p>
+        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+          {PUBLIC_SAAS_TRIAL.days}-day free trial. No credit card required.
+        </p>
+        {planIntent.wasInvalid && (
+          <p className="mt-2 text-xs text-amber-300">
+            Unknown plan selected. Starter trial will be used.
+          </p>
+        )}
+      </div>
+
       {error && (
         <div className="p-3 text-sm bg-red-500/10 border border-red-500/20 rounded text-red-400">
           {error}
@@ -174,6 +205,27 @@ export function RegisterForm() {
           <p className="mt-1 text-xs text-red-400">{fieldErrors.confirmPassword}</p>
         )}
       </div>
+
+      <label className="flex items-start gap-3 text-sm text-[var(--color-text-muted)]">
+        <input
+          type="checkbox"
+          checked={acceptedTerms}
+          onChange={(e) => setAcceptedTerms(e.target.checked)}
+          className="mt-1 h-4 w-4 rounded border-[var(--color-border)] bg-[var(--color-bg-secondary)]"
+          disabled={isLoading}
+        />
+        <span>
+          I agree to the{' '}
+          <Link href="/terms" className="text-[var(--sw-cyan)] hover:underline">
+            Terms
+          </Link>{' '}
+          and{' '}
+          <Link href="/privacy" className="text-[var(--sw-cyan)] hover:underline">
+            Privacy Policy
+          </Link>
+          .
+        </span>
+      </label>
 
       <button
         type="submit"

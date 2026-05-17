@@ -4,7 +4,6 @@
  * T089-T093: Row selection (Click, Shift+Click, Ctrl+Click)
  * T098-T100: Merge button integration
  * T101-T103: Editable descriptions
- * T104-T106: AI row indicators with sparkle icon
  * Table component for displaying and editing evaluation data
  * Matches Cost Plan table styling
  * Feature 011 - Evaluation Report
@@ -13,17 +12,53 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Trash, Plus, AlertTriangle, Merge, GripVertical, Upload } from 'lucide-react';
-import { DiamondIcon } from '@/components/ui/diamond-icon';
-import type { EvaluationRow, EvaluationFirm, EvaluationRowSource } from '@/types/evaluation';
+import { Trash, Plus, AlertTriangle, Merge, GripVertical, Upload, Lock, Unlock, MoreHorizontal } from 'lucide-react';
+import type {
+    EvaluationRow,
+    EvaluationFirm,
+    EvaluationTableType,
+    EvaluationCellValueType,
+    UpdateRowMetaRequest,
+    VmAdoptionStatus,
+    VmOrigin,
+} from '@/types/evaluation';
 import { EVALUATION_TABLE_COLUMNS } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { parseEvaluationCellInput } from '@/lib/evaluation/tender-commercial';
+
+const VM_STATUS_OPTIONS: Array<{ value: VmAdoptionStatus; label: string; title: string }> = [
+    { value: 'adopted', label: 'Adopt', title: 'Adopt this VM item' },
+    { value: 'tbd', label: 'To be determined', title: 'Keep this VM item to be decided' },
+    { value: 'not_adopted', label: 'No', title: 'Do not adopt this VM item' },
+];
+
+const VM_ORIGIN_OPTIONS: Array<{ value: VmOrigin; label: string; title: string }> = [
+    { value: 'tenderer_proposed', label: 'Tenderer proposed', title: 'Tenderer proposed' },
+    { value: 'pm_client_proposed', label: 'PM/client proposed', title: 'PM/client proposed' },
+    { value: 'ai_identified', label: 'AI identified', title: 'AI identified' },
+    { value: 'tender_wide_option', label: 'Tender-wide option', title: 'Tender-wide option' },
+];
 
 interface EvaluationSheetProps {
     rows: EvaluationRow[];
     firms: EvaluationFirm[];
-    tableType: 'initial_price' | 'adds_subs';
-    onCellUpdate: (rowId: string, firmId: string, amountCents: number) => Promise<void>;
+    tableType: EvaluationTableType;
+    onCellUpdate: (
+        rowId: string,
+        firmId: string,
+        amountCents: number,
+        valueType?: EvaluationCellValueType
+    ) => Promise<void>;
     onDeleteRow: (rowId: string) => Promise<void>;
     onAddRow: () => void;
     onFileDrop?: (file: File, firmId: string) => Promise<void>;
@@ -34,6 +69,8 @@ interface EvaluationSheetProps {
     onRowSelect: (rowId: string, event: React.MouseEvent) => void;
     // T098-T100: Merge button
     onMergeClick?: () => void;
+    onToggleRowLock?: (rowId: string, isLocked: boolean) => Promise<unknown>;
+    onRowMetaUpdate?: (rowId: string, patch: UpdateRowMetaRequest) => Promise<unknown>;
     parsingFirmId?: string | null;
     subtotals: { [firmId: string]: number };
     title: string;
@@ -57,6 +94,8 @@ export function EvaluationSheet({
     selectedRowIds,
     onRowSelect,
     onMergeClick,
+    onToggleRowLock,
+    onRowMetaUpdate,
     parsingFirmId,
     subtotals,
     title,
@@ -107,18 +146,43 @@ export function EvaluationSheet({
         }).format(dollars);
     };
 
-    // Parse currency input to cents
-    const parseCurrencyToCents = (value: string): number => {
-        const cleaned = value.replace(/[$,\s]/g, '');
-        const parsed = parseFloat(cleaned);
-        if (isNaN(parsed)) return 0;
-        return Math.round(parsed * 100);
+    const formatCellStatus = (valueType: EvaluationCellValueType | null | undefined): string | null => {
+        switch (valueType) {
+            case 'included':
+                return 'Incl.';
+            case 'assumed_included':
+                return 'Assumed';
+            case 'excluded':
+                return 'Excluded';
+            case 'tbc':
+                return 'TBC';
+            case 'na':
+                return 'N/A';
+            case 'blank':
+                return '-';
+            default:
+                return null;
+        }
     };
 
     // Get cell value for a row/firm combination
     const getCellValue = (row: EvaluationRow, firmId: string): number => {
         const cell = row.cells?.find(c => c.firmId === firmId);
         return cell?.amountCents || 0;
+    };
+
+    const getCellEditValue = (row: EvaluationRow, firmId: string): string => {
+        const cell = row.cells?.find(c => c.firmId === firmId);
+        const status = formatCellStatus(cell?.valueType);
+        if (status) return status;
+        return cell?.amountCents ? (cell.amountCents / 100).toString() : '';
+    };
+
+    const getCellDisplay = (row: EvaluationRow, firmId: string): string => {
+        const cell = row.cells?.find(c => c.firmId === firmId);
+        const status = formatCellStatus(cell?.valueType);
+        if (status) return status;
+        return formatCurrency(cell?.amountCents || 0) || '-';
     };
 
     // Check if cell was AI-populated and get confidence
@@ -136,26 +200,21 @@ export function EvaluationSheet({
         return confidence !== null && confidence < 70;
     };
 
-    // T104-T106: Check if row was AI-generated
-    const isAIGeneratedRow = (source?: EvaluationRowSource): boolean => {
-        return source === 'ai_parsed';
-    };
-
     // Handle cell click to start editing
-    const handleCellClick = (rowId: string, firmId: string, currentValue: number, event: React.MouseEvent) => {
+    const handleCellClick = (row: EvaluationRow, firmId: string, event: React.MouseEvent) => {
         // Don't start editing if row is being selected with modifier keys
         if (event.shiftKey || event.ctrlKey || event.metaKey) return;
 
-        setEditingCell({ rowId, firmId });
-        setEditValue(currentValue === 0 ? '' : (currentValue / 100).toString());
+        setEditingCell({ rowId: row.id, firmId });
+        setEditValue(getCellEditValue(row, firmId));
     };
 
     // Handle cell blur to save
     const handleCellBlur = useCallback(async () => {
         if (!editingCell) return;
 
-        const amountCents = parseCurrencyToCents(editValue);
-        await onCellUpdate(editingCell.rowId, editingCell.firmId, amountCents);
+        const parsed = parseEvaluationCellInput(editValue);
+        await onCellUpdate(editingCell.rowId, editingCell.firmId, parsed.amountCents, parsed.valueType);
         setEditingCell(null);
         setEditValue('');
     }, [editingCell, editValue, onCellUpdate]);
@@ -321,7 +380,7 @@ export function EvaluationSheet({
     // Strip leading numbers (e.g., "1.", "5.") from adds_subs descriptions
     const getDisplayDescription = (description: string | null | undefined): string => {
         if (!description) return '';
-        if (tableType === 'adds_subs') {
+        if (tableType === 'adds_subs' || tableType === 'value_management') {
             // Remove leading number + period pattern (e.g., "1.", "5.", "10.")
             return description.replace(/^\d+\.\s*/, '');
         }
@@ -329,6 +388,81 @@ export function EvaluationSheet({
     };
 
     const accentCssVar = { '--evaluation-accent': accentColor } as React.CSSProperties;
+
+    const renderVmControls = (row: EvaluationRow) => {
+        if (tableType !== 'value_management' || !onRowMetaUpdate) return null;
+
+        const status = row.vmAdoptionStatus ?? (row.source === 'manual' ? 'adopted' : 'tbd');
+        const isEmbedded = row.vmEmbeddedInBase === true;
+        const origin = row.vmOrigin ?? (row.source === 'ai' || row.source === 'ai_parsed' ? 'ai_identified' : 'tenderer_proposed');
+        const hasNonZeroAmount = row.cells?.some(cell => (cell.amountCents || 0) !== 0) ?? false;
+        const statusLabel = VM_STATUS_OPTIONS.find(option => option.value === status)?.label ?? 'To be determined';
+        const originLabel = VM_ORIGIN_OPTIONS.find(option => option.value === origin)?.label ?? 'Tenderer proposed';
+
+        return (
+            <div
+                className="ml-1 flex shrink-0 items-center"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            title="Value management options"
+                            aria-label={`Value management options. Status: ${statusLabel}. Origin: ${originLabel}${isEmbedded ? '. Embedded in base price' : ''}.`}
+                            className="inline-flex h-5 w-5 items-center justify-center text-[var(--color-text-muted)] opacity-50 transition-colors hover:text-[var(--evaluation-accent)] hover:opacity-100 focus-visible:text-[var(--evaluation-accent)] focus-visible:opacity-100 focus-visible:outline-none"
+                        >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuLabel className="text-xs">Adoption</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                            value={status}
+                            onValueChange={(value) => {
+                                void onRowMetaUpdate(row.id, { vmAdoptionStatus: value as VmAdoptionStatus });
+                            }}
+                        >
+                            {VM_STATUS_OPTIONS.map(option => (
+                                <DropdownMenuRadioItem key={option.value} value={option.value} title={option.title}>
+                                    {option.label}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                            checked={isEmbedded}
+                            onCheckedChange={(checked) => {
+                                void onRowMetaUpdate(row.id, { vmEmbeddedInBase: checked === true });
+                            }}
+                        >
+                            Embedded in base
+                        </DropdownMenuCheckboxItem>
+                        {isEmbedded && hasNonZeroAmount && (
+                            <div className="flex items-start gap-1 px-2 py-1 text-[11px] leading-snug text-yellow-600">
+                                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                                Excluded from VM and award-basis totals.
+                            </div>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs">Origin</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                            value={origin}
+                            onValueChange={(value) => {
+                                void onRowMetaUpdate(row.id, { vmOrigin: value as VmOrigin });
+                            }}
+                        >
+                            {VM_ORIGIN_OPTIONS.map(option => (
+                                <DropdownMenuRadioItem key={option.value} value={option.value} title={option.title}>
+                                    {option.label}
+                                </DropdownMenuRadioItem>
+                            ))}
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+        );
+    };
 
     return (
         <div
@@ -349,8 +483,6 @@ export function EvaluationSheet({
                     {firms.map(firm => (
                         <col key={firm.id} style={{ width: `${EVALUATION_TABLE_COLUMNS.firmColumn}px` }} />
                     ))}
-                    {/* AI indicator column */}
-                    <col style={{ width: `${EVALUATION_TABLE_COLUMNS.aiIndicator}px` }} />
                     {/* Delete button column */}
                     <col style={{ width: `${EVALUATION_TABLE_COLUMNS.deleteButton}px` }} />
                 </colgroup>
@@ -445,10 +577,6 @@ export function EvaluationSheet({
                                 </th>
                             );
                         })}
-                        {/* AI indicator column header */}
-                        <th
-                            style={{ height: cellHeight }}
-                        />
                         {/* Delete button column header */}
                         <th
                             style={{ height: cellHeight }}
@@ -489,17 +617,12 @@ export function EvaluationSheet({
                                     </td>
                                 );
                             })}
-                            {/* Empty AI indicator cell */}
-                            <td
-                                style={{ height: cellHeight }}
-                            />
                             {/* Empty delete cell */}
                             <td style={{ height: cellHeight }} />
                         </tr>
                     ) : (
                         rows.map((row) => {
                             const isSelected = selectedRowIds.has(row.id);
-                            const isAIRow = isAIGeneratedRow(row.source);
                             const isEditingDescription = editingDescriptionRowId === row.id;
                             const isDragging = draggedRowId === row.id;
                             const isDragOver = dragOverRowId === row.id;
@@ -554,10 +677,11 @@ export function EvaluationSheet({
                                                     className="flex-1 bg-transparent text-sm text-[var(--color-text-primary)] outline-none"
                                                 />
                                             ) : (
-                                                <span className="truncate">
+                                                <span className="min-w-0 flex-1 truncate">
                                                     {getDisplayDescription(row.description)}
                                                 </span>
                                             )}
+                                            {!isEditingDescription && renderVmControls(row)}
                                         </div>
                                     </td>
 
@@ -582,7 +706,7 @@ export function EvaluationSheet({
                                                 style={{ height: cellHeight }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleCellClick(row.id, firm.id, value, e);
+                                                    handleCellClick(row, firm.id, e);
                                                 }}
                                                 title={isAI ? `AI-extracted (${confidence || 0}% confidence)` : undefined}
                                             >
@@ -609,11 +733,11 @@ export function EvaluationSheet({
                                                         )}
                                                         <div
                                                             className={`px-2 text-right text-sm ${
-                                                                value ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'
+                                                                value ? 'text-[var(--role-money)] font-mono' : 'text-[var(--color-text-muted)]'
                                                             }`}
                                                             style={{ height: cellHeight, lineHeight: `${cellHeight}px` }}
                                                         >
-                                                            {formatCurrency(value) || '-'}
+                                                            {getCellDisplay(row, firm.id)}
                                                         </div>
                                                     </div>
                                                 )}
@@ -628,32 +752,37 @@ export function EvaluationSheet({
                                         );
                                     })}
 
-                                    {/* AI indicator cell */}
-                                    <td
-                                        className="text-center"
-                                        style={{ height: cellHeight }}
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        {isAIRow && (
-                                            <span title="AI-generated row">
-                                                <DiamondIcon variant="empty" className="w-3 h-3 text-[var(--evaluation-accent)] mx-auto" />
-                                            </span>
-                                        )}
-                                    </td>
-
                                     {/* Delete button cell */}
                                     <td
                                         className="text-center"
                                         style={{ height: cellHeight }}
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <button
-                                            onClick={() => handleDelete(row.id)}
-                                            className="opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-all"
-                                            title="Delete row"
-                                        >
-                                            <Trash className="w-3 h-3 mx-auto" />
-                                        </button>
+                                        <div className="flex items-center justify-center gap-1">
+                                            {onToggleRowLock && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onToggleRowLock(row.id, !row.isLocked)}
+                                                    className={`transition-opacity text-[var(--color-text-muted)] hover:text-[var(--evaluation-accent)] ${
+                                                        row.isLocked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                                                    }`}
+                                                    title={row.isLocked ? 'Unlock row' : 'Lock row'}
+                                                >
+                                                    {row.isLocked ? (
+                                                        <Lock className="w-3 h-3" />
+                                                    ) : (
+                                                        <Unlock className="w-3 h-3" />
+                                                    )}
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleDelete(row.id)}
+                                                className="opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-accent-coral)] transition-all"
+                                                title="Delete row"
+                                            >
+                                                <Trash className="w-3 h-3 mx-auto" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             );
@@ -678,7 +807,7 @@ export function EvaluationSheet({
                                 <td
                                     key={firm.id}
                                     data-firm-id={firm.id}
-                                    className={`px-3 text-right text-sm font-semibold relative ${
+                                    className={`px-3 text-right text-sm font-semibold font-mono relative ${
                                         isColumnDragOver ? 'bg-[var(--evaluation-accent)]/20' : ''
                                     }`}
                                     style={{ height: cellHeight, color: accentColor }}
@@ -695,10 +824,6 @@ export function EvaluationSheet({
                                 </td>
                             );
                         })}
-                        {/* Empty AI indicator cell */}
-                        <td
-                            style={{ height: cellHeight }}
-                        />
                         {/* Empty delete cell */}
                         <td style={{ height: cellHeight }} />
                     </tr>

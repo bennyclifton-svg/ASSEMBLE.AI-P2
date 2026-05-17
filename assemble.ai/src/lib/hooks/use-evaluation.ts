@@ -13,7 +13,8 @@ import type {
     UpdateCellRequest,
     AddRowRequest,
     EvaluationFirm,
-    MergeRowsRequest,
+    EvaluationTableType,
+    UpdateRowMetaRequest,
 } from '@/types/evaluation';
 
 interface UseEvaluationOptions {
@@ -60,13 +61,16 @@ interface UseEvaluationReturn {
     mergeRows: (rowIds: string[], newDescription: string, tableType: 'initial_price' | 'adds_subs') => Promise<MergeRowsResult>;
     // T088: Update row description
     updateRowDescription: (rowId: string, description: string) => Promise<boolean>;
+    updateRowLock: (rowId: string, isLocked: boolean) => Promise<boolean>;
+    updateRowMeta: (rowId: string, patch: UpdateRowMetaRequest) => Promise<boolean>;
     // Reorder row within table
-    reorderRow: (rowId: string, newIndex: number, tableType: 'initial_price' | 'adds_subs') => Promise<boolean>;
+    reorderRow: (rowId: string, newIndex: number, tableType: EvaluationTableType) => Promise<boolean>;
 
     // Computed values
     shortlistedFirms: EvaluationFirm[];
     initialPriceRows: EvaluationRow[];
     addSubsRows: EvaluationRow[];
+    valueManagementRows: EvaluationRow[];
 }
 
 // Debounce delay for auto-save (T032)
@@ -206,6 +210,7 @@ export function useEvaluation({
                     firmId: request.firmId,
                     firmType: request.firmType,
                     amountCents: request.amountCents,
+                    valueType: request.valueType || 'amount',
                     source: request.source || 'manual',
                     confidence: request.confidence,
                 };
@@ -489,7 +494,7 @@ export function useEvaluation({
     const reorderRow = useCallback(async (
         rowId: string,
         newIndex: number,
-        tableType: 'initial_price' | 'adds_subs'
+        tableType: EvaluationTableType
     ): Promise<boolean> => {
         if (!contextId || !data) return false;
 
@@ -558,11 +563,97 @@ export function useEvaluation({
         }
     }, [projectId, contextType, contextId, data, fetchData]);
 
+    const updateRowLock = useCallback(async (
+        rowId: string,
+        isLocked: boolean
+    ): Promise<boolean> => {
+        if (!contextId) return false;
+
+        setData(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                rows: prev.rows.map(row =>
+                    row.id === rowId ? { ...row, isLocked } : row
+                ),
+            };
+        });
+
+        try {
+            setIsSaving(true);
+
+            const response = await fetch(
+                `/api/evaluation/${projectId}/${contextType}/${contextId}/rows/${rowId}`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ isLocked }),
+                }
+            );
+
+            if (!response.ok) {
+                await fetchData();
+                throw new Error('Failed to update row lock');
+            }
+
+            return true;
+        } catch (err) {
+            console.error('Error updating row lock:', err);
+            return false;
+        } finally {
+            setIsSaving(false);
+        }
+    }, [projectId, contextType, contextId, fetchData]);
+
+    const updateRowMeta = useCallback(async (
+        rowId: string,
+        patch: UpdateRowMetaRequest
+    ): Promise<boolean> => {
+        if (!contextId) return false;
+
+        setData(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                rows: prev.rows.map(row =>
+                    row.id === rowId ? { ...row, ...patch } : row
+                ),
+            };
+        });
+
+        try {
+            setIsSaving(true);
+
+            const response = await fetch(
+                `/api/evaluation/${projectId}/${contextType}/${contextId}/rows/${rowId}`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patch),
+                }
+            );
+
+            if (!response.ok) {
+                await fetchData();
+                throw new Error('Failed to update row');
+            }
+
+            return true;
+        } catch (err) {
+            console.error('Error updating row metadata:', err);
+            return false;
+        } finally {
+            setIsSaving(false);
+        }
+    }, [projectId, contextType, contextId, fetchData]);
+
     // Computed values - sort by orderIndex
     const shortlistedFirms = data?.firms.filter(f => f.shortlisted) || [];
     const initialPriceRows = (data?.rows.filter(r => r.tableType === 'initial_price') || [])
         .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
     const addSubsRows = (data?.rows.filter(r => r.tableType === 'adds_subs') || [])
+        .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+    const valueManagementRows = (data?.rows.filter(r => r.tableType === 'value_management') || [])
         .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
     return {
@@ -580,9 +671,12 @@ export function useEvaluation({
         parseTender,
         mergeRows,
         updateRowDescription,
+        updateRowLock,
+        updateRowMeta,
         reorderRow,
         shortlistedFirms,
         initialPriceRows,
         addSubsRows,
+        valueManagementRows,
     };
 }

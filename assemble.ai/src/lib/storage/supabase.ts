@@ -5,8 +5,9 @@
 
 import crypto from 'crypto';
 import path from 'path';
-import { supabaseAdmin, STORAGE_BUCKET, isSupabaseConfigured } from '@/lib/supabase/client';
-import type { StorageService } from './local';
+import { supabaseAdmin, STORAGE_BUCKET } from '@/lib/supabase/client';
+import { sanitizeStorageFileName, type StorageSaveOptions, type StorageService } from './local';
+import { getStorageSettings, type FilenameStrategy } from './settings';
 
 export class SupabaseStorageService implements StorageService {
     private bucketName: string;
@@ -40,38 +41,27 @@ export class SupabaseStorageService implements StorageService {
         }
     }
 
-    async save(file: File, buffer: Buffer): Promise<{ path: string; hash: string; size: number }> {
+    async save(file: File, buffer: Buffer, options?: StorageSaveOptions): Promise<{ path: string; hash: string; size: number }> {
         if (!supabaseAdmin) {
             throw new Error('Supabase is not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.');
         }
 
         await this.ensureBucket();
 
-        // Generate hash for deduplication and unique filename
+        // Generate hash for integrity metadata and collision-resistant fallback names.
         const hash = crypto.createHash('sha256').update(buffer).digest('hex');
-        const ext = path.extname(file.name);
-        const fileName = `${hash}${ext}`;
+        const settings = await getStorageSettings();
+        const strategy = settings.filenameStrategy;
+        const fileName = filenameForStrategy(file, hash, strategy);
 
         // Organize files by date for better management
         const date = new Date();
         const datePath = `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}`;
-        const storagePath = `${datePath}/${fileName}`;
+        const directory = [datePath, ...sanitizeDirectory(options?.directory)].join('/');
+        const storagePath = strategy === 'content_hash'
+            ? `${directory}/${fileName}`
+            : await this.getAvailableStoragePath(directory, fileName);
 
-        // Check if file already exists (deduplication)
-        const { data: existingFile } = await supabaseAdmin.storage
-            .from(this.bucketName)
-            .list(datePath, { search: fileName });
-
-        if (existingFile && existingFile.length > 0) {
-            // File already exists, return existing path
-            return {
-                path: `supabase://${this.bucketName}/${storagePath}`,
-                hash,
-                size: buffer.length
-            };
-        }
-
-        // Upload file to Supabase Storage
         const { error } = await supabaseAdmin.storage
             .from(this.bucketName)
             .upload(storagePath, buffer, {
@@ -81,7 +71,8 @@ export class SupabaseStorageService implements StorageService {
 
         if (error) {
             // If file exists error, that's fine (deduplication)
-            if (!error.message.includes('already exists') && !error.message.includes('Duplicate')) {
+            const isDuplicate = error.message.includes('already exists') || error.message.includes('Duplicate');
+            if (!isDuplicate || strategy !== 'content_hash') {
                 throw new Error(`Failed to upload file: ${error.message}`);
             }
         }
@@ -92,6 +83,26 @@ export class SupabaseStorageService implements StorageService {
             hash,
             size: buffer.length
         };
+    }
+
+    private async getAvailableStoragePath(directory: string, preferredName: string): Promise<string> {
+        for (let suffix = 0; suffix < 10000; suffix += 1) {
+            const fileName = suffix === 0 ? preferredName : addCollisionSuffix(preferredName, suffix + 1);
+            const { data, error } = await supabaseAdmin!.storage
+                .from(this.bucketName)
+                .list(directory, { search: fileName });
+
+            if (error) {
+                throw new Error(`Failed to inspect storage path: ${error.message}`);
+            }
+
+            const exists = data?.some((entry) => entry.name === fileName);
+            if (!exists) {
+                return `${directory}/${fileName}`;
+            }
+        }
+
+        throw new Error(`Could not find an available filename for ${preferredName}`);
     }
 
     async delete(filePath: string): Promise<void> {
@@ -158,3 +169,20 @@ export class SupabaseStorageService implements StorageService {
 
 // Export singleton instance
 export const supabaseStorage = new SupabaseStorageService();
+
+function sanitizeDirectory(directory: string[] | undefined): string[] {
+    return (directory ?? []).filter(Boolean).map((segment) => sanitizeStorageFileName(segment, 'files'));
+}
+
+function filenameForStrategy(file: File, hash: string, strategy: FilenameStrategy): string {
+    if (strategy === 'content_hash') {
+        const ext = path.extname(file.name).replace(/[<>:"/\\|?*\x00-\x1F]/g, '');
+        return `${hash}${ext}`;
+    }
+    return sanitizeStorageFileName(file.name);
+}
+
+function addCollisionSuffix(fileName: string, suffix: number): string {
+    const parsed = path.parse(fileName);
+    return `${parsed.name || 'upload'} (${suffix})${parsed.ext}`;
+}

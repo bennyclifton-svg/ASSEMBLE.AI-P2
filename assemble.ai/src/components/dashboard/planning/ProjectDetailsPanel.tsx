@@ -7,107 +7,7 @@ import { AddressAutocomplete } from './AddressAutocomplete';
 import { LEPDataCard } from './LEPDataCard';
 import type { PlaceSelection, SiteInfo } from '@/types/lep';
 
-// Props for InlineEditField component
-interface InlineEditFieldProps {
-    value: string;
-    onSave: (newValue: string) => Promise<void>;
-    placeholder?: string;
-    className?: string;
-}
-
-// Inline editable text field
-function InlineEditField({ value, onSave, placeholder, className }: InlineEditFieldProps) {
-    const [editValue, setEditValue] = useState(value || '');
-    const [isSaving, setIsSaving] = useState(false);
-    const [savedValue, setSavedValue] = useState(value || '');
-    const [isFocused, setIsFocused] = useState(false);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    useEffect(() => {
-        if (!isFocused && !isSaving) {
-            setEditValue(value || '');
-            setSavedValue(value || '');
-        }
-    }, [value, isFocused, isSaving]);
-
-    useEffect(() => {
-        return () => {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-            }
-        };
-    }, []);
-
-    const handleSave = async () => {
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-            saveTimeoutRef.current = null;
-        }
-
-        if (editValue === savedValue) return;
-
-        setIsSaving(true);
-        const previousValue = savedValue;
-        setSavedValue(editValue);
-
-        try {
-            await onSave(editValue);
-        } catch (error) {
-            console.error('Save failed:', error);
-            setSavedValue(previousValue);
-            setEditValue(previousValue);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleBlur = () => {
-        setIsFocused(false);
-        if (saveTimeoutRef.current) {
-            clearTimeout(saveTimeoutRef.current);
-        }
-        saveTimeoutRef.current = setTimeout(() => handleSave(), 150);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            inputRef.current?.blur();
-        } else if (e.key === 'Escape') {
-            setEditValue(savedValue);
-            inputRef.current?.blur();
-        }
-    };
-
-    return (
-        <div className="relative">
-            <input
-                ref={inputRef}
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={handleBlur}
-                onKeyDown={handleKeyDown}
-                placeholder={placeholder}
-                disabled={isSaving}
-                className={`
-                    w-full bg-transparent outline-none border-none
-                    focus:outline-none focus:ring-0
-                    placeholder:text-[var(--color-text-muted)] disabled:opacity-50
-                    transition-all
-                    ${className}
-                `}
-            />
-            {isSaving && (
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <div className="w-3 h-3 border-2 border-[var(--color-accent-copper)] border-t-transparent rounded-full animate-spin"></div>
-                </div>
-            )}
-        </div>
-    );
-}
+const muted = 'var(--sw-muted)';
 
 // Props for DetailRow component
 interface DetailRowProps {
@@ -223,25 +123,29 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
 
     return (
         <div
-            className={`
-                flex transition-all duration-150 relative
-                ${!isLast ? 'border-b border-[var(--color-border)]' : ''}
-            `}
+            className="grid items-center relative transition-all duration-150"
+            style={{
+                gridTemplateColumns: '88px 1fr',
+                gap: 12,
+                padding: '1px 4px',
+                borderBottom: !isLast ? '1px solid var(--sw-rule-2)' : undefined,
+            }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            <div className="w-[120px] shrink-0 px-3 py-2 flex items-center relative">
-                <span className="text-sm font-medium text-[var(--color-text-muted)]">{label}</span>
-                <div
-                    className={`
-                        absolute right-0 top-0 bottom-0 w-[2px]
-                        transition-opacity duration-150
-                        ${isHovered && !isFocused ? 'opacity-100 bg-[var(--color-accent-copper)]' : 'opacity-0 bg-transparent'}
-                    `}
-                />
-            </div>
+            <span
+                style={{
+                    fontFamily: 'var(--sw-font-mono)',
+                    fontSize: 10,
+                    color: muted,
+                    textTransform: 'lowercase',
+                    letterSpacing: '0.02em',
+                }}
+            >
+                {label}
+            </span>
 
-            <div className="flex-1 relative px-3">
+            <div className="relative">
                 <textarea
                     ref={textareaRef}
                     value={editValue}
@@ -249,29 +153,43 @@ function DetailRow({ label, value, onSave, placeholder, isLast = false }: Detail
                     onFocus={() => setIsFocused(true)}
                     onBlur={handleBlur}
                     onKeyDown={handleKeyDown}
-                    className={`
-                        w-full px-2 py-2 text-sm
-                        bg-transparent
-                        transition-all duration-150
-                        outline-none border-0 ring-0 shadow-none
-                        focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none
-                        disabled:opacity-50
-                        resize-none overflow-hidden
-                        placeholder:text-[var(--color-text-muted)]
-                        text-[var(--color-text-primary)]
-                    `}
+                    className="w-full bg-transparent transition-all duration-150 outline-none border-0 ring-0 shadow-none focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none disabled:opacity-50 resize-none overflow-hidden"
+                    style={{
+                        fontFamily: 'var(--sw-font-sans)',
+                        fontSize: 13,
+                        color: 'var(--sw-ink)',
+                        padding: '1px 0',
+                        textTransform: 'none',
+                        borderBottom: isFocused
+                            ? '1px solid var(--sw-ink)'
+                            : isHovered
+                                ? '1px solid var(--sw-rule-2)'
+                                : '1px solid transparent',
+                    }}
                     placeholder={placeholder}
                     disabled={isSaving}
                     rows={1}
                 />
 
                 {isSaving && (
-                    <div className="absolute right-4 top-2.5 pointer-events-none">
-                        <div className="w-3 h-3 border-2 border-[var(--color-accent-copper)] border-t-transparent rounded-full animate-spin"></div>
+                    <div className="absolute right-1 top-0.5 pointer-events-none">
+                        <div
+                            className="w-3 h-3 border-2 border-t-transparent rounded-full animate-spin"
+                            style={{ borderColor: 'var(--sw-peach)', borderTopColor: 'transparent' }}
+                        />
                     </div>
                 )}
                 {showSuccess && !isSaving && (
-                    <span className="absolute right-4 top-2.5 text-[var(--color-accent-copper)] text-sm pointer-events-none">✓</span>
+                    <span
+                        className="absolute right-1 top-0 pointer-events-none"
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 12,
+                            color: 'var(--sw-peach)',
+                        }}
+                    >
+                        ✓
+                    </span>
                 )}
             </div>
         </div>
@@ -550,7 +468,7 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
 
     return (
         <div
-            className="h-full flex flex-col relative"
+            className="relative"
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -559,102 +477,160 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
         >
             {/* Extraction Progress Overlay */}
             {isExtracting && (
-                <div className="absolute inset-0 z-50 bg-[var(--color-bg-primary)]/80 rounded-xl flex items-center justify-center">
-                    <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg p-6 flex flex-col items-center gap-3">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent-copper)]"></div>
-                        <p className="text-[var(--color-text-primary)] font-semibold">Extracting project details...</p>
-                        <p className="text-xs text-[var(--color-text-muted)]">This may take a few moments</p>
+                <div
+                    className="absolute inset-0 z-50 flex items-center justify-center"
+                    style={{ background: 'color-mix(in srgb, var(--sw-paper) 80%, transparent)' }}
+                >
+                    <div
+                        className="p-6 flex flex-col items-center gap-3"
+                        style={{
+                            background: 'white',
+                            border: '1px solid var(--sw-rule)',
+                        }}
+                    >
+                        <div
+                            className="animate-spin rounded-full h-8 w-8 border-b-2"
+                            style={{ borderColor: 'var(--sw-peach)' }}
+                        />
+                        <p
+                            style={{
+                                fontFamily: 'var(--sw-font-sans)',
+                                fontSize: 14,
+                                fontWeight: 600,
+                                color: 'var(--sw-ink)',
+                            }}
+                        >
+                            Extracting project details…
+                        </p>
+                        <p
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: muted,
+                            }}
+                        >
+                            this may take a few moments
+                        </p>
                     </div>
                 </div>
             )}
 
             {/* Drag & Drop Overlay */}
             {isDragging && !isExtracting && (
-                <div className="absolute inset-0 z-50 bg-[var(--color-accent-copper)]/20 border-2 border-dashed border-[var(--color-accent-copper)] rounded-xl flex items-center justify-center">
-                    <div className="bg-[var(--color-bg-primary)] border border-[var(--color-accent-copper)] rounded-lg p-6 flex flex-col items-center gap-3">
-                        <Upload className="w-10 h-10 text-[var(--color-accent-copper)]" />
-                        <p className="text-[var(--color-text-primary)] font-semibold">Drop to extract project details</p>
-                        <p className="text-xs text-[var(--color-text-muted)]">PDF, Word, Image, or Text</p>
+                <div
+                    className="absolute inset-0 z-50 flex items-center justify-center"
+                    style={{
+                        background: 'color-mix(in srgb, var(--sw-peach) 20%, transparent)',
+                        border: '2px dashed var(--sw-peach)',
+                    }}
+                >
+                    <div
+                        className="p-6 flex flex-col items-center gap-3"
+                        style={{
+                            background: 'white',
+                            border: '1px solid var(--sw-peach)',
+                        }}
+                    >
+                        <Upload className="w-10 h-10" style={{ color: 'var(--sw-peach)' }} />
+                        <p
+                            style={{
+                                fontFamily: 'var(--sw-font-sans)',
+                                fontSize: 14,
+                                fontWeight: 600,
+                                color: 'var(--sw-ink)',
+                            }}
+                        >
+                            Drop to extract project details
+                        </p>
+                        <p
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: muted,
+                            }}
+                        >
+                            pdf · word · image · text
+                        </p>
                     </div>
                 </div>
             )}
 
-            {/* Form content */}
-            <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarGutter: 'stable both-edges' }}>
-                <div className="space-y-4">
-                    {/* Project Name Card */}
-                    <div className="border border-[var(--color-border)]/50 rounded overflow-hidden">
-                        <div
-                            className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
-                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
-                        >
-                            <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
-                                Project Name
-                            </span>
-                            <Upload className="w-4 h-4 text-[var(--color-text-muted)]" />
-                        </div>
-                        <div
-                            className="backdrop-blur-md p-4"
-                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                        >
-                            <InlineEditField
-                                value={data?.projectName || ''}
-                                onSave={(v) => updateField('projectName', v)}
-                                placeholder="Untitled Project"
-                                className="text-xl font-bold text-[var(--color-text-primary)]"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Details Card */}
-                    <div className="border border-[var(--color-border)]/50 rounded overflow-hidden">
-                        <div
-                            className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
-                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
-                        >
-                            <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
-                                Site Details
-                            </span>
-                        </div>
-                        <div
-                            className="backdrop-blur-md"
-                            style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-                        >
-                            <AddressAutocomplete
-                                value={data?.address || ''}
-                                onSelect={handleAddressSelect}
-                                onManualEdit={(v) => updateField('address', v)}
-                                placeholder="Search address..."
-                            />
-                            <DetailRow
-                                label="Lot Area"
-                                value={data?.lotArea?.toString() || ''}
-                                onSave={(v) => updateField('lotArea', v)}
-                                placeholder="0 m²"
-                            />
-                            <DetailRow
-                                label="Legal Address"
-                                value={data?.legalAddress || ''}
-                                onSave={(v) => updateField('legalAddress', v)}
-                                placeholder="Enter legal address"
-                            />
-                            <DetailRow
-                                label="Jurisdiction"
-                                value={data?.jurisdiction || ''}
-                                onSave={(v) => updateField('jurisdiction', v)}
-                                placeholder="Enter jurisdiction"
-                                isLast
-                            />
-                        </div>
-                    </div>
-
-                    {/* LEP Planning Controls Card */}
-                    <LEPDataCard
-                        projectId={projectId}
-                        hasCoordinates={!!(data?.latitude && data?.longitude)}
-                        coordinates={data?.latitude && data?.longitude ? { lat: data.latitude, lng: data.longitude } : undefined}
-                        onSiteInfo={handleSiteInfo}
+            {/* Flat field list — rendered inside the parent's "Lot" CardShell.
+                Name + Address span the full shell width; everything below is
+                split into two columns so the LEP rows on the right balance
+                the lot/jurisdiction rows on the left. */}
+            <div className="flex flex-col">
+                <DetailRow
+                    label="Name"
+                    value={data?.projectName || ''}
+                    onSave={(v) => updateField('projectName', v)}
+                    placeholder="Untitled project"
+                />
+                <div
+                    className="grid items-center"
+                    style={{
+                        gridTemplateColumns: '88px 1fr',
+                        gap: 12,
+                        padding: '1px 4px',
+                        borderBottom: '1px solid var(--sw-rule-2)',
+                    }}
+                >
+                    <span
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 10,
+                            color: muted,
+                            textTransform: 'lowercase',
+                            letterSpacing: '0.02em',
+                        }}
+                    >
+                        Address
+                    </span>
+                    <AddressAutocomplete
+                        value={data?.address || ''}
+                        onSelect={handleAddressSelect}
+                        onManualEdit={(v) => updateField('address', v)}
+                        placeholder="Search address…"
                     />
+                </div>
+                <div
+                    className="grid"
+                    style={{
+                        gridTemplateColumns: '1fr 1fr',
+                        // Column gap only — rows in each column manage their
+                        // own bottom borders, so no vertical gap here.
+                        columnGap: 24,
+                    }}
+                >
+                    <div className="flex flex-col">
+                        <DetailRow
+                            label="Lot area"
+                            value={data?.lotArea?.toString() || ''}
+                            onSave={(v) => updateField('lotArea', v)}
+                            placeholder="0 m²"
+                        />
+                        <DetailRow
+                            label="Legal address"
+                            value={data?.legalAddress || ''}
+                            onSave={(v) => updateField('legalAddress', v)}
+                            placeholder="enter legal address"
+                        />
+                        <DetailRow
+                            label="Jurisdiction"
+                            value={data?.jurisdiction || ''}
+                            onSave={(v) => updateField('jurisdiction', v)}
+                            placeholder="enter jurisdiction"
+                            isLast
+                        />
+                    </div>
+                    <div className="flex flex-col">
+                        <LEPDataCard
+                            projectId={projectId}
+                            hasCoordinates={!!(data?.latitude && data?.longitude)}
+                            coordinates={data?.latitude && data?.longitude ? { lat: data.latitude, lng: data.longitude } : undefined}
+                            onSiteInfo={handleSiteInfo}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

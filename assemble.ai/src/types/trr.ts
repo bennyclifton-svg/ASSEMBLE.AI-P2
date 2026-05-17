@@ -7,11 +7,13 @@ export interface TRR {
     id: string;
     projectId: string;
     stakeholderId?: string | null;
+    evaluationPriceId?: string | null;
     trrNumber: number;
     executiveSummary?: string | null;
     clarifications?: string | null;
     recommendation?: string | null;
     reportDate?: string | null;
+    issueSnapshotArtefactId?: string | null;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -33,6 +35,7 @@ export interface TRRUpdateData {
     clarifications?: string | null;
     recommendation?: string | null;
     reportDate?: string | null;
+    evaluationPriceId?: string | null;
 }
 
 // Tender Process table row

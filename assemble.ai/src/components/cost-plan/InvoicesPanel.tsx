@@ -158,7 +158,7 @@ export function InvoicesPanel({ projectId, renderTabsList }: InvoicesPanelProps)
 
     if (error) {
         return (
-            <div className="h-full flex items-center justify-center" style={{ background: 'var(--sw-paper)' }}>
+            <div className="h-full flex items-center justify-center" style={{ background: 'var(--sw-canvas)' }}>
                 <div className="text-center">
                     <p className="text-[var(--color-accent-coral)] mb-2">Failed to load invoices</p>
                     <button onClick={() => refetch()} className="text-sm text-[var(--color-accent-teal)] hover:opacity-80">
@@ -171,12 +171,12 @@ export function InvoicesPanel({ projectId, renderTabsList }: InvoicesPanelProps)
 
     return (
         <InvoiceDropZone projectId={projectId} onUploadComplete={() => refetch()}>
-        <div className="h-full flex flex-col text-xs" style={{ background: 'var(--sw-paper)' }}>
+        <div className="h-full flex flex-col text-xs" style={{ background: 'var(--sw-canvas)' }}>
             {/* Toolbar */}
             <div
                 className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
                 style={{
-                    background: 'var(--sw-paper)',
+                    background: 'var(--sw-canvas)',
                     borderBottom: '1px solid var(--sw-rule)',
                 }}
             >
@@ -215,9 +215,9 @@ export function InvoicesPanel({ projectId, renderTabsList }: InvoicesPanelProps)
             </div>
 
             {/* Table */}
-            <div className="flex-1 overflow-auto" style={{ background: 'var(--sw-paper)' }}>
-                <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed', fontFamily: 'var(--sw-font-mono)', background: 'white' }}>
-                    <thead className="sticky top-0 z-10 shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ background: 'white' }}>
+            <div className="flex-1 overflow-auto" style={{ background: 'var(--sw-canvas)' }}>
+                <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed', fontFamily: 'var(--sw-font-mono)', background: 'var(--sw-shell)' }}>
+                    <thead className="sticky top-0 z-10 shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ background: 'var(--sw-shell)' }}>
                         <tr>
                             <th
                                 className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[100px] overflow-hidden cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
@@ -314,11 +314,11 @@ export function InvoicesPanel({ projectId, renderTabsList }: InvoicesPanelProps)
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'white' }}>Loading invoices...</td>
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'var(--sw-shell)' }}>Loading invoices...</td>
                             </tr>
                         ) : sortedInvoices.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'white' }}>
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'var(--sw-shell)' }}>
                                     {monthFilter === 'all'
                                         ? 'No invoices yet. Click the + icon to add one.'
                                         : 'No invoices match the selected month.'}
@@ -353,7 +353,7 @@ export function InvoicesPanel({ projectId, renderTabsList }: InvoicesPanelProps)
                                 <td colSpan={6} className="border border-[var(--color-border)] px-2 py-1.5 text-right text-[var(--color-text-muted)]">
                                     Total:
                                 </td>
-                                <td className="border border-[var(--color-border)] px-2 py-1.5 text-right font-mono text-[var(--color-text-primary)]">
+                                <td className="border border-[var(--color-border)] px-2 py-1.5 text-right font-mono text-[var(--role-money)]">
                                     {formatCurrency(sortedInvoices.reduce((sum, inv) => sum + inv.amountCents, 0))}
                                 </td>
                                 <td className="border border-[var(--color-border)] px-2 py-1.5"></td>
@@ -484,7 +484,7 @@ function InvoiceRow({ invoice, costLines, variations, onUpdate, onDelete }: Invo
     return (
         <tr className="group bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] transition-colors">
             <td
-                className="border-x border-[var(--color-border)] px-2 py-1.5 font-mono font-medium text-[var(--color-accent-teal)] cursor-pointer w-[100px]"
+                className="border-x border-[var(--color-border)] px-2 py-1.5 font-mono font-medium text-[var(--role-id)] cursor-pointer w-[100px]"
                 onClick={() => handleStartEdit('invoiceNumber', invoice.invoiceNumber)}
             >
                 {editingField === 'invoiceNumber' ? (
@@ -523,26 +523,29 @@ function InvoiceRow({ invoice, costLines, variations, onUpdate, onDelete }: Invo
                 )}
             </td>
             <td className="border-x border-[var(--color-border)] px-1 py-1 w-[160px]">
-                <select
-                    value={invoice.costLineId || ''}
-                    onChange={(e) => handleCostLineChange(e.target.value)}
-                    className="w-full px-1 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
-                    title={invoice.costLine?.activity || ''}
-                    style={{ colorScheme: 'dark' }}
-                >
-                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
-                    {sortedCostLines.map((line) => {
-                        const stakeholderName = line.stakeholder?.name || '';
-                        const label = stakeholderName
-                            ? `${stakeholderName} - ${line.activity}`
-                            : line.activity;
-                        return (
-                            <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                                {label}
-                            </option>
-                        );
-                    })}
-                </select>
+                <div className="relative min-w-0">
+                    <select
+                        value={invoice.costLineId || ''}
+                        onChange={(e) => handleCostLineChange(e.target.value)}
+                        className="w-full min-w-0 truncate appearance-none pl-1 pr-5 py-0.5 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+                        title={invoice.costLine?.activity || ''}
+                        style={{ colorScheme: 'dark' }}
+                    >
+                        <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
+                        {sortedCostLines.map((line) => {
+                            const stakeholderName = line.stakeholder?.name || '';
+                            const label = stakeholderName
+                                ? `${stakeholderName} - ${line.activity}`
+                                : line.activity;
+                            return (
+                                <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                                    {label}
+                                </option>
+                            );
+                        })}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--color-text-primary)]" />
+                </div>
             </td>
             <td className="border-x border-[var(--color-border)] px-1 py-1 w-[120px]">
                 <select
@@ -611,7 +614,7 @@ function InvoiceRow({ invoice, costLines, variations, onUpdate, onDelete }: Invo
                         className={numberInputClass}
                     />
                 ) : (
-                    <span className="font-mono text-[var(--color-text-primary)]">
+                    <span className="font-mono text-[var(--role-money)]">
                         {formatCurrency(invoice.amountCents)}
                     </span>
                 )}
@@ -732,26 +735,29 @@ function AddInvoiceRow({ costLines, variations, onSave, onCancel, isSubmitting }
                 />
             </td>
             <td className="border-x border-[var(--color-border)] px-1 py-1">
-                <select
-                    value={formData.costLineId}
-                    onChange={(e) => setFormData({ ...formData, costLineId: e.target.value, variationId: '' })}
-                    className="w-full px-1.5 py-1 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
-                    title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
-                    style={{ colorScheme: 'dark' }}
-                >
-                    <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
-                    {sortedCostLines.map((line) => {
-                        const stakeholderName = line.stakeholder?.name || '';
-                        const label = stakeholderName
-                            ? `${stakeholderName} - ${line.activity}`
-                            : line.activity;
-                        return (
-                            <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
-                                {label}
-                            </option>
-                        );
-                    })}
-                </select>
+                <div className="relative min-w-0">
+                    <select
+                        value={formData.costLineId}
+                        onChange={(e) => setFormData({ ...formData, costLineId: e.target.value, variationId: '' })}
+                        className="w-full min-w-0 truncate appearance-none pl-1.5 pr-5 py-1 bg-transparent border-0 hover:bg-[var(--color-bg-tertiary)] focus:bg-[var(--color-bg-tertiary)] rounded text-[11px] text-[var(--color-text-primary)] focus:outline-none cursor-pointer"
+                        title={formData.costLineId ? sortedCostLines.find(l => l.id === formData.costLineId)?.activity : ''}
+                        style={{ colorScheme: 'dark' }}
+                    >
+                        <option value="" className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]">None</option>
+                        {sortedCostLines.map((line) => {
+                            const stakeholderName = line.stakeholder?.name || '';
+                            const label = stakeholderName
+                                ? `${stakeholderName} - ${line.activity}`
+                                : line.activity;
+                            return (
+                                <option key={line.id} value={line.id} title={label} className="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
+                                    {label}
+                                </option>
+                            );
+                        })}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--color-text-primary)]" />
+                </div>
             </td>
             <td className="border-x border-[var(--color-border)] px-1 py-1">
                 <select

@@ -391,13 +391,13 @@ export function StakeholderPanel({
 
   if (isLoading) {
     return (
-      <div className="flex h-full flex-col" style={{ background: 'var(--sw-paper)' }}>
+      <div className="flex h-full flex-col" style={{ background: 'var(--sw-canvas)' }}>
         <div className="p-4">
           <Skeleton className="mb-3 h-8 w-48" />
           <Skeleton className="mb-4 h-7 w-full" />
           <div className="space-y-4">
             {GROUP_ORDER.map((group) => (
-              <div key={group} className="border border-[var(--sw-rule)] bg-white">
+              <div key={group} className="border border-[var(--sw-rule)] bg-[var(--sw-shell)]">
                 <Skeleton className="h-10 w-full" />
                 <div className="space-y-1 p-3">
                   {[1, 2, 3].map((i) => (
@@ -413,14 +413,10 @@ export function StakeholderPanel({
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden" style={{ background: 'var(--sw-paper)' }}>
+    <div className="flex h-full flex-col overflow-hidden" style={{ background: 'var(--sw-canvas)' }}>
       <header className="shrink-0 px-4 pt-2 pb-3" style={{ borderBottom: '1px solid var(--sw-rule-2)' }}>
         <div className="mb-2 flex items-center justify-between gap-4">
           <StakeholderBreadcrumb projectName={projectName} activeCrumb={activeCrumb} />
-          <div className="flex gap-1.5">
-            <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
-            <StatusPill label="stage: detail design" tone="dark" />
-          </div>
         </div>
 
         <div className="mb-2 flex items-end justify-between gap-4">
@@ -607,8 +603,8 @@ function GroupCard({
     : `Delete all ${GROUP_LABELS[group].toLowerCase()} stakeholders`;
 
   return (
-    <section className="flex min-w-0 flex-col overflow-hidden border border-[var(--sw-rule)] bg-white">
-      <div className="flex h-10 items-center justify-between gap-3 border-b border-[var(--sw-rule-2)] bg-white px-3">
+    <section className="flex min-w-0 flex-col overflow-hidden bg-[var(--sw-shell)]">
+      <div className="flex h-10 items-center justify-between gap-3 border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)] px-3">
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
@@ -630,7 +626,7 @@ function GroupCard({
               type="button"
               onClick={() => onToggleVisibility(categoryId)}
               className={cn(
-                'p-1 transition-colors hover:bg-[var(--sw-paper-2)] hover:text-[var(--sw-ink)]',
+                'p-1 transition-colors hover:bg-[var(--sw-canvas)] hover:text-[var(--sw-ink)]',
                 isVisible ? 'text-[var(--sw-muted)]' : 'text-[var(--sw-rule)]'
               )}
               title={isVisible
@@ -666,7 +662,7 @@ function GroupCard({
           style={{ fontFamily: 'var(--sw-font-mono)', lineHeight: 1.1 }}
         >
           <thead>
-            <tr className="border-b border-[var(--sw-rule-2)] bg-white">
+            <tr className="border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)]">
               <StakeholderHead className="w-24">
                 <span className="inline-flex items-center gap-1.5">
                   <SelectionToggle

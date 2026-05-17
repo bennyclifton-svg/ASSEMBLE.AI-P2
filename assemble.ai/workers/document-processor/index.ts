@@ -6,19 +6,16 @@
  * that depend on environment variables (like rag-client.ts)
  */
 
-import { config } from 'dotenv';
+import { loadAppEnv } from '../../src/lib/env/load-app-env';
+import { assertSaasRuntimeConfig } from '../../src/lib/env/saas-runtime-config';
+import type { Job } from 'bullmq';
 
 // Load environment variables FIRST - before any other imports
-// In production (Docker), env vars are injected so this is a no-op
-// In development, load env files in same order as Next.js
-if (process.env.NODE_ENV !== 'production') {
-    config({ path: '.env.local' });
-    config({ path: '.env.development' });
-    config({ path: '.env' });
-}
+loadAppEnv();
 
-// Init Sentry after env load, before any other imports that might throw
-import '../sentry-init';
+if (process.env.NODE_ENV === 'production' || process.env.SITEWISE_PUBLIC_SAAS === '1') {
+    assertSaasRuntimeConfig('worker');
+}
 
 // Verify required env vars
 console.log('[worker] Checking environment variables...');
@@ -32,9 +29,22 @@ if (!process.env.DATABASE_URL && !process.env.SUPABASE_POSTGRES_URL) {
     process.exit(1);
 }
 
+if (!process.env.REDIS_URL) {
+    console.error('[worker] FATAL: REDIS_URL is not set!');
+    process.exit(1);
+}
+
+if (process.env.SITEWISE_WORKER_SMOKE === '1') {
+    console.log('[worker] Smoke check passed: environment loaded.');
+    process.exit(0);
+}
+
 // Now we can safely import modules that depend on env vars
 async function bootstrap() {
-    const { Worker, Job } = await import('bullmq');
+    // Init Sentry after env load, before other imports that might throw
+    await import('../sentry-init');
+
+    const { Worker } = await import('bullmq');
     const { ragDb } = await import('../../src/lib/db/rag-client');
     const { documentChunks, documentSetMembers } = await import('../../src/lib/db/rag-schema');
     const { parseDocument } = await import('../../src/lib/rag/parsing');
@@ -100,7 +110,7 @@ async function bootstrap() {
             job.updateProgress(50);
             console.log(`[worker] Generating embeddings for ${chunks.length} chunks`);
 
-            const chunkContents = chunks.map((c: any) => c.content);
+            const chunkContents = chunks.map((chunk: { content: string }) => chunk.content);
             const embeddingsResult = await generateEmbeddings(chunkContents);
 
             // Step 4: Insert chunks with embeddings

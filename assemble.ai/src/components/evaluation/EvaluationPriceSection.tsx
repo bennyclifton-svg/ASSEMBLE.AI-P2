@@ -107,11 +107,19 @@ export function EvaluationPriceSection({
     }, [deleteEvaluationPrice, activeEvaluationPriceId, evaluationPrices, setActiveEvaluationPriceId]);
 
     const handleSelectEvaluationPrice = useCallback((id: string) => {
+        const previousId = activeEvaluationPriceId;
         setActiveEvaluationPriceId(id);
+        if (previousId && previousId !== id && stakeholderId) {
+            void fetch(`/api/evaluation/${projectId}/stakeholder/${stakeholderId}/recommendation-state`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ event: 'active_price_instance_changed' }),
+            });
+        }
         if (!isExpanded) {
             setIsExpanded(true);
         }
-    }, [setActiveEvaluationPriceId, isExpanded, setIsExpanded]);
+    }, [activeEvaluationPriceId, setActiveEvaluationPriceId, stakeholderId, projectId, isExpanded, setIsExpanded]);
 
     // Handle export
     const handleExport = async (format: 'pdf' | 'docx' | 'xlsx') => {

@@ -12,9 +12,9 @@
  * Run with: npx tsx scripts/test-seed-retrieval.ts
  */
 
-import { config } from 'dotenv';
-config({ path: '.env.local' });
-config({ path: '.env' });
+import { loadAppEnv } from '../src/lib/env/load-app-env';
+
+loadAppEnv();
 
 // ============================================
 // Test definitions

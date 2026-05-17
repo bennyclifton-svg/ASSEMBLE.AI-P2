@@ -4,22 +4,26 @@
  */
 
 import type { Config } from 'drizzle-kit';
-import * as dotenv from 'dotenv';
+import { getTableName, isTable } from 'drizzle-orm';
+import * as pgSchema from './src/lib/db/pg-schema';
+import { loadAppEnv } from './src/lib/env/load-app-env';
 
-// Load .env.development for local, or .env.production for production
-dotenv.config({ path: '.env.development' });
-dotenv.config({ path: '.env.production' });
-dotenv.config({ path: '.env' });
+loadAppEnv();
+
+const tablesFilter = Array.from(
+    new Set(Object.values(pgSchema).filter(isTable).map((table) => getTableName(table)))
+);
 
 export default {
     schema: './src/lib/db/pg-schema.ts',
     out: './drizzle-pg',
     dialect: 'postgresql',
+    tablesFilter,
     dbCredentials: {
         url: process.env.DATABASE_URL || process.env.SUPABASE_POSTGRES_URL || '',
     },
     // Verbose output for debugging
     verbose: true,
     // Strict mode for safer migrations
-    strict: true,
+    strict: process.env.DRIZZLE_STRICT !== 'false',
 } satisfies Config;

@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { checkout } from '@/lib/auth-client';
+import { createCheckoutRequestForPlan } from '@/lib/billing/polar-checkout';
 import type { SubscriptionPlan } from '@/lib/polar/plans';
 
 interface PricingCardProps {
@@ -29,9 +30,7 @@ export function PricingCard({ plan, isCurrentPlan, currentPlanId = 'free' }: Pri
         try {
             // Use Better Auth's Polar checkout - redirects to Polar checkout page
             // Use slug to reference the product configured in better-auth.ts
-            await checkout({
-                slug: plan.id, // 'starter' or 'professional' matches the slug in server config
-            });
+            await checkout(createCheckoutRequestForPlan(plan.id));
         } catch (err) {
             console.error('Checkout error:', err);
             setError(err instanceof Error ? err.message : 'Something went wrong');

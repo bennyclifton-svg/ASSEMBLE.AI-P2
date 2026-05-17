@@ -86,9 +86,14 @@ function generateTimelineColumns(start: Date, end: Date, zoomLevel: ZoomLevel) {
 
 // Group columns by month for header
 function groupColumnsByMonth(columns: Array<{ date: Date; label: string }>, zoomLevel: ZoomLevel) {
-    if (zoomLevel === 'month') {
+    if (zoomLevel !== 'week') {
         return columns.map((col) => ({
-            month: col.date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+            month: col.date.toLocaleDateString(
+                'en-US',
+                zoomLevel === 'fit'
+                    ? { month: 'short' }
+                    : { month: 'short', year: 'numeric' }
+            ),
             span: 1,
         }));
     }
@@ -178,6 +183,7 @@ export function ProgramTable({
 }: ProgramTableProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const timelineAreaRef = useRef<HTMLDivElement>(null);
+    const [timelineViewportWidth, setTimelineViewportWidth] = useState(0);
     const [linkingState, setLinkingState] = useState<LinkingState | null>(null);
     const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
     const [activeId, setActiveId] = useState<string | null>(null);
@@ -272,11 +278,16 @@ export function ProgramTable({
         return today >= colDate && today < nextDate;
     });
 
-    const columnWidth = zoomLevel === 'week' ? 40 : 80;
+    const defaultColumnWidth = zoomLevel === 'week' ? 40 : 80;
+    const columnWidth = zoomLevel === 'fit' && timelineViewportWidth > 0 && columns.length > 0
+        ? Math.max(1, timelineViewportWidth / columns.length)
+        : defaultColumnWidth;
     const activityColumnWidth = 300;
     const startDateColumnWidth = 70;
     const endDateColumnWidth = 70;
     const rowHeight = 32;
+    const timelineContentWidth = columns.length * columnWidth;
+    const timelineContentHeight = visibleActivities.length * rowHeight;
 
     // Handle starting a link drag from a bar
     const handleStartLinkDrag = useCallback((activityId: string, end: 'start' | 'end', clientX: number, clientY: number) => {
@@ -397,6 +408,38 @@ export function ProgramTable({
         return () => timelineArea.removeEventListener('scroll', handleScroll);
     }, []);
 
+    useEffect(() => {
+        const timelineArea = timelineAreaRef.current;
+        if (!timelineArea) return;
+
+        const updateViewportWidth = () => {
+            setTimelineViewportWidth(timelineArea.clientWidth);
+        };
+
+        updateViewportWidth();
+
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', updateViewportWidth);
+            return () => window.removeEventListener('resize', updateViewportWidth);
+        }
+
+        const observer = new ResizeObserver(updateViewportWidth);
+        observer.observe(timelineArea);
+
+        return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        if (zoomLevel !== 'fit') return;
+
+        if (timelineAreaRef.current) {
+            timelineAreaRef.current.scrollLeft = 0;
+        }
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = 0;
+        }
+    }, [zoomLevel, timelineContentWidth]);
+
     // Center the timeline on today's date when the panel first loads.
     // Guarded so a manual scroll afterwards is never overridden.
     const hasCenteredOnTodayRef = useRef(false);
@@ -449,9 +492,9 @@ export function ProgramTable({
     }, []);
 
     return (
-        <div className="flex h-full min-h-0 flex-col overflow-hidden border border-[var(--sw-rule)] bg-white">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden border border-[var(--sw-rule)] bg-transparent">
             <div
-                className="flex border-b border-[var(--sw-rule-2)]"
+                className="flex border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)]"
                 style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.12em', textTransform: 'lowercase' }}
             >
                 <div
@@ -476,13 +519,14 @@ export function ProgramTable({
                 </div>
 
                 <div className="flex-1 overflow-hidden" ref={scrollContainerRef}>
-                    <div className="flex flex-col" style={{ minWidth: columns.length * columnWidth }}>
+                    <div className="flex flex-col" style={{ minWidth: timelineContentWidth }}>
                         <div className="flex border-b border-[var(--sw-rule-2)]">
                             {monthGroups.map((group, i) => (
                                 <div
                                     key={i}
-                                    className="shrink-0 border-r border-[var(--sw-rule-2)] px-2 py-1 text-center text-[10px] font-semibold text-[var(--sw-muted)]"
+                                    className="shrink-0 truncate whitespace-nowrap border-r border-[var(--sw-rule-2)] px-2 py-1 text-center text-[10px] font-semibold text-[var(--sw-muted)]"
                                     style={{ width: columnWidth * group.span }}
+                                    title={group.month}
                                 >
                                     {group.month}
                                 </div>
@@ -495,10 +539,11 @@ export function ProgramTable({
                                 {columns.map((col, i) => (
                                     <div
                                         key={i}
-                                        className={`shrink-0 border-r border-[var(--sw-rule-2)] px-1 py-1 text-center text-[10px] font-semibold text-[var(--sw-muted)] ${
+                                        className={`shrink-0 truncate whitespace-nowrap border-r border-[var(--sw-rule-2)] px-1 py-1 text-center text-[10px] font-semibold text-[var(--sw-muted)] ${
                                             i === todayIndex ? 'bg-[var(--sw-rose-tint)] text-[var(--sw-rose-dk)]' : ''
                                         }`}
                                         style={{ width: columnWidth }}
+                                        title={col.label}
                                     >
                                         {col.label}
                                     </div>
@@ -517,10 +562,10 @@ export function ProgramTable({
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-1 overflow-hidden bg-transparent">
                     {/* Activity column (sticky) - sortable */}
                     <div
-                        className="shrink-0 overflow-y-auto border-r border-[var(--sw-rule-2)] bg-white"
+                        className="shrink-0 overflow-y-auto border-r border-[var(--sw-rule-2)] bg-transparent"
                         style={{ width: activityColumnWidth }}
                     >
                         <SortableContext items={visibleActivities.map(a => a.id)} strategy={verticalListSortingStrategy}>
@@ -559,7 +604,7 @@ export function ProgramTable({
 
                     {/* Date columns (sticky with activity column) */}
                     <div
-                        className="shrink-0 overflow-y-auto border-r border-[var(--sw-rule-2)] bg-white"
+                        className="shrink-0 overflow-y-auto border-r border-[var(--sw-rule-2)] bg-transparent"
                         style={{ width: startDateColumnWidth + endDateColumnWidth }}
                     >
                         {visibleActivities.map((activity) => (
@@ -575,15 +620,21 @@ export function ProgramTable({
                     </div>
 
                     {/* Timeline area (scrollable) */}
-                    <div ref={timelineAreaRef} className="relative flex-1 overflow-auto bg-white">
-                        {todayIndex >= 0 && (
-                            <div
-                                className="absolute top-0 bottom-0 z-10 w-0.5 bg-[var(--sw-rose)]"
-                                style={{ left: todayIndex * columnWidth + columnWidth / 2 }}
-                            />
-                        )}
+                    <div ref={timelineAreaRef} className="relative flex-1 overflow-auto bg-transparent">
+                        <div
+                            className="relative bg-[var(--sw-shell)]"
+                            style={{ minWidth: timelineContentWidth }}
+                        >
+                            {todayIndex >= 0 && timelineContentHeight > 0 && (
+                                <div
+                                    className="absolute top-0 z-10 w-0.5 bg-[var(--sw-rose)]"
+                                    style={{
+                                        left: todayIndex * columnWidth + columnWidth / 2,
+                                        height: timelineContentHeight,
+                                    }}
+                                />
+                            )}
 
-                        <div style={{ minWidth: columns.length * columnWidth }}>
                             {visibleActivities.map((activity) => (
                                 <ProgramRow
                                     key={activity.id}
@@ -623,7 +674,7 @@ export function ProgramTable({
                                 return (
                                     <svg
                                         className="absolute inset-0 pointer-events-none z-20"
-                                        style={{ width: columns.length * columnWidth, height: visibleActivities.length * rowHeight }}
+                                        style={{ width: timelineContentWidth, height: timelineContentHeight }}
                                     >
                                         <line
                                             x1={line.fromX}

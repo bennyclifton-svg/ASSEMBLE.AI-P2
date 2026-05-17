@@ -38,7 +38,13 @@ import {
     formatChatViewContextForPrompt,
     type ChatViewContext,
 } from '@/lib/chat/view-context';
-import { isIssueVariationWorkflowRequest, isTechnicalServicesQuestion } from './intent';
+import {
+    isIssueVariationWorkflowRequest,
+    isRfiReferenceRequest,
+    isRfiWriteRequest,
+    isTechnicalServicesDocumentReviewRequest,
+    isTechnicalServicesQuestion,
+} from './intent';
 import { guardProjectObjectivesAgainstLatestRequest } from './objective-intent-guard';
 import { guardToolAgainstCurrentDocumentSelection } from './selected-document-guard';
 import { guardAddendumStakeholderAgainstLatestRequest } from './stakeholder-intent-guard';
@@ -106,7 +112,9 @@ const TENDER_FIRM_REQUEST_RE =
 const FIRM_CONTACT_LIST_RE =
     /(?=[\s\S]*\b(?:email|e-mail)\b)(?=[\s\S]*\bphone\b)(?=[\s\S]*\baddress\b)(?=[\s\S]*(?:^\s*\d+\.|\b(?:services|contractors|consultants|mechanical|hvac|builders|pty|ltd)\b))/im;
 const WRITE_REQUEST_RE =
-    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|new|update|change|set|move|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,160}\b(invoice|progress claim|claim|cost line|cost lines|variation|variations|risk|risks|note|notes|meeting|meetings|report|reports|programme|program|schedule|activity|activities|milestone|milestones|stakeholder|stakeholders|contact|contacts|objective|objectives|project objective|project objectives|brief|project brief|rft|request for tender|tender package|tender document|tender documents|addendum|addenda|transmittal|transmittals|document|documents|firms?|companies|tenderers?|builders?|contractors?|consultants?|tender panel|tender list)\b/i;
+    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|new|update|change|set|move|populate|generate|redraft|replace|append|attach|increase|decrease|adjust|revise)\b[\s\S]{0,160}\b(invoice|progress claim|claim|budgets?|contract value|contract values|approved contracts?|contract sums?|cost plan|cost plans?|cost line|cost lines|variation|variations|risk|risks|rfi|rfis|request for information|requests for information|note|notes|meeting|meetings|report|reports|programme|program|schedule|activity|activities|milestone|milestones|stakeholder|stakeholders|contact|contacts|objective|objectives|project objective|project objectives|brief|project brief|rft|request for tender|tender package|tender document|tender documents|addendum|addenda|transmittal|transmittals|document|documents|firms?|companies|tenderers?|builders?|contractors?|consultants?|tender panel|tender list)\b/i;
+const PROGRAMME_REPLACEMENT_REQUEST_RE =
+    /\b(delete|clear|override|replace|reset|regenerate|start over|wipe)\b[\s\S]{0,220}\b(programme|program|schedule|activities?)\b|\b(programme|program|schedule|activities?)\b[\s\S]{0,220}\b(delete|clear|override|replace|reset|regenerate|start over|wipe)\b/i;
 const MUTATING_TOOL_NAMES = new Set([
     'update_cost_line',
     'create_cost_line',
@@ -118,6 +126,10 @@ const MUTATING_TOOL_NAMES = new Set([
     'attach_documents_to_note',
     'create_meeting',
     'create_report',
+    'create_rfi',
+    'record_rfi_response',
+    'attach_rfi_evidence',
+    'sync_project_documents_to_ai',
     'create_risk',
     'update_risk',
     'create_variation',
@@ -125,8 +137,10 @@ const MUTATING_TOOL_NAMES = new Set([
     'update_variation',
     'create_program_activity',
     'update_program_activity',
+    'replace_program',
     'create_program_milestone',
     'update_program_milestone',
+    'update_rft_brief',
     'update_stakeholder',
     'set_project_objectives',
     'add_tender_firms',
@@ -134,6 +148,13 @@ const MUTATING_TOOL_NAMES = new Set([
 ]);
 const NOTE_TOOL_NAMES = new Set(['create_note', 'update_note', 'attach_documents_to_note']);
 const PROGRAM_TOOL_NAMES = new Set([
+    'create_program_activity',
+    'update_program_activity',
+    'replace_program',
+    'create_program_milestone',
+    'update_program_milestone',
+]);
+const PROGRAMME_INCREMENTAL_TOOL_NAMES = new Set([
     'create_program_activity',
     'update_program_activity',
     'create_program_milestone',
@@ -154,11 +175,32 @@ const ISSUE_VARIATION_DIRECT_WRITE_TOOL_NAMES = new Set([
     'update_note',
     'attach_documents_to_note',
 ]);
-const PROJECT_EVIDENCE_TOOL_NAMES = new Set(['list_notes', 'search_rag']);
+const PROJECT_EVIDENCE_TOOL_NAMES = new Set(['list_notes', 'list_rfis', 'list_project_documents', 'search_rag']);
 const DOCUMENT_INGESTION_QUERY_RE =
     /\b(ingested|ingestion|synced|sync(?:ed|ing)?|rag|ai knowledge|knowledge base|searchable by ai)\b/i;
 const UNSUPPORTED_EVIDENCE_ANSWER_RE =
-    /\b(cost plan|would be detailed in|refer to the .*consultant|refer this question|no specific information|no relevant references|not found|couldn't find|could not find|uploaded documents|knowledge libraries|technical documentation)\b/i;
+    /\b(cost plan|would be detailed in|refer to the .*consultant|refer this question|no specific information|no specific extractable details|no direct text summary|no relevant references|not found|couldn't find|could not find|uploaded documents|knowledge libraries|technical documentation|specialist'?s detailed input is needed|consultant .*provide .*summary)\b/i;
+const UNSYNCED_DOCUMENT_STOP_RE =
+    /\b(not yet (?:been )?(?:synced|ingested)|not (?:AI[-/\s]*)?(?:synced|ingested|searchable)|not searchable(?:\/synced)?|not .*AI (?:knowledge|search)|sync(?:ed)? to AI knowledge|need(?:s)? to be (?:synced|ingested)|uploaded and reviewed further|please review these documents)\b/i;
+const RFI_CONSULTANT_HANDOFF_RE =
+    /\b(?:electrical|mechanical|hydraulic|fire|acoustic|structural|architectural)\s+consultant\s+should\s+confirm\b/i;
+const LIGHTING_SCHEDULE_CONTEXT_RE =
+    /\b(light(?:ing)?\s+(?:fittings?|fixtures?|schedule|types?|layout)|luminaire schedule|list(?:\s+all)?\s+(?:the\s+)?lights?|lights?\s+in\s+(?:this|the)\s+schedule|fittings? specified)\b/i;
+const LIGHTING_PLACEHOLDER_TERMS = [
+    /\bled strip lights?\b/i,
+    /\bled ceiling panels?\b/i,
+    /\bpendant lights?\b/i,
+    /\bwall sconces?\b/i,
+    /\bbollard lights?\b/i,
+];
+const LIGHTING_MISSING_DETAIL_RE =
+    /\b(?:wattages?|brands?|catalog(?:ue)?|colou?r temperature|supplier|specific [\w\s]{0,40}details)[\s\S]{0,140}\b(?:not listed|not provided|not available|not included|not in the context|need verification|additional specifications)/i;
+const LIGHTING_UNSUPPORTED_QUANTITY_RE =
+    /\b\d+(?:\.\d+)?\s*(?:units?|meters?|metres?|m)\b/i;
+const LIGHTING_GROUPED_CATEGORY_RE =
+    /\b(common area lighting|apartment lighting|external lighting)\b/i;
+const LIGHTING_ACTION_ITEM_RE =
+    /\b(action items?|verify quantities|confirm led types|additional specifications may need verification)\b/i;
 const PROJECT_MISMATCH_EVIDENCE_RE =
     /\b(found a relevant|relevant .*specification|different project|project mismatch|appears to be for .*different project|not for .*current project|not for .*lighthouse)\b/i;
 const PROJECT_MISMATCH_NON_ANSWER_RE =
@@ -254,6 +296,25 @@ function originalUserRequest(text: string): string {
     return text.slice(index + marker.length).trim();
 }
 
+function countLightingPlaceholderTerms(text: string): number {
+    return LIGHTING_PLACEHOLDER_TERMS.reduce(
+        (count, pattern) => count + (pattern.test(text) ? 1 : 0),
+        0
+    );
+}
+
+export function looksLikeUngroundedLightingScheduleAnswer(text: string): boolean {
+    const placeholderCount = countLightingPlaceholderTerms(text);
+    if (placeholderCount === 0) return false;
+    if (LIGHTING_MISSING_DETAIL_RE.test(text)) return true;
+    if (placeholderCount >= 2 && LIGHTING_ACTION_ITEM_RE.test(text)) return true;
+    return (
+        placeholderCount >= 3 &&
+        LIGHTING_UNSUPPORTED_QUANTITY_RE.test(text) &&
+        LIGHTING_GROUPED_CATEGORY_RE.test(text)
+    );
+}
+
 export function shouldRecoverMissingInvoiceApproval(args: {
     latestUserMessage: string;
     finalText: string;
@@ -275,7 +336,8 @@ export function shouldRecoverMissingApproval(args: {
     if (
         !WRITE_REQUEST_RE.test(args.latestUserMessage) &&
         !FIRM_CONTACT_LIST_RE.test(args.latestUserMessage) &&
-        !PROJECT_REPORT_REQUEST_RE.test(args.latestUserMessage)
+        !PROJECT_REPORT_REQUEST_RE.test(args.latestUserMessage) &&
+        !isRfiReferenceRequest(args.latestUserMessage)
     ) {
         return false;
     }
@@ -330,6 +392,13 @@ export function shouldRecoverWriteRefusal(args: {
     if (ADDENDUM_REQUEST_RE.test(args.latestUserMessage)) {
         return args.allowedToolNames.includes('create_addendum');
     }
+    if (isRfiReferenceRequest(args.latestUserMessage)) {
+        return (
+            args.allowedToolNames.includes('record_rfi_response') ||
+            args.allowedToolNames.includes('attach_rfi_evidence') ||
+            args.allowedToolNames.includes('sync_project_documents_to_ai')
+        );
+    }
     if (PROJECT_REPORT_REQUEST_RE.test(args.latestUserMessage)) {
         return args.allowedToolNames.includes('create_report');
     }
@@ -348,10 +417,77 @@ export function shouldRecoverMissingEvidenceSearch(args: {
     usedToolNames: string[];
     allowedToolNames: string[];
 }): boolean {
-    if (!isTechnicalServicesQuestion(args.latestUserMessage)) return false;
+    const isTechnicalEvidenceRequest =
+        isTechnicalServicesQuestion(args.latestUserMessage) ||
+        isTechnicalServicesDocumentReviewRequest(args.latestUserMessage);
+    const isRfiEvidenceRequest = isRfiReferenceRequest(args.latestUserMessage);
+    if (!isTechnicalEvidenceRequest && !isRfiEvidenceRequest) return false;
     if (!args.allowedToolNames.includes('search_rag')) return false;
-    if (args.usedToolNames.some((name) => PROJECT_EVIDENCE_TOOL_NAMES.has(name))) return false;
-    return args.usedToolNames.length === 0 || UNSUPPORTED_EVIDENCE_ANSWER_RE.test(args.finalText);
+    if (
+        isRfiEvidenceRequest &&
+        (args.usedToolNames.includes('sync_project_documents_to_ai') ||
+            args.usedToolNames.includes('record_rfi_response'))
+    ) {
+        return false;
+    }
+    const unsupportedEvidenceAnswer =
+        UNSUPPORTED_EVIDENCE_ANSWER_RE.test(args.finalText) ||
+        UNSYNCED_DOCUMENT_STOP_RE.test(args.finalText) ||
+        (isRfiEvidenceRequest && RFI_CONSULTANT_HANDOFF_RE.test(args.finalText));
+    const evidenceToolUseCount = args.usedToolNames.filter((name) =>
+        PROJECT_EVIDENCE_TOOL_NAMES.has(name)
+    ).length;
+    if (
+        isRfiEvidenceRequest &&
+        unsupportedEvidenceAnswer &&
+        (!args.usedToolNames.includes('search_rag') ||
+            (
+                args.allowedToolNames.includes('list_project_documents') &&
+                !args.usedToolNames.includes('list_project_documents')
+            ) ||
+            evidenceToolUseCount < 4)
+    ) {
+        return true;
+    }
+    if (evidenceToolUseCount === 0) {
+        return args.usedToolNames.length === 0 || unsupportedEvidenceAnswer;
+    }
+    return (
+        evidenceToolUseCount < 3 &&
+        isTechnicalServicesDocumentReviewRequest(args.latestUserMessage) &&
+        unsupportedEvidenceAnswer
+    );
+}
+
+export function shouldRecoverLightingScheduleGrounding(args: {
+    latestUserMessage: string;
+    finalText: string;
+    usedToolNames: string[];
+    allowedToolNames: string[];
+}): boolean {
+    const isLightingScheduleRequest =
+        LIGHTING_SCHEDULE_CONTEXT_RE.test(args.latestUserMessage) ||
+        (isRfiReferenceRequest(args.latestUserMessage) &&
+            LIGHTING_SCHEDULE_CONTEXT_RE.test(args.finalText));
+
+    if (!isLightingScheduleRequest) return false;
+    if (!args.allowedToolNames.includes('search_rag')) return false;
+    if (
+        args.usedToolNames.includes('record_rfi_response') ||
+        args.usedToolNames.includes('sync_project_documents_to_ai')
+    ) {
+        return false;
+    }
+    if (looksLikeUngroundedLightingScheduleAnswer(args.finalText)) return true;
+
+    const usedEvidenceTools = args.usedToolNames.some((name) =>
+        PROJECT_EVIDENCE_TOOL_NAMES.has(name)
+    );
+    return (
+        !usedEvidenceTools &&
+        /\b(?:downlights?|exit signs?|light fittings?|fixtures?|led)\b/i.test(args.finalText) &&
+        LIGHTING_UNSUPPORTED_QUANTITY_RE.test(args.finalText)
+    );
 }
 
 export function shouldRecoverEvidenceMismatchNonAnswer(args: {
@@ -369,12 +505,30 @@ export function shouldRecoverEvidenceMismatchNonAnswer(args: {
 
 function missingEvidenceSearchRecoveryPrompt(): string {
     return (
-        'You answered a technical services/specification question without searching project evidence. ' +
+        'You answered a technical services/specification or existing-RFI question without sufficiently searching project evidence. ' +
         'Do not answer from the cost plan, general project context, or training knowledge alone. ' +
+        'If the user references an existing RFI such as "RFI 001", call list_rfis with query set to that reference, use the returned RFI question and responsible party as the search brief, then call list_project_documents with includeDocuments=true using the discipline and title/topic terms from the RFI. ' +
+        'For an electrical lighting RFI, search the document register with disciplineOrTrade="Electrical" and documentName terms like "lighting", "light", and "schedule"; select the likely documentIds with select_project_documents so the document repo highlights them. If likely documents are uploaded but not AI-synced, do not merely tell the user to review or sync them; call sync_project_documents_to_ai with those documentIds and use attach_rfi_evidence when they are clearly relevant to the RFI. ' +
+        'If the documents are synced, call search_rag with focused queries such as "light fittings", "lighting schedule", "luminaire schedule", and "electrical lighting layout"; when the evidence is sufficient, call record_rfi_response with the drafted answer and evidence document IDs. ' +
+        'If list_project_documents finds likely uploaded documents but search_rag cannot find contents, call sync_project_documents_to_ai and attach_rfi_evidence before ending the turn. Only then explain that the answer can be generated after approval and background sync completes. ' +
         'If the user names a note or review, call list_notes first with includeContent=true and a focused query for that note title. ' +
-        'Then call search_rag with a focused query for the technical issue, such as mechanical systems, apartment HVAC, car park exhaust, or CO monitoring. ' +
+        'If the user says the document was just ingested, call list_project_documents with aiIngestionStatus="synced", includeDocuments=true, and a title or discipline filter if one is available. ' +
+        'Then call search_rag with focused and broad queries for the technical issue, such as hydraulic specification scope, mechanical systems, apartment HVAC, car park exhaust, CO monitoring, major equipment, pumps, tanks, valves, fixtures, meters, hot water, sanitary drainage, stormwater, testing, commissioning, and authority interfaces. ' +
+        'For requests asking for cost components or long-lead items, do not search only for those labels; infer likely cost drivers and early-order items from the retrieved technical scope and clearly label them as inferred, not priced. ' +
         'Answer from the returned note content or document excerpts and cite the note title or document name. ' +
         'If neither source returns relevant evidence, say that project evidence was not found and name the search limitation.'
+    );
+}
+
+function lightingScheduleGroundingRecoveryPrompt(): string {
+    return (
+        'The lighting schedule/RFI answer appears to use generic or unsupported fitting names or quantities. ' +
+        'Re-read project evidence and answer only from retrieved rows. ' +
+        'For lighting schedules, extract exact schedule fields as a table with Reference, Type, Location, Watts, Lumens, Supplier, Catalogue Reference, and Source. ' +
+        'Do not invent common/apartment/external categories, action items, quantities, suppliers, wattages, or catalogue numbers. ' +
+        'Lighting schedules usually define fitting types/specifications; quantities must come from a layout, takeoff, or explicit schedule quantity column. ' +
+        'If no quantity is in the evidence, write "Quantity not provided in the lighting schedule." ' +
+        'For an existing RFI, if evidence is sufficient, call record_rfi_response with that grounded answer and evidence document IDs; if likely documents are present but not searchable, use the sync/evidence tools instead.'
     );
 }
 
@@ -407,13 +561,13 @@ function missingApprovalRecoveryPrompt(): string {
         'for create_variation, use costLineReference and disciplineOrTrade when the user supplied labels instead of an id, and use list_cost_lines query rather than section for fuzzy cost-line labels; variation statuses are only Forecast, Approved, Rejected, or Withdrawn; ' +
         'create_addendum for stakeholder addenda and attached transmittal documents; ' +
         'create_transmittal for Notes-section transmittals from selected or filtered documents, or targeted project transmittals when a stakeholder/subcategory is supplied; ' +
-        'create_report for project reports, monthly reports, and PCG (Project Control Group) reports; use list_reports first if the existing report naming/cadence matters; do not treat PCG report as progress claim unless the user explicitly writes "progress claim"; ' +
-        'create_risk or update_risk for risks; attach_documents_to_note, create_note, or update_note for notes; ' +
+        'create_weekly_report_draft for weekly briefing/report drafts that need grounded records, typed RFIs, citations, assumptions, and recommendations; create_report for empty or generic project reports, monthly reports, and PCG (Project Control Group) reports; use list_reports first if the existing report naming/cadence matters; do not treat PCG report as progress claim unless the user explicitly writes "progress claim"; ' +
+        'create_risk or update_risk for risks; record_rfi_response for populated answers to existing RFIs; attach_rfi_evidence for RFI evidence links; sync_project_documents_to_ai for approval-gated document AI sync; attach_documents_to_note, create_note, or update_note for notes; ' +
         'create_meeting for meeting records; ' +
         'set_project_objectives for project brief/objective rows, using only the latest explicit objective wording when the user supplies a specific list; ' +
         'add_tender_firms for adding consultant, contractor, builder, or tenderer firms to tender panels/lists; ' +
-        'list_stakeholders then update_stakeholder for RFT brief content because the RFT Brief section is stored on the stakeholder briefServices/briefDeliverables fields; ' +
-        'create_cost_line or update_cost_line for cost lines; create_program_activity, update_program_activity, create_program_milestone, or update_program_milestone for programme changes; ' +
+        'list_stakeholders then update_rft_brief for RFT brief content because the RFT Brief section, first RFT record when missing, and Fee table need one structured proposal; ' +
+        'create_cost_line or update_cost_line for cost lines; replace_program for whole-programme replacement requests; create_program_activity, update_program_activity, create_program_milestone, or update_program_milestone for incremental programme changes; ' +
         'update_stakeholder for stakeholder/contact changes. ' +
         'If you cannot call the right mutating tool because a required field is missing, ask one concise clarifying question and explicitly say no approval card has been created yet.'
     );
@@ -438,6 +592,15 @@ export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
         );
     }
 
+    if (PROGRAMME_REPLACEMENT_REQUEST_RE.test(latestUserMessage)) {
+        return (
+            'You refused or drifted from a whole-programme replacement request, but this agent can propose the replacement through replace_program. ' +
+            'Do not answer in prose and do not create individual programme activities. ' +
+            'Call list_program first to read the current programme, then call replace_program once with the complete replacement activity list. ' +
+            'The single approval card should clear the old programme and create the replacement programme.'
+        );
+    }
+
     if (TRANSMITTAL_REQUEST_RE.test(latestUserMessage)) {
         return (
             'You refused or handed off a transmittal request, but this agent can propose transmittals through create_transmittal. ' +
@@ -448,6 +611,26 @@ export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
             'If select_project_documents already returned documentIds in this run, call create_transmittal with destination="note", those exact documentIds, and a concise name. ' +
             'For requests like "create a transmittal for basement drawings", use destination="note" and documentName="basement" if explicit documentIds are not already available. ' +
             'If no matching documents are found, ask one concise clarifying question and explicitly say no approval card has been created yet.'
+        );
+    }
+
+    if (isRfiReferenceRequest(latestUserMessage) && !isRfiWriteRequest(latestUserMessage)) {
+        return (
+            'You refused or drifted from an existing RFI response request, but this agent can resolve typed RFIs and propose updates. ' +
+            'Do not answer in prose and do not create a duplicate RFI or a legacy note. ' +
+            'Call list_rfis with the RFI reference, then use list_project_documents and search_rag for evidence. Select clearly relevant documentIds with select_project_documents. ' +
+            'If likely uploaded documents are not AI-synced, call sync_project_documents_to_ai and use attach_rfi_evidence for clearly relevant source documents. ' +
+            'If the evidence is searchable and sufficient, call record_rfi_response with the drafted answer and evidence document IDs so the response is populated in the RFI.'
+        );
+    }
+
+    if (isRfiWriteRequest(latestUserMessage)) {
+        return (
+            'You refused or drifted from an RFI drafting request, but this agent can propose typed RFIs through create_rfi. ' +
+            'Do not answer in prose and do not create a legacy note. ' +
+            'Use list_rfis when existing RFI context could matter, resolve the responsible stakeholder with list_stakeholders where possible, and use list_project_documents or search_rag for material document evidence. ' +
+            'Then call create_rfi with the typed RFI title, request/question text, priority, responsibleStakeholderId when known, dueDate only when known, and evidence citations. ' +
+            'If a required RFI fact is genuinely ambiguous, ask one concise clarifying question and explicitly say no approval card has been created yet.'
         );
     }
 
@@ -464,6 +647,13 @@ export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
     }
 
     if (PROJECT_REPORT_REQUEST_RE.test(latestUserMessage)) {
+        if (/\bweekly\b[\s\S]{0,120}\b(briefing|report|draft|status)\b|\b(briefing|report|draft|status)\b[\s\S]{0,120}\bweekly\b/i.test(latestUserMessage)) {
+            return (
+                'You refused or drifted from a weekly briefing/report draft request, but this agent can propose it through create_weekly_report_draft. ' +
+                'Do not answer in prose and do not create only an empty report shell. ' +
+                'Call create_weekly_report_draft with any supplied report/reporting-period dates. The draft must remain reviewable and is not issued or sent.'
+            );
+        }
         return (
             'You refused or drifted from a project-report request, but this agent can propose project reports through create_report. ' +
             'Do not answer in prose and do not hand this to Finance or Document Control. ' +
@@ -475,9 +665,9 @@ export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
 
     if (RFT_REQUEST_RE.test(latestUserMessage) && !NOTE_REQUEST_RE.test(latestUserMessage)) {
         return (
-            'You refused or drifted from an RFT content request, but this agent can propose RFT brief updates through the stakeholder brief fields. ' +
+            'You refused or drifted from an RFT content request, but this agent can propose structured RFT brief updates. ' +
             'Do not use create_note, update_note, attach_documents_to_note, or create_addendum. ' +
-            'Do not answer in prose. Use list_stakeholders with stakeholderGroup="consultant" to resolve the relevant stakeholder, then call update_stakeholder with briefServices and/or briefDeliverables. ' +
+            'Do not answer in prose. Use list_stakeholders with stakeholderGroup="consultant" to resolve the relevant consultant, then call update_rft_brief with briefServices, briefDeliverables, briefFee, and feeRows when the user requests staged fee lines; it creates the first RFT record if none exists. ' +
             'If the stakeholder cannot be resolved, ask one concise clarifying question and explicitly say no approval card has been created yet.'
         );
     }
@@ -551,6 +741,20 @@ export function guardToolAgainstLatestIntent(args: {
     }
 
     if (
+        args.toolName === 'record_rfi_response' &&
+        isRfiReferenceRequest(latestRequest) &&
+        !isRfiWriteRequest(latestRequest)
+    ) {
+        const input = asInputRecord(args.input);
+        const responseText = typeof input.responseText === 'string' ? input.responseText : '';
+        if (looksLikeUngroundedLightingScheduleAnswer(responseText)) {
+            throw new Error(
+                'The RFI response appears to use generic or unsupported lighting schedule content. Re-read the exact project evidence, list only fitting rows that appear in the source, and do not include quantities unless a schedule quantity, layout count, or takeoff evidence supports them.'
+            );
+        }
+    }
+
+    if (
         INVOICE_REQUEST_RE.test(args.latestUserMessage) &&
         NOTE_TOOL_NAMES.has(args.toolName) &&
         !NOTE_REQUEST_RE.test(args.latestUserMessage)
@@ -573,6 +777,17 @@ export function guardToolAgainstLatestIntent(args: {
     }
 
     if (
+        PROGRAMME_REPLACEMENT_REQUEST_RE.test(args.latestUserMessage) &&
+        PROGRAMME_INCREMENTAL_TOOL_NAMES.has(args.toolName)
+    ) {
+        throw new Error(
+            'This is a whole-programme replacement request, not an incremental programme edit. ' +
+                'Call list_program first, then call replace_program once with the complete replacement activity list. ' +
+                'Do not create individual programme activities or milestones for this request because the old programme must be cleared in the same approval.'
+        );
+    }
+
+    if (
         isIssueVariationWorkflowRequest(args.latestUserMessage) &&
         args.toolName !== 'start_issue_variation_workflow' &&
         ISSUE_VARIATION_DIRECT_WRITE_TOOL_NAMES.has(args.toolName)
@@ -584,13 +799,55 @@ export function guardToolAgainstLatestIntent(args: {
     }
 
     if (
+        isRfiWriteRequest(args.latestUserMessage) &&
+        NOTE_TOOL_NAMES.has(args.toolName) &&
+        !NOTE_REQUEST_RE.test(args.latestUserMessage)
+    ) {
+        throw new Error(
+            'This is an RFI drafting request, not a note request. Use create_rfi for the typed RFI proposal. ' +
+                'Do not create a legacy note unless the user explicitly asks for a separate note.'
+        );
+    }
+
+    if (
+        isRfiReferenceRequest(args.latestUserMessage) &&
+        !isRfiWriteRequest(args.latestUserMessage) &&
+        NOTE_TOOL_NAMES.has(args.toolName) &&
+        !NOTE_REQUEST_RE.test(args.latestUserMessage)
+    ) {
+        throw new Error(
+            'This is an existing RFI response request, not a note request. Use list_rfis, project evidence tools, record_rfi_response, attach_rfi_evidence, or sync_project_documents_to_ai as appropriate.'
+        );
+    }
+
+    if (
+        isRfiReferenceRequest(args.latestUserMessage) &&
+        !isRfiWriteRequest(args.latestUserMessage) &&
+        args.toolName === 'create_rfi'
+    ) {
+        throw new Error(
+            'This request references an existing RFI. Do not create a duplicate RFI; use record_rfi_response or attach_rfi_evidence after resolving the existing RFI.'
+        );
+    }
+
+    if (
         RFT_REQUEST_RE.test(args.latestUserMessage) &&
         !NOTE_REQUEST_RE.test(args.latestUserMessage) &&
         NOTE_TOOL_NAMES.has(args.toolName)
     ) {
         throw new Error(
             'This is an RFT content request, not a note request. Do not use create_note, update_note, or attach_documents_to_note. ' +
-                'Resolve the relevant consultant with list_stakeholders, then use update_stakeholder to update the RFT Brief fields (briefServices and/or briefDeliverables).'
+                'Resolve the relevant consultant with list_stakeholders, then use update_rft_brief to update the RFT Brief fields and any requested fee-stage rows.'
+        );
+    }
+    if (
+        RFT_REQUEST_RE.test(args.latestUserMessage) &&
+        !NOTE_REQUEST_RE.test(args.latestUserMessage) &&
+        args.toolName === 'update_stakeholder'
+    ) {
+        throw new Error(
+            'This is an RFT content request. Use update_rft_brief so services, deliverables, fee instructions, and fee-stage rows are proposed together. ' +
+                'Do not use plain update_stakeholder for RFT brief content.'
         );
     }
     if (
@@ -600,7 +857,7 @@ export function guardToolAgainstLatestIntent(args: {
     ) {
         throw new Error(
             'This is an RFT content request, not an addendum request. Do not use create_addendum. ' +
-                'Resolve the relevant consultant with list_stakeholders, then use update_stakeholder to update the RFT Brief fields (briefServices and/or briefDeliverables).'
+                'Resolve the relevant consultant with list_stakeholders, then use update_rft_brief to update the RFT Brief fields and any requested fee-stage rows.'
         );
     }
     if (
@@ -737,6 +994,12 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
                             usedToolNames,
                             allowedToolNames: agent.allowedTools,
                         }) ||
+                        shouldRecoverLightingScheduleGrounding({
+                            latestUserMessage: triggeringUserText,
+                            finalText,
+                            usedToolNames,
+                            allowedToolNames: agent.allowedTools,
+                        }) ||
                         shouldRecoverEvidenceMismatchNonAnswer({
                             latestUserMessage: triggeringUserText,
                             finalText,
@@ -751,6 +1014,13 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
                         usedToolNames,
                     })) {
                         recoveryPrompt = evidenceMismatchAnswerRecoveryPrompt();
+                    } else if (shouldRecoverLightingScheduleGrounding({
+                        latestUserMessage: triggeringUserText,
+                        finalText,
+                        usedToolNames,
+                        allowedToolNames: agent.allowedTools,
+                    })) {
+                        recoveryPrompt = lightingScheduleGroundingRecoveryPrompt();
                     } else if (shouldRecoverMissingEvidenceSearch({
                         latestUserMessage: triggeringUserText,
                         finalText,
@@ -791,6 +1061,7 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
                 content: string;
                 is_error?: boolean;
             }> = [];
+            const approvalCountBeforeToolDispatch = approvalToolNames.length;
 
             for (const tu of toolUses) {
                 const def = getTool(tu.name);
@@ -934,6 +1205,11 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
                         throw err;
                     }
                 }
+            }
+
+            if (approvalToolNames.length > approvalCountBeforeToolDispatch) {
+                stopReason = 'awaiting_approval';
+                break;
             }
 
             // Feed all tool results back as a single user message

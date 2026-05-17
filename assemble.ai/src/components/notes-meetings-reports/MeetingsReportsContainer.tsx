@@ -328,7 +328,7 @@ export function MeetingsReportsContainer({
         />
     ) : (
         <section
-            className="flex min-h-[420px] items-center justify-center border border-[var(--sw-rule)] bg-white px-6 text-center"
+            className="flex min-h-[420px] items-center justify-center border border-[var(--sw-rule)] bg-[var(--sw-shell)] px-6 text-center"
             style={{ fontFamily: 'var(--sw-font-mono)', color: muted }}
         >
             <div>
@@ -343,10 +343,6 @@ export function MeetingsReportsContainer({
             <header className="flex-shrink-0 px-2 pt-2">
                 <div className="mb-2 flex items-center justify-between gap-3">
                     <MeetingsReportsBreadcrumb projectName={projectName} activeCrumb={activeCrumb} />
-                    <div className="flex shrink-0 gap-1.5">
-                        <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
-                        <StatusPill label="stage: detail design" tone="dark" />
-                    </div>
                 </div>
 
                 <div className="mb-3 flex items-end justify-between gap-3">
@@ -447,10 +443,10 @@ export function MeetingsReportsContainer({
                                                 }
                                             }}
                                             className={cn(
-                                                'grid h-10 w-full cursor-pointer grid-cols-[84px_minmax(0,1fr)_74px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
+                                                'grid h-8 w-full cursor-pointer grid-cols-[84px_minmax(0,1fr)_74px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
                                                 isActive
                                                     ? 'border-l-4 bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-ink)]'
-                                                    : 'bg-transparent hover:bg-[var(--sw-paper-2)]'
+                                                    : 'bg-transparent hover:bg-[var(--sw-canvas)]'
                                             )}
                                             style={{
                                                 borderLeftColor: item.accent,

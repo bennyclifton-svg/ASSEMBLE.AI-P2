@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useConsultants } from '@/lib/hooks/use-consultants';
 import { FirmCard, AddFirmButton, FirmData } from '@/components/firms';
 import { useToast } from '@/lib/hooks/use-toast';
-import { formatCurrency } from '@/lib/utils/currency';
 
 import { ProcurementCardShell, ProcurementWorkflowLayout } from '@/components/procurement';
 import {
@@ -163,15 +162,12 @@ export function ConsultantGallery({
     }
 
     try {
-      const result = await toggleAward(id, awarded, disciplineId);
-      const contractValue = result?.contractValueCents;
+      await toggleAward(id, awarded, disciplineId);
 
       toast({
         title: awarded ? 'Contract Awarded' : 'Award Removed',
         description: awarded
-          ? contractValue
-            ? `Contract value of ${formatCurrency(contractValue)} recorded in Cost Plan.`
-            : 'Company has been added to the master list and is now available in Cost Planning.'
+          ? 'Award recorded. Push awarded pricing to the Cost Plan from Evaluation Price when ready.'
           : 'Award status has been removed.',
       });
     } catch (error) {

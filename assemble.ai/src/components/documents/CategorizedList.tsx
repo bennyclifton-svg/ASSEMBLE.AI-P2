@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload, Download, Check } from 'lucide-react';
+import { Loader2, Folder, ChevronUp, ChevronDown, Trash, FileText, Upload, Download, Check, AlertCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { useSyncStatus, SyncStatus } from '@/lib/hooks/use-sync-status';
 import { useRenderLoopGuard, useStableArray } from '@/lib/hooks/use-render-loop-guard';
@@ -27,7 +27,7 @@ function SyncStatusDiamond({ status }: { status: SyncStatus | null }) {
     }
 
     const colorMap = {
-        synced: 'text-[var(--color-accent-green)]',
+        synced: 'text-[var(--color-accent-gold)]',
         pending: 'text-[var(--color-accent-yellow)]',
         processing: 'text-[var(--color-accent-yellow)]',
         failed: 'text-[var(--color-accent-coral)]',
@@ -92,9 +92,11 @@ interface CategorizedListProps {
     processingCount?: number;
     /** Callback when files are dropped onto the table (uploaded as uncategorized). */
     onFilesDropped?: (files: File[]) => void;
+    /** Callback fired when background processing status changes (drawing extraction / RAG ingestion). */
+    onProcessingStatusChange?: (status: { ingestingCount: number; hasProcessingDrawings: boolean }) => void;
 }
 
-export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef, filterCategoryId, filterSubcategoryId, filterBySyncedOnly, isProcessing, processingCount, onFilesDropped }: CategorizedListProps) {
+export function CategorizedList({ refreshTrigger, projectId, selectedIds: externalSelectedIds, onSelectionChange, scrollContainerRef, filterCategoryId, filterSubcategoryId, filterBySyncedOnly, onFilesDropped, onProcessingStatusChange }: CategorizedListProps) {
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(externalSelectedIds || new Set());
@@ -371,6 +373,12 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         ).length;
     }, [syncStatuses]);
 
+    // Bubble background processing status up to the parent so it can render
+    // a sticky status banner above the scrollable list.
+    useEffect(() => {
+        onProcessingStatusChange?.({ ingestingCount, hasProcessingDrawings });
+    }, [ingestingCount, hasProcessingDrawings, onProcessingStatusChange]);
+
     // Poll for drawing extraction status updates
     useEffect(() => {
         // Skip polling during cooldown to prevent render loops
@@ -606,63 +614,11 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 </div>
             )}
 
-            {/* Processing Banner */}
-            {isProcessing && processingCount && processingCount > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-[var(--sw-rule-2)]">
-                    <svg
-                        width={16}
-                        height={16}
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="animate-diamond-spin text-[var(--sw-rose)]"
-                    >
-                        <path
-                            d="M8 1L15 8L8 15L1 8L8 1Z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            fill="none"
-                        />
-                        <path
-                            d="M8 4.5L11.5 8L8 11.5L4.5 8L8 4.5Z"
-                            fill="currentColor"
-                        />
-                    </svg>
-                    <span className="text-xs text-[var(--sw-ink)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
-                        Processing {processingCount} file{processingCount !== 1 ? 's' : ''}...
-                    </span>
-                </div>
-            )}
-
-            {/* RAG Ingestion Banner */}
-            {ingestingCount > 0 && (
-                <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-[var(--sw-rule-2)]">
-                    <svg
-                        width={16}
-                        height={16}
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="animate-diamond-spin text-[var(--sw-cyan)] flex-shrink-0"
-                    >
-                        <path
-                            d="M8 1L15 8L8 15L1 8L8 1Z"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            fill="none"
-                        />
-                    </svg>
-                    <span className="text-xs text-[var(--sw-ink)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
-                        Ingestion in progress - {ingestingCount} document{ingestingCount !== 1 ? 's' : ''} syncing to AI knowledge base
-                    </span>
-                </div>
-            )}
-
             {/* Empty State */}
             {filteredDocuments.length === 0 ? (
                 <div
                     className="m-4 border border-dashed flex flex-col items-center justify-center h-32 gap-2"
-                    style={{ borderColor: 'var(--sw-rule)', background: 'white' }}
+                    style={{ borderColor: 'var(--sw-rule)', background: '#F6FBFB' }}
                 >
                     {filterBySyncedOnly || filterCategoryId ? (
                         <p className="text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
@@ -683,11 +639,11 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
             <>
             {/* Table Toolbar */}
             <div
-                className="flex items-center justify-between gap-2 px-4 py-3"
+                className="flex items-center justify-between gap-2 px-4 py-1"
                 style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
             >
                 <div
-                    className="text-sm font-semibold"
+                    className="text-[11px] font-semibold"
                     style={{ fontFamily: 'var(--sw-font-mono)', color: 'var(--sw-ink)' }}
                 >
                     {selectedIds.size > 0 ? `${selectedIds.size} selected` : null}
@@ -695,28 +651,28 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                 <button
                     onClick={handleDownload}
                     disabled={selectedIds.size === 0 || isDownloading}
-                    className="flex items-center gap-1.5 px-1 py-1 text-xs font-semibold text-[var(--sw-muted)] hover:text-[var(--sw-ink)] transition-colors disabled:opacity-45"
+                    className="flex items-center gap-1 px-1 py-0.5 text-[11px] font-semibold text-[var(--sw-muted)] hover:text-[var(--sw-ink)] transition-colors disabled:opacity-45"
                     style={{ fontFamily: 'var(--sw-font-mono)' }}
                     title={selectedIds.size === 0 ? 'Select documents to download' : `Download ${selectedIds.size} document${selectedIds.size !== 1 ? 's' : ''}`}
                 >
                     {isDownloading ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                        <Download className="h-3.5 w-3.5" />
+                        <Download className="h-3 w-3" />
                     )}
                     {isDownloading ? 'Downloading...' : 'Download'}
                 </button>
             </div>
-            <div className="overflow-hidden @container" style={{ background: 'white' }}>
+            <div className="overflow-hidden @container" style={{ background: '#F6FBFB' }}>
                 <div className="relative w-full">
                     <table
                         className="w-full caption-bottom text-[11px] table-fixed"
                         style={{ fontFamily: 'var(--sw-font-mono)', lineHeight: 1.1 }}
                     >
                         <TableHeader>
-                            <TableRow className="border-[var(--sw-rule-2)]" style={{ background: 'white' }}>
+                            <TableRow className="border-[var(--sw-rule-2)]" style={{ background: '#F6FBFB' }}>
                                 <TableHead
-                                    className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase w-16 !px-4 cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
+                                    className="text-[10px] font-semibold text-[var(--sw-muted)] uppercase w-28 !px-4 cursor-pointer hover:text-[var(--sw-ink)] select-none transition-colors"
                                     style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
                                     onClick={() => handleSort('drawingNumber')}
                                 >
@@ -870,10 +826,10 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                         onClick={(e) => handleSelect(doc.id, e)}
                                     >
                                          <TableCell
-                                             className="w-16 !px-4 !py-1 text-[11px]"
+                                             className="w-28 !px-4 !py-1 text-[11px]"
                                              style={{
                                                  fontFamily: 'var(--sw-font-mono)',
-                                                 color: doc.drawingNumber ? 'var(--sw-lav)' : 'var(--sw-muted)',
+                                                 color: doc.drawingNumber ? 'var(--sw-cta)' : 'var(--sw-muted)',
                                              }}
                                          >
                                              {doc.drawingExtractionStatus === 'PROCESSING' ? (
@@ -881,6 +837,16 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
                                              ) : doc.drawingNumber ? (
                                                  <span className="truncate block" title={doc.drawingNumber}>
                                                      {doc.drawingNumber}
+                                                 </span>
+                                             ) : doc.drawingExtractionStatus === 'FAILED' ? (
+                                                 <span
+                                                     title="Drawing extraction failed — check worker logs (e.g. API credit balance or quota). Use the reprocess action to retry."
+                                                     className="inline-flex items-center"
+                                                 >
+                                                     <AlertCircle
+                                                         className="w-3.5 h-3.5 text-[var(--color-accent-coral)]"
+                                                         aria-label="Drawing extraction failed"
+                                                     />
                                                  </span>
                                              ) : (
                                                  <span>-</span>

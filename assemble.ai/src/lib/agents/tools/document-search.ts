@@ -1,5 +1,11 @@
 import { ilike, or, sql, type SQL } from 'drizzle-orm';
-import { fileAssets } from '@/lib/db/pg-schema';
+import {
+    categories,
+    consultantDisciplines,
+    contractorTrades,
+    fileAssets,
+    subcategories,
+} from '@/lib/db/pg-schema';
 
 export function buildDocumentTextSearchTerms(value: string): string[] {
     const trimmed = normaliseWhitespace(value);
@@ -45,6 +51,23 @@ export function documentTitleSearchCondition(value: string): SQL {
     }
 
     return conditions.length > 0 ? or(...conditions)! : sql`false`;
+}
+
+export function documentScopeSearchCondition(value: string): SQL {
+    const terms = buildDocumentTextSearchTerms(value);
+    const conditions: SQL[] = [];
+
+    for (const term of terms) {
+        const pattern = `%${term}%`;
+        conditions.push(
+            sql`COALESCE(${subcategories.name}, ${consultantDisciplines.disciplineName}, ${contractorTrades.tradeName}) ILIKE ${pattern}`,
+            ilike(categories.name, pattern)
+        );
+    }
+
+    return conditions.length > 0
+        ? or(...conditions, documentTitleSearchCondition(value))!
+        : documentTitleSearchCondition(value);
 }
 
 function normaliseWhitespace(value: string): string {

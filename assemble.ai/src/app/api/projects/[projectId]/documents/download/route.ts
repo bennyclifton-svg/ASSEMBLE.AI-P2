@@ -11,6 +11,7 @@ import { documents, versions, fileAssets } from '@/lib/db';
 import { eq, inArray, and } from 'drizzle-orm';
 import JSZip from 'jszip';
 import { getFileFromStorage } from '@/lib/storage';
+import { isAccessDenied, requireExportProjectAccess } from '@/lib/auth/project-access';
 
 interface RouteContext {
     params: Promise<{ projectId: string }>;
@@ -19,6 +20,9 @@ interface RouteContext {
 export async function POST(request: NextRequest, context: RouteContext) {
     return handleApiError(async () => {
         const { projectId } = await context.params;
+        const access = await requireExportProjectAccess(projectId);
+        if (isAccessDenied(access)) return access.response;
+
         const body = await request.json();
         const { documentIds } = body as { documentIds: unknown };
 

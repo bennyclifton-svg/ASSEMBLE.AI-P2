@@ -6,13 +6,15 @@ import { CheckCircle, XCircle, Receipt } from 'lucide-react';
 import { SubscriptionCard } from './SubscriptionCard';
 import { PricingCard } from './PricingCard';
 import { CustomerPortalButton } from './CustomerPortalButton';
-import { getAllPlans } from '@/lib/polar/plans';
+import { getPublicPlans } from '@/lib/polar/plans';
 
 interface SubscriptionData {
     currentPlanId: string;
     subscriptionStatus: string;
     currentPeriodEnd: number | null;
     cancelAtPeriodEnd: boolean;
+    hasPolarCustomer: boolean;
+    readOnly?: boolean;
 }
 
 interface Transaction {
@@ -37,11 +39,13 @@ export function BillingPanel() {
         subscriptionStatus: 'free',
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
+        hasPolarCustomer: false,
+        readOnly: false,
     });
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const plans = getAllPlans();
+    const plans = getPublicPlans();
 
     useEffect(() => {
         async function fetchData() {
@@ -132,6 +136,15 @@ export function BillingPanel() {
                     />
                 </section>
 
+                {subscription.readOnly && (
+                    <section className="sitewise-card mb-12 border-l-[3px] border-l-[var(--sw-rose)] p-6">
+                        <div className="sitewise-section-label mb-2">Read-only state</div>
+                        <p className="text-sm text-[var(--sw-muted)]">
+                            Export and viewing stay available. Upgrade or update billing to create, edit, upload, and run AI actions again.
+                        </p>
+                    </section>
+                )}
+
                 {/* Available Plans */}
                 <section>
                     <div className="sitewise-section-label mb-4">Available Plans</div>
@@ -148,7 +161,7 @@ export function BillingPanel() {
                 </section>
 
                 {/* Manage Subscription Link */}
-                {subscription.currentPlanId !== 'free' && (
+                {subscription.hasPolarCustomer && (
                     <section className="sitewise-card mt-12 p-6">
                         <div className="sitewise-section-label mb-2">Need to make changes?</div>
                         <p className="mb-4 text-[var(--sw-muted)]">
@@ -191,7 +204,7 @@ export function BillingPanel() {
                                             <td className="px-4 py-3 text-sm">
                                                 {tx.productName || 'Subscription'}
                                             </td>
-                                            <td className="px-4 py-3 text-sm">
+                                            <td className="px-4 py-3 text-sm text-[var(--role-money)] font-mono">
                                                 ${(tx.amountCents / 100).toFixed(2)} {(tx.currency || 'USD').toUpperCase()}
                                             </td>
                                             <td className="px-4 py-3">

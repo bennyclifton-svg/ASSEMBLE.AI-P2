@@ -20,6 +20,8 @@ import {
     addenda,
     consultants,
     contractors,
+    evaluations,
+    clarifications,
 } from '@/lib/db/pg-schema';
 import {
     buildSystemPrompt,
@@ -29,6 +31,7 @@ import {
 } from '@/lib/prompts/system-prompts';
 import { assembleContext } from '@/lib/context/orchestrator';
 import { normalizeTag, isKnownTag } from '@/lib/constants/knowledge-domains';
+import { selectActiveTrrEvaluationPrice } from '@/lib/evaluation/trr-linkage';
 
 type TrrField = 'executiveSummary' | 'clarifications' | 'recommendation';
 
@@ -91,10 +94,15 @@ async function fetchTrrContext(trrId: string) {
     }
 
     // Fetch evaluation price data
-    const firms = await fetchFirmPriceData(trrRecord.projectId, trrRecord.stakeholderId, stakeholderGroup);
+    const firms = await fetchFirmPriceData(
+        trrRecord.projectId,
+        trrRecord.stakeholderId,
+        stakeholderGroup,
+        trrRecord.evaluationPriceId
+    );
 
     // Fetch non-price scores
-    const nonPriceScores = await fetchNonPriceScores(trrRecord.projectId, trrRecord.stakeholderId);
+    const nonPriceScores = await fetchNonPriceScores();
 
     // Fetch addenda count
     const addendaList = trrRecord.stakeholderId
@@ -107,6 +115,29 @@ async function fetchTrrContext(trrId: string) {
             ))
         : [];
 
+    const evaluation = trrRecord.stakeholderId
+        ? await db.query.evaluations.findFirst({
+            where: and(
+                eq(evaluations.projectId, trrRecord.projectId),
+                eq(evaluations.stakeholderId, trrRecord.stakeholderId)
+            ),
+        })
+        : null;
+
+    const unresolvedMaterialClarifications = evaluation
+        ? await db.query.clarifications.findMany({
+            where: and(
+                eq(clarifications.evaluationId, evaluation.id),
+                eq(clarifications.materiality, 'high')
+            ),
+        })
+        : [];
+
+    const unresolvedClarificationText = unresolvedMaterialClarifications
+        .filter((item) => item.status !== 'responded' && item.status !== 'closed')
+        .map((item, index) => `${index + 1}. ${item.questionText}`)
+        .join('\n');
+
     return {
         trrRecord,
         projectName: details?.projectName || 'Untitled Project',
@@ -115,6 +146,7 @@ async function fetchTrrContext(trrId: string) {
         firms,
         nonPriceScores,
         addendaCount: addendaList.length,
+        unresolvedClarificationText,
         rftDate: null as string | null, // TODO: fetch from RFT if available
     };
 }
@@ -122,7 +154,8 @@ async function fetchTrrContext(trrId: string) {
 async function fetchFirmPriceData(
     projectId: string,
     stakeholderId: string | null,
-    stakeholderGroup: string
+    stakeholderGroup: string,
+    trrEvaluationPriceId?: string | null
 ): Promise<FirmPriceData[]> {
     if (!stakeholderId) return [];
 
@@ -136,8 +169,12 @@ async function fetchFirmPriceData(
                 eq(evaluationPrice.stakeholderId, stakeholderId)
             ));
 
-        if (priceInstances.length === 0) return [];
-        const evalPriceId = priceInstances[0].id;
+        const activePrice = selectActiveTrrEvaluationPrice({
+            trrEvaluationPriceId,
+            priceInstances,
+        });
+        if (!activePrice) return [];
+        const evalPriceId = activePrice.id;
 
         // Fetch rows and cells
         const rows = await db
@@ -148,16 +185,8 @@ async function fetchFirmPriceData(
         if (rows.length === 0) return [];
 
         const rowIds = rows.map(r => r.id);
-        const allCells = await db
-            .select()
-            .from(evaluationCells)
-            .where(
-                // drizzle doesn't have inArray for this context, use raw query approach
-                eq(evaluationCells.rowId, rowIds[0]) // Will need to collect all
-            );
-
         // Actually fetch all cells for all rows
-        const cellsByRow = new Map<string, typeof allCells>();
+        const cellsByRow = new Map<string, Array<typeof evaluationCells.$inferSelect>>();
         for (const rowId of rowIds) {
             const cells = await db
                 .select()
@@ -235,10 +264,7 @@ async function fetchFirmPriceData(
     }
 }
 
-async function fetchNonPriceScores(
-    _projectId: string,
-    _stakeholderId: string | null
-): Promise<NonPriceScore[]> {
+async function fetchNonPriceScores(): Promise<NonPriceScore[]> {
     // TODO: Implement non-price score fetching from evaluation_non_price tables
     // For now, TRR generation proceeds without non-price data and the prompts
     // handle the empty case gracefully (noting data was unavailable).
@@ -274,7 +300,7 @@ export async function POST(
             );
         }
 
-        const { trrRecord, projectName, contextName, firms, nonPriceScores, addendaCount, rftDate } = context;
+        const { trrRecord, projectName, contextName, firms, nonPriceScores, addendaCount, unresolvedClarificationText, rftDate } = context;
 
         // Derive discipline tag from stakeholder's disciplineOrTrade (e.g. "Structural" → "structural")
         const normalizedDiscipline = normalizeTag(contextName);
@@ -345,7 +371,10 @@ export async function POST(
                     })),
                     nonPriceScores,
                     addendaCount,
-                    existingContent: trrRecord.clarifications || undefined,
+                    existingContent: [
+                        trrRecord.clarifications || '',
+                        unresolvedClarificationText ? `Unresolved material clarifications:\n${unresolvedClarificationText}` : '',
+                    ].filter(Boolean).join('\n\n') || undefined,
                 });
                 break;
 
@@ -360,7 +389,10 @@ export async function POST(
                         isLowest: f.isLowest,
                     })),
                     nonPriceLeader: nonPriceScores.length > 0 ? nonPriceScores[0].firmName : null,
-                    existingClarifications: trrRecord.clarifications || undefined,
+                    existingClarifications: [
+                        trrRecord.clarifications || '',
+                        unresolvedClarificationText ? `Unresolved material clarifications:\n${unresolvedClarificationText}` : '',
+                    ].filter(Boolean).join('\n\n') || undefined,
                     existingExecutiveSummary: trrRecord.executiveSummary || undefined,
                 });
                 break;
@@ -408,10 +440,15 @@ export async function POST(
             },
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[trr-generate] Error:', error);
 
-        if (error?.status === 529) {
+        if (
+            typeof error === 'object' &&
+            error !== null &&
+            'status' in error &&
+            (error as { status?: unknown }).status === 529
+        ) {
             return NextResponse.json(
                 { error: 'AI service is temporarily busy. Please try again.' },
                 { status: 503 }

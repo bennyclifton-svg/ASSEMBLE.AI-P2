@@ -1,6 +1,6 @@
 /**
  * Pricing Page
- * Dedicated pricing page with tier comparison
+ * Dedicated pricing page with tier comparison.
  */
 
 'use client';
@@ -8,6 +8,7 @@
 import { NavBar } from '@/components/landing/NavBar';
 import { PricingSection } from '@/components/landing/PricingSection';
 import { FooterSection } from '@/components/landing/FooterSection';
+import { PUBLIC_SAAS_TRIAL } from '@/lib/polar/plans';
 
 export default function PricingPage() {
     return (
@@ -16,7 +17,6 @@ export default function PricingPage() {
             <main className="pt-16">
                 <PricingSection showToggle={true} />
 
-                {/* FAQ Section */}
                 <section className="border-t border-gray-800 py-20">
                     <div className="mx-auto max-w-3xl px-6 lg:px-8">
                         <h2 className="text-center text-2xl font-bold text-white">
@@ -51,8 +51,7 @@ const faqs = [
     },
     {
         question: 'Is there a free trial?',
-        answer:
-            'Yes — every paid plan starts with a 14-day free trial of the full agent team. No credit card required to start. You\'re only charged after the trial if you decide to continue.',
+        answer: `Yes. Starter and Professional both include a ${PUBLIC_SAAS_TRIAL.days}-day no-card trial with full feature access, capped at ${PUBLIC_SAAS_TRIAL.limits.maxProjects} project, ${PUBLIC_SAAS_TRIAL.limits.maxDocuments} documents, and ${PUBLIC_SAAS_TRIAL.limits.maxAiActions} AI actions.`,
     },
     {
         question: 'What happens to my data if I cancel?',
@@ -60,13 +59,13 @@ const faqs = [
             'Your projects stay accessible in read-only mode for 30 days after cancellation. Export at any time before then. After 30 days, project data is permanently deleted.',
     },
     {
-        question: 'Which agents do I get on each plan?',
+        question: 'Which workflows do I get on each plan?',
         answer:
-            'Free includes the Procurement Agent in a limited form. Starter adds the Correspondence Agent. Professional unlocks the full team — Feasibility, Design, Procurement, Delivery, Finance, Program and Correspondence — across unlimited projects.',
+            'Starter includes the core document, procurement, and correspondence workflows for focused project use. Professional unlocks the full project agent and workflow set across unlimited projects.',
     },
     {
         question: 'Is Sitewise for head contractors?',
         answer:
-            'No — Sitewise is built for the client side of the table. Architects, project managers and in-house developer teams running building projects on behalf of an owner. Head contractors have their own tools.',
+            'No. Sitewise is built for the client side of the table: architects, project managers, and in-house developer teams running building projects on behalf of an owner.',
     },
 ];

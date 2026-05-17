@@ -17,15 +17,18 @@ import {
     fileAssets,
     categories,
     projectStakeholders,
+    tenderSubmissionPackages,
     tenderSubmissions,
 } from '@/lib/db';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';
 import { versioning } from '@/lib/versioning';
 import { parseNonPriceTender } from '@/lib/services/non-price-parser';
 import { NON_PRICE_CRITERIA } from '@/lib/constants/non-price-criteria';
+import { applyRecommendationEvent } from '@/lib/evaluation/recommendation-state';
+import { storeArtefact } from '@/lib/evaluation/artefact-store';
 import type { QualityRating } from '@/types/evaluation';
 
 interface RouteParams {
@@ -166,6 +169,8 @@ export async function POST(
 
         // Upload PDF to document repository (FR-017)
         let uploadedFileAssetId: string | null = null;
+        let uploadedDocumentId: string | null = null;
+        let uploadedVersionId: string | null = null;
         try {
             const { path: storagePath, hash, size } = await storage.save(file, buffer);
 
@@ -215,9 +220,11 @@ export async function POST(
                 });
                 console.log(`[non-price-parse] Created new document ${documentId}`);
             }
+            uploadedDocumentId = documentId;
 
             // Create version
             const versionId = uuidv4();
+            uploadedVersionId = versionId;
             await db.insert(versions).values({
                 id: versionId,
                 documentId,
@@ -237,21 +244,94 @@ export async function POST(
             // Continue even if upload fails - the parsing result is more important
         }
 
+        const existingPackage = await db.query.tenderSubmissionPackages.findFirst({
+            where: and(
+                eq(tenderSubmissionPackages.evaluationId, evaluation.id),
+                isNull(tenderSubmissionPackages.evaluationPriceId),
+                eq(tenderSubmissionPackages.firmId, firmId),
+                eq(tenderSubmissionPackages.firmType, firmType)
+            ),
+        });
+
+        const packageId = existingPackage?.id || nanoid();
+        if (existingPackage) {
+            await db.update(tenderSubmissionPackages)
+                .set({ updatedAt: new Date(), status: 'active' })
+                .where(eq(tenderSubmissionPackages.id, packageId));
+        } else {
+            await db.insert(tenderSubmissionPackages).values({
+                id: packageId,
+                evaluationId: evaluation.id,
+                firmId,
+                firmType,
+                status: 'active',
+            });
+        }
+
         // T033: Create tender_submission record for audit trail
         const submissionId = nanoid();
         await db.insert(tenderSubmissions).values({
             id: submissionId,
             evaluationId: evaluation.id,
+            packageId,
             firmId,
             firmType,
             filename: file.name,
+            documentId: uploadedDocumentId,
+            versionId: uploadedVersionId,
             fileAssetId: uploadedFileAssetId,
             parserUsed: 'claude',
             confidence: Math.round(parseResult.overallConfidence),
-            rawExtractedItems: JSON.stringify(parseResult.results),
+            rawExtractedItems: JSON.stringify({
+                criteriaCount: parseResult.results.length,
+            }),
         });
 
+        try {
+            const artefact = await storeArtefact({
+                kind: 'full_extraction',
+                content: {
+                    results: parseResult.results,
+                    filename: file.name,
+                },
+                relations: {
+                    evaluationId: evaluation.id,
+                    packageId,
+                    submissionId,
+                },
+                metadata: {
+                    parserUsed: 'claude',
+                    confidence: parseResult.overallConfidence,
+                    evaluationSurface: 'non_price',
+                },
+            });
+
+            await db.update(tenderSubmissions)
+                .set({
+                    rawExtractedItems: JSON.stringify({
+                        artefactId: artefact.id,
+                        criteriaCount: parseResult.results.length,
+                    }),
+                })
+                .where(eq(tenderSubmissions.id, submissionId));
+        } catch (artefactError) {
+            console.warn('[non-price-parse] Failed to store full extraction artefact:', artefactError);
+            await db.update(tenderSubmissions)
+                .set({ rawExtractedItems: JSON.stringify(parseResult.results) })
+                .where(eq(tenderSubmissions.id, submissionId));
+        }
+
         console.log(`[non-price-parse] Created tender submission record: ${submissionId}`);
+
+        const nextRecommendationState = applyRecommendationEvent(
+            (evaluation.recommendationState ?? 'draft') as 'draft' | 'conditional' | 'final',
+            'new_tender_file_attached'
+        );
+        if (nextRecommendationState !== evaluation.recommendationState) {
+            await db.update(evaluations)
+                .set({ recommendationState: nextRecommendationState, updatedAt: new Date() })
+                .where(eq(evaluations.id, evaluation.id));
+        }
 
         // T031: Store extraction results - Create/update cells for all 7 criteria
         // T032: Preserve user edits - only update AI fields, not userEdited fields

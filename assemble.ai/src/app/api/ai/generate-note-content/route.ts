@@ -14,14 +14,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { generateNoteContentSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { generateNoteContent } from '@/lib/services/note-content-generation';
+import {
+    markAiActionFailed,
+    markAiActionSucceeded,
+    requireAiActionAllowed,
+} from '@/lib/subscription/ai-usage-meter';
 import type { GenerateNoteContentResponse } from '@/types/notes-meetings-reports';
 
 export async function POST(req: NextRequest) {
+    let aiUsageEventId: string | null = null;
+
     try {
         // Authenticate user
         const authResult = await getCurrentUser();
         if (!authResult.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        if (!authResult.user.organizationId) {
+            return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
         }
 
         // Parse and validate request body
@@ -36,6 +46,15 @@ export async function POST(req: NextRequest) {
         }
 
         const request = validationResult.data;
+        const aiGate = await requireAiActionAllowed({
+            userId: authResult.user.id,
+            organizationId: authResult.user.organizationId,
+            projectId: request.projectId,
+            action: 'ai.generate-note-content',
+            metadata: { noteId: request.noteId },
+        });
+        if (!aiGate.allowed) return aiGate.response;
+        aiUsageEventId = aiGate.eventId;
 
         // Generate content
         const result: GenerateNoteContentResponse = await generateNoteContent({
@@ -44,10 +63,14 @@ export async function POST(req: NextRequest) {
             existingContent: request.existingContent,
             existingTitle: request.existingTitle,
         });
+        await markAiActionSucceeded(aiUsageEventId);
 
         return NextResponse.json(result);
 
     } catch (error) {
+        if (aiUsageEventId) {
+            await markAiActionFailed(aiUsageEventId, error);
+        }
         console.error('[ai/generate-note-content] Error:', error);
 
         return NextResponse.json(

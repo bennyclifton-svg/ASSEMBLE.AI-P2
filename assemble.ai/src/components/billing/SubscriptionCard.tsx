@@ -63,6 +63,27 @@ export function SubscriptionCard({
                 icon: Clock,
             };
         }
+        if (status === 'active_trial') {
+            return {
+                label: 'Trial',
+                chipClass: 'sitewise-chip-cyan',
+                icon: Clock,
+            };
+        }
+        if (status === 'expired_trial') {
+            return {
+                label: 'Trial Expired',
+                chipClass: 'sitewise-chip-rose',
+                icon: AlertCircle,
+            };
+        }
+        if (status === 'missing_subscription') {
+            return {
+                label: 'Read Only',
+                chipClass: 'sitewise-chip-amber',
+                icon: AlertCircle,
+            };
+        }
         if (status === 'canceled') {
             return {
                 label: 'Canceled',

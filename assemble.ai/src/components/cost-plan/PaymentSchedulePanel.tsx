@@ -206,15 +206,18 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
     // TRR-style cell classes
     const tdClass = 'px-4 py-2.5 text-sm';
     const tdRight = `${tdClass} text-right tabular-nums`;
+    // Semantic role styles — money values, identifiers, awaiting-approval status.
+    const moneyStyle = { color: 'var(--role-money)' } as const;
+    const idStyle = { color: 'var(--role-id)' } as const;
 
     if (!selectedStakeholderId) {
         return (
-            <div className="h-full flex flex-col" style={{ background: 'var(--sw-paper)' }}>
+            <div className="h-full flex flex-col" style={{ background: 'var(--sw-canvas)' }}>
                 {/* Toolbar */}
                 <div
                     className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
                     style={{
-                        background: 'var(--sw-paper)',
+                        background: 'var(--sw-canvas)',
                         borderBottom: '1px solid var(--sw-rule)',
                     }}
                 >
@@ -280,12 +283,12 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
     }
 
     return (
-        <div className="h-full flex flex-col" style={{ background: 'var(--sw-paper)' }}>
+        <div className="h-full flex flex-col" style={{ background: 'var(--sw-canvas)' }}>
             {/* Toolbar */}
             <div
                 className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
                 style={{
-                    background: 'var(--sw-paper)',
+                    background: 'var(--sw-canvas)',
                     borderBottom: '1px solid var(--sw-rule)',
                 }}
             >
@@ -344,13 +347,13 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
             </div>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-auto p-4" style={{ background: 'var(--sw-paper)' }}>
+            <div className="flex-1 overflow-auto p-4" style={{ background: 'var(--sw-canvas)' }}>
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full">
                         <p className="text-sm text-[var(--color-text-muted)]">Loading...</p>
                     </div>
                 ) : (
-                    <div className="max-w-[900px] mx-auto p-6 bg-white rounded-md shadow-sm space-y-6">
+                    <div className="max-w-[900px] mx-auto p-6 bg-[var(--sw-shell)] rounded-md shadow-sm space-y-6">
                         {/* ============================================================ */}
                         {/* HEADER SECTION */}
                         {/* ============================================================ */}
@@ -443,11 +446,11 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                                         <tr key={cl.id}>
                                                             <td className="px-4 py-2.5 text-black/60">{idx + 1}</td>
                                                             <td className="px-4 py-2.5 text-black">{cl.activity}</td>
-                                                            <td className={tdRight + ' text-black'}>{formatCurrency(totalLet)}</td>
+                                                            <td className={tdRight} style={moneyStyle}>{formatCurrency(totalLet)}</td>
                                                             <td className={tdRight + ' text-black/60'}>{pct}</td>
-                                                            <td className={tdRight + ' text-black'}>{formatCurrency(completed)}</td>
-                                                            <td className={tdRight + ' text-black'}>{formatCurrency(lessPrior)}</td>
-                                                            <td className={tdRight + ' text-black'}>{formatCurrency(thisClaim)}</td>
+                                                            <td className={tdRight} style={moneyStyle}>{formatCurrency(completed)}</td>
+                                                            <td className={tdRight} style={moneyStyle}>{formatCurrency(lessPrior)}</td>
+                                                            <td className={tdRight} style={moneyStyle}>{formatCurrency(thisClaim)}</td>
                                                         </tr>
                                                     );
                                                 })}
@@ -455,13 +458,13 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                                 <tr className="border-t border-[var(--color-border)]">
                                                     <td className="px-4 py-2.5" />
                                                     <td className="px-4 py-2.5 text-black font-semibold">SUB TOTAL ($)</td>
-                                                    <td className={tdRight + ' text-black font-semibold'}>{formatCurrency(contractSubtotal.totalLet)}</td>
+                                                    <td className={tdRight + ' font-semibold'} style={moneyStyle}>{formatCurrency(contractSubtotal.totalLet)}</td>
                                                     <td className={tdRight + ' text-black/60'}>
                                                         {completionPct(contractSubtotal.completedToDate, contractSubtotal.totalLet)}
                                                     </td>
-                                                    <td className={tdRight + ' text-black font-semibold'}>{formatCurrency(contractSubtotal.completedToDate)}</td>
-                                                    <td className={tdRight + ' text-black font-semibold'}>{formatCurrency(contractSubtotal.lessPrior)}</td>
-                                                    <td className={tdRight + ' text-black font-semibold'}>{formatCurrency(contractSubtotal.thisClaim)}</td>
+                                                    <td className={tdRight + ' font-semibold'} style={moneyStyle}>{formatCurrency(contractSubtotal.completedToDate)}</td>
+                                                    <td className={tdRight + ' font-semibold'} style={moneyStyle}>{formatCurrency(contractSubtotal.lessPrior)}</td>
+                                                    <td className={tdRight + ' font-semibold'} style={moneyStyle}>{formatCurrency(contractSubtotal.thisClaim)}</td>
                                                 </tr>
                                             </>
                                         )}
@@ -520,28 +523,36 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                                         <tr key={v.id}>
                                                             <td className="px-4 py-2.5 text-black/60" />
                                                             <td className="px-4 py-2.5 text-black">
-                                                                <span className="font-medium">{v.variationNumber}</span>
+                                                                <span className="font-medium" style={idStyle}>{v.variationNumber}</span>
                                                                 <span className="mx-1">-</span>
                                                                 {v.description}
                                                                 {!isApproved && (
-                                                                    <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">
+                                                                    <span
+                                                                        className="ml-2 px-1.5 py-0.5 rounded"
+                                                                        style={{
+                                                                            font: 'var(--type-mono)',
+                                                                            letterSpacing: 'var(--type-mono-tracking)',
+                                                                            color: 'var(--role-attention)',
+                                                                            backgroundColor: 'color-mix(in oklab, var(--role-attention) 14%, transparent)',
+                                                                        }}
+                                                                    >
                                                                         Forecast
                                                                     </span>
                                                                 )}
                                                             </td>
-                                                            <td className={tdRight + ' text-black'}>
+                                                            <td className={tdRight} style={moneyStyle}>
                                                                 {isApproved ? formatCurrency(approvedAmt) : '—'}
                                                             </td>
                                                             <td className={tdRight + ' text-black/60'}>
                                                                 {approvedAmt > 0 ? completionPct(vCompleted, approvedAmt) : '—'}
                                                             </td>
-                                                            <td className={tdRight + ' text-black'}>
+                                                            <td className={tdRight} style={moneyStyle}>
                                                                 {vCompleted > 0 ? formatCurrency(vCompleted) : '—'}
                                                             </td>
-                                                            <td className={tdRight + ' text-black'}>
+                                                            <td className={tdRight} style={moneyStyle}>
                                                                 {vCompleted > 0 ? formatCurrency(vLessPrior) : '—'}
                                                             </td>
-                                                            <td className={tdRight + ' text-black'}>
+                                                            <td className={tdRight} style={moneyStyle}>
                                                                 {vThisClaim > 0 ? formatCurrency(vThisClaim) : '—'}
                                                             </td>
                                                         </tr>
@@ -551,11 +562,11 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                                 <tr className="border-t border-[var(--color-border)]">
                                                     <td className="px-4 py-2.5" />
                                                     <td className="px-4 py-2.5 text-black font-semibold">SUB TOTAL ($)</td>
-                                                    <td className={tdRight + ' text-black font-semibold'}>{formatCurrency(variationSubtotal.approved)}</td>
+                                                    <td className={tdRight + ' font-semibold'} style={moneyStyle}>{formatCurrency(variationSubtotal.approved)}</td>
                                                     <td className={tdRight} />
-                                                    <td className={tdRight + ' text-black font-semibold'}>{formatCurrency(variationSubtotal.completedToDate)}</td>
-                                                    <td className={tdRight + ' text-black font-semibold'}>{formatCurrency(variationSubtotal.lessPrior)}</td>
-                                                    <td className={tdRight + ' text-black font-semibold'}>{formatCurrency(variationSubtotal.thisClaim)}</td>
+                                                    <td className={tdRight + ' font-semibold'} style={moneyStyle}>{formatCurrency(variationSubtotal.completedToDate)}</td>
+                                                    <td className={tdRight + ' font-semibold'} style={moneyStyle}>{formatCurrency(variationSubtotal.lessPrior)}</td>
+                                                    <td className={tdRight + ' font-semibold'} style={moneyStyle}>{formatCurrency(variationSubtotal.thisClaim)}</td>
                                                 </tr>
                                             </>
                                         )}
@@ -597,13 +608,13 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                         <tr className="border-t border-[var(--color-border)]">
                                             <td className="px-4 py-2.5" />
                                             <td className="px-4 py-2.5 text-black font-bold">TOTAL (EXC GST)</td>
-                                            <td className={tdRight + ' text-black font-bold'}>{formatCurrency(adjustedTotal.grandTotalLet)}</td>
+                                            <td className={tdRight + ' font-bold'} style={moneyStyle}>{formatCurrency(adjustedTotal.grandTotalLet)}</td>
                                             <td className={tdRight + ' text-black/60'}>
                                                 {completionPct(adjustedTotal.grandCompletedToDate, adjustedTotal.grandTotalLet)}
                                             </td>
-                                            <td className={tdRight + ' text-black font-bold'}>{formatCurrency(adjustedTotal.grandCompletedToDate)}</td>
-                                            <td className={tdRight + ' text-black font-bold'}>{formatCurrency(adjustedTotal.grandLessPrior)}</td>
-                                            <td className={tdRight + ' text-black font-bold'}>{formatCurrency(adjustedTotal.grandThisClaim)}</td>
+                                            <td className={tdRight + ' font-bold'} style={moneyStyle}>{formatCurrency(adjustedTotal.grandCompletedToDate)}</td>
+                                            <td className={tdRight + ' font-bold'} style={moneyStyle}>{formatCurrency(adjustedTotal.grandLessPrior)}</td>
+                                            <td className={tdRight + ' font-bold'} style={moneyStyle}>{formatCurrency(adjustedTotal.grandThisClaim)}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -614,19 +625,19 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                         <tbody>
                                             <tr>
                                                 <td className="pr-8 py-1.5 text-black/60 font-medium">TOTAL (EXC GST)</td>
-                                                <td className="text-right py-1.5 tabular-nums font-semibold text-black">
+                                                <td className="text-right py-1.5 tabular-nums font-semibold" style={moneyStyle}>
                                                     {formatCurrency(adjustedTotal.totalExGst)}
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td className="pr-8 py-1.5 text-black/60 font-medium">GST ($)</td>
-                                                <td className="text-right py-1.5 tabular-nums text-black">
+                                                <td className="text-right py-1.5 tabular-nums" style={moneyStyle}>
                                                     {formatCurrency(adjustedTotal.gst)}
                                                 </td>
                                             </tr>
                                             <tr className="border-t border-[var(--color-border)]">
                                                 <td className="pr-8 py-1.5 text-black font-bold">TOTAL (INC GST)</td>
-                                                <td className="text-right py-1.5 tabular-nums font-bold text-black">
+                                                <td className="text-right py-1.5 tabular-nums font-bold" style={moneyStyle}>
                                                     {formatCurrency(adjustedTotal.totalIncGst)}
                                                 </td>
                                             </tr>
@@ -674,7 +685,7 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                                         <td className="px-4 py-2.5 text-black">
                                                             {String(idx + 1).padStart(2, '0')}
                                                         </td>
-                                                        <td className="px-4 py-2.5 text-black">
+                                                        <td className="px-4 py-2.5" style={idStyle}>
                                                             {inv.invoiceNumber}
                                                         </td>
                                                         <td className="px-4 py-2.5 text-black">
@@ -682,16 +693,22 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                                         </td>
                                                         <td className="px-4 py-2.5 text-black">
                                                             {inv.variation ? (
-                                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
+                                                                <span
+                                                                    className="text-[10px] px-1.5 py-0.5 rounded"
+                                                                    style={{
+                                                                        color: 'var(--role-id)',
+                                                                        backgroundColor: 'color-mix(in oklab, var(--role-id) 14%, transparent)',
+                                                                    }}
+                                                                >
                                                                     {inv.variation.variationNumber}
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-[10px] text-black/40">Contract</span>
                                                             )}
                                                         </td>
-                                                        <td className={tdRight + ' text-black'}>{formatCurrency(inv.amountCents)}</td>
-                                                        <td className={tdRight + ' text-black'}>{formatCurrency(inv.gstCents)}</td>
-                                                        <td className={tdRight + ' text-black'}>{formatCurrency(inv.amountCents + inv.gstCents)}</td>
+                                                        <td className={tdRight} style={moneyStyle}>{formatCurrency(inv.amountCents)}</td>
+                                                        <td className={tdRight} style={moneyStyle}>{formatCurrency(inv.gstCents)}</td>
+                                                        <td className={tdRight} style={moneyStyle}>{formatCurrency(inv.amountCents + inv.gstCents)}</td>
                                                     </tr>
                                                 ))}
                                                 {/* TOTAL */}
@@ -701,9 +718,9 @@ export function PaymentSchedulePanel({ projectId, renderTabsList }: PaymentSched
                                                     <td className="px-4 py-2.5" />
                                                     <td className="px-4 py-2.5" />
                                                     <td className="px-4 py-2.5" />
-                                                    <td className={tdRight + ' text-black font-bold'}>{formatCurrency(paymentListTotal.amountExGst)}</td>
-                                                    <td className={tdRight + ' text-black font-bold'}>{formatCurrency(paymentListTotal.gst)}</td>
-                                                    <td className={tdRight + ' text-black font-bold'}>{formatCurrency(paymentListTotal.amountIncGst)}</td>
+                                                    <td className={tdRight + ' font-bold'} style={moneyStyle}>{formatCurrency(paymentListTotal.amountExGst)}</td>
+                                                    <td className={tdRight + ' font-bold'} style={moneyStyle}>{formatCurrency(paymentListTotal.gst)}</td>
+                                                    <td className={tdRight + ' font-bold'} style={moneyStyle}>{formatCurrency(paymentListTotal.amountIncGst)}</td>
                                                 </tr>
                                             </>
                                         )}

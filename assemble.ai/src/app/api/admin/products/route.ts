@@ -2,27 +2,21 @@
  * Admin Products API
  *
  * CRUD operations for managing subscription products.
- * Protected endpoint - requires authentication.
+ * Protected endpoint - requires super-admin authority.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { auth } from '@/lib/better-auth';
 import { db } from '@/lib/db';
 import { products } from '@/lib/db/pg-schema';
 import { eq, asc } from 'drizzle-orm';
+import { requireSuperAdminApi } from '@/lib/admin/guard';
 
-/**
- * Check if user is authenticated
- */
-async function checkAuth() {
+async function requireAdminOrResponse() {
     try {
-        const session = await auth.api.getSession({
-            headers: await headers(),
-        });
-        return session?.user || null;
-    } catch {
+        await requireSuperAdminApi();
         return null;
+    } catch (response) {
+        return response as Response;
     }
 }
 
@@ -31,10 +25,8 @@ async function checkAuth() {
  * List all products
  */
 export async function GET() {
-    const user = await checkAuth();
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = await requireAdminOrResponse();
+    if (denied) return denied;
 
     try {
         const allProducts = await db
@@ -57,10 +49,8 @@ export async function GET() {
  * Update a product
  */
 export async function PATCH(request: NextRequest) {
-    const user = await checkAuth();
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = await requireAdminOrResponse();
+    if (denied) return denied;
 
     try {
         const body = await request.json();
@@ -113,10 +103,8 @@ export async function PATCH(request: NextRequest) {
  * Create a new product
  */
 export async function POST(request: NextRequest) {
-    const user = await checkAuth();
-    if (!user) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const denied = await requireAdminOrResponse();
+    if (denied) return denied;
 
     try {
         const body = await request.json();

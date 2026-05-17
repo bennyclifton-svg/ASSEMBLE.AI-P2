@@ -75,4 +75,22 @@ describe('project-events bus', () => {
 
         expect(enqueued.length).toBe(0);
     });
+
+    test('emits document sync status changes', () => {
+        const { controller, enqueued } = makeController();
+        registerProjectConnection('proj-sync', controller);
+
+        emitProjectEvent('proj-sync', {
+            type: 'document_sync_status_changed',
+            documentIds: ['doc-1', 'doc-2'],
+            documentSetId: 'set-1',
+        });
+
+        expect(enqueued.length).toBe(1);
+        const text = decode(enqueued);
+        expect(text).toContain('event: document_sync_status_changed');
+        expect(text).toContain('"documentSetId":"set-1"');
+
+        unregisterProjectConnection('proj-sync', controller);
+    });
 });

@@ -280,7 +280,7 @@ export function LinkInvoiceDialog({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-[var(--color-text-muted)] shrink-0" />
-                        <span className="text-[var(--color-text-primary)] font-medium truncate">
+                        <span className="font-medium truncate text-[var(--role-id)]">
                           {invoice.invoiceNumber}
                         </span>
                       </div>
@@ -307,7 +307,7 @@ export function LinkInvoiceDialog({
 
                     {/* Amount */}
                     <div className="text-right">
-                      <span className="text-[var(--color-text-primary)] font-medium">
+                      <span className="font-medium text-[var(--role-money)] font-mono">
                         {formatCurrency(invoice.amountCents)}
                       </span>
                       {invoice.gstCents > 0 && (

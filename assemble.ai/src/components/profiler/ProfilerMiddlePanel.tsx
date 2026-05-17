@@ -151,91 +151,6 @@ function deriveComplexityBand(score: number | null | undefined): string | null {
   return 'extreme';
 }
 
-/**
- * Conservative NCC class derivation. Returns classCode for the common
- * cases; omits typeAndVolume except for Class 1a (which is always Vol 2).
- * Type A/B/C requires the full NCC C2D2 rise-in-storeys table (a function
- * of class AND storeys, not storeys alone) — defer to a richer helper
- * once we wire the full classification logic.
- */
-function deriveNCCClass(
-  buildingClass: BuildingClass | null,
-  subclasses: string[],
-): { classCode: string; typeAndVolume?: string } | null {
-  if (!buildingClass) return null;
-
-  if (buildingClass === 'residential') {
-    if (subclasses.includes('house') || subclasses.includes('townhouses')) {
-      return { classCode: 'Class 1a', typeAndVolume: 'Vol 2' };
-    }
-    if (subclasses.includes('aged_care_9c')) {
-      return { classCode: 'Class 9c' };
-    }
-    if (
-      subclasses.includes('apartments') ||
-      subclasses.includes('btr') ||
-      subclasses.includes('student_housing') ||
-      subclasses.includes('social_affordable') ||
-      subclasses.includes('coliving') ||
-      subclasses.includes('heritage_conversion')
-    ) {
-      return { classCode: 'Class 2' };
-    }
-    return { classCode: 'Class 2' };
-  }
-
-  if (buildingClass === 'commercial') {
-    if (subclasses.includes('hotel')) {
-      return { classCode: 'Class 3' };
-    }
-    if (subclasses.includes('retail_shopping')) {
-      return { classCode: 'Class 6' };
-    }
-    return { classCode: 'Class 5' };
-  }
-
-  if (buildingClass === 'industrial') {
-    return { classCode: 'Class 7/8' };
-  }
-
-  if (buildingClass === 'institution') {
-    if (subclasses.includes('healthcare_hospital')) {
-      return { classCode: 'Class 9a' };
-    }
-    if (
-      subclasses.includes('education_school') ||
-      subclasses.includes('education_tertiary')
-    ) {
-      return { classCode: 'Class 9b' };
-    }
-    return { classCode: 'Class 9b' };
-  }
-
-  if (buildingClass === 'mixed') {
-    return { classCode: 'Mixed (Class 2 + 5/6)' };
-  }
-
-  return null;
-}
-
-/**
- * Stub — returns null until cost-benchmark wiring lands.
- *
- * Was previously returning a coarse band keyed only on projectType,
- * which produced visibly wrong figures for several building classes
- * (e.g. warehouse rates too high, hospital too low). Falling back to
- * null causes the UI to render '—' which is preferable to wrong.
- *
- * TODO(real-cost-derivation): wire to CostBenchmark per
- * region/subclass/quality_tier when available.
- */
-function deriveEstCostBand(
-  _projectType: ProjectType | null,
-  _scaleData: Record<string, number>,
-): { lowAUD: number; highAUD: number } | null {
-  return null;
-}
-
 // ---- RiskFlags translation: replicates the existing RiskFlags logic, but
 // returns the wireframe shape `{ label, description, tag }`. ----
 
@@ -394,47 +309,29 @@ const CLASS_DISCIPLINES: Record<string, string[]> = {
   agricultural: ['Agricultural', 'Environmental', 'Civil'],
 };
 
-interface DisciplineHit {
-  name: string;
-  required: boolean;
-}
-
-const SUBCLASS_DISCIPLINES: Record<string, DisciplineHit[]> = {
-  aged_care_9c: [
-    { name: 'Fire Engineer', required: true },
-    { name: 'Access', required: true },
-    { name: 'Kitchen Consultant', required: false },
-  ],
+const SUBCLASS_DISCIPLINES: Record<string, string[]> = {
+  aged_care_9c: ['Fire Engineer', 'Access', 'Kitchen Consultant'],
   healthcare_hospital: [
-    { name: 'Medical Planner', required: true },
-    { name: 'Fire Engineer', required: true },
-    { name: 'Acoustic', required: true },
-    { name: 'Infection Control Consultant', required: false },
+    'Medical Planner',
+    'Fire Engineer',
+    'Acoustic',
+    'Infection Control Consultant',
   ],
-  data_centre: [
-    { name: 'Data Centre Specialist', required: true },
-    { name: 'Fire Engineer', required: true },
-    { name: 'Security', required: true },
-  ],
-  hotel: [
-    { name: 'Interior', required: true },
-    { name: 'Kitchen Consultant', required: true },
-    { name: 'Acoustic', required: true },
-    { name: 'Lighting', required: false },
-  ],
+  data_centre: ['Data Centre Specialist', 'Fire Engineer', 'Security'],
+  hotel: ['Interior', 'Kitchen Consultant', 'Acoustic', 'Lighting'],
 };
 
-const COMPLEXITY_DISCIPLINES: Record<string, DisciplineHit> = {
-  heritage: { name: 'Heritage', required: true },
-  listed: { name: 'Heritage Architect', required: true },
-  bushfire: { name: 'Bushfire', required: true },
-  flood: { name: 'Flood', required: true },
-  state_significant: { name: 'Planning', required: true },
-  complex_da: { name: 'Town Planning', required: true },
-  triple_cert: { name: 'ESD', required: true },
-  net_zero: { name: 'Net Zero Consultant', required: true },
-  tier_3: { name: 'Commissioning Agent', required: true },
-  tier_4: { name: 'Commissioning Agent', required: true },
+const COMPLEXITY_DISCIPLINES: Record<string, string> = {
+  heritage: 'Heritage',
+  listed: 'Heritage Architect',
+  bushfire: 'Bushfire',
+  flood: 'Flood',
+  state_significant: 'Planning',
+  complex_da: 'Town Planning',
+  triple_cert: 'ESD',
+  net_zero: 'Net Zero Consultant',
+  tier_3: 'Commissioning Agent',
+  tier_4: 'Commissioning Agent',
 };
 
 function deriveDisciplines(args: {
@@ -443,46 +340,27 @@ function deriveDisciplines(args: {
   complexity: Record<string, string | string[]>;
   workScope: string[];
   projectType: ProjectType | null;
-}): { required: string[]; suggested: string[] } {
+}): string[] {
   const { buildingClass, subclass, complexity, workScope, projectType } = args;
-  if (!buildingClass || subclass.length === 0) {
-    return { required: [], suggested: [] };
-  }
-  const map = new Map<string, DisciplineHit>();
-  BASE_DISCIPLINES.forEach((name) =>
-    map.set(name, { name, required: true }),
-  );
-  (CLASS_DISCIPLINES[buildingClass] ?? []).forEach((name) => {
-    if (!map.has(name)) map.set(name, { name, required: false });
-  });
+  if (!buildingClass || subclass.length === 0) return [];
+  const names = new Set<string>();
+  BASE_DISCIPLINES.forEach((name) => names.add(name));
+  (CLASS_DISCIPLINES[buildingClass] ?? []).forEach((name) => names.add(name));
   subclass.forEach((sub) => {
-    (SUBCLASS_DISCIPLINES[sub] ?? []).forEach((d) => {
-      if (!map.has(d.name) || d.required) map.set(d.name, d);
-    });
+    (SUBCLASS_DISCIPLINES[sub] ?? []).forEach((name) => names.add(name));
   });
   Object.values(complexity).forEach((value) => {
     const values = Array.isArray(value) ? value : [value];
     values.forEach((v) => {
       const hit = COMPLEXITY_DISCIPLINES[v as string];
-      if (hit && !map.has(hit.name)) map.set(hit.name, hit);
+      if (hit) names.add(hit);
     });
   });
   workScope.forEach((scopeValue) => {
     const item = findWorkScopeItem(scopeValue, projectType);
-    item?.consultants?.forEach((c) => {
-      if (!map.has(c)) map.set(c, { name: c, required: true });
-    });
+    item?.consultants?.forEach((c) => names.add(c));
   });
-
-  const required: string[] = [];
-  const suggested: string[] = [];
-  Array.from(map.values())
-    .sort((a, b) => {
-      if (a.required !== b.required) return a.required ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    })
-    .forEach((d) => (d.required ? required.push(d.name) : suggested.push(d.name)));
-  return { required, suggested };
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
 
 // ============================================================================
@@ -980,14 +858,6 @@ export function ProfilerMiddlePanel({
     () => deriveComplexityBand(complexityScore),
     [complexityScore],
   );
-  const nccClass = useMemo(
-    () => deriveNCCClass(buildingClass, selectedSubclasses),
-    [buildingClass, selectedSubclasses],
-  );
-  const estCostBand = useMemo(
-    () => deriveEstCostBand(projectType, scaleData),
-    [projectType, scaleData],
-  );
   const riskFlags = useMemo(
     () =>
       deriveRiskFlags({
@@ -1055,8 +925,6 @@ export function ProfilerMiddlePanel({
           templates={derivedTemplates}
           complexityScore={complexityScore}
           complexityBand={complexityBand}
-          nccClass={nccClass}
-          estCostBand={estCostBand}
           riskFlags={riskFlags}
           disciplines={disciplines}
         />

@@ -19,6 +19,10 @@ import { db } from '@/lib/db';
 import { sql, eq } from 'drizzle-orm';
 import { aiComplete } from '@/lib/ai/client';
 import { getCurrentUser } from '@/lib/auth/get-user';
+import {
+    generateProcurementBriefField,
+    isProcurementBriefField,
+} from '@/lib/procurement/brief-generation';
 import type { ProfileTagInput } from '@/lib/constants/knowledge-domains';
 import {
     PROJECT_KNOWLEDGE_SET_NAMES,
@@ -147,6 +151,21 @@ export async function POST(req: NextRequest) {
         // Detect input interpretation mode
         const inputMode = detectInputMode(body.userInput);
         console.log(`[generate-field] Mode: ${inputMode}, Field: ${body.fieldType}`);
+
+        if (isProcurementBriefField(body.fieldType)) {
+            const response = await generateProcurementBriefField({
+                projectId: body.projectId,
+                fieldType: body.fieldType,
+                userInput: body.userInput,
+                inputMode,
+                stakeholderId: body.stakeholderId,
+                disciplineId: body.disciplineId,
+                organizationId,
+                additionalContext: body.additionalContext,
+            });
+
+            return NextResponse.json(response);
+        }
 
         // Fetch project context
         const projectContext = await fetchProjectContext(body.projectId);

@@ -55,6 +55,62 @@ function formatProgrammeDate(date: Date): string {
     return date.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' });
 }
 
+function getFallbackDateRange(now: Date) {
+    return {
+        start: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        end: new Date(now.getFullYear(), now.getMonth() + 24, 0),
+    };
+}
+
+function buildDateRanges(
+    activities: Array<{ startDate: string | null; endDate: string | null }> | undefined,
+    milestones: Array<{ date: string | null }> | undefined
+) {
+    const now = new Date();
+    const fallback = getFallbackDateRange(now);
+
+    if (!activities) {
+        return { standard: fallback, fit: fallback };
+    }
+
+    const dates: Date[] = [];
+    for (const activity of activities) {
+        if (activity.startDate) dates.push(new Date(activity.startDate));
+        if (activity.endDate) dates.push(new Date(activity.endDate));
+    }
+    for (const milestone of milestones || []) {
+        if (milestone.date) dates.push(new Date(milestone.date));
+    }
+
+    if (dates.length === 0) {
+        return { standard: fallback, fit: fallback };
+    }
+
+    const firstProgrammeDate = new Date(Math.min(...dates.map((date) => date.getTime())));
+    const lastProgrammeDate = new Date(Math.max(...dates.map((date) => date.getTime())));
+
+    const standardStart = new Date(firstProgrammeDate);
+    standardStart.setDate(standardStart.getDate() - 7);
+
+    let standardEnd = new Date(lastProgrammeDate);
+    const eighteenMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 18, 0);
+    if (standardEnd < eighteenMonthsFromNow) {
+        standardEnd = eighteenMonthsFromNow;
+    }
+    standardEnd.setMonth(standardEnd.getMonth() + 1);
+
+    const fitStart = new Date(firstProgrammeDate);
+    fitStart.setDate(fitStart.getDate() - 7);
+
+    const fitEnd = new Date(lastProgrammeDate);
+    fitEnd.setMonth(fitEnd.getMonth() + 1);
+
+    return {
+        standard: { start: standardStart, end: standardEnd },
+        fit: { start: fitStart, end: fitEnd },
+    };
+}
+
 function ProgrammeBreadcrumb({
     projectName,
     activeCrumb,
@@ -114,7 +170,7 @@ export function ProgramPanel({
     const [zoomLevel, setZoomLevel] = useState<ZoomLevel>(() => {
         if (typeof window !== 'undefined') {
             const stored = localStorage.getItem(ZOOM_STORAGE_KEY);
-            if (stored === 'week' || stored === 'month') {
+            if (stored === 'week' || stored === 'month' || stored === 'fit') {
                 return stored;
             }
         }
@@ -132,47 +188,13 @@ export function ProgramPanel({
         return buildActivityTree(activities);
     }, [activities]);
 
-    // Calculate date range from activities
-    const dateRange = useMemo(() => {
-        const now = new Date();
-
-        if (!activities) {
-            const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const end = new Date(now.getFullYear(), now.getMonth() + 24, 0);
-            return { start, end };
-        }
-
-        const dates: Date[] = [];
-        for (const activity of activities) {
-            if (activity.startDate) dates.push(new Date(activity.startDate));
-            if (activity.endDate) dates.push(new Date(activity.endDate));
-        }
-        for (const milestone of milestones || []) {
-            if (milestone.date) dates.push(new Date(milestone.date));
-        }
-
-        if (dates.length === 0) {
-            // Default to current month + 24 months
-            const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-            const end = new Date(now.getFullYear(), now.getMonth() + 24, 0);
-            return { start, end };
-        }
-
-        const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
-        let maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
-
-        // Ensure timeline extends at least 18 months from today
-        const eighteenMonthsFromNow = new Date(now.getFullYear(), now.getMonth() + 18, 0);
-        if (maxDate < eighteenMonthsFromNow) {
-            maxDate = eighteenMonthsFromNow;
-        }
-
-        // Add padding (1 week before and 1 month after)
-        minDate.setDate(minDate.getDate() - 7);
-        maxDate.setMonth(maxDate.getMonth() + 1);
-
-        return { start: minDate, end: maxDate };
-    }, [activities, milestones]);
+    // Calculate date ranges from activities. Standard views keep the planning horizon;
+    // fit view uses the programme's actual extent so it can compress onto one screen.
+    const dateRanges = useMemo(
+        () => buildDateRanges(activities, milestones),
+        [activities, milestones]
+    );
+    const activeDateRange = zoomLevel === 'fit' ? dateRanges.fit : dateRanges.standard;
 
     const activityCount = activities?.length ?? 0;
     const scheduledCount = activities?.filter((activity) => activity.startDate && activity.endDate).length ?? 0;
@@ -183,16 +205,20 @@ export function ProgramPanel({
         [buildingClass, projectType, profileData]
     );
     const programmeSubtitle = activityCount > 0
-        ? `${activityCount} activities / ${scheduledCount} scheduled / ${milestoneCount} milestones / ${dependencyCount} dependencies / ${formatProgrammeDate(dateRange.start)} - ${formatProgrammeDate(dateRange.end)}`
+        ? `${activityCount} activities / ${scheduledCount} scheduled / ${milestoneCount} milestones / ${dependencyCount} dependencies / ${formatProgrammeDate(activeDateRange.start)} - ${formatProgrammeDate(activeDateRange.end)}`
         : 'No activities yet / add an activity or insert a template';
-    const activeCrumb = zoomLevel === 'week' ? 'WEEK VIEW' : 'MONTH VIEW';
+    const activeCrumb = zoomLevel === 'week'
+        ? 'WEEK VIEW'
+        : zoomLevel === 'month'
+            ? 'MONTH VIEW'
+            : 'FIT VIEW';
 
     if (isLoading && !data) {
         return (
             <div
                 className="flex h-full items-center justify-center"
                 style={{
-                    background: 'var(--sw-paper)',
+                    background: 'var(--sw-canvas)',
                     color: muted,
                     fontFamily: 'var(--sw-font-mono)',
                 }}
@@ -207,7 +233,7 @@ export function ProgramPanel({
             <div
                 className="flex h-full items-center justify-center"
                 style={{
-                    background: 'var(--sw-paper)',
+                    background: 'var(--sw-canvas)',
                     color: 'var(--sw-rose-dk)',
                     fontFamily: 'var(--sw-font-mono)',
                 }}
@@ -221,18 +247,14 @@ export function ProgramPanel({
         <RefetchContext.Provider value={refetch}>
             <div
                 className="program-workspace flex h-full min-h-0 flex-col overflow-hidden"
-                style={{ background: 'var(--sw-paper)' }}
+                style={{ background: 'var(--sw-canvas)' }}
             >
-                <header className="shrink-0 px-2 pt-2">
+                <header className="shrink-0 px-4 pt-2 pb-3" style={{ borderBottom: '1px solid var(--sw-rule-2)' }}>
                     <div className="mb-2 flex items-center justify-between gap-3">
                         <ProgrammeBreadcrumb projectName={projectName} activeCrumb={activeCrumb} />
-                        <div className="flex shrink-0 gap-1.5">
-                            <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
-                            <StatusPill label="stage: detail design" tone="dark" />
-                        </div>
                     </div>
 
-                    <div className="mb-3 flex items-end justify-between gap-3">
+                    <div className="mb-2 flex items-end justify-between gap-4">
                         <div className="min-w-0">
                             <h1
                                 style={{
@@ -260,23 +282,23 @@ export function ProgramPanel({
                                 {programmeSubtitle}
                             </div>
                         </div>
-
-                        <ProgramToolbar
-                            projectId={projectId}
-                            zoomLevel={zoomLevel}
-                            onZoomChange={setZoomLevel}
-                        />
                     </div>
+
+                    <ProgramToolbar
+                        projectId={projectId}
+                        zoomLevel={zoomLevel}
+                        onZoomChange={setZoomLevel}
+                    />
                 </header>
 
-                <div className="min-h-0 flex-1 overflow-hidden px-2 pb-3">
+                <div className="min-h-0 flex-1 overflow-hidden p-4">
                     <ProgramTable
                         projectId={projectId}
                         activities={activityTree}
                         allActivities={activities || []}
                         dependencies={dependencies || []}
                         milestones={milestones || []}
-                        dateRange={dateRange}
+                        dateRange={activeDateRange}
                         zoomLevel={zoomLevel}
                     />
                 </div>

@@ -15,14 +15,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { polishContentSchema } from '@/lib/validations/notes-meetings-reports-schema';
 import { polishContent } from '@/lib/services/ai-content-generation';
+import {
+    markAiActionFailed,
+    markAiActionSucceeded,
+    requireAiActionAllowed,
+} from '@/lib/subscription/ai-usage-meter';
 import type { PolishContentResponse } from '@/types/notes-meetings-reports';
 
 export async function POST(req: NextRequest) {
+    let aiUsageEventId: string | null = null;
+
     try {
         // Authenticate user
         const authResult = await getCurrentUser();
         if (!authResult.user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        if (!authResult.user.organizationId) {
+            return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
         }
 
         // Parse and validate request body
@@ -37,6 +47,14 @@ export async function POST(req: NextRequest) {
         }
 
         const request = validationResult.data;
+        const aiGate = await requireAiActionAllowed({
+            userId: authResult.user.id,
+            organizationId: authResult.user.organizationId,
+            action: 'ai.polish-content',
+            metadata: { sectionKey: request.sectionKey, tone: request.tone },
+        });
+        if (!aiGate.allowed) return aiGate.response;
+        aiUsageEventId = aiGate.eventId;
 
         // Polish content
         const result: PolishContentResponse = await polishContent({
@@ -44,10 +62,14 @@ export async function POST(req: NextRequest) {
             sectionKey: request.sectionKey,
             tone: request.tone,
         });
+        await markAiActionSucceeded(aiUsageEventId);
 
         return NextResponse.json(result);
 
     } catch (error) {
+        if (aiUsageEventId) {
+            await markAiActionFailed(aiUsageEventId, error);
+        }
         console.error('[ai/polish-content] Error:', error);
 
         return NextResponse.json(

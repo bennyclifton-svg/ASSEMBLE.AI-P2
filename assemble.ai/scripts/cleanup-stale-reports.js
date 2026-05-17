@@ -23,7 +23,7 @@ async function cleanup() {
         console.log('\n=== Reports with locks ===');
         const lockedResult = await client.query(`
             SELECT id, project_id, title, status, locked_by, locked_at, discipline_id, trade_id
-            FROM report_templates
+            FROM rag_report_templates
             WHERE locked_by IS NOT NULL
         `);
 
@@ -39,7 +39,7 @@ async function cleanup() {
         console.log('\n=== Reports in "generating" status ===');
         const generatingResult = await client.query(`
             SELECT id, project_id, title, status, locked_by, discipline_id, trade_id
-            FROM report_templates
+            FROM rag_report_templates
             WHERE status = 'generating'
         `);
 
@@ -54,7 +54,7 @@ async function cleanup() {
         // Clear all locks
         console.log('\n=== Clearing locks ===');
         const clearLocksResult = await client.query(`
-            UPDATE report_templates
+            UPDATE rag_report_templates
             SET locked_by = NULL, locked_by_name = NULL, locked_at = NULL, updated_at = NOW()
             WHERE locked_by IS NOT NULL
         `);
@@ -63,22 +63,22 @@ async function cleanup() {
         // Reset stuck "generating" reports to "failed"
         console.log('\n=== Resetting stuck generating reports to failed ===');
         const resetResult = await client.query(`
-            UPDATE report_templates
+            UPDATE rag_report_templates
             SET status = 'failed', updated_at = NOW()
             WHERE status = 'generating'
         `);
         console.log(`Reset ${resetResult.rowCount} report(s) to failed status`);
 
-        // Delete report_sections for failed reports (to allow clean regeneration)
+        // Delete rag_report_sections for failed reports (to allow clean regeneration)
         console.log('\n=== Cleaning up sections for failed reports ===');
         const failedResult = await client.query(`
-            SELECT id FROM report_templates WHERE status = 'failed'
+            SELECT id FROM rag_report_templates WHERE status = 'failed'
         `);
 
         let deletedSections = 0;
         for (const r of failedResult.rows) {
             const deleteResult = await client.query(`
-                DELETE FROM report_sections WHERE report_id = $1
+                DELETE FROM rag_report_sections WHERE report_id = $1
             `, [r.id]);
             deletedSections += deleteResult.rowCount;
         }

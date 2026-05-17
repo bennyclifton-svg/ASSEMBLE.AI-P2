@@ -9,8 +9,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleApiError } from '@/lib/api-utils';
 import { db } from '@/lib/db';
-import { trr, trrTransmittals } from '@/lib/db';
-import { eq, sql } from 'drizzle-orm';
+import { evaluationPrice, evaluationRows, evaluations, trr, trrTransmittals } from '@/lib/db';
+import { eq, sql, and, isNull } from 'drizzle-orm';
+import { storeArtefact } from '@/lib/evaluation/artefact-store';
+import { buildIssueSnapshot, selectActiveTrrEvaluationPrice } from '@/lib/evaluation/trr-linkage';
+import type { EvaluationCell, EvaluationFirm, EvaluationRow, EvaluationRowSource, EvaluationTableType } from '@/types/evaluation';
 
 interface RouteContext {
     params: Promise<{ id: string }>;
@@ -56,6 +59,8 @@ export async function PUT(
             return NextResponse.json({ error: 'TRR not found' }, { status: 404 });
         }
 
+        const priorReportDate = existing2.reportDate;
+
         // Update only the fields that are provided
         const updateData: Record<string, unknown> = {
             updatedAt: sql`CURRENT_TIMESTAMP`,
@@ -73,6 +78,9 @@ export async function PUT(
         if (body.reportDate !== undefined) {
             updateData.reportDate = body.reportDate;
         }
+        if (body.evaluationPriceId !== undefined) {
+            updateData.evaluationPriceId = body.evaluationPriceId;
+        }
 
         await db
             .update(trr)
@@ -86,7 +94,116 @@ export async function PUT(
             .where(eq(trr.id, id))
             .limit(1);
 
+        if (
+            updated?.reportDate &&
+            body.reportDate !== undefined &&
+            body.reportDate !== priorReportDate
+        ) {
+            const artefact = await createIssueSnapshotArtefact(updated);
+            if (artefact?.id) {
+                await db.update(trr)
+                    .set({ issueSnapshotArtefactId: artefact.id, updatedAt: sql`CURRENT_TIMESTAMP` })
+                    .where(eq(trr.id, id));
+                updated.issueSnapshotArtefactId = artefact.id;
+            }
+        }
+
         return NextResponse.json(updated);
+    });
+}
+
+async function createIssueSnapshotArtefact(trrRecord: typeof trr.$inferSelect) {
+    if (!trrRecord.stakeholderId) return null;
+
+    const evaluation = await db.query.evaluations.findFirst({
+        where: and(
+            eq(evaluations.projectId, trrRecord.projectId),
+            eq(evaluations.stakeholderId, trrRecord.stakeholderId)
+        ),
+    });
+    if (!evaluation) return null;
+
+    const priceInstances = await db
+        .select()
+        .from(evaluationPrice)
+        .where(and(
+            eq(evaluationPrice.projectId, trrRecord.projectId),
+            eq(evaluationPrice.stakeholderId, trrRecord.stakeholderId)
+        ));
+
+    const activePrice = selectActiveTrrEvaluationPrice({
+        trrEvaluationPriceId: trrRecord.evaluationPriceId,
+        priceInstances,
+    });
+    if (!activePrice) return null;
+
+    const rows = await db.query.evaluationRows.findMany({
+        where: activePrice.id
+            ? and(
+                eq(evaluationRows.evaluationId, evaluation.id),
+                eq(evaluationRows.evaluationPriceId, activePrice.id)
+            )
+            : and(
+                eq(evaluationRows.evaluationId, evaluation.id),
+                isNull(evaluationRows.evaluationPriceId)
+            ),
+        with: { cells: true },
+    });
+
+    const typedRows: EvaluationRow[] = rows.map((row) => ({
+        ...row,
+        evaluationId: row.evaluationId ?? evaluation.id,
+        evaluationPriceId: row.evaluationPriceId,
+        tableType: row.tableType as EvaluationTableType,
+        source: row.source as EvaluationRowSource,
+        vmAdoptionStatus: row.vmAdoptionStatus as EvaluationRow['vmAdoptionStatus'],
+        vmOrigin: row.vmOrigin as EvaluationRow['vmOrigin'],
+        createdAt: row.createdAt?.toISOString(),
+        cells: (row.cells ?? []).map((cell): EvaluationCell => ({
+            ...cell,
+            firmType: cell.firmType as 'consultant' | 'contractor',
+            amountCents: cell.amountCents ?? 0,
+            valueType: cell.valueType as EvaluationCell['valueType'],
+            source: cell.source as EvaluationCell['source'],
+            createdAt: cell.createdAt?.toISOString(),
+            updatedAt: cell.updatedAt?.toISOString(),
+        })),
+    }));
+
+    const firmIds = new Set<string>();
+    for (const row of typedRows) {
+        for (const cell of row.cells ?? []) {
+            firmIds.add(cell.firmId);
+        }
+    }
+
+    const firms: EvaluationFirm[] = [...firmIds].map((firmId) => ({
+        id: firmId,
+        companyName: firmId,
+        shortlisted: true,
+    }));
+
+    const payload = buildIssueSnapshot({
+        trr: trrRecord,
+        evaluation,
+        activePriceInstance: activePrice,
+        recommendationState: (evaluation.recommendationState ?? 'draft') as 'draft' | 'conditional' | 'final',
+        rows: typedRows,
+        firms,
+    });
+
+    return storeArtefact({
+        kind: 'issue_snapshot',
+        content: payload,
+        relations: {
+            evaluationId: evaluation.id,
+            evaluationPriceId: activePrice.id,
+            trrId: trrRecord.id,
+        },
+        metadata: {
+            reportDate: trrRecord.reportDate,
+            recommendationState: payload.recommendationState,
+        },
     });
 }
 

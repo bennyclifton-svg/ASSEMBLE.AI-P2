@@ -75,13 +75,6 @@ const GROUP_LABELS: Record<StakeholderGroup, string> = {
   contractor: 'Contractor',
 };
 
-const GROUP_ACCENTS: Record<StakeholderGroup, string> = {
-  client: 'var(--sw-rose)',
-  authority: 'var(--sw-cyan)',
-  consultant: 'var(--sw-lav)',
-  contractor: 'var(--sw-peach)',
-};
-
 interface InlineEditProps {
   value: string;
   onSave: (newValue: string) => Promise<void>;
@@ -143,7 +136,7 @@ function InlineEdit({ value, onSave, placeholder, className, disabled }: InlineE
       className={cn(
         'h-6 w-full bg-transparent px-1 py-0.5 text-[11px] outline-none transition-colors focus-visible:outline-none',
         'placeholder:text-[var(--sw-muted)]',
-        'hover:bg-[var(--sw-paper-2)] focus:bg-white',
+        'hover:bg-[var(--sw-canvas)] focus:bg-white',
         isFocused ? 'border border-[var(--sw-rose)]' : 'border border-transparent',
         disabled && 'cursor-not-allowed opacity-50',
         className
@@ -210,12 +203,9 @@ export function StakeholderRow({
   return (
     <tr
       className={cn(
-        'h-9 cursor-pointer select-none border-b border-l-2 border-[var(--sw-rule-2)] bg-white transition-colors',
-        isSelected
-          ? 'border-l-4 bg-[var(--sw-paper)] hover:bg-[var(--sw-paper)]'
-          : 'hover:bg-[var(--sw-paper-2)]'
+        'h-8 cursor-pointer select-none border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)] transition-colors hover:bg-[var(--sw-rose-tint)]',
+        isSelected && 'bg-[var(--sw-rose-tint)] hover:bg-[var(--sw-rose-tint)]'
       )}
-      style={{ borderLeftColor: GROUP_ACCENTS[stakeholder.stakeholderGroup] }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onMouseDown={(event) => event.shiftKey && event.preventDefault()}

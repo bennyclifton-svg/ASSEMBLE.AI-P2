@@ -11,6 +11,192 @@ applicableStates: [NSW, VIC, QLD, WA, SA, TAS, ACT, NT]
 
 # MEP Services Guide
 
+## Procurement Brief Service Catalogue
+
+Use this catalogue when generating Services Engineer, MEP, Mechanical, Electrical, Hydraulic, or Fire services for procurement briefs. Services should describe building services design, authority coordination, documentation, commissioning support, inspections, and handover within the active services discipline.
+
+Core services:
+- Establish services design criteria for mechanical, electrical, hydraulic, fire, vertical transport, communications, security, metering, controls, and commissioning requirements within the appointed scope.
+- Develop building services concepts, capacity allowances, plant zones, risers, distribution routes, utility connections, and authority interface strategies.
+- Prepare services design documentation for authority approvals, tender, construction, commissioning, and handover as required by the fee schedule or project stage.
+- Coordinate services spatial requirements with architectural layouts, basement car parking, structure, facade, roof plant, fire compartments, acoustic requirements, access requirements, and maintenance zones.
+- Coordinate services penetrations, sleeves, cast-ins, setdowns, plant loads, access panels, ceiling zones, and builder's work openings with architectural and structural documentation.
+- Provide services input to NCC/BCA, Section J, BASIX, NatHERS, fire safety, utility authority, Construction Certificate, and Occupation Certificate processes where services documentation or certification is required.
+- Review services shop drawings, equipment selections, samples, technical submissions, commissioning plans, and contractor alternatives where included in the appointment.
+- Undertake services inspections, witness testing, review commissioning records, respond to RFIs, review defects, and support handover.
+
+For multi-residential apartment projects, emphasise car park ventilation, apartment ventilation, electrical supply and metering, hydraulic supply and drainage, fire services, utility authority connections, services risers, basement coordination, commissioning, O&M manuals, defects, and handover.
+
+## Procurement Brief Deliverables
+
+Use this catalogue when generating Services Engineer deliverables. Deliverables must be issued artifacts such as drawings, reports, calculations, schedules, certificates, registers, commissioning records, or handover manuals.
+
+Core deliverables:
+- Services design criteria report
+- Mechanical services drawings and schedules
+- Electrical services drawings and schedules
+- Hydraulic services drawings and schedules
+- Fire services drawings and schedules
+- Communications, security, access control, and intercom services documentation where included in the appointment
+- Services riser, plantroom, basement, and ceiling coordination drawings
+- Utility authority application inputs and response records
+- NCC/BCA, Section J, BASIX, or fire safety services compliance inputs where applicable
+- Services specifications
+- Equipment schedules
+- Services calculations package
+- Shop drawing review register and marked-up shop drawings, where included
+- Services RFI responses and design clarification records
+- Commissioning plan review records
+- Testing and commissioning records
+- Services inspection reports
+- Defects and non-conformance review records
+- Operations and maintenance manual review records
+- Services handover pack
+
+## Discipline Boundaries
+
+Services Engineer scope must stay inside building services design, services authority interfaces, services coordination, commissioning support, and services construction support.
+
+Boundary rules:
+- Do not make the Services Engineer responsible for architectural layouts, apartment planning, facade design, structural design, basement retention, planning strategy, or BCA certification except as services input to another consultant's process.
+- Do not make a combined Services Engineer responsible for every services discipline unless the stakeholder label, fee schedule, or project context indicates a combined MEP appointment. For single-discipline labels, stay within that discipline.
+- Do not state that the Services Engineer obtains DA, CC, or OC approvals. Use wording such as "provide services documentation, responses, and certification inputs for the approval pathway".
+- Describe architectural, structural, BCA, fire engineering, acoustic, sustainability, and authority matters as coordination interfaces unless the context assigns that scope to the Services Engineer.
+
+## Common Exclusions
+
+Avoid these items unless the project facts, fee schedule, project documents, or user input specifically include them:
+- Architectural design
+- Structural engineering design
+- Town planning strategy
+- BCA certification
+- Fire engineering performance solutions
+- Acoustic testing or certification
+- BASIX or NatHERS certification as lead consultant
+- Detailed lift traffic analysis
+- Specialist security design
+- Energy modelling beyond services inputs
+
+When one of these items is relevant but not confirmed, qualify it with "services input", "coordination input", or "where applicable" rather than assuming full design or certification responsibility.
+
+## Mechanical Procurement Brief Focus
+
+Use this focus section when the active stakeholder is Mechanical, HVAC, Mechanical Services, or Mechanical Engineer rather than a combined Services Engineer or MEP appointment. It narrows the broader MEP catalogue to mechanical services only.
+
+Mechanical services:
+- Establish mechanical and HVAC design criteria for apartment ventilation, basement car park ventilation, smoke or exhaust systems where applicable, plant capacity, controls, acoustic constraints, maintenance access, and commissioning requirements.
+- Develop apartment ventilation, common area ventilation, basement car park ventilation, toilet exhaust, lobby relief, stair pressurisation, smoke exhaust, and mechanical plant strategies where required by the project.
+- Coordinate mechanical plant locations, condenser units, roof plant, basement plant, risers, duct routes, ceiling zones, access panels, louvers, penetrations, vibration isolation, and acoustic treatment with architectural and structural documentation.
+- Provide mechanical inputs to NCC/BCA, Section J, BASIX, NatHERS, acoustic, fire safety, Construction Certificate, and Occupation Certificate processes where mechanical documentation or certification inputs are required.
+- Review mechanical equipment selections, controls strategy, shop drawings, technical submissions, commissioning plans, testing records, RFIs, defects, and handover records where included in the appointment.
+
+Mechanical deliverables:
+- Mechanical design criteria report
+- Mechanical services drawings and schedules
+- Apartment ventilation drawings
+- Basement car park ventilation drawings
+- Smoke exhaust or stair pressurisation drawings where applicable
+- Mechanical plant, riser, ceiling zone, and louver coordination layouts
+- Mechanical equipment capacity schedules
+- Ductwork, diffuser, grille, fan, and plant schedules
+- Mechanical services specifications
+- Mechanical calculations package
+- Section J and BASIX mechanical services inputs
+- Mechanical shop drawing review register and marked-up shop drawings where included
+- Mechanical RFI responses and design clarification records
+- Mechanical commissioning plan review records
+- Testing, balancing, and commissioning records
+- Mechanical inspection reports
+- Mechanical defects and non-conformance review records
+- Mechanical O&M manual review records
+- Mechanical handover pack
+
+Mechanical boundaries:
+- Do not include electrical, hydraulic, fire, communications, security, access control, intercom, or vertical transport design deliverables unless the appointment is explicitly combined MEP or Services Engineer.
+- Do not describe BASIX, NatHERS, Section J, acoustic, fire safety, CC, or OC compliance as owned by the Mechanical Engineer. Use "mechanical inputs", "mechanical compliance inputs", or "coordination inputs".
+- Do not use generic "authority and utility application inputs" unless the authority item is mechanical-specific; prefer "mechanical ventilation compliance inputs" or "mechanical services approval inputs" where relevant.
+
+## Electrical Procurement Brief Focus
+
+Use this focus section when the active stakeholder is Electrical, Electrical Services, or Electrical Engineer rather than a combined Services Engineer or MEP appointment. It narrows the broader MEP catalogue to electrical services only.
+
+Electrical services:
+- Establish electrical design criteria for incoming supply, main switchboards, distribution boards, apartment power, lighting, emergency lighting, metering, communications pathways, security pathways where included, EV charging provisions where included, controls interfaces, and commissioning requirements.
+- Develop electrical supply, main switchboard, metering, distribution, apartment load, house services, lighting, emergency lighting, communications, and earthing strategies where required by the project.
+- Coordinate electrical risers, switchrooms, meter rooms, distribution routes, cable trays, ceiling zones, plant power, generator or solar interfaces where included, penetrations, access clearances, and authority supply requirements with architectural and structural documentation.
+- Provide electrical inputs to NCC/BCA, Section J, BASIX, NatHERS, emergency lighting, fire safety interfaces, utility supply, Construction Certificate, and Occupation Certificate processes where electrical documentation or certification inputs are required.
+- Review electrical equipment selections, switchboard submissions, lighting submissions, shop drawings, technical submissions, commissioning plans, testing records, RFIs, defects, and handover records where included in the appointment.
+
+Electrical deliverables:
+- Electrical design criteria report
+- Electrical services drawings package
+- Single line diagrams
+- Main switchboard and distribution board schedules
+- Electrical riser diagrams
+- Apartment metering schedule
+- Lighting and power layouts
+- Emergency lighting drawings and schedules
+- Communications and security pathway drawings where included
+- EV charging infrastructure drawings where included
+- Electrical equipment schedules
+- Electrical services specifications
+- Electrical calculations package
+- Utility connection application inputs
+- Section J and BASIX electrical services inputs
+- Electrical shop drawing review register and marked-up shop drawings where included
+- Electrical RFI responses and design clarification records
+- Electrical commissioning plan review records
+- Inspection and test reports
+- Electrical commissioning records
+- Electrical defects close-out register
+- Electrical O&M manual review records
+- Electrical handover pack
+
+Electrical boundaries:
+- Do not include mechanical, hydraulic, fire, lift, structural, architectural, or BCA certification deliverables unless the appointment is explicitly combined MEP or Services Engineer.
+- Do not describe BASIX, NatHERS, Section J, fire safety, CC, or OC compliance as owned by the Electrical Engineer. Use "electrical inputs", "electrical compliance inputs", or "coordination inputs".
+- Do not use generic "authority approval inputs" unless the authority item is electrical-specific; prefer "utility connection application inputs" or "electrical services approval inputs" where relevant.
+
+## Hydraulic Procurement Brief Focus
+
+Use this focus section when the active stakeholder is Hydraulic, Hydraulic Services, Plumbing, or Hydraulic Engineer rather than a combined Services Engineer or MEP appointment. It narrows the broader MEP catalogue to building hydraulic services only.
+
+Hydraulic services:
+- Establish hydraulic design criteria for potable water, hot water, sanitary drainage, gas services where applicable, roof drainage and internal stormwater where included, rainwater reuse where included, pumps, meters, fixtures, authority connections, and commissioning requirements.
+- Develop water supply, hot water, sanitary drainage, gas reticulation, fixture, pump, meter, rainwater reuse, and hydraulic plant strategies where required by the project.
+- Coordinate hydraulic risers, drainage stacks, plant rooms, pump rooms, hot water plant, basement drainage interfaces, slab setdowns, penetrations, sleeves, tundishes, access panels, and authority connection points with architectural and structural documentation.
+- Provide hydraulic inputs to NCC/BCA, Plumbing Code of Australia, BASIX water, utility authority, Construction Certificate, and Occupation Certificate processes where hydraulic documentation or certification inputs are required.
+- Review hydraulic shop drawings, equipment selections, technical submissions, testing records, commissioning records, RFIs, defects, and handover records where included in the appointment.
+
+Hydraulic deliverables:
+- Hydraulic design criteria report
+- Hydraulic services drawings package
+- Water supply schematic
+- Sanitary drainage schematic
+- Gas services schematic where applicable
+- Hot water plant and reticulation schematic
+- Hydraulic riser diagrams
+- Roof drainage and internal stormwater drawings where included
+- Rainwater reuse drawings where included
+- Fixture, tapware, pump, meter, and equipment schedules
+- Hydraulic services specifications
+- Hydraulic calculations package
+- BASIX water services inputs
+- Utility authority application inputs
+- Hydraulic shop drawing review register and marked-up shop drawings where included
+- Hydraulic RFI responses and design clarification records
+- Pressure testing and commissioning records
+- Hydraulic inspection reports
+- Hydraulic defects close-out register
+- Hydraulic O&M manual review records
+- Hydraulic handover pack
+
+Hydraulic boundaries:
+- Do not include civil stormwater, on-site detention, erosion and sediment control, bulk earthworks, pavement drainage, or external civil drainage deliverables unless the appointment explicitly includes civil/hydraulic combined scope.
+- Do not describe BASIX, NCC/BCA, Plumbing Code, CC, or OC compliance as owned by the Hydraulic Engineer. Use "hydraulic inputs", "hydraulic compliance inputs", "BASIX water services inputs", or "coordination inputs".
+- Do not use generic "stormwater management" unless the item is clearly roof drainage, internal stormwater, rainwater reuse, or hydraulic drainage within the building. Civil owns site stormwater and erosion/sediment controls unless the context says otherwise.
+- Do not include mechanical, electrical, fire, structural, architectural, or BCA certification deliverables unless the appointment is explicitly combined MEP or Services Engineer.
+
 ## HVAC Systems Overview — Selection by Project Type and Scale
 
 The choice of HVAC system type is one of the earliest and most consequential decisions on any building project because it locks in the electrical load profile, ceiling zone depth, plant room footprint, and long-lead procurement timeline. A wrong selection at concept design is rarely recoverable without significant cost and program impact — changing from a chilled water system to VRF after detailed design has commenced typically costs $80,000-$200,000 in abortive design fees alone, before any physical rework.

@@ -156,7 +156,7 @@ export function MeetingsPanel({
                     isMenuExpanded={isMenuExpanded}
                     onToggleMenu={() => setMenuExpanded(!isMenuExpanded)}
                 />
-                <div className="flex flex-1 flex-col items-center justify-center bg-[var(--sw-paper)] p-8">
+                <div className="flex flex-1 flex-col items-center justify-center bg-[var(--sw-shell)] p-8">
                     <div className="mb-4 border border-[var(--sw-rule)] bg-white p-4">
                         <AlertCircle className="h-8 w-8 text-[var(--sw-rose-dk)]" />
                     </div>
@@ -212,7 +212,7 @@ export function MeetingsPanel({
                     size="sm"
                     onClick={handleRibbonCopy}
                     disabled={!activeMeeting || isCopying}
-                    className="h-7 w-7 rounded-none border border-[var(--sw-rule)] bg-transparent p-0 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
+                    className="h-7 w-7 rounded-none border border-[var(--sw-rule)] bg-transparent p-0 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-shell)] hover:text-[var(--sw-ink)]"
                     title="Copy meeting"
                 >
                     {isCopying ? (
@@ -302,7 +302,7 @@ export function MeetingsPanel({
 
             {/* Content Area - only shown when expanded */}
             {isExpanded && (
-                <div className="mx-2 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-4">
+                <div className="mx-2 border border-[var(--sw-rule)] bg-[var(--sw-shell)] p-4">
                     {panelContent}
                 </div>
             )}
@@ -343,7 +343,7 @@ function MeetingsPanelSkeleton() {
 function EmptyState() {
     return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="mb-4 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-4">
+            <div className="mb-4 border border-[var(--sw-rule)] bg-[var(--sw-shell)] p-4">
                 <Calendar className="h-8 w-8 text-[var(--sw-muted)]" />
             </div>
             <h3 className="mb-2 text-lg font-medium text-[var(--sw-ink)]">

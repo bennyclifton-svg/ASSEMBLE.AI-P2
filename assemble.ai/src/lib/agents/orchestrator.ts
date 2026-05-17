@@ -28,8 +28,11 @@ import {
     isProgrammeDateWriteRequest,
     isProgramNoteRequest,
     isProgramWriteRequest,
+    isRfiReferenceRequest,
+    isRfiWriteRequest,
     isProjectStatusRequest,
     isRftWriteRequest,
+    isTechnicalServicesDocumentReviewRequest,
     isTenderFirmWriteRequest,
     isTechnicalServicesQuestion,
     isTransmittalWriteRequest,
@@ -250,11 +253,32 @@ export function routeAgents(text: string): SpecialistName[] {
         return ['design'];
     }
 
+    if (isRfiWriteRequest(text)) {
+        return ['design'];
+    }
+
+    if (isRfiReferenceRequest(text)) {
+        return ['design'];
+    }
+
     if (isTenderFirmWriteRequest(text)) {
         return ['design'];
     }
 
     if (isRftWriteRequest(text)) {
+        return ['design'];
+    }
+
+    if (
+        isTechnicalServicesDocumentReviewRequest(text) &&
+        !isCostValueWriteRequest(text) &&
+        !isFinanceWriteRequest(text) &&
+        !isInvoiceWriteRequest(text) &&
+        !isIssueVariationWorkflowRequest(text) &&
+        !isVariationWriteRequest(text) &&
+        !isProgramWriteRequest(text) &&
+        !isProgrammeDateWriteRequest(text)
+    ) {
         return ['design'];
     }
 
@@ -365,8 +389,35 @@ function specialistRoutingHint(agentName: SpecialistName, latestUserMessage: str
     }
     if (
         agentName === 'design' &&
+        isRfiReferenceRequest(latestUserMessage) &&
+        !isRfiWriteRequest(latestUserMessage)
+    ) {
+        return (
+            'Routing note: this is an existing RFI response request. ' +
+            'Use list_rfis to resolve the typed RFI, search/select relevant project documents, sync them to AI if needed, and use record_rfi_response or attach_rfi_evidence rather than creating a duplicate RFI or note.'
+        );
+    }
+    if (
+        agentName === 'design' &&
+        isRfiWriteRequest(latestUserMessage)
+    ) {
+        return (
+            'Routing note: this is an RFI drafting request. ' +
+            'Use project evidence first, resolve the responsible stakeholder where possible, then use create_rfi for the typed RFI proposal. ' +
+            'Do not satisfy this with create_note or a generic correspondence note. If a required RFI fact is ambiguous, ask one concise clarifying question.'
+        );
+    }
+    if (
+        agentName === 'design' &&
         isProjectReportWriteRequest(latestUserMessage)
     ) {
+        if (/\bweekly\b[\s\S]{0,120}\b(briefing|report|draft|status)\b|\b(briefing|report|draft|status)\b[\s\S]{0,120}\bweekly\b/i.test(latestUserMessage)) {
+            return (
+                'Routing note: this is weekly briefing/report draft work. ' +
+                'Use create_weekly_report_draft so the draft is grounded in project records, typed RFIs, documents, approved memory, assumptions, and recommendations. ' +
+                'Do not use create_report alone unless the user only asked for an empty report shell.'
+            );
+        }
         return (
             'Routing note: this is project-report work in the Notes/Meetings/Reports area. ' +
             'If the user says PCG report, treat PCG as Project Control Group, not progress claim. ' +
@@ -380,8 +431,8 @@ function specialistRoutingHint(agentName: SpecialistName, latestUserMessage: str
     ) {
         return (
             'Routing note: this is RFT content work, not a note or addendum. ' +
-            'The RFT Brief section uses stakeholder briefServices and briefDeliverables. ' +
-            'Resolve the relevant consultant, then use update_stakeholder if possible.'
+            'The RFT Brief section uses stakeholder brief fields and the Fee table uses linked consultant cost-plan rows. ' +
+            'Resolve the relevant consultant, then use update_rft_brief so services, deliverables, fee instructions, and fee-stage rows stay together.'
         );
     }
     if (

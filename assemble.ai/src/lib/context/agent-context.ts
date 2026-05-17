@@ -22,6 +22,7 @@ export function formatAgentContext(ctx: AssembledContext): string {
         ctx.projectSummary,
         ctx.moduleContext,
         ctx.ragContext,
+        ctx.aiMemoryContext,
         ctx.crossModuleInsights,
     ]
         .filter(Boolean)

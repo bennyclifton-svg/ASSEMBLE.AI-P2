@@ -22,7 +22,7 @@ export interface DrawingExtractionResult {
     drawingName: string | null;
     drawingRevision: string | null;
     confidence: number;  // 0-100
-    source: 'AI' | 'FILENAME' | 'VISION';
+    source: 'AI' | 'FILENAME' | 'VISION' | 'TEXT';
 }
 
 export interface DrawingExtractionRequest {
@@ -40,6 +40,8 @@ export interface DrawingExtractionRequest {
  * Discipline prefixes: A (Arch), S (Struct), M (Mech), E (Elec), P (Plumb), L (Landscape)
  */
 const DRAWING_NUMBER_PATTERNS: RegExp[] = [
+    // Consultant/project prefix + discipline + sheet number: CC-A-102, ABC-AR-1001
+    /^[A-Z]{2,4}-[A-Z]{1,2}-\d{2,4}[A-Z]?$/i,
     // Generic two-letter prefix with hyphen and number: CC-11, AB-01, XY-123
     // This catches consultant codes, custom prefixes, etc.
     /^[A-Z]{2}-\d{1,3}$/i,
@@ -100,16 +102,17 @@ function normalizeDrawingNumber(drawingNumber: string | null): string | null {
  * Common revision patterns
  */
 const REVISION_PATTERNS: RegExp[] = [
-    /^\[([A-Z])\]$/i,                    // [A], [B], [C] - square bracket revisions
-    /^\(([A-Z])\)$/i,                    // (A), (B), (C) - parenthesis letter revisions
-    /^Rev\.?\s*([A-Z]|\d+)$/i,          // Rev A, Rev. 1
+    /^\[([A-Z]\d*|\d{1,2})\]$/i,        // [A], [C1], [04] - square bracket revisions
+    /^\(([A-Z]\d*|\d{1,2})\)$/i,        // (A), (C1), (04) - parenthesis revisions
+    /^Rev\.?\s*([A-Z]\d*|\d+)$/i,       // Rev A, Rev. 1, Rev C1
     /^([A-Z])$/,                         // Just A, B, C
     /^(\d{1,2})$/,                       // Just 1, 2, 3
-    /^P0?(\d+)$/i,                       // P01, P1 (preliminary)
-    /^R(\d+)$/i,                         // R1, R2 (revision)
-    /^Issue\s*([A-Z]|\d+)$/i,           // Issue A, Issue 1
-    /^C(\d+)$/i,                         // C1, C2 (construction)
-    /^T(\d+)$/i,                         // T1, T2 (tender)
+    /^(P0?\d+)$/i,                       // P01, P1 (preliminary)
+    /^(R\d+)$/i,                         // R1, R2 (revision)
+    /^Issue\s*([A-Z]\d*|\d+)$/i,        // Issue A, Issue 1, Issue C1
+    /^(C\d+)$/i,                         // C1, C2 (construction)
+    /^(T\d+)$/i,                         // T1, T2 (tender)
+    /^(C\d+)(CONSTRUCTION)?ISSUE$/i,     // C1CONSTRUCTIONISSUE
     /^\((\d{1,2})\)$/,                   // (01), (04) - common in construction docs
 ];
 
@@ -158,6 +161,411 @@ function isNonDrawingFilename(filename: string): boolean {
 }
 
 // ============================================================================
+// LOCAL TITLE-BLOCK TEXT EXTRACTION
+// ============================================================================
+
+const TITLE_BLOCK_LABEL_PATTERN = /^(project|drawing\s+title|sheet\s+title|north\s+point|job\s+no|job\s+number|dwg\s+no|drawing\s+number|sheet\s+number|scale|sheet\s+scale|sheet\s+size|plot\s+date|issue|revision|drawn|checked|date|architect|services\s+consultant|project\s+manager|client)\s*:?$/i;
+
+function isTitleBlockLabelLine(line: string): boolean {
+    if (TITLE_BLOCK_LABEL_PATTERN.test(line)) return true;
+
+    const id = normaliseIdentifier(line);
+    return [
+        'PROJECTTITLE',
+        'DRAWINGTITLE',
+        'SHEETTITLE',
+        'SHEETNUMBERPLOTDATE',
+        'ISSUESHEETSIZESHEETSCALE',
+        'DRAWINGNUMBERSHEETNUMBER',
+    ].includes(id);
+}
+
+function cleanPdfTextLine(line: string): string {
+    return line
+        .replace(/[\u0000-\u001F\u007F-\u009F]+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function normaliseIdentifier(value: string): string {
+    return cleanPdfTextLine(value).toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function normaliseTextLines(documentText: string): string[] {
+    return documentText
+        .split(/\r?\n/)
+        .map(cleanPdfTextLine)
+        .filter(Boolean);
+}
+
+function compactLinesText(lines: string[]): string {
+    return lines.join('').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function hasDrawingTitleLabel(lines: string[]): boolean {
+    return lines.some(line => /^(Drawing|Sheet)\s+Title\s*:?/i.test(line)) ||
+        compactLinesText(lines).includes('DRAWINGTITLE') ||
+        compactLinesText(lines).includes('SHEETTITLE');
+}
+
+function isClearlyNonDrawingText(documentText: string): boolean {
+    const lines = normaliseTextLines(documentText);
+    if (lines.length === 0 || hasDrawingTitleLabel(lines)) return false;
+
+    const openingLines = lines.slice(0, 80);
+    return openingLines.some(line =>
+        /^Transmittal$/i.test(line) ||
+        /^Distribution Register:?$/i.test(line) ||
+        /^Reason For Issue:?/i.test(line) ||
+        /^E=\s*Electronic$/i.test(line)
+    );
+}
+
+function isIssueStatusLine(line: string): boolean {
+    const upper = line.toUpperCase();
+    return (
+        /^(D&C\s+)?TENDER\s+ISSUE$/.test(upper) ||
+        /^PRELIMINARY\s+ISSUE$/.test(upper) ||
+        /^DESIGN\s+REVIEW$/.test(upper) ||
+        /^ISSUED\s+FOR\b/.test(upper) ||
+        /^FOR\s+(CONSTRUCTION|TENDER|INFORMATION|REVIEW|APPROVAL)\b/.test(upper) ||
+        /^(CONSTRUCTION|TENDER|APPROVAL|DRAFT)\s+ISSUE$/.test(upper) ||
+        /^[A-Z]\d+CONSTRUCTION\s+ISSUE$/.test(upper)
+    );
+}
+
+function parseRevisionToken(line: string): string | null {
+    const cleaned = cleanPdfTextLine(line);
+    const explicitRevMatch = cleaned.match(/^Rev\.?\s+([A-Z]\d*|\d+)\b/i);
+    if (explicitRevMatch) {
+        return explicitRevMatch[1].toUpperCase();
+    }
+
+    const compact = cleaned.replace(/\s+/g, '');
+
+    for (const revPattern of REVISION_PATTERNS) {
+        const match = compact.match(revPattern);
+        if (match) {
+            return (match[1] || match[0]).toUpperCase();
+        }
+    }
+
+    return null;
+}
+
+function isNonTitleCandidate(line: string, drawingNumber?: string | null, revision?: string | null): boolean {
+    const upper = line.toUpperCase();
+    const id = normaliseIdentifier(line);
+
+    if (!line || line.length < 5 || line.length > 140) return true;
+    if (isTitleBlockLabelLine(line)) return true;
+    if (drawingNumber && id === normaliseIdentifier(drawingNumber)) return true;
+    if (revision && id === normaliseIdentifier(revision)) return true;
+    if (DRAWING_NUMBER_PATTERNS.some(pattern => pattern.test(line))) return true;
+    if (REVISION_PATTERNS.some(pattern => pattern.test(line))) return true;
+    if (isIssueStatusLine(line)) return true;
+    if (/^\d+:\d+$/.test(line)) return true;
+    if (/^\(?A\d\)?$/i.test(line)) return true;
+    if (/^NORTH$/i.test(line)) return true;
+    if (/^Rev\.?\s*Description\.?\s*Initial\.?\s*Date\.?$/i.test(line)) return true;
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(line)) return true;
+    if (/\b(PH|FAX|A\.?B\.?N|A\.?C\.?N|EMAIL|WWW)\b/i.test(line)) return true;
+    if (/@/.test(line)) return true;
+    if (/^(PROJECT|ARCHITECT|CLIENT|SERVICE|SERVICES|DRAWING NUMBER|COORDINATED REFERENCE DRAWINGS)$/i.test(line)) return true;
+
+    const letterCount = (upper.match(/[A-Z]/g) || []).length;
+    return letterCount < 4;
+}
+
+function isLikelyDrawingTitle(line: string, drawingNumber?: string | null, revision?: string | null): boolean {
+    if (isNonTitleCandidate(line, drawingNumber, revision)) return false;
+
+    // Prefer drawing-like nouns, but allow concise discipline titles that may not
+    // include one of these terms.
+    if (hasDrawingTitleKeyword(line)) {
+        return true;
+    }
+
+    return /^[A-Z0-9][A-Z0-9 &/().,'-]+$/i.test(line);
+}
+
+function hasDrawingTitleKeyword(line: string): boolean {
+    return /\b(PLAN|DETAIL|SECTION|ELEVATION|SCHEDULE|LAYOUT|SERVICES|SCHEMATIC|SCHEMATICS|LEGEND|NOTES|HYDRAULIC|MECHANICAL|ELECTRICAL|STRUCTURAL|ARCHITECTURAL|CIVIL|FLOOR|ROOF|BASEMENT|LEVEL|COVER|SHEET|LIGHTING|POWER|COMMS)\b/i.test(line);
+}
+
+const COMPACT_TITLE_START_TOKENS = [
+    'MECHANICALSERVICES',
+    'HYDRAULICSERVICES',
+    'ELECTRICALSERVICES',
+    'STRUCTURALSERVICES',
+    'ARCHITECTURALSERVICES',
+    'FIRESERVICES',
+    'STORMWATER',
+    'BASEMENT',
+    'GROUND',
+    'LEVEL',
+    'ROOF',
+    'COVER',
+    'DETAIL',
+    'SEWER',
+    'WATER',
+    'GAS',
+];
+
+const COMPACT_TITLE_WORDS = [
+    'ARCHITECTURAL',
+    'ELECTRICAL',
+    'MECHANICAL',
+    'STRUCTURAL',
+    'HYDRAULIC',
+    'COMMUNICATION',
+    'COMMUNICATIONS',
+    'STORMWATER',
+    'SERVICES',
+    'SERVICE',
+    'BASEMENT',
+    'GROUND',
+    'CARPARK',
+    'SCHEMATICS',
+    'SCHEMATIC',
+    'EQUIPMENT',
+    'SCHEDULE',
+    'DETAILS',
+    'DETAIL',
+    'COVER',
+    'SHEET',
+    'LEGEND',
+    'LEVEL',
+    'ROOF',
+    'FLOOR',
+    'PLAN',
+    'SEWER',
+    'WATER',
+    'FIRE',
+    'GAS',
+];
+
+function splitCompactDrawingTitle(compactTitle: string): string | null {
+    const words: string[] = [];
+    let remaining = compactTitle;
+
+    while (remaining.length > 0) {
+        const numberMatch = remaining.match(/^\d+/);
+        if (numberMatch) {
+            words.push(numberMatch[0]);
+            remaining = remaining.slice(numberMatch[0].length);
+            continue;
+        }
+
+        const word = COMPACT_TITLE_WORDS.find(candidate => remaining.startsWith(candidate));
+        if (!word) break;
+
+        words.push(word);
+        remaining = remaining.slice(word.length);
+    }
+
+    if (words.length < 2) return null;
+
+    return words.join(' ');
+}
+
+function extractDrawingTitleFromCompactedText(
+    lines: string[],
+    drawingNumber: string,
+): string | null {
+    const compactText = compactLinesText(lines);
+    const targetNumber = normaliseIdentifier(drawingNumber);
+    const numberIndex = compactText.indexOf(targetNumber);
+
+    if (numberIndex < 0) return null;
+
+    const titleBlockPrefix = compactText.slice(Math.max(0, numberIndex - 140), numberIndex);
+    const startIndex = COMPACT_TITLE_START_TOKENS
+        .map(token => titleBlockPrefix.lastIndexOf(token))
+        .find(index => index >= 0);
+
+    if (startIndex === undefined) return null;
+
+    const compactTitle = titleBlockPrefix.slice(startIndex);
+    if (compactTitle.length < 8 || compactTitle.length > 80) return null;
+
+    return splitCompactDrawingTitle(compactTitle);
+}
+
+function isPrecedingTitleMetadata(line: string): boolean {
+    const id = normaliseIdentifier(line);
+
+    return (
+        /^\d{4,6}$/.test(id) ||
+        /\b(NTS|MAY|JAN|FEB|MAR|APR|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\b/i.test(line) ||
+        /^[A-Z](\.[A-Z])+/.test(line)
+    );
+}
+
+function extractDrawingTitleFromPrecedingLines(
+    lines: string[],
+    drawingNumber: string,
+    revision?: string | null
+): string | null {
+    const targetNumber = normaliseIdentifier(drawingNumber);
+
+    for (let i = 0; i < lines.length; i++) {
+        if (normaliseIdentifier(lines[i]) !== targetNumber) continue;
+
+        const titleLines: string[] = [];
+
+        for (let j = i - 1; j >= Math.max(0, i - 14); j--) {
+            const line = lines[j];
+
+            if (isPrecedingTitleMetadata(line)) continue;
+
+            if (!isNonTitleCandidate(line, drawingNumber, revision) && hasDrawingTitleKeyword(line)) {
+                titleLines.unshift(line);
+                continue;
+            }
+
+            if (titleLines.length > 0) break;
+        }
+
+        if (titleLines.length > 0) {
+            return titleLines.join(' ');
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Extract a drawing title from locally parsed PDF text.
+ *
+ * Some PDFs expose title-block text in a visual-order sequence rather than
+ * directly after the "Drawing Title" label. In those cases the most reliable
+ * local cue is the title-block cluster: scale -> drawing number -> revision ->
+ * issue status -> drawing title.
+ */
+export function extractDrawingTitleFromText(
+    documentText: string,
+    drawingNumber?: string | null,
+    revision?: string | null
+): string | null {
+    const lines = normaliseTextLines(documentText);
+    if (lines.length === 0) return null;
+    const titleLabelFound = hasDrawingTitleLabel(lines);
+
+    for (let i = 0; i < lines.length; i++) {
+        const inlineMatch = lines[i].match(/^(Drawing|Sheet)\s+Title\s*:?\s*(.+)$/i);
+        if (inlineMatch?.[1]) {
+            const candidate = cleanPdfTextLine(inlineMatch[2]);
+            if (isLikelyDrawingTitle(candidate, drawingNumber, revision)) {
+                return candidate;
+            }
+        }
+    }
+
+    if (!drawingNumber) {
+        return null;
+    }
+    if (!titleLabelFound) return null;
+
+    const precedingTitle = extractDrawingTitleFromPrecedingLines(lines, drawingNumber, revision);
+    if (precedingTitle) return precedingTitle;
+
+    const compactedTitle = extractDrawingTitleFromCompactedText(lines, drawingNumber);
+    if (compactedTitle) return compactedTitle;
+
+    const targetNumber = normaliseIdentifier(drawingNumber);
+    const targetRevision = revision ? normaliseIdentifier(revision) : null;
+
+    for (let i = 0; i < lines.length; i++) {
+        const lineId = normaliseIdentifier(lines[i]);
+        if (!lineId.includes(targetNumber)) continue;
+
+        for (let j = i + 1; j < Math.min(lines.length, i + 12); j++) {
+            const candidateId = normaliseIdentifier(lines[j]);
+            if (targetRevision && candidateId === targetRevision) continue;
+            if (isIssueStatusLine(lines[j])) continue;
+            if (isTitleBlockLabelLine(lines[j])) continue;
+            if (isLikelyDrawingTitle(lines[j], drawingNumber, revision)) {
+                return lines[j];
+            }
+        }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+        if (!/^(Drawing|Sheet)\s+Title\s*:?$/i.test(lines[i])) continue;
+
+        for (let j = i + 1; j < Math.min(lines.length, i + 8); j++) {
+            if (isTitleBlockLabelLine(lines[j])) continue;
+            if (isLikelyDrawingTitle(lines[j], drawingNumber, revision)) {
+                return lines[j];
+            }
+        }
+    }
+
+    return null;
+}
+
+export function extractDrawingNumberFromText(documentText: string): string | null {
+    const lines = normaliseTextLines(documentText);
+
+    for (const line of lines) {
+        if (isKnownDrawingNumberPattern(line)) {
+            return line.toUpperCase();
+        }
+    }
+
+    return null;
+}
+
+export function extractDrawingRevisionFromText(
+    documentText: string,
+    drawingNumber?: string | null
+): string | null {
+    if (!drawingNumber) return null;
+
+    const lines = normaliseTextLines(documentText);
+    const targetNumber = normaliseIdentifier(drawingNumber);
+
+    for (let i = 0; i < lines.length; i++) {
+        if (normaliseIdentifier(lines[i]) !== targetNumber) continue;
+
+        const beforeLines = lines.slice(Math.max(0, i - 14), i).reverse();
+        const afterLines = lines.slice(i + 1, Math.min(lines.length, i + 8));
+        const nearbyLines = [...afterLines, ...beforeLines];
+
+        for (const line of nearbyLines) {
+            if (!/^Rev\.?\s+/i.test(line)) continue;
+
+            const revision = parseRevisionToken(line);
+            if (revision) return revision;
+        }
+
+        for (const line of [...beforeLines, ...afterLines]) {
+            if (/^NORTH$/i.test(line) || isTitleBlockLabelLine(line)) continue;
+
+            const revision = parseRevisionToken(line);
+            if (revision && !/^\d{1,2}$/.test(revision)) return revision;
+        }
+
+        for (const line of afterLines.slice(0, 3)) {
+            if (/^NORTH$/i.test(line) || isTitleBlockLabelLine(line)) continue;
+
+            const revision = parseRevisionToken(line);
+            if (revision) return revision;
+        }
+    }
+
+    for (const line of lines.slice(0, 80)) {
+        if (!/^Rev\.?\s+/i.test(line)) continue;
+
+        const revision = parseRevisionToken(line);
+        if (revision) return revision;
+    }
+
+    return null;
+}
+
+// ============================================================================
 // FILENAME EXTRACTION (FALLBACK)
 // ============================================================================
 
@@ -165,7 +573,40 @@ function isNonDrawingFilename(filename: string): boolean {
  * Pattern to detect revision suffix attached to drawing number
  * e.g., LT01[B] -> drawing: LT01, revision: B
  */
-const ATTACHED_REVISION_PATTERN = /^(.+?)(\[([A-Z])\]|\(([A-Z])\))$/i;
+const ATTACHED_REVISION_PATTERN = /^(.+?)(\[([A-Z]\d*|\d{1,2})\]|\(([A-Z]\d*|\d{1,2})\))$/i;
+
+function isFilenameSeparatorToken(part: string): boolean {
+    return /^[-–—]+$/.test(part);
+}
+
+function buildFilenameDrawingName(parts: string[]): string | null {
+    const cleanParts = [...parts];
+
+    while (cleanParts.length > 0 && isFilenameSeparatorToken(cleanParts[0])) {
+        cleanParts.shift();
+    }
+    while (cleanParts.length > 0 && isFilenameSeparatorToken(cleanParts[cleanParts.length - 1])) {
+        cleanParts.pop();
+    }
+
+    if (cleanParts.length === 0) return null;
+
+    let name = '';
+    for (const part of cleanParts) {
+        if (isFilenameSeparatorToken(part)) {
+            if (name && !name.endsWith(' - ')) {
+                name += ' - ';
+            }
+        } else {
+            if (name && !name.endsWith(' - ')) {
+                name += ' ';
+            }
+            name += part;
+        }
+    }
+
+    return name.trim().replace(/\s+-\s+$/g, '') || null;
+}
 
 /**
  * Extract drawing number from filename as fallback
@@ -177,6 +618,11 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
     let drawingNumber: string | null = null;
     let revision: string | null = null;
     let drawingName: string | null = null;
+
+    const shortFilenameMatch = baseName.match(/^([ASMEPL]\d{2,4})(?:[-~]|$)/i);
+    if (shortFilenameMatch) {
+        drawingNumber = shortFilenameMatch[1].toUpperCase();
+    }
 
     // Extract explicit -(NN) revision suffix from end of filename FIRST
     // Pattern: "15123_S0012_Shoring_Details Sht 1-(04)" → revision "04"
@@ -192,11 +638,13 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
     // First pass: Find hyphenated drawing numbers directly in the filename
     // Patterns like CC-01, CC-11, AR-101, SK-001, etc.
     // Must check the full string BEFORE splitting (which would destroy hyphenated patterns)
-    for (const pattern of DRAWING_NUMBER_PATTERNS) {
-        const match = baseName.match(new RegExp(pattern.source, 'gi'));
-        if (match) {
-            drawingNumber = match[0].toUpperCase();
-            break;
+    if (!drawingNumber) {
+        for (const pattern of DRAWING_NUMBER_PATTERNS) {
+            const match = baseName.match(new RegExp(pattern.source, 'gi'));
+            if (match) {
+                drawingNumber = match[0].toUpperCase();
+                break;
+            }
         }
     }
 
@@ -238,17 +686,16 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
             }
         }
 
-        // If no single letter at end, look for revision patterns in parts
+        // If no single letter at end, only treat the final token as a revision.
+        // Tokens like "C1" can be a level name in "LEVEL C1 CARPARK PLAN".
         if (!revision) {
-            for (const part of parts) {
-                for (const revPattern of REVISION_PATTERNS) {
-                    const match = part.match(revPattern);
-                    if (match) {
-                        revision = match[1] || match[0];
-                        break;
-                    }
+            const lastPart = parts[parts.length - 1];
+            for (const revPattern of REVISION_PATTERNS) {
+                const match = lastPart.match(revPattern);
+                if (match) {
+                    revision = match[1] || match[0];
+                    break;
                 }
-                if (revision) break;
             }
         }
     }
@@ -270,7 +717,7 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
             const endIndex = lastPartIsRevision ? parts.length - 1 : parts.length;
             const nameParts = parts.slice(drawingNumIndex + 1, endIndex);
             if (nameParts.length > 0) {
-                drawingName = nameParts.join(' ');
+                drawingName = buildFilenameDrawingName(nameParts);
             }
         }
     }
@@ -282,7 +729,7 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
     // Higher confidence when we have both a recognized drawing number pattern and a clean revision
     const hasStrongPattern = isKnownDrawingNumberPattern(drawingNumber);
     const hasNumericRevision = revision !== null && /^\d+$/.test(revision);
-    const hasCleanRevision = revision !== null && /^[A-Z]$/i.test(revision);
+    const hasCleanRevision = revision !== null && /^[A-Z]\d*$/i.test(revision);
     const confidence = hasStrongPattern && hasNumericRevision ? 90
         : hasStrongPattern && hasCleanRevision ? 85
         : hasStrongPattern ? 80
@@ -341,9 +788,10 @@ export async function extractDrawingInfo(
 
             // Merge vision with filename result
             const merged = mergeExtractionResults(visionResult, filenameResult);
-            console.log(`[drawing-extraction] Fast result for ${filename}: ${merged.drawingNumber || 'none'}, rev: ${merged.drawingRevision || 'none'} (confidence: ${merged.confidence}, source: ${merged.source})`);
+            const enriched = await enrichMissingDrawingNameFromLocalText(merged, fileBuffer, filename, mimeType);
+            console.log(`[drawing-extraction] Fast result for ${filename}: ${enriched.drawingNumber || 'none'}, rev: ${enriched.drawingRevision || 'none'} (confidence: ${enriched.confidence}, source: ${enriched.source})`);
 
-            return merged;
+            return enriched;
         } catch (visionError) {
             console.error('[drawing-extraction] Vision extraction failed, falling back to text:', visionError);
             // Fall through to text-based extraction
@@ -389,10 +837,11 @@ export async function extractDrawingInfo(
     const merged = aiResult
         ? mergeExtractionResults(aiResult, filenameResult)
         : (filenameResult || createEmptyResult('FILENAME'));
+    const enriched = await enrichMissingDrawingNameFromLocalText(merged, fileBuffer, filename, mimeType);
 
-    console.log(`[drawing-extraction] Final result for ${filename}: ${merged.drawingNumber || 'none'}, rev: ${merged.drawingRevision || 'none'} (confidence: ${merged.confidence}, source: ${merged.source})`);
+    console.log(`[drawing-extraction] Final result for ${filename}: ${enriched.drawingNumber || 'none'}, rev: ${enriched.drawingRevision || 'none'} (confidence: ${enriched.confidence}, source: ${enriched.source})`);
 
-    return merged;
+    return enriched;
 }
 
 /**
@@ -527,6 +976,113 @@ function createEmptyResult(source: 'AI' | 'FILENAME' | 'VISION'): DrawingExtract
     };
 }
 
+async function extractLocalDocumentText(
+    fileBuffer: Buffer,
+    filename: string,
+    mimeType: string
+): Promise<string | null> {
+    const ext = filename.toLowerCase().split('.').pop() || '';
+    const isPdf = mimeType === 'application/pdf' || ext === 'pdf';
+
+    if (isPdf) {
+        const { default: pdf } = await import('pdf-parse');
+        const result = await pdf(fileBuffer);
+        return result.text || null;
+    }
+
+    if (mimeType.startsWith('text/') || ['txt', 'md', 'csv'].includes(ext)) {
+        return fileBuffer.toString('utf-8');
+    }
+
+    return null;
+}
+
+async function enrichMissingDrawingNameFromLocalText(
+    result: DrawingExtractionResult,
+    fileBuffer: Buffer,
+    filename: string,
+    mimeType: string
+): Promise<DrawingExtractionResult> {
+    // Respect a confident AI/VISION "not a drawing" verdict. Without this guard,
+    // a null drawingNumber falls through to extractDrawingNumberFromText() below,
+    // which scans raw PDF text and synthesizes a drawing number from any token
+    // matching the regex — producing hallucinated entries for reports, planning
+    // documents, etc.
+    if (
+        (result.source === 'AI' || result.source === 'VISION') &&
+        result.drawingNumber === null &&
+        result.confidence >= 70
+    ) {
+        return result;
+    }
+
+    const existingNameLooksLikeRevision = result.drawingName
+        ? parseRevisionToken(result.drawingName) !== null
+        : false;
+
+    try {
+        const localText = await extractLocalDocumentText(fileBuffer, filename, mimeType);
+        if (!localText) return result;
+
+        if (result.source === 'FILENAME' && isClearlyNonDrawingText(localText)) {
+            console.log(`[drawing-extraction] Local text classified as non-drawing: ${filename}`);
+            return {
+                drawingNumber: null,
+                drawingName: null,
+                drawingRevision: null,
+                confidence: 90,
+                source: 'TEXT',
+            };
+        }
+
+        const drawingNumber = result.drawingNumber || extractDrawingNumberFromText(localText);
+        if (!drawingNumber) return result;
+
+        const drawingName = extractDrawingTitleFromText(
+            localText,
+            drawingNumber,
+            result.drawingRevision
+        );
+        const drawingRevision = extractDrawingRevisionFromText(
+            localText,
+            drawingNumber
+        ) || result.drawingRevision;
+
+        const shouldReplaceDrawingName =
+            !result.drawingName ||
+            existingNameLooksLikeRevision ||
+            (drawingName !== null && hasDrawingTitleKeyword(drawingName));
+
+        const nextDrawingName = shouldReplaceDrawingName
+            ? drawingName || (existingNameLooksLikeRevision ? null : result.drawingName)
+            : result.drawingName;
+
+        if (
+            drawingNumber === result.drawingNumber &&
+            nextDrawingName === result.drawingName &&
+            drawingRevision === result.drawingRevision
+        ) {
+            return result;
+        }
+
+        if (drawingName && shouldReplaceDrawingName && drawingName !== result.drawingName) {
+            console.log(`[drawing-extraction] Local title-block fallback: ${filename} -> "${drawingName}"`);
+        }
+
+        return {
+            ...result,
+            drawingNumber,
+            drawingName: nextDrawingName,
+            drawingRevision,
+            confidence: Math.max(result.confidence, 88),
+            source: result.source === 'FILENAME' ? 'TEXT' : result.source,
+        };
+    } catch (error) {
+        console.warn(`[drawing-extraction] Local title-block fallback failed for ${filename}:`, error);
+        return result;
+    }
+}
+
 // ============================================================================
 // VISION EXTRACTION (FALLBACK FOR LOW CONFIDENCE)
 // ============================================================================
@@ -604,51 +1160,46 @@ async function extractWithVision(
     filename: string,
     mimeType: string
 ): Promise<DrawingExtractionResult> {
-    try {
-        console.log(`[drawing-extraction] Vision fallback for: ${filename}`);
-        const anthropic = new Anthropic();
+    console.log(`[drawing-extraction] Vision fallback for: ${filename}`);
+    const anthropic = new Anthropic();
 
-        // Determine media type for the document
-        const mediaType = mimeType === 'application/pdf' ? 'application/pdf' : 'application/pdf';
+    // Determine media type for the document
+    const mediaType = mimeType === 'application/pdf' ? 'application/pdf' : 'application/pdf';
 
-        const message = await anthropic.messages.create({
-            model: 'claude-haiku-4-5-20251001',  // Haiku for cost efficiency
-            max_tokens: 500,
-            messages: [{
-                role: 'user',
-                content: [
-                    {
-                        type: 'document',
-                        source: {
-                            type: 'base64',
-                            media_type: mediaType,
-                            data: fileBuffer.toString('base64'),
-                        },
+    const message = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',  // Haiku for cost efficiency
+        max_tokens: 500,
+        messages: [{
+            role: 'user',
+            content: [
+                {
+                    type: 'document',
+                    source: {
+                        type: 'base64',
+                        media_type: mediaType,
+                        data: fileBuffer.toString('base64'),
                     },
-                    {
-                        type: 'text',
-                        text: buildVisionExtractionPrompt(filename),
-                    },
-                ],
-            }],
-        });
+                },
+                {
+                    type: 'text',
+                    text: buildVisionExtractionPrompt(filename),
+                },
+            ],
+        }],
+    });
 
-        // Extract text response
-        const textContent = message.content.find(c => c.type === 'text');
-        if (!textContent || textContent.type !== 'text') {
-            throw new Error('No text response from vision AI');
-        }
-
-        // Parse JSON response
-        const result = parseVisionResponse(textContent.text);
-
-        console.log(`[drawing-extraction] Vision result for ${filename}: ${result.drawingNumber || 'none'} (confidence: ${result.confidence})`);
-
-        return result;
-    } catch (error) {
-        console.error('[drawing-extraction] Vision extraction failed:', error);
-        return createEmptyResult('VISION');
+    // Extract text response
+    const textContent = message.content.find(c => c.type === 'text');
+    if (!textContent || textContent.type !== 'text') {
+        throw new Error('No text response from vision AI');
     }
+
+    // Parse JSON response
+    const result = parseVisionResponse(textContent.text);
+
+    console.log(`[drawing-extraction] Vision result for ${filename}: ${result.drawingNumber || 'none'} (confidence: ${result.confidence})`);
+
+    return result;
 }
 
 /**

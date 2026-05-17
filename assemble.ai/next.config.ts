@@ -28,6 +28,11 @@ const nextConfig: NextConfig = {
     '@opentelemetry/api',
     'require-in-the-middle',
     'import-in-the-middle',
+    // BullMQ uses an internal `ioredis/built/utils` import that Next.js can't resolve
+    // when ioredis is left external on its own. Marking bullmq external too lets
+    // Node.js resolve the whole chain at runtime, which is how the workers already run.
+    'bullmq',
+    'ioredis',
   ],
 
   // Increase body size limit for file uploads (default is 10MB)

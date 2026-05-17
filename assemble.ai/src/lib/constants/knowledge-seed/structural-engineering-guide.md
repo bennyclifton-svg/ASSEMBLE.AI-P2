@@ -11,6 +11,76 @@ applicableStates: [NSW, VIC, QLD, WA, SA, TAS, ACT, NT]
 
 # Structural Engineering Guide
 
+## Procurement Brief Service Catalogue
+
+Use this catalogue when generating Structural Engineer services for procurement briefs. Services should describe structural engineering responsibility, advice, design, coordination, review, inspection, and certification within the active structural discipline.
+
+Core services:
+- Establish structural design criteria, loading assumptions, design life requirements, importance level, durability exposure, and applicable Australian Standards.
+- Develop the structural concept for foundations, basement structure, primary frame, gravity systems, lateral stability systems, and transfer elements where required by the project.
+- Design footings, slabs, columns, beams, walls, retaining elements, suspended structure, roof structure, and structural steel or timber elements where applicable.
+- Coordinate basement retention, excavation support, foundation interfaces, and substructure design with geotechnical and civil inputs.
+- Coordinate structural interfaces with facade support, slab edges, balcony structure, balustrade support, plant support, lift/stair cores, and roof plant zones.
+- Coordinate structural penetrations, setdowns, cast-ins, embeds, and builder's work openings with architectural and services documentation.
+- Review structural implications of facade, precast, post-tensioning, steelwork, masonry, balustrade, waterproofing, and plant support systems where they are present in the project.
+- Provide structural input to authority, certifier, NCC/BCA, Construction Certificate, and Occupation Certificate processes where structural documentation or certification is required.
+- Review shop drawings, temporary works interfaces, construction methodologies, RFIs, and contractor proposals where included in the appointment.
+- Undertake structural site inspections, respond to non-conformances, review defects, and provide structural certification records.
+
+For multi-residential apartment projects, emphasise foundations, basement retention, concrete frame or structural steel frame, lateral stability, facade/slab-edge interfaces, balcony and balustrade support, services penetration coordination, inspections, certification, defects, and handover records.
+
+## Procurement Brief Deliverables
+
+Use this catalogue when generating Structural Engineer deliverables. Deliverables must be issued artifacts such as drawings, reports, calculations, schedules, certificates, registers, inspection records, or review records.
+
+Core deliverables:
+- Structural design criteria report
+- Structural calculations package
+- Foundation and footing drawings
+- Basement retention and substructure drawings
+- Slab, column, wall, beam, core, and roof structure drawings
+- Transfer structure drawings, where applicable
+- Lateral stability design documentation
+- Structural steel, concrete, timber, masonry, or retaining wall details where applicable
+- Structural specifications
+- Structural design certificate or engineering certification records
+- NCC/BCA structural compliance inputs
+- Construction Certificate structural documentation package
+- Services penetration and cast-in coordination markups
+- Facade support and slab-edge interface details
+- Shop drawing review register and marked-up shop drawings, where included
+- Structural RFI responses and design clarification records
+- Structural inspection reports
+- Non-conformance and defects review records
+- Structural handover and as-built review records
+
+## Discipline Boundaries
+
+Structural Engineer scope must stay inside structural design, structural certification, structural coordination, and structural construction support.
+
+Boundary rules:
+- Do not make the Structural Engineer responsible for BASIX, NatHERS, thermal comfort, energy efficiency, or sustainability compliance except as structural input to another consultant's process.
+- Do not make the Structural Engineer responsible for acoustic performance except for structural vibration, flanking-path coordination, or structural input requested by the acoustic consultant.
+- Do not make the Structural Engineer responsible for architectural layouts, finishes, facade system design, glazing performance, waterproofing design, access control, intercoms, landscaping, or planning approvals.
+- Do not make the Structural Engineer responsible for mechanical, electrical, hydraulic, fire, or lift services design; describe these only as services penetration, loading, plant support, cast-in, or coordination interfaces.
+- Do not state that the Structural Engineer obtains DA, CC, or OC approvals. Use wording such as "provide structural documentation, responses, and certification inputs for the approval pathway".
+
+## Common Exclusions
+
+Avoid these items unless the project facts, fee schedule, project documents, or user input specifically include them:
+- Post-tensioning
+- Precast concrete
+- Transfer slabs or transfer beams
+- Piling or ground anchors
+- Temporary works design
+- Crane bases or hoist ties
+- Specialist facade engineering
+- Detailed vibration analysis
+- Existing-structure strengthening
+- Seismic assessment
+
+When one of these items is relevant but not confirmed, qualify it with "where applicable" or frame it as a review/coordination interface rather than assuming full design responsibility.
+
 ## Concrete Frame Construction
 
 Concrete frame construction on Australian commercial and multi-residential projects revolves around the floor cycle — the repeatable sequence of formwork erection, reinforcement placement, services rough-in, pour, cure, and strip that determines the pace of the superstructure programme. On a typical high-rise project with an 800 m2 floor plate, the floor cycle target is 5-7 days per level for a PT flat-slab system and 7-10 days for a conventionally reinforced beam-and-slab system. Every additional day on the floor cycle costs $15,000-$40,000 in direct preliminaries (tower crane, site establishment, supervision) before you account for the downstream impact on facade, services, and fitout trades stacking up behind the structure.

@@ -15,6 +15,7 @@ import './list-variations';
 import './list-stakeholders';
 import './list-meetings';
 import './list-reports';
+import './list-rfis';
 import './list-project-documents';
 import './list-project-objectives';
 import './list-addenda';
@@ -30,5 +31,5 @@ import './start-issue-variation-workflow';
 import './start-issue-variation-assessment-revision-workflow';
 import './action-tools';
 
-export { getTool, specsFor, type AgentToolDefinition } from './catalog';
+export { getTool, listToolDefinitions, specsFor, type AgentToolDefinition } from './catalog';
 export { type ToolContext, assertProjectOrg, CrossTenantAccessError } from './_context';

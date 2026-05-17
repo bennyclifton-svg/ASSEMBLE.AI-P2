@@ -11,7 +11,7 @@
 import { NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectProfiles } from '@/lib/db/pg-schema';
+import { projectProfiles, briefAttachments } from '@/lib/db/pg-schema';
 import {
   projectObjectives,
   objectiveGenerationSessions,
@@ -21,12 +21,22 @@ import { aiComplete } from '@/lib/ai/client';
 import { retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
 import { resolveProfileDomainTags, buildProfileSearchQuery } from '@/lib/constants/knowledge-domains';
 import { evaluateRules, formatRulesForPrompt, type ProjectData, type ContentType } from '@/lib/services/inference-engine';
+import { buildAttachedObjectiveDocumentContext } from '@/lib/services/objective-document-context';
 import { buildPolishFreshPrompt } from './polish-fresh-prompt-builder';
 
 function rulesetForSection(section: ObjectiveType): ContentType {
   return section === 'functional' || section === 'quality'
     ? 'objectives_functional_quality'
     : 'objectives_planning_compliance';
+}
+
+async function getAttachedObjectiveDocumentIds(projectId: string): Promise<string[]> {
+  const briefAttached = await db
+    .select({ documentId: briefAttachments.documentId })
+    .from(briefAttachments)
+    .where(eq(briefAttachments.projectId, projectId));
+
+  return [...new Set(briefAttached.map((attachment) => attachment.documentId))];
 }
 
 export async function handleLongFresh(args: { projectId: string; section: ObjectiveType }) {
@@ -125,21 +135,39 @@ export async function handleLongFresh(args: { projectId: string; section: Object
   const rules = evaluateRules(rulesetForSection(section), projectData);
   const inferenceRulesFormatted = formatRulesForPrompt(rules, { includeConfidence: true, groupBySource: false });
 
-  // 4. Build prompt and call AI
+  // 4. Attached indexed documents, when present, override generic inference.
+  let attachedDocumentContext = '';
+  try {
+    const attachedDocumentIds = await getAttachedObjectiveDocumentIds(projectId);
+    if (attachedDocumentIds.length > 0) {
+      const context = await buildAttachedObjectiveDocumentContext(attachedDocumentIds);
+      attachedDocumentContext = context.context;
+      console.log(
+        `[objectives-polish/long-fresh] Indexed document context: ${context.documentChunkCount} chunks, ` +
+        `${context.estimatedDocumentTokens} estimated tokens, ` +
+        `stagedSummary=${context.usedStagedSummary}`
+      );
+    }
+  } catch (error) {
+    console.warn('[objectives-polish/long-fresh] Attached document context failed:', error);
+  }
+
+  // 5. Build prompt and call AI
   const prompt = buildPolishFreshPrompt({
     section,
     profileContext,
     domainContextSection,
+    attachedDocumentContext,
     inferenceRulesFormatted,
   });
 
   const { text: aiText } = await aiComplete({
-    featureGroup: 'generation',
+    featureGroup: 'objectives_generation',
     maxTokens: 2000,
     messages: [{ role: 'user', content: prompt }],
   });
 
-  // 5. Parse JSON
+  // 6. Parse JSON
   let items: { short: string; polished: string }[] = [];
   try {
     let jsonText = aiText;
@@ -163,7 +191,7 @@ export async function handleLongFresh(args: { projectId: string; section: Object
     );
   }
 
-  // 6. Defensively soft-delete any existing rows for this project+section
+  // 7. Defensively soft-delete any existing rows for this project+section
   await db
     .update(projectObjectives)
     .set({ isDeleted: true, updatedAt: new Date() })
@@ -175,7 +203,7 @@ export async function handleLongFresh(args: { projectId: string; section: Object
       )
     );
 
-  // 7. Insert new rows with both text + textPolished
+  // 8. Insert new rows with both text + textPolished
   const toInsert = items.map((item, idx) => ({
     projectId,
     objectiveType: section,
@@ -188,7 +216,7 @@ export async function handleLongFresh(args: { projectId: string; section: Object
 
   const inserted = await db.insert(projectObjectives).values(toInsert).returning();
 
-  // 8. Audit row
+  // 9. Audit row
   await db.insert(objectiveGenerationSessions).values({
     projectId,
     objectiveType: section,

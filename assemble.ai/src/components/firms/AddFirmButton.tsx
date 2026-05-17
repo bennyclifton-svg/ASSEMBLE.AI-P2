@@ -51,7 +51,7 @@ export function AddFirmButton({ onAdd, onFileDrop }: Omit<AddFirmButtonProps, 'i
       className={`
         flex items-center justify-center gap-1.5 px-3 py-2 cursor-pointer
         border transition-colors duration-150
-        ${isDragOver || isHovered ? 'border-[var(--sw-rose-dk)] bg-[var(--sw-rose-dk)]' : 'border-[var(--sw-rose)] bg-[var(--sw-rose)]'}
+        ${isDragOver || isHovered ? 'border-[var(--sw-cta-hover)] bg-[var(--sw-cta-hover)]' : 'border-[var(--sw-cta)] bg-[var(--sw-cta)]'}
         w-[200px] flex-shrink-0 self-stretch min-h-[56px]
       `}
       onMouseEnter={() => setIsHovered(true)}
@@ -64,19 +64,19 @@ export function AddFirmButton({ onAdd, onFileDrop }: Omit<AddFirmButtonProps, 'i
     >
       <Plus
         className={`
-          w-5 h-5 transition-colors
-          ${isDragOver || isHovered ? 'text-white' : 'text-[var(--sw-ink)]'}
+          w-5 h-5 transition-colors text-[var(--sw-cta-fg)]
         `}
       />
       <span
         className={`
-          text-[10px] font-medium transition-colors
-          ${isDragOver || isHovered ? 'text-white' : 'text-[var(--sw-ink)]'}
+          transition-colors text-[var(--sw-cta-fg)]
         `}
         style={{
           fontFamily: 'var(--sw-font-mono)',
-          letterSpacing: '0.08em',
-          textTransform: 'lowercase',
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '0.15em',
+          textTransform: 'uppercase',
         }}
       >
         New Firm

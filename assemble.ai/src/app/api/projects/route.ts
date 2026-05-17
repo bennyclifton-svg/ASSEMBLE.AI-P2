@@ -8,7 +8,6 @@ import {
     contractorStatuses,
     projectStages,
     projectDetails,
-    projectObjectives,
     costLines,
     variations,
     invoices,
@@ -16,8 +15,15 @@ import {
 } from '@/lib/db';
 import { CONSULTANT_DISCIPLINES, CONTRACTOR_TRADES, STATUS_TYPES } from '@/lib/constants/disciplines';
 import { DEFAULT_COST_LINES, getTotalDefaultBudget } from '@/lib/constants/default-cost-lines';
-import { getCurrentUser, AuthError } from '@/lib/auth/get-user';
+import { getCurrentUser } from '@/lib/auth/get-user';
+import { requireProjectCreationAllowedForWorkspace } from '@/lib/subscription/project-creation-gate';
+import { filterProjectsForWorkspace } from '@/lib/projects/workspace-access';
 import { eq, desc } from 'drizzle-orm';
+
+type ProjectDefaultSettings = {
+    enabledDisciplines?: string[];
+    enabledTrades?: string[];
+};
 
 export async function GET() {
     try {
@@ -36,7 +42,10 @@ export async function GET() {
                 .orderBy(desc(projects.updatedAt))
             : [];
 
-        return NextResponse.json(projectsList);
+        return NextResponse.json(filterProjectsForWorkspace(
+            projectsList,
+            authResult.user.organizationId
+        ));
     } catch (error) {
         console.error('Error fetching projects:', error);
         return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
@@ -72,6 +81,12 @@ export async function POST(request: Request) {
             );
         }
 
+        const projectGate = await requireProjectCreationAllowedForWorkspace({
+            userId: authResult.user.id,
+            organizationId: authResult.user.organizationId,
+        });
+        if (!projectGate.allowed) return projectGate.response;
+
         const { name, code, status = 'active' } = await request.json();
         console.log('Request data:', { name, code, status });
 
@@ -93,10 +108,10 @@ export async function POST(request: Request) {
             .limit(1);
         console.log('Organization found:', !!org);
 
-        let defaultSettings = {};
+        let defaultSettings: ProjectDefaultSettings = {};
         if (org && org.defaultSettings) {
             try {
-                defaultSettings = JSON.parse(org.defaultSettings);
+                defaultSettings = JSON.parse(org.defaultSettings) as ProjectDefaultSettings;
                 console.log('Parsed default settings:', defaultSettings);
             } catch (e) {
                 console.error('Failed to parse defaultSettings:', e);
@@ -193,11 +208,8 @@ export async function POST(request: Request) {
                 address: '', // Empty, user will fill in
             });
 
-            // 8. Initialize empty ProjectObjectives (FR-054)
-            await tx.insert(projectObjectives).values({
-                id: crypto.randomUUID(),
-                projectId,
-            });
+            // 8. Objectives use the row-model table and start empty. Rows are
+            // created later by the Objectives workspace, briefing, or agents.
 
             // 9. Initialize default cost lines (FR-009 - Default Financial Data)
             // Creates pre-populated cost line entries across 4 sections (if any default lines exist)

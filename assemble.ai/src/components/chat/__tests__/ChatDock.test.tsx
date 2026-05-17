@@ -76,9 +76,9 @@ afterEach(() => {
 });
 
 describe('ChatDock approvals', () => {
-    it('renders inside the center panel anchor when that panel is available', async () => {
+    it('renders inside the app-level anchor when that layout is present', async () => {
         const anchor = document.createElement('div');
-        anchor.setAttribute('data-chat-dock-anchor', 'center');
+        anchor.setAttribute('data-chat-dock-anchor', 'app');
         document.body.appendChild(anchor);
 
         try {
@@ -94,7 +94,7 @@ describe('ChatDock approvals', () => {
 
     it('reserves space for the collapsed dock so content can scroll above it', async () => {
         const anchor = document.createElement('div');
-        anchor.setAttribute('data-chat-dock-anchor', 'center');
+        anchor.setAttribute('data-chat-dock-anchor', 'app');
         document.body.appendChild(anchor);
 
         try {

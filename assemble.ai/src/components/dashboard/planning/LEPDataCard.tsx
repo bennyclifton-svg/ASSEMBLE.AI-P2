@@ -5,8 +5,9 @@ import {
     MapPin, Building2, Ruler, Shield,
     Droplets, Flame, Maximize, AlertTriangle,
 } from 'lucide-react';
-import { DiamondIcon } from '@/components/ui/diamond-icon';
 import type { LEPData, LEPFetchStatus, LEPApiResponse, SiteInfo } from '@/types/lep';
+
+const muted = 'var(--sw-muted)';
 
 interface LEPDataCardProps {
     projectId: string;
@@ -26,20 +27,39 @@ interface LEPRowProps {
 
 function LEPRow({ label, value, icon: Icon, error, isLast = false }: LEPRowProps) {
     return (
-        <div className={`flex ${!isLast ? 'border-b border-[var(--color-border)]' : ''}`}>
-            <div className="w-[120px] shrink-0 px-3 py-2 flex items-center gap-1.5">
-                <Icon className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                <span className="text-sm font-medium text-[var(--color-text-muted)]">{label}</span>
-            </div>
-            <div className="flex-1 px-3 py-2">
-                {error ? (
-                    <span className="text-sm text-[var(--color-text-muted)] italic">Unavailable</span>
-                ) : (
-                    <span className="text-sm text-[var(--color-text-primary)]">
-                        {value || 'N/A'}
-                    </span>
-                )}
-            </div>
+        <div
+            className="grid items-center"
+            style={{
+                gridTemplateColumns: '88px 1fr',
+                gap: 12,
+                padding: '1px 4px',
+                borderBottom: !isLast ? '1px solid var(--sw-rule-2)' : undefined,
+            }}
+        >
+            <span
+                className="flex items-center gap-1.5"
+                style={{
+                    fontFamily: 'var(--sw-font-mono)',
+                    fontSize: 10,
+                    color: muted,
+                    textTransform: 'lowercase',
+                    letterSpacing: '0.02em',
+                }}
+            >
+                <Icon className="w-3 h-3" />
+                {label}
+            </span>
+            <span
+                style={{
+                    fontFamily: 'var(--sw-font-sans)',
+                    fontSize: 13,
+                    color: error ? muted : 'var(--sw-ink)',
+                    fontStyle: error ? 'italic' : 'normal',
+                    textTransform: 'none',
+                }}
+            >
+                {error ? 'Unavailable' : (value || '—')}
+            </span>
         </div>
     );
 }
@@ -48,13 +68,18 @@ function LoadingSkeleton() {
     return (
         <div className="animate-pulse">
             {Array.from({ length: 7 }).map((_, i) => (
-                <div key={i} className={`flex ${i < 6 ? 'border-b border-[var(--color-border)]' : ''}`}>
-                    <div className="w-[120px] shrink-0 px-3 py-2">
-                        <div className="h-4 bg-[var(--color-border)] rounded w-16" />
-                    </div>
-                    <div className="flex-1 px-3 py-2">
-                        <div className="h-4 bg-[var(--color-border)] rounded w-32" />
-                    </div>
+                <div
+                    key={i}
+                    className="grid items-center"
+                    style={{
+                        gridTemplateColumns: '88px 1fr',
+                        gap: 12,
+                        padding: '1px 4px',
+                        borderBottom: i < 6 ? '1px solid var(--sw-rule-2)' : undefined,
+                    }}
+                >
+                    <div className="h-3 w-16" style={{ background: 'var(--sw-rule)' }} />
+                    <div className="h-3 w-32" style={{ background: 'var(--sw-rule)' }} />
                 </div>
             ))}
         </div>
@@ -65,7 +90,6 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
     const [lepData, setLepData] = useState<LEPData | null>(null);
     const [status, setStatus] = useState<LEPFetchStatus>('idle');
     const [unsupportedState, setUnsupportedState] = useState<string | null>(null);
-    const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
     // Use ref to avoid onSiteInfo in fetchLEP dependencies (prevents re-fetch cascade)
     const onSiteInfoRef = useRef(onSiteInfo);
@@ -104,7 +128,6 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
 
             setLepData(result.data);
             setStatus(result.status === 'partial' ? 'partial' : 'success');
-            setFetchedAt(result.data?.fetchedAt || null);
 
             // Pass site info back to parent for auto-filling Site Details
             if (result.siteInfo && onSiteInfoRef.current) {
@@ -141,22 +164,6 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
         }
     }, [hasCoordinates, coordinates?.lat, coordinates?.lng, fetchLEP]);
 
-    const formatTimestamp = (iso: string | null) => {
-        if (!iso) return null;
-        try {
-            const date = new Date(iso);
-            return date.toLocaleDateString('en-AU', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-            });
-        } catch {
-            return null;
-        }
-    };
-
     const rows: Array<{ label: string; key: string; icon: React.ComponentType<{ className?: string }> }> = [
         { label: 'Zone', key: 'landZone', icon: MapPin },
         { label: 'FSR', key: 'floorSpaceRatio', icon: Ruler },
@@ -168,38 +175,21 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
     ];
 
     return (
-        <div className="border border-[var(--color-border)]/50 rounded overflow-hidden">
-            {/* Header */}
-            <div
-                className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
-            >
-                <div className="flex items-center gap-2">
-                    <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
-                        LEP Planning Controls
-                    </span>
-                    {fetchedAt && status !== 'loading' && (
-                        <span className="text-[10px] text-[var(--color-text-muted)]">
-                            {formatTimestamp(fetchedAt)}
-                        </span>
-                    )}
-                </div>
-                {status === 'loading' && (
-                    <DiamondIcon variant="empty" className="w-3.5 h-3.5 text-[var(--color-accent-copper)] animate-diamond-spin" />
-                )}
-            </div>
-
-            {/* Content */}
-            <div
-                className="backdrop-blur-md"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)' }}
-            >
+        <div className="flex flex-col">
+            <div className="flex flex-col">
                 {/* No coordinates yet */}
                 {!hasCoordinates && (
-                    <div className="px-4 py-6 text-center">
-                        <MapPin className="w-5 h-5 mx-auto mb-2 text-[var(--color-text-muted)]" />
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            Select an address above to fetch LEP data
+                    <div className="flex flex-col items-center py-6 gap-2">
+                        <MapPin className="w-5 h-5" style={{ color: muted }} />
+                        <p
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: muted,
+                                textTransform: 'lowercase',
+                            }}
+                        >
+                            select an address above to fetch lep data
                         </p>
                     </div>
                 )}
@@ -209,14 +199,28 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
 
                 {/* Unsupported state */}
                 {status === 'unsupported-state' && (
-                    <div className="px-4 py-6 text-center">
-                        <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-[var(--color-text-muted)]" />
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            LEP data is currently available for NSW only
+                    <div className="flex flex-col items-center py-6 gap-2">
+                        <AlertTriangle className="w-5 h-5" style={{ color: muted }} />
+                        <p
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: muted,
+                                textTransform: 'lowercase',
+                            }}
+                        >
+                            lep data is currently available for nsw only
                         </p>
                         {unsupportedState && unsupportedState !== 'UNKNOWN' && (
-                            <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                                Detected state: {unsupportedState}
+                            <p
+                                style={{
+                                    fontFamily: 'var(--sw-font-mono)',
+                                    fontSize: 10,
+                                    color: muted,
+                                    textTransform: 'lowercase',
+                                }}
+                            >
+                                detected state · {unsupportedState.toLowerCase()}
                             </p>
                         )}
                     </div>
@@ -224,16 +228,33 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
 
                 {/* Error */}
                 {status === 'error' && (
-                    <div className="px-4 py-6 text-center">
-                        <AlertTriangle className="w-5 h-5 mx-auto mb-2 text-[var(--color-text-muted)]" />
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                            Failed to fetch LEP data
+                    <div className="flex flex-col items-center py-6 gap-2">
+                        <AlertTriangle className="w-5 h-5" style={{ color: muted }} />
+                        <p
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: muted,
+                                textTransform: 'lowercase',
+                            }}
+                        >
+                            failed to fetch lep data
                         </p>
                         <button
                             onClick={() => fetchLEP(true)}
-                            className="mt-2 text-xs text-[var(--color-accent-copper)] hover:underline"
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: 'var(--sw-peach)',
+                                textTransform: 'lowercase',
+                                letterSpacing: '0.05em',
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                            }}
                         >
-                            Try again
+                            try again
                         </button>
                     </div>
                 )}
@@ -261,8 +282,17 @@ export function LEPDataCard({ projectId, hasCoordinates, coordinates, onSiteInfo
                             />
                         ))}
                         {status === 'partial' && (
-                            <div className="px-4 py-1.5 text-[10px] text-[var(--color-text-muted)] border-t border-[var(--color-border)]">
-                                Some layers were unavailable. Click refresh to retry.
+                            <div
+                                className="mt-1 pt-1.5"
+                                style={{
+                                    fontFamily: 'var(--sw-font-mono)',
+                                    fontSize: 10,
+                                    color: muted,
+                                    borderTop: '1px solid var(--sw-rule-2)',
+                                    textTransform: 'lowercase',
+                                }}
+                            >
+                                some layers unavailable · click refresh to retry
                             </div>
                         )}
                     </>

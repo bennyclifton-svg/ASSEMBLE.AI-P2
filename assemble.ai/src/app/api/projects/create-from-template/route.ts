@@ -16,6 +16,7 @@ import { ProjectTypeId, projectTypes } from '@/lib/data/templates/project-types'
 import { objectivesTemplates } from '@/lib/data/templates/objectives-templates';
 import { costPlanTemplates } from '@/lib/data/templates/cost-plan-templates';
 import { programTemplates } from '@/lib/data/templates/program-templates';
+import { requireProjectCreationAllowedForWorkspace } from '@/lib/subscription/project-creation-gate';
 
 const STATUS_TYPES = ['brief', 'tender', 'rec', 'award'] as const;
 
@@ -26,8 +27,19 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: authResult.error }, { status: authResult.status });
         }
 
+        if (!authResult.user.organizationId) {
+            return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
+        }
+
+        const projectGate = await requireProjectCreationAllowedForWorkspace({
+            userId: authResult.user.id,
+            organizationId: authResult.user.organizationId,
+        });
+        if (!projectGate.allowed) return projectGate.response;
+
         const body = await request.json();
-        const { projectType, projectName, address, estimatedCost } = body;
+        const { projectType, projectName, address } = body;
+        const timestamp = new Date();
 
         if (!projectType || !projectName) {
             return NextResponse.json(
@@ -53,12 +65,12 @@ export async function POST(request: Request) {
             name: projectName,
             code: projectName.substring(0, 10).toUpperCase().replace(/\s/g, ''),
             status: 'active',
-            organizationId: authResult.user.organizationId || null,
+            organizationId: authResult.user.organizationId,
             projectType: projectType,
             currencyCode: 'AUD',
             showGst: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: timestamp,
+            updatedAt: timestamp,
         });
 
         // 2. Create project details
@@ -67,19 +79,53 @@ export async function POST(request: Request) {
             projectId,
             projectName,
             address: address || '',
-            updatedAt: new Date().toISOString(),
+            updatedAt: timestamp,
         });
 
-        // 3. Create project objectives
-        await db.insert(projectObjectives).values({
-            id: `po_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            projectId,
-            functional: objectivesTemplate.functional,
-            quality: objectivesTemplate.quality,
-            budget: objectivesTemplate.budget,
-            program: objectivesTemplate.program,
-            updatedAt: new Date().toISOString(),
-        });
+        // 3. Create project objectives in the row-model table.
+        const objectiveRows = [
+            {
+                id: `po_${Date.now()}_functional_${Math.random().toString(36).substr(2, 9)}`,
+                projectId,
+                objectiveType: 'functional' as const,
+                source: 'manual' as const,
+                text: objectivesTemplate.functional,
+                category: 'functional',
+                sortOrder: 0,
+                updatedAt: new Date(),
+            },
+            {
+                id: `po_${Date.now()}_quality_${Math.random().toString(36).substr(2, 9)}`,
+                projectId,
+                objectiveType: 'quality' as const,
+                source: 'manual' as const,
+                text: objectivesTemplate.quality,
+                category: 'quality',
+                sortOrder: 0,
+                updatedAt: new Date(),
+            },
+            {
+                id: `po_${Date.now()}_budget_${Math.random().toString(36).substr(2, 9)}`,
+                projectId,
+                objectiveType: 'planning' as const,
+                source: 'manual' as const,
+                text: objectivesTemplate.budget,
+                category: 'cost',
+                sortOrder: 0,
+                updatedAt: new Date(),
+            },
+            {
+                id: `po_${Date.now()}_program_${Math.random().toString(36).substr(2, 9)}`,
+                projectId,
+                objectiveType: 'planning' as const,
+                source: 'manual' as const,
+                text: objectivesTemplate.program,
+                category: 'programme',
+                sortOrder: 1,
+                updatedAt: new Date(),
+            },
+        ];
+        await db.insert(projectObjectives).values(objectiveRows);
 
         // 4. Create consultant disciplines (sorted alphabetically)
         const sortedDisciplines = [...typeConfig.disciplines].sort((a, b) => a.localeCompare(b));
@@ -92,7 +138,7 @@ export async function POST(request: Request) {
                 disciplineName: sortedDisciplines[i],
                 isEnabled: false,
                 order: i,
-                updatedAt: new Date().toISOString(),
+                updatedAt: timestamp,
             });
 
             // Create statuses for this discipline
@@ -102,7 +148,7 @@ export async function POST(request: Request) {
                     disciplineId,
                     statusType,
                     isActive: false,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: timestamp,
                 });
             }
         }
@@ -118,7 +164,7 @@ export async function POST(request: Request) {
                 tradeName: sortedTrades[i],
                 isEnabled: false,
                 order: i,
-                updatedAt: new Date().toISOString(),
+                updatedAt: timestamp,
             });
 
             // Create statuses for this trade
@@ -128,7 +174,7 @@ export async function POST(request: Request) {
                     tradeId,
                     statusType,
                     isActive: false,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: timestamp,
                 });
             }
         }
@@ -154,8 +200,8 @@ export async function POST(request: Request) {
                 budgetCents: 0,
                 approvedContractCents: 0,
                 sortOrder: i,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                createdAt: timestamp,
+                updatedAt: timestamp,
             });
         }
 
@@ -181,8 +227,8 @@ export async function POST(request: Request) {
                 collapsed: false,
                 color: colors[i % colors.length],
                 sortOrder: i,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                createdAt: timestamp,
+                updatedAt: timestamp,
             });
 
             currentStartDate = new Date(endDate);

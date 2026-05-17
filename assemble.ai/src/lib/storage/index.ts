@@ -7,15 +7,18 @@
  */
 
 import fs from 'fs';
-import path from 'path';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
-import { LocalStorageService, type StorageService } from './local';
+import { LocalStorageService, resolveLocalFilePath, type StorageService } from './local';
 import { SupabaseStorageService, supabaseStorage } from './supabase';
+import { shouldPreferSupabaseStorage } from './settings';
 
 // Determine which storage service to use
 function createStorageService(): StorageService {
     // Use Supabase Storage if configured (production)
-    if (isSupabaseConfigured() && process.env.USE_SUPABASE_STORAGE !== 'false') {
+    if (shouldPreferSupabaseStorage({
+        supabaseConfigured: isSupabaseConfigured(),
+        useSupabaseStorage: process.env.USE_SUPABASE_STORAGE,
+    })) {
         console.log('📦 Using Supabase Storage');
         return new SupabaseStorageService();
     }
@@ -45,9 +48,9 @@ export async function getFileFromStorage(storagePath: string): Promise<Buffer | 
         }
     }
 
-    // Handle local storage paths (/uploads/filename)
+    // Handle local storage paths (/uploads/filename, relative paths, or absolute paths)
     try {
-        const fullPath = path.join(process.cwd(), storagePath);
+        const fullPath = resolveLocalFilePath(storagePath);
         if (fs.existsSync(fullPath)) {
             return fs.readFileSync(fullPath);
         }
@@ -75,7 +78,7 @@ export async function fileExistsInStorage(storagePath: string): Promise<boolean>
     }
 
     // Handle local storage paths
-    const fullPath = path.join(process.cwd(), storagePath);
+    const fullPath = resolveLocalFilePath(storagePath);
     return fs.existsSync(fullPath);
 }
 

@@ -3,8 +3,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-export const EVALUATION_PRICE_ACCENT_COLOR = 'var(--sw-rose)';
-export const EVALUATION_NON_PRICE_ACCENT_COLOR = 'var(--sw-lav)';
+// Evaluation workspace accent colors now route through semantic role tokens.
+// Price = money values across the app; non-price = identifier-style values
+// (firm names, codes). Visual change: price was rose, becomes peach to match
+// the cost-plan workspace. Non-price stays lavender (same primitive, renamed).
+export const EVALUATION_PRICE_ACCENT_COLOR = 'var(--role-money)';
+export const EVALUATION_NON_PRICE_ACCENT_COLOR = 'var(--role-id)';
 
 interface ProjectDetails {
     projectName: string;

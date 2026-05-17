@@ -26,6 +26,7 @@ export interface AttachmentDocument {
     drawingName?: string | null;
     drawingRevision?: string | null;
     drawingExtractionStatus?: string | null;
+    ingestStatus?: string | null;
 }
 
 interface AttachmentTableProps {
@@ -62,6 +63,7 @@ export function AttachmentTable({
     const cellPadding = compact ? 'px-2 py-1' : 'px-4 py-1.5';
     const headerPadding = compact ? 'px-2 py-1' : 'px-4 py-1.5';
     const textSize = compact ? 'text-xs' : 'text-sm';
+    const showIngestStatus = documents.some((doc) => Boolean(doc.ingestStatus));
 
     return (
         <div className={cn('overflow-hidden border border-[var(--sw-rule)]', className)}>
@@ -80,6 +82,9 @@ export function AttachmentTable({
                                 <th className={cn('w-36 text-left text-[10px] font-medium uppercase', headerPadding)}>category</th>
                                 <th className={cn('w-40 text-left text-[10px] font-medium uppercase', headerPadding)}>subcategory</th>
                             </>
+                        )}
+                        {showIngestStatus && (
+                            <th className={cn('w-24 text-left text-[10px] font-medium uppercase', headerPadding)}>ingest</th>
                         )}
                         {showRemove && (
                             <th className="w-8"></th>
@@ -145,6 +150,21 @@ export function AttachmentTable({
                                             )}
                                         </td>
                                     </>
+                                )}
+                                {showIngestStatus && (
+                                    <td className={cellPadding}>
+                                        <span
+                                            className="inline-flex border px-1.5 py-0.5 text-[10px] uppercase"
+                                            style={{
+                                                fontFamily: 'var(--sw-font-mono)',
+                                                color: doc.ingestStatus === 'synced' ? 'var(--sw-ink)' : 'var(--sw-muted)',
+                                                borderColor: 'var(--sw-rule)',
+                                                background: doc.ingestStatus === 'synced' ? 'var(--sw-paper)' : 'transparent',
+                                            }}
+                                        >
+                                            {doc.ingestStatus ?? '-'}
+                                        </span>
+                                    </td>
                                 )}
                                 {showRemove && onRemove && (
                                     <td className={compact ? 'py-1 px-1' : 'py-2 px-1'}>

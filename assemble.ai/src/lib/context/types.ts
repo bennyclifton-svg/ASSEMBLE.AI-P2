@@ -61,6 +61,9 @@ export interface ContextRequest {
   /** Whether to include knowledge domain RAG results */
   includeKnowledgeDomains?: boolean;
 
+  /** Whether to include reviewable AI memory/preferences */
+  includeAiMemory?: boolean;
+
   /** Specific domain tags to filter knowledge domain search */
   domainTags?: string[];
 
@@ -159,6 +162,9 @@ export interface AssembledContext {
 
   /** Document RAG results (if applicable) */
   ragContext: string;
+
+  /** Reviewable AI memory/preferences (if available) */
+  aiMemoryContext: string;
 
   /** Cross-module insight strings */
   crossModuleInsights?: string;

@@ -12,6 +12,11 @@ import {
     type ActionContext,
 } from '@/lib/actions';
 import { sanitizeChatViewContext } from '@/lib/chat/view-context';
+import {
+    markAiActionFailed,
+    markAiActionSucceeded,
+    requireAiActionAllowed,
+} from '@/lib/subscription/ai-usage-meter';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -71,7 +76,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             actorId: authResult.user.id,
             viewContext,
         };
-        const result = await runAction({ action, ctx, input });
+        const aiGate = await requireAiActionAllowed({
+            userId: authResult.user.id,
+            organizationId: orgId,
+            projectId,
+            action: `action.run:${action.id}`,
+        });
+        if (!aiGate.allowed) return aiGate.response;
+
+        let result: Awaited<ReturnType<typeof runAction>>;
+        try {
+            result = await runAction({ action, ctx, input });
+            await markAiActionSucceeded(aiGate.eventId);
+        } catch (error) {
+            await markAiActionFailed(aiGate.eventId, error);
+            throw error;
+        }
 
         return NextResponse.json({
             status: 'applied',

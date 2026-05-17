@@ -142,7 +142,7 @@ export function ProcurementSectionShell({
     return (
         <section
             style={{
-                background: 'white',
+                background: 'var(--sw-shell)',
                 border: isDetail ? '0' : '1px solid var(--sw-rule)',
             }}
         >
@@ -236,7 +236,7 @@ export function ProcurementSectionShell({
 
             {isDetail ? (
                 <div
-                    className="min-h-0 overflow-hidden bg-white"
+                    className="min-h-0 overflow-hidden bg-[var(--sw-shell)]"
                     style={{
                         border: '1px solid var(--sw-rule)',
                         borderTop: 'none',

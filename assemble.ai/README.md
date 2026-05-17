@@ -1,42 +1,85 @@
-# Assemble.ai
+# Sitewise
 
-Enterprise project management platform for architectural and construction firms, combining structured project data with an agentic AI layer that reasons, proposes, and writes across every project entity — while keeping the user in full control at all times.
+Sitewise is a private project record system for client-side construction project management. The current product direction is a local/private single-user project appliance where an AI project officer helps one accountable PM keep one live project coherent, evidenced, and ready to issue.
 
----
+For the current strategy, read `docs/strategy/local-private-appliance.md`. A staged public SaaS reintegration track is recorded in `docs/strategy/public-saas-reintegration.md`; it keeps the current app as the base and treats old SaaS-era material as reference only.
 
-- **Project workspace** — A single hub covering cost plan, program, risks, variations, invoices, notes, meetings, stakeholders, document repository, consultant/contractor register, procurement status, tender evaluation, and report generation (TRR, RFT, Addendum) with DOCX/PDF export. Every entity is fully editable by hand — the AI layer is additive, not a replacement for direct user operation.
+## Product Shape
 
-- **Project profiler** — Each project carries a structured profile defining building class (residential, commercial, industrial, mixed-use, infrastructure), subclass (e.g. apartments, townhouses, office, retail, fitout, remediation), project type, scale data, region/state, procurement route, and complexity attributes. The profiler drives automatic domain tag resolution, knowledge library filtering, objectives inference, and context assembly — so AI outputs are always scoped to the actual project type rather than generic construction advice.
+The first design center is one PM running one live project. Sitewise is not being treated as pure desktop-only software, a public SaaS-first product, or an immediate firm-wide collaboration rollout.
 
-- **AI agent system** — A chat dock at the bottom of every project workspace hosts eight specialist agents coordinated by an **Orchestrator** that routes each message and fans out to multiple specialists in parallel when needed:
-  - **Finance Agent** — Quantity Surveyor role: cost planning, budgets, variations, progress claims, invoice recording, contingency monitoring
-  - **Program Agent** — Programmer role: schedule activities, milestones, critical path, delay analysis, float tracking
-  - **Design Agent** — Design manager role: consultant briefs, DA readiness, stakeholder coordination, design decision records
-  - **Delivery Agent** — Contract administrator role: site instructions, defects, EOT claims, progress assessment
-  - **Procurement Agent** — Head contractor procurement: RFT packages, tender evaluation, addenda, contractor appointments
-  - **Correspondence Agent** — Outbound communications: formal letters, RFIs, transmittals, correspondence register
-  - **Feasibility Agent** — Site assessment, planning risk, due diligence, pro forma analysis
-  
-  Agent replies stream live. Multi-domain questions (e.g. "give me a project status briefing") concurrently invoke Finance, Program, and Design and combine their attributed responses into one reply.
+The product loop is:
 
-- **Agent skill library** — Approximately 22 callable tool-skills back the agents, organised into read tools (search documents, list cost lines, list program, list risks, list variations, list notes, list meetings, list stakeholders, search knowledge libraries) and write tools (create/update cost lines, record invoices, create/update variations, create/update risks, create/update notes, update program activities, create/update milestones, update stakeholder briefs, and more). Each specialist is granted a curated whitelist — Finance cannot call Program tools, and so on. New tool-skills are added per phase without touching existing agent logic.
+1. The PM adds project facts, documents, correspondence, and judgement.
+2. Sitewise stores project truth in structured records and stored files.
+3. The AI reads project records, documents, RAG excerpts, and approved memory.
+4. The AI proposes record changes or issued artefacts through registered actions.
+5. The PM reviews, edits, approves, rejects, or issues.
+6. Sitewise stores the final decision, evidence, audit trail, and exportable artefact.
 
-- **Chat dock — read, write, and approval gate** — The chat dock can read and propose writes across all major project entities: cost lines, variations, invoices, program activities, milestones, risks, notes, meetings, stakeholders, and documents (10+ entity types). All proposed writes surface as inline diff cards — showing before/after values — and require explicit user Approve or Reject before anything touches the database. Optimistic row-versioning detects concurrent edits and re-proposes rather than overwriting. Users can ignore the agents entirely and operate every entity directly through the standard UI at any time.
+## Current Capabilities
 
-- **Knowledge libraries** — 15 curated domain libraries covering Australian construction practice are pre-ingested as vector embeddings and queried by agents before answering regulatory, benchmark, or best-practice questions. A sample of the libraries:
-  - *NCC Reference Guide* — National Construction Code clause index, building classifications, performance requirements
-  - *Contract Administration Guide* — AS 2124, AS 4000, AS 4902 contract management, variations, extensions of time, defect liability
-  - *Cost Management Principles* — Cost planning benchmarks, contingency rates by stage, progress claim methodology, forecast management
-  - *Program & Scheduling Guide* — Construction programming, milestone tracking, critical path, delay analysis
-  - *MEP Services Guide* — HVAC, electrical, hydraulic, fire systems: design coordination, commissioning, authority connections
-  - *(plus 10 further guides covering procurement, residential, commercial, structural engineering, civil earthworks, architectural trades, trade interfaces, and remediation)*
-  
-  Library results take precedence over LLM training knowledge — agents are instructed to cite library content and flag when an answer relies on general knowledge instead.
+- **Project workspace**: project profile, objectives, stakeholders, documents, cost plan, program, risks, variations, invoices, notes, meetings, reports, procurement records, tender evaluation, and communication artefacts.
+- **AI and approvals**: chat, specialists/flows implemented in the runtime, tool calls, approval records, edit-and-approve, optimistic row-versioning, and audit trails.
+- **Application actions**: the intended shared write surface for agents, workflows, and eventually direct UI operations. The migration is partial, so new agent/workflow writes should use registered actions and approval gates.
+- **RAG pipeline**: project documents are parsed, chunked, embedded, stored in PostgreSQL/pgvector, retrieved, and reranked for AI context.
+- **Background processing**: Redis/BullMQ workers handle document processing and drawing extraction.
+- **Storage**: stored files use the existing storage abstraction, with local storage fallback where configured.
+- **Typed RFI register**: RFIs now have typed records, deterministic project numbering, due/overdue display, responsible parties, evidence links, response/close/reopen lifecycle audit, and versioned PDF/DOCX issued artefacts.
+- **Reviewable AI memory**: project memory entries are visible, editable, and advisory-only. They can help style and recurring context, but records and documents override them.
+- **Weekly report drafts**: a grounded weekly report draft action reads structured records, typed RFIs, document/RAG excerpts, risks, cost/program context, and approved memory, then creates editable report sections.
+- **Local appliance operations**: `/api/health`, `/setup/status`, `local:smoke`, `project:backup`, `project:restore`, `local:backup-smoke`, and `secret:hygiene` support local/private setup and handoff checks.
 
-- **RAG pipeline** — Project documents (reports, specifications, drawings, correspondence) are parsed via LlamaParse, chunked with construction-aware semantic splitting, and embedded via Voyage AI (1024-dim) into pgvector on PostgreSQL. A 4-stage retrieval pipeline (embed → cosine similarity search → BAAI/Cohere reranking → hierarchy enrichment) feeds retrieved context into report generation, objectives inference, note enhancement, and agent tool calls. Sync status (pending → processing → synced → failed) is tracked per document.
+## Current Horizon
 
-- **Model configuration** — Every AI call site belongs to a named feature group (`agent_finance`, `agent_program`, `agent_design`, `agent_orchestrator`, `content_generation`, `objectives_generation`, `document_extraction`, `cost_line_matching`, and more) configurable at runtime via `/admin/models`. Swap providers (Anthropic, OpenRouter) or model tiers per task without redeploying — e.g. route the Orchestrator and Design agent to Haiku for cost efficiency while keeping Finance and Program on Sonnet for complex multi-turn reasoning.
+The immediate proof points are:
 
----
+- **RFI typed-record pilot**: shipped as the first schema-backed contract-administration register. The next test is whether real PM use proves the pattern before notices, EOTs, defects, site instructions, progress claims, or determinations are typed.
+- **Briefing/reporting workflow**: the first weekly report draft tracer is in place. The next test is whether the draft is useful enough that PMs rely on it as a weekly operating ritual.
+- **Local/private appliance trust**: setup honesty, health checks, backup/restore, explicit migrations, local file storage, model-key setup, and secret hygiene are now documented and smokeable. Harder rollout work remains around real-project recovery, updates, and handoff.
 
-**Stack:** Next.js 16 · PostgreSQL + pgvector · Drizzle ORM · Anthropic Claude · Voyage AI · BAAI/Cohere reranking · BullMQ/Redis · Supabase
+## Data And AI Boundaries
+
+Structured PostgreSQL records and stored files are canonical project truth. Chat is interaction history. AI memory is editable preferences and recurring context only; it must not override schema facts, document evidence, or issued artefacts.
+
+New agent and workflow mutations should go through registered application actions and approval gates. Existing direct UI writes can remain during migration, but should converge onto actions over time.
+
+The `docs/skills/*/SKILL.md` files are archived source/reference material only. They are not live runtime skills and are not loaded by the app. See `docs/skills/README.md` for how to mine that material into knowledge libraries, prompts, action specs, workflow specs, or product docs.
+
+## Deferred Scope
+
+The local/private horizon does not include SQLite, Electron/Tauri desktop packaging, real-time multi-user collaboration, immediate firm-wide rollout, Xero/accounting integration, council portal automation, external email sending as part of RFI export, speculative specialist agents, or EOT-first typed-record work. Public SaaS launch work is now tracked separately as a reintegration path, not as part of the local/private bootstrap.
+
+## Public SaaS Reintegration
+
+The public SaaS track is documented in `docs/strategy/public-saas-reintegration.md`, with the PRD at `docs/prds/2026-05-17-public-saas-reintegration-prd.md` and implementation issues under `docs/issues/2026-05-17-public-saas-reintegration/`.
+
+That track targets public SaaS with one-user workspaces, Starter and Professional paid plans, no public Free plan, a no-card 14-day trial, a clean SaaS database, Dokploy/VPS deployment, separate web and worker services, Supabase Storage, Resend email, Polar billing, and a mandatory API security pass before launch.
+
+Public SaaS deployment docs should live under `docs/deployment/public-saas/`. Local/private setup remains under `docs/setup/`.
+
+## Stack
+
+Next.js 16, React 19, TypeScript, PostgreSQL, pgvector, Drizzle ORM, BullMQ/Redis, Better Auth, Anthropic/OpenAI-compatible model providers, Voyage embeddings, BAAI/Cohere reranking, Supabase-compatible storage, and local storage fallback.
+
+## Local Private Bootstrap
+
+The repeatable local/private path is documented in `docs/setup/local-private-bootstrap.md`.
+
+```bash
+npm install
+npm run local:bootstrap
+npm run dev
+```
+
+Then, once the dev server is running:
+
+```bash
+npm run local:smoke
+npm run local:backup-smoke
+npm run secret:hygiene
+```
+
+This path starts Docker PostgreSQL with pgvector and Redis, applies the main/auth/RAG schemas, uses local file storage by default, and checks the app, database, Redis, workers, storage, RAG readiness, the first local project backup/restore path, and committed docs/config for obvious secret leaks.
+
+The human-readable setup surface is `/setup/status`; the machine-readable health surface is `/api/health`.

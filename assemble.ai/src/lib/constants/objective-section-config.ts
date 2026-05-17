@@ -76,8 +76,8 @@ const ADVISORY_SECTIONS: Record<ObjectiveType, SectionConfig> = {
 
 const BUILD_CONFIG: ProjectTypeConfig = {
   sections: BUILD_SECTIONS,
-  shortWordRange: [2, 4],
-  longWordRange: [8, 12],
+  shortWordRange: [4, 8],
+  longWordRange: [18, 30],
   bulletsPerSection: [3, 5],
   polishCitationGuidance:
     'cite NCC 2022, BCA, AS standards present in the domain context — do NOT invent standards',

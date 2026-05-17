@@ -23,11 +23,11 @@ const spectral = Spectral({
 });
 
 export const metadata: Metadata = {
-    title: 'SiteWise - AI-Powered Construction Project Management',
-    description: 'Build faster. Save time. Stand out. SiteWise is the AI platform that turns project chaos into an ongoing way of working for AEC firms.',
+    title: 'Sitewise - Run Better Tenders, Faster',
+    description: 'Tender intelligence for Australian building projects. Scope packages, issue tenders, compare submissions and prepare award recommendations from one AI-powered workspace.',
     openGraph: {
-        title: 'SiteWise - AI-Powered Construction Project Management',
-        description: 'Build faster. Save time. Stand out. The AI platform for architecture, engineering, and construction firms.',
+        title: 'Sitewise - Run Better Tenders, Faster',
+        description: 'Tender intelligence for Australian building projects.',
         type: 'website',
         locale: 'en_AU',
         siteName: 'SiteWise',
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     twitter: {
         card: 'summary_large_image',
         title: 'SiteWise',
-        description: 'AI-Powered Construction Project Management',
+        description: 'Run better tenders, faster.',
     },
     robots: {
         index: true,

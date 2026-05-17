@@ -6,9 +6,9 @@
 
 import { ragDb } from '../db/rag-client';
 import { documentChunks } from '../db/rag-schema';
-import { generateEmbedding, cosineSimilarity } from './embeddings';
-import { rerankDocuments, simpleRelevanceScore } from './reranking';
-import { sql, and, eq, inArray } from 'drizzle-orm';
+import { generateEmbedding } from './embeddings';
+import { rerankDocuments } from './reranking';
+import { sql, inArray } from 'drizzle-orm';
 
 export interface RetrievalResult {
     chunkId: string;
@@ -19,6 +19,11 @@ export interface RetrievalResult {
     hierarchyPath: string | null;
     sectionTitle: string | null;
     clauseNumber: string | null;
+}
+
+export interface DocumentChunkContent extends RetrievalResult {
+    tokenCount: number | null;
+    createdAt: Date | string | null;
 }
 
 export interface RetrievalOptions {
@@ -53,6 +58,84 @@ export interface DomainRetrievalResult extends RetrievalResult {
 const DEFAULT_TOP_K = 20; // Initial vector search results
 const DEFAULT_RERANK_TOP_K = 5; // Final reranked results
 const MIN_RELEVANCE_SCORE = 0.1; // Low threshold to allow fallback scoring to pass
+
+function compareHierarchyPath(a: string | null, b: string | null): number {
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+
+    const aParts = a.split('.').map((part) => Number.parseInt(part, 10));
+    const bParts = b.split('.').map((part) => Number.parseInt(part, 10));
+    const maxLength = Math.max(aParts.length, bParts.length);
+
+    for (let i = 0; i < maxLength; i++) {
+        const aPart = Number.isFinite(aParts[i]) ? aParts[i] : 0;
+        const bPart = Number.isFinite(bParts[i]) ? bParts[i] : 0;
+        if (aPart !== bPart) return aPart - bPart;
+    }
+
+    return a.localeCompare(b);
+}
+
+/**
+ * Fetch all embedded chunks for specific documents in source order.
+ *
+ * This is intentionally not semantic retrieval: broad document review tasks
+ * need the whole attached document, not whichever chunks match a vague query
+ * like "review the attached document".
+ */
+export async function getDocumentChunksByIds(
+    documentIds: string[]
+): Promise<DocumentChunkContent[]> {
+    if (documentIds.length === 0) return [];
+
+    const documentOrder = new Map(documentIds.map((id, index) => [id, index]));
+
+    const rows = await ragDb
+        .select({
+            chunkId: documentChunks.id,
+            documentId: documentChunks.documentId,
+            content: documentChunks.content,
+            relevanceScore: sql<number>`1.0`,
+            hierarchyLevel: documentChunks.hierarchyLevel,
+            hierarchyPath: documentChunks.hierarchyPath,
+            sectionTitle: documentChunks.sectionTitle,
+            clauseNumber: documentChunks.clauseNumber,
+            tokenCount: documentChunks.tokenCount,
+            createdAt: documentChunks.createdAt,
+        })
+        .from(documentChunks)
+        .where(inArray(documentChunks.documentId, documentIds));
+
+    return rows
+        .map((row) => ({
+            chunkId: row.chunkId,
+            documentId: row.documentId,
+            content: row.content,
+            relevanceScore: 1,
+            hierarchyLevel: row.hierarchyLevel,
+            hierarchyPath: row.hierarchyPath,
+            sectionTitle: row.sectionTitle,
+            clauseNumber: row.clauseNumber,
+            tokenCount: row.tokenCount,
+            createdAt: row.createdAt,
+        }))
+        .sort((a, b) => {
+            const documentDelta =
+                (documentOrder.get(a.documentId) ?? Number.MAX_SAFE_INTEGER) -
+                (documentOrder.get(b.documentId) ?? Number.MAX_SAFE_INTEGER);
+            if (documentDelta !== 0) return documentDelta;
+
+            const hierarchyDelta = compareHierarchyPath(a.hierarchyPath, b.hierarchyPath);
+            if (hierarchyDelta !== 0) return hierarchyDelta;
+
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            if (aTime !== bTime) return aTime - bTime;
+
+            return a.chunkId.localeCompare(b.chunkId);
+        });
+}
 
 /**
  * Stage 1: Generate query embedding
@@ -222,8 +305,15 @@ async function enrichWithContext(
     `);
 
     // Create lookup map
+    type ParentChunkRow = {
+        id: string;
+        parentId: string | null;
+        parentContent: string | null;
+        parentSectionTitle: string | null;
+    };
+
     const parentMap = new Map<string, { parentContent: string; parentTitle: string | null }>();
-    for (const row of (parentChunks.rows || []) as any[]) {
+    for (const row of (parentChunks.rows || []) as ParentChunkRow[]) {
         if (row.parentId && row.parentContent) {
             parentMap.set(row.id, {
                 parentContent: row.parentContent,
@@ -268,7 +358,7 @@ async function resolveDocumentSetIds(documentSetIds: string[]): Promise<string[]
         AND sync_status = 'synced'
     `);
 
-    const documentIds = ((members.rows || []) as any[]).map(m => m.documentId);
+    const documentIds = ((members.rows || []) as Array<{ documentId: string }>).map(m => m.documentId);
     console.log(`[retrieval] Resolved ${documentIds.length} synced documents from repos`);
 
     return documentIds;
@@ -376,7 +466,15 @@ async function enrichWithDomainMetadata(
         domainTags: string[];
         sourceVersion: string | null;
     }>();
-    for (const row of (metadataResult.rows || []) as any[]) {
+    type DomainMetadataRow = {
+        documentId: string;
+        domainName: string;
+        domainType: string;
+        domainTags: string[] | null;
+        sourceVersion: string | null;
+    };
+
+    for (const row of (metadataResult.rows || []) as DomainMetadataRow[]) {
         domainMap.set(row.documentId, {
             domainName: row.domainName,
             domainType: row.domainType,
@@ -581,7 +679,11 @@ export async function getRelatedChunks(
         return [];
     }
 
-    const sourceChunk = chunk.rows[0] as any;
+    const sourceChunk = chunk.rows[0] as {
+        documentId: string;
+        parentChunkId: string | null;
+        hierarchyPath: string | null;
+    };
     const conditions: string[] = [];
 
     // Get siblings (same parent)
@@ -613,7 +715,17 @@ export async function getRelatedChunks(
         ORDER BY hierarchy_path ASC
     `);
 
-    return ((related.rows || []) as any[]).map(row => ({
+    type RelatedChunkRow = {
+        chunkId: string;
+        documentId: string;
+        content: string;
+        hierarchyLevel: number;
+        hierarchyPath: string | null;
+        sectionTitle: string | null;
+        clauseNumber: string | null;
+    };
+
+    return ((related.rows || []) as RelatedChunkRow[]).map(row => ({
         chunkId: row.chunkId,
         documentId: row.documentId,
         content: row.content,

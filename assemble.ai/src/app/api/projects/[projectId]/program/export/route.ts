@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, programActivities, programDependencies, programMilestones, projects } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 import { exportProgramToPDF } from '@/lib/export/program-pdf';
+import { isAccessDenied, requireExportProjectAccess } from '@/lib/auth/project-access';
 
 // GET /api/projects/[projectId]/program/export - Export program to PDF
 export async function GET(
@@ -10,6 +11,8 @@ export async function GET(
 ) {
     try {
         const { projectId } = await params;
+        const access = await requireExportProjectAccess(projectId);
+        if (isAccessDenied(access)) return access.response;
 
         // Get project info
         const project = await db

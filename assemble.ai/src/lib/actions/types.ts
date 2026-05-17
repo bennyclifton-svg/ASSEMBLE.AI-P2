@@ -2,7 +2,7 @@ import type { z } from 'zod';
 import type { ProposedDiff } from '@/lib/agents/approvals';
 import type { ProjectEntity, ProjectEntityOp } from '@/lib/agents/project-events';
 
-export type ActionActorKind = 'user' | 'agent' | 'workflow' | 'system';
+export type ActionActorKind = 'user' | 'agent' | 'workflow' | 'system' | 'ai';
 export type ActionPolicy = 'run' | 'confirm' | 'propose' | 'sensitive';
 export type ActionInvocationStatus = 'running' | 'applied' | 'proposed' | 'rejected' | 'error';
 

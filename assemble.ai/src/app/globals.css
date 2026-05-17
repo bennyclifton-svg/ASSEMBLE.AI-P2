@@ -177,6 +177,7 @@
   /* Status accents */
   --color-accent-green: #5C7A4A;
   --color-accent-yellow: var(--sw-amber);
+  --color-accent-gold: var(--sw-gold);
   --color-accent-coral: var(--sw-rose-dk);
   --color-accent-teal: var(--sw-cyan);
   --color-accent-purple: var(--sw-lav);
@@ -1657,6 +1658,7 @@ textarea:-webkit-autofill:active {
   --sw-lav: #9AA4E0;            /* IDs — cooler periwinkle */
   --sw-cyan: #4FB6BE;           /* type — same family as primary (intentional) */
   --sw-amber: #E3B658;          /* status dot — warm pop */
+  --sw-gold: #ECC94B;           /* ingest/synced indicator — saturated gold */
 
   /* Rules — dark-translucent so card hairlines remain visible on white */
   --sw-rule: rgba(14, 16, 20, 0.12);

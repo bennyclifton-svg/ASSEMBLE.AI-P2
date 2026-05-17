@@ -6,25 +6,22 @@
  * that depend on environment variables
  */
 
-import { config } from 'dotenv';
+import { loadAppEnv } from '../../src/lib/env/load-app-env';
+import { assertSaasRuntimeConfig } from '../../src/lib/env/saas-runtime-config';
+import type { Job } from 'bullmq';
 
 // Load environment variables FIRST - before any other imports
-// In production (Docker), env vars are injected so this is a no-op
-// In development, load env files in same order as Next.js (highest to lowest priority)
-if (process.env.NODE_ENV !== 'production') {
-    config({ path: '.env.local' });
-    config({ path: '.env.development' });
-    config({ path: '.env' });
-}
+loadAppEnv();
 
-// Init Sentry after env load, before any other imports that might throw
-import '../sentry-init';
+if (process.env.NODE_ENV === 'production' || process.env.SITEWISE_PUBLIC_SAAS === '1') {
+    assertSaasRuntimeConfig('worker');
+}
 
 // Verify required env vars
 console.log('[drawing-worker] Checking environment variables...');
 console.log('[drawing-worker] REDIS_URL:', process.env.REDIS_URL ? 'set' : 'NOT SET');
 console.log('[drawing-worker] ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? 'set' : 'NOT SET');
-console.log('[drawing-worker] DATABASE_URL:', process.env.DATABASE_URL ? 'set (PostgreSQL)' : 'NOT SET (SQLite)');
+console.log('[drawing-worker] DATABASE_URL:', process.env.DATABASE_URL ? 'set (PostgreSQL)' : 'NOT SET');
 console.log('[drawing-worker] SUPABASE_POSTGRES_URL:', process.env.SUPABASE_POSTGRES_URL ? 'set' : 'NOT SET');
 
 if (!process.env.REDIS_URL) {
@@ -32,9 +29,22 @@ if (!process.env.REDIS_URL) {
     process.exit(1);
 }
 
+if (!process.env.DATABASE_URL && !process.env.SUPABASE_POSTGRES_URL) {
+    console.error('[drawing-worker] FATAL: DATABASE_URL or SUPABASE_POSTGRES_URL is not set!');
+    process.exit(1);
+}
+
+if (process.env.SITEWISE_WORKER_SMOKE === '1') {
+    console.log('[drawing-worker] Smoke check passed: environment loaded.');
+    process.exit(0);
+}
+
 // Now we can safely import modules that depend on env vars
 async function bootstrap() {
-    const { Worker, Job } = await import('bullmq');
+    // Init Sentry after env load, before other imports that might throw
+    await import('../sentry-init');
+
+    const { Worker } = await import('bullmq');
     const { db } = await import('../../src/lib/db');
     const { fileAssets, versions, documents, projects } = await import('../../src/lib/db/pg-schema');
     const { extractDrawingInfo } = await import('../../src/lib/services/drawing-extraction');

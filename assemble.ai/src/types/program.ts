@@ -130,7 +130,7 @@ export interface ProgramTemplate {
 }
 
 // Zoom level
-export type ZoomLevel = 'week' | 'month';
+export type ZoomLevel = 'week' | 'month' | 'fit';
 
 // Color palette for auto-assignment
 export const PROGRAM_COLORS = [

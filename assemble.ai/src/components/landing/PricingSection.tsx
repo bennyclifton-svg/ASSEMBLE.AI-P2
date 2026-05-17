@@ -1,8 +1,6 @@
 /**
  * Pricing Section Component
- * Displays subscription tiers with CTAs.
- * Auth-aware: triggers Polar checkout for logged-in users, links to register for guests.
- * Devtools Rose dialect — paper surface, mono labels, rose accent for the highlighted tier.
+ * Displays public SaaS plans from the shared plan catalog.
  */
 
 'use client';
@@ -11,69 +9,12 @@ import { useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useSession, checkout } from '@/lib/auth-client';
+import { createCheckoutRequestForPlan } from '@/lib/billing/polar-checkout';
+import { PUBLIC_SAAS_TRIAL, getPublicPlans, type SubscriptionPlan } from '@/lib/polar/plans';
 
-export interface PricingTier {
-    id: string;
-    name: string;
-    description: string;
-    price: {
-        monthly: number;
-        annually: number;
-    };
-    features: string[];
-    highlighted?: boolean;
-    cta: string;
-    polarProductId?: string;
-}
+export type PricingTier = SubscriptionPlan;
 
-export const pricingTiers: PricingTier[] = [
-    {
-        id: 'free',
-        name: 'Free',
-        description: 'Try the workspace solo, on one project',
-        price: { monthly: 0, annually: 0 },
-        features: [
-            '1 active project',
-            'Procurement Agent (limited)',
-            'Document workspace',
-            'Manual data entry',
-            'Community support',
-        ],
-        cta: 'Get Started',
-    },
-    {
-        id: 'starter',
-        name: 'Starter',
-        description: 'For architects and PMs running a few projects at a time',
-        price: { monthly: 49, annually: 39 },
-        features: [
-            '5 active projects',
-            'Procurement Agent + Correspondence Agent',
-            'AI document processing',
-            '100 AI queries/month',
-            'Email support',
-        ],
-        cta: 'Start Free Trial',
-        polarProductId: 'starter',
-    },
-    {
-        id: 'professional',
-        name: 'Professional',
-        description: 'For practices and in-house teams running multiple projects with a full agent team',
-        price: { monthly: 149, annually: 119 },
-        features: [
-            'Unlimited projects',
-            'All seven agents — Feasibility, Design, Procurement, Delivery, Finance, Program, Correspondence',
-            'Unlimited AI queries',
-            'Cost planning + cashflow',
-            'TRR + tender award reports',
-            'Priority support',
-        ],
-        highlighted: true,
-        cta: 'Start Free Trial',
-        polarProductId: 'professional',
-    },
-];
+export const pricingTiers: PricingTier[] = getPublicPlans();
 
 interface PricingSectionProps {
     billingPeriod?: 'monthly' | 'annually';
@@ -97,16 +38,13 @@ export function PricingSection({
     const [error, setError] = useState<string | null>(null);
 
     const handleCheckout = async (tier: PricingTier) => {
-        if (!tier.polarProductId) return;
         setLoadingTier(tier.id);
         setError(null);
         try {
-            await checkout({ slug: tier.id });
+            await checkout(createCheckoutRequestForPlan(tier.slug));
         } catch (err) {
             console.error('Checkout error:', err);
-            setError(
-                err instanceof Error ? err.message : 'Something went wrong. Please try again.',
-            );
+            setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
             setLoadingTier(null);
         }
     };
@@ -130,7 +68,7 @@ export function PricingSection({
                             fontWeight: 600,
                         }}
                     >
-                        // Pricing
+                        {'// Pricing'}
                     </p>
                     <h2
                         className="m-0 text-balance"
@@ -139,11 +77,10 @@ export function PricingSection({
                             fontSize: 'clamp(32px, 3.6vw, 44px)',
                             fontWeight: 700,
                             lineHeight: 1.1,
-                            letterSpacing: '-0.025em',
                             color: 'var(--sw-ink)',
                         }}
                     >
-                        Pick the team that matches your project load.
+                        Pick the plan that matches your project load.
                     </h2>
                     <p
                         className="mt-5"
@@ -154,11 +91,10 @@ export function PricingSection({
                             color: 'var(--sw-muted)',
                         }}
                     >
-                        Start free. All paid plans include a 14-day trial and the agent team that fits your practice.
+                        {PUBLIC_SAAS_TRIAL.summary} {PUBLIC_SAAS_TRIAL.detail}
                     </p>
                 </div>
 
-                {/* Billing toggle — segmented control, no rounded pill */}
                 {showToggle && (
                     <div className="mt-10 flex justify-center">
                         <div
@@ -198,7 +134,7 @@ export function PricingSection({
                                                     color: active ? 'var(--sw-rose)' : 'var(--sw-rose-dk)',
                                                 }}
                                             >
-                                                −20%
+                                                -20%
                                             </span>
                                         )}
                                     </button>
@@ -222,8 +158,7 @@ export function PricingSection({
                     </div>
                 )}
 
-                {/* Pricing cards */}
-                <div className="mt-14 grid max-w-lg mx-auto grid-cols-1 gap-6 lg:max-w-none lg:grid-cols-3">
+                <div className="mt-14 grid max-w-lg mx-auto grid-cols-1 gap-6 lg:max-w-4xl lg:grid-cols-2">
                     {pricingTiers.map((tier) => (
                         <PricingCard
                             key={tier.id}
@@ -242,7 +177,6 @@ export function PricingSection({
                         fontFamily: 'var(--sw-font-mono)',
                         fontSize: 11,
                         color: 'var(--sw-muted)',
-                        letterSpacing: '0.02em',
                     }}
                 >
                     All prices in AUD. GST included where applicable.
@@ -273,7 +207,7 @@ function PricingCard({
     loading: boolean;
     onCheckout: () => void;
 }) {
-    const price = billingPeriod === 'annually' ? tier.price.annually : tier.price.monthly;
+    const price = billingPeriod === 'annually' ? tier.priceAnnually : tier.priceMonthly;
 
     return (
         <div
@@ -311,7 +245,6 @@ function PricingCard({
                     fontFamily: 'var(--sw-font-sans)',
                     fontSize: 22,
                     fontWeight: 700,
-                    letterSpacing: '-0.02em',
                 }}
             >
                 {tier.name}
@@ -333,26 +266,23 @@ function PricingCard({
                         fontFamily: 'var(--sw-font-sans)',
                         fontSize: 44,
                         fontWeight: 800,
-                        letterSpacing: '-0.04em',
                         fontVariantNumeric: 'tabular-nums',
                         color: tier.highlighted ? 'var(--sw-rose)' : 'var(--sw-ink)',
                     }}
                 >
                     ${price}
                 </span>
-                {tier.price.monthly > 0 && (
-                    <span
-                        style={{
-                            fontFamily: 'var(--sw-font-mono)',
-                            fontSize: 12,
-                            color: tier.highlighted ? 'rgba(232,228,218,0.55)' : 'var(--sw-muted)',
-                        }}
-                    >
-                        /month
-                    </span>
-                )}
+                <span
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 12,
+                        color: tier.highlighted ? 'rgba(232,228,218,0.55)' : 'var(--sw-muted)',
+                    }}
+                >
+                    /month
+                </span>
             </div>
-            {tier.price.monthly > 0 && billingPeriod === 'annually' && (
+            {billingPeriod === 'annually' && (
                 <p
                     className="mt-1"
                     style={{
@@ -361,12 +291,12 @@ function PricingCard({
                         color: tier.highlighted ? 'rgba(232,228,218,0.45)' : 'var(--sw-muted)',
                     }}
                 >
-                    Billed as ${tier.price.annually * 12}/year
+                    Billed as ${tier.priceAnnually * 12}/year
                 </p>
             )}
 
             <ul className="mt-8 flex-1 space-y-2.5">
-                {tier.features.map((feature) => (
+                {tier.marketingFeatures.map((feature) => (
                     <li
                         key={feature}
                         className="flex items-start gap-2.5"
@@ -390,7 +320,7 @@ function PricingCard({
                 ))}
             </ul>
 
-            {isLoggedIn && tier.polarProductId ? (
+            {isLoggedIn ? (
                 <button
                     onClick={onCheckout}
                     disabled={loading}
@@ -411,32 +341,15 @@ function PricingCard({
                     {loading ? (
                         <>
                             <Loader2 className="h-4 w-4 animate-spin" />
-                            Processing…
+                            Processing...
                         </>
                     ) : (
-                        'Upgrade now →'
+                        'Upgrade now ->'
                     )}
                 </button>
-            ) : isLoggedIn && tier.id === 'free' ? (
-                <Link
-                    href="/dashboard"
-                    className="mt-8 inline-flex items-center justify-center"
-                    style={{
-                        fontFamily: 'var(--sw-font-mono)',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        padding: '12px 16px',
-                        background: 'var(--sw-ink)',
-                        color: 'var(--sw-paper)',
-                    }}
-                >
-                    Go to dashboard →
-                </Link>
             ) : (
                 <Link
-                    href={tier.id === 'free' ? '/register' : `/register?plan=${tier.id}`}
+                    href={`/register?plan=${tier.id}`}
                     className="mt-8 inline-flex items-center justify-center transition-opacity hover:opacity-90"
                     style={{
                         fontFamily: 'var(--sw-font-mono)',
@@ -449,7 +362,7 @@ function PricingCard({
                         color: tier.highlighted ? 'var(--sw-ink)' : 'var(--sw-paper)',
                     }}
                 >
-                    {tier.cta} →
+                    {tier.cta} -&gt;
                 </Link>
             )}
         </div>

@@ -302,10 +302,10 @@ export function SnapshotDialog({
                         {snapshot.totals && (
                           <div className="flex items-center gap-4 mt-2 text-xs">
                             <span className="text-[var(--color-text-muted)]">
-                              Budget: <span className="text-[var(--color-text-primary)]">{formatCurrency(snapshot.totals.budgetCents)}</span>
+                              Budget: <span className="text-[var(--role-money)] font-mono">{formatCurrency(snapshot.totals.budgetCents)}</span>
                             </span>
                             <span className="text-[var(--color-text-muted)]">
-                              Forecast: <span className="text-[var(--color-text-primary)]">{formatCurrency(snapshot.totals.finalForecastCents)}</span>
+                              Forecast: <span className="text-[var(--role-money)] font-mono">{formatCurrency(snapshot.totals.finalForecastCents)}</span>
                             </span>
                             <span className={snapshot.totals.varianceCents >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'}>
                               Variance: {formatCurrency(snapshot.totals.varianceCents)}

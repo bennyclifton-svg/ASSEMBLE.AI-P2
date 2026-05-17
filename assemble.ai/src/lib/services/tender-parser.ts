@@ -5,13 +5,28 @@
  *
  * Extracts pricing line items from tender submission PDFs using:
  * 1. LlamaParse/Unstructured/pdf-parse for document parsing (T041)
- * 2. Claude API for intelligent pricing extraction (T042)
+ * 2. The configured extraction AI provider for intelligent pricing extraction (T042)
  * 3. Semantic matching to map amounts to evaluation rows (T043)
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { parseDocument, type ParsedDocument } from '@/lib/rag/parsing';
-import type { ParsedLineItem, TenderParseResult, EvaluationRow, TenderItemType } from '@/types/evaluation';
+import {
+    cleanOptionalText,
+    normaliseTenderItemType,
+    normaliseTenderLineItemTableType,
+    normaliseVmOrigin,
+    normaliseVmStatus,
+} from './tender-parser-classification';
+import type {
+    EvaluationRow,
+    EvaluationTableType,
+    ParsedLineItem,
+    TenderItemType,
+    TenderParseResult,
+    VmAdoptionStatus,
+    VmOrigin,
+} from '@/types/evaluation';
 
 // ============================================================================
 // TYPES
@@ -47,28 +62,34 @@ export interface MappedTenderResult {
 // ============================================================================
 
 const TENDER_EXTRACTION_PROMPT = `You are an expert at extracting pricing data from tender submission documents.
-Analyze the provided tender document and extract ONLY specific deliverable-based pricing line items.
+Analyze the provided tender document and extract priced rows for a tender evaluation sheet.
 
-IMPORTANT CLASSIFICATION RULES:
+The evaluation sheet has three table types:
 
-1. INCLUDE as "deliverable" - Items representing specific project deliverables with fixed prices:
-   - Design phases (e.g., "Schematic Design", "Detail Design for Tender (70%)")
-   - Documentation deliverables (e.g., "Drawings Package", "Specifications")
-   - Specific project activities (e.g., "Site Supervision - 10 visits", "Project Management")
-   - Consultation services tied to deliverables
-   - Attendance/meetings that are part of a fixed fee scope
+1. "initial_price" - the tenderer's base fee / price schedule.
+   Include fixed-sum deliverables such as Schematic Design, Detail Design, CC Documentation, Contract Administration, Tender Assistance, commissioning attendance, or fixed allowances.
 
-2. EXCLUDE as "total" - Summary/aggregation rows:
-   - Lines starting with "Total", "Sub-Total", "Subtotal", "Grand Total"
-   - Lines ending with "Total" or "Fee (excl GST)" or "Fee (ex GST)"
-   - Sum lines that aggregate other items
+2. "adds_subs" - commercial adjustments that should normalise the tenders.
+   Include add/deduct rows, exclusions that need pricing, qualifications with stated values, additional services, "if required" items, formal report additions, peer review workshops, missing-scope allowances, and other priced items that change the comparable tender price.
 
-3. EXCLUDE as "unit_rate" - Variable pricing items:
-   - Lines containing "Rate per", "Price per", "$/hour", "$/day", "$/visit", "$/meeting"
-   - Per-unit rates (e.g., "Rate per site visit", "$X per meeting", "Hourly rate")
-   - Time-based rates without fixed totals
+3. "value_management" - tenderer-proposed VM / value engineering / alternative-scope options.
+   Include priced options that could reduce or change scope after evaluation. Use negative amountCents for savings or credits, positive amountCents for extra-cost VM options. These rows should default to vmAdoptionStatus "tbd" because the PM decides whether to adopt them.
 
-IMPORTANT: Convert ALL currency amounts to cents (multiply dollars by 100).
+EXCLUDE as "total" - summary/aggregation rows:
+- Lines starting with "Total", "Sub-Total", "Subtotal", "Grand Total"
+- Lines ending with "Total" or "Fee (excl GST)" or "Fee (ex GST)"
+- Sum lines that aggregate other items
+
+EXCLUDE as "unit_rate" - variable rate rows without a fixed total:
+- "Rate per", "Price per", "$/hour", "$/day", "$/visit", "$/meeting"
+- Time-based rates without fixed totals
+
+IMPORTANT:
+- Convert ALL currency amounts to cents (multiply dollars by 100).
+- Return the row's own amount only. Do not return subtotals or grand totals.
+- Keep the tenderer's wording where possible, but remove numbering/table noise.
+- If a row appears under a Value Management or VM heading, tableType must be "value_management".
+- If a row appears under Adds & Subs, Commercial Adjustments, Normalisation, Exclusions, Qualifications, or Clarifications with a fixed price, tableType must be "adds_subs".
 
 Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):
 
@@ -77,19 +98,29 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
   "items": [
     {
       "description": "string (the line item description)",
-      "amountCents": number (amount in cents),
+      "amountCents": number (amount in cents, can be negative for savings/deductions),
       "confidence": number (0-1, your confidence in this extraction),
-      "itemType": "deliverable" | "total" | "unit_rate" | "allowance"
+      "itemType": "deliverable" | "commercial_adjustment" | "value_management" | "total" | "unit_rate" | "allowance",
+      "tableType": "initial_price" | "adds_subs" | "value_management",
+      "category": "short category such as base price, scope gap, exclusion, qualification, value management, allowance",
+      "sourceSection": "heading or section where the row was found",
+      "vmAdoptionStatus": "tbd",
+      "vmEmbeddedInBase": false,
+      "vmOrigin": "tenderer_proposed"
     }
   ],
   "overallConfidence": number (0-1, overall confidence in the extraction)
 }
 
 Examples:
-- "Schematic Design For DA" -> itemType: "deliverable" (include)
+- "Schematic Design" -> itemType: "deliverable", tableType: "initial_price" (include)
+- "Tender Assistance" -> itemType: "deliverable", tableType: "initial_price" (include)
 - "Total Lump Sum Fee (excl GST)" -> itemType: "total" (exclude)
 - "Rate per Site Visit" -> itemType: "unit_rate" (exclude)
-- "Detail Design For Tender (70%) - Meetings" -> itemType: "deliverable" (include - fixed scope)
+- "Include formal natural ventilation report suitable for client issue" -> itemType: "commercial_adjustment", tableType: "adds_subs" (include)
+- "Add CFD modelling for basement ventilation if required" -> itemType: "commercial_adjustment", tableType: "adds_subs" (include)
+- "VM-01: Rationalise car park exhaust zoning" -> itemType: "value_management", tableType: "value_management" (include)
+- "Value management saving - mixed-mode ventilation strategy" -> itemType: "value_management", tableType: "value_management" (include as a negative amount)
 - "Sub-Total" -> itemType: "total" (exclude)
 
 Document content:
@@ -194,14 +225,20 @@ export function filterLineItems(items: ParsedLineItem[]): FilterResult {
 }
 
 // ============================================================================
-// ANTHROPIC CLIENT
+// ERROR NORMALISATION
 // ============================================================================
 
-function getAnthropicClient(): Anthropic {
-    if (!process.env.ANTHROPIC_API_KEY) {
-        throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+function normaliseAiExtractionError(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (/credit balance is too low/i.test(message)) {
+        return (
+            'The configured AI extraction provider rejected the request because its credit balance is too low. ' +
+            'Top up that provider, or switch the Extraction model in Admin > Models to an available OpenAI/OpenRouter model.'
+        );
     }
-    return new Anthropic();
+
+    return message;
 }
 
 // ============================================================================
@@ -263,7 +300,7 @@ export async function extractPricingFromTender(
 
     // Step 2: Extract pricing with Claude (T042)
     try {
-        console.log('[tender-parser] Calling Claude for pricing extraction...');
+        console.log('[tender-parser] Calling configured extraction AI for pricing extraction...');
         console.log(`[tender-parser] PDF text preview (first 500 chars):\n${content.substring(0, 500)}\n...`);
 
         // Check if content is empty or too short
@@ -281,10 +318,10 @@ export async function extractPricingFromTender(
             };
         }
 
-        const anthropic = getAnthropicClient();
-        const response = await anthropic.messages.create({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 2000,
+        const response = await aiComplete({
+            featureGroup: 'extraction',
+            maxTokens: 3000,
+            temperature: 0,
             messages: [
                 {
                     role: 'user',
@@ -293,22 +330,27 @@ export async function extractPricingFromTender(
             ],
         });
 
-        // Extract text content from response
-        const textContent = response.content.find((c) => c.type === 'text');
-        if (!textContent || textContent.type !== 'text') {
-            throw new Error('No text response from Claude');
-        }
-
         // Parse JSON response
         let extractedData: {
             firmName: string | null;
-            items: Array<{ description: string; amountCents: number; confidence: number; itemType?: TenderItemType }>;
+            items: Array<{
+                description: string;
+                amountCents: number;
+                confidence: number;
+                itemType?: TenderItemType;
+                tableType?: EvaluationTableType;
+                category?: string;
+                sourceSection?: string;
+                vmAdoptionStatus?: VmAdoptionStatus;
+                vmEmbeddedInBase?: boolean;
+                vmOrigin?: VmOrigin;
+            }>;
             overallConfidence: number;
         };
 
         try {
             // Clean up response - extract JSON from markdown code blocks or raw JSON
-            let jsonText = textContent.text.trim();
+            let jsonText = response.text.trim();
 
             // Try to extract JSON from markdown code block first
             const codeBlockMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -326,18 +368,32 @@ export async function extractPricingFromTender(
 
             console.log('[tender-parser] Cleaned JSON to parse:', jsonText.substring(0, 200));
             extractedData = JSON.parse(jsonText);
-        } catch (jsonError) {
-            console.error('[tender-parser] Failed to parse JSON response:', textContent.text);
+        } catch {
+            console.error('[tender-parser] Failed to parse JSON response:', response.text);
             throw new Error('Invalid JSON response from extraction');
         }
 
         // Build raw items with AI classification
-        const rawItems: ParsedLineItem[] = extractedData.items.map((item) => ({
-            description: item.description,
-            amountCents: Math.round(Number(item.amountCents) || 0),
-            confidence: Number(item.confidence) || 0.5,
-            itemType: item.itemType || 'deliverable', // Default to deliverable if not specified
-        }));
+        const rawItems: ParsedLineItem[] = extractedData.items.map((item) => {
+            const parsed: ParsedLineItem = {
+                description: item.description,
+                amountCents: Math.round(Number(item.amountCents) || 0),
+                confidence: Number(item.confidence) || 0.5,
+                itemType: normaliseTenderItemType(item.itemType),
+                tableType: item.tableType,
+                category: cleanOptionalText(item.category),
+                sourceSection: cleanOptionalText(item.sourceSection),
+            };
+            const tableType = normaliseTenderLineItemTableType(parsed);
+
+            return {
+                ...parsed,
+                tableType,
+                vmAdoptionStatus: tableType === 'value_management' ? normaliseVmStatus(item.vmAdoptionStatus) : undefined,
+                vmEmbeddedInBase: tableType === 'value_management' ? Boolean(item.vmEmbeddedInBase) : undefined,
+                vmOrigin: tableType === 'value_management' ? normaliseVmOrigin(item.vmOrigin) : undefined,
+            };
+        });
 
         console.log(`[tender-parser] Extracted ${rawItems.length} raw line items from PDF`);
 
@@ -346,7 +402,7 @@ export async function extractPricingFromTender(
 
         console.log(`[tender-parser] After filtering: ${items.length} included, ${filteredItems.length} filtered`);
         items.forEach((item, i) => {
-            console.log(`[tender-parser]   ${i + 1}. [${item.itemType}] "${item.description}" = $${item.amountCents / 100}`);
+            console.log(`[tender-parser]   ${i + 1}. [${item.tableType}/${item.itemType}] "${item.description}" = $${item.amountCents / 100}`);
         });
 
         if (filteredItems.length > 0) {
@@ -367,13 +423,14 @@ export async function extractPricingFromTender(
         };
     } catch (extractError) {
         console.error('[tender-parser] Extraction failed:', extractError);
+        const normalisedError = normaliseAiExtractionError(extractError);
         return {
             success: false,
             items: [],
             filteredItems: [],
             firmNameExtracted: null,
             overallConfidence: 0,
-            error: `Failed to extract pricing: ${extractError instanceof Error ? extractError.message : 'Unknown error'}`,
+            error: `Failed to extract pricing: ${normalisedError}`,
             parserUsed: parser,
             rawText: content.substring(0, 3000),
         };
@@ -472,16 +529,18 @@ export function mapItemsToRows(
 
         if (bestMatch) {
             // Map to this row
+            const combinedConfidence = item.confidence * bestMatch.score;
             usedRowIds.add(bestMatch.row.id);
             mappedItems.push({
                 rowId: bestMatch.row.id,
                 description: bestMatch.row.description,
                 amountCents: item.amountCents,
-                confidence: item.confidence * bestMatch.score, // Combine confidences
+                confidence: combinedConfidence, // Combine confidences
             });
 
             // Store the matchedRowId for reference
             item.matchedRowId = bestMatch.row.id;
+            item.confidence = combinedConfidence;
 
             console.log(
                 `[tender-parser] Mapped "${item.description}" -> "${bestMatch.row.description}" (score: ${bestMatch.score.toFixed(2)})`
@@ -535,28 +594,28 @@ export async function parseTenderForEvaluation(
         };
     }
 
-    // Map to evaluation rows
-    const mapping = mapItemsToRows(extraction.items, evaluationRows, firmId);
+    const tableTypes: EvaluationTableType[] = ['initial_price', 'adds_subs', 'value_management'];
+    const mappings = tableTypes.map((tableType) => {
+        const itemsForTable = extraction.items.filter((item) => normaliseTenderLineItemTableType(item) === tableType);
+        const rowsForTable = evaluationRows.filter((row) => row.tableType === tableType);
+        return mapItemsToRows(itemsForTable, rowsForTable, firmId);
+    });
 
-    // Build final result
-    const items: ParsedLineItem[] = mapping.mappedItems.map((item) => ({
-        description: item.description,
-        amountCents: item.amountCents,
-        confidence: item.confidence,
-        matchedRowId: item.rowId,
-    }));
-
-    // Include unmapped items without row mapping
-    items.push(...mapping.unmappedItems);
+    const items = extraction.items;
+    const unmappedItems = items.filter((item) => !item.matchedRowId);
+    const mappedConfidence = mappings.flatMap((mapping) => mapping.mappedItems.map((item) => item.confidence));
+    const overallConfidence = mappedConfidence.length > 0
+        ? mappedConfidence.reduce((sum, confidence) => sum + confidence, 0) / mappedConfidence.length
+        : extraction.overallConfidence;
 
     return {
         firmId,
         firmName: extraction.firmNameExtracted || undefined,
         items,
         filteredItems: extraction.filteredItems,  // Pass through filtered items for audit trail
-        overallConfidence: mapping.overallConfidence,
-        errors: mapping.unmappedItems.length > 0
-            ? [`${mapping.unmappedItems.length} items could not be mapped`]
+        overallConfidence,
+        errors: unmappedItems.length > 0
+            ? [`${unmappedItems.length} items could not be mapped`]
             : undefined,
     };
 }

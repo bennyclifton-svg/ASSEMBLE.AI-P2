@@ -27,6 +27,7 @@ import { markdownToHTML } from '@/lib/utils/report-formatting';
 
 export interface GenerativeFieldContext {
     projectId: string;
+    stakeholderId?: string;
     disciplineId?: string;
     tradeId?: string;
 }
@@ -173,6 +174,7 @@ export function GenerativeField({
     const { generate, isGenerating, error } = useFieldGeneration({
         fieldType: type,
         projectId: context.projectId,
+        stakeholderId: context.stakeholderId,
         disciplineId: context.disciplineId,
         tradeId: context.tradeId,
         additionalContext,

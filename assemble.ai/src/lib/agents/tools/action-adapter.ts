@@ -65,6 +65,9 @@ export function actionToAgentTool(action: ActionDefinition): AgentToolDefinition
     const canMutate = Boolean(action.apply || action.applyResult || action.prepareProposal || action.preview);
 
     return {
+        actionBacked: {
+            actionId: action.id,
+        },
         spec: {
             name: action.toolName,
             description: action.description,

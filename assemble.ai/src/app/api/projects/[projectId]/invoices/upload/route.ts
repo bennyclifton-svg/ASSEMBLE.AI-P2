@@ -8,6 +8,7 @@ import { extractInvoiceFromPdf } from '@/lib/invoice/extract';
 import { matchCompany } from '@/lib/invoice/company-matcher';
 import { matchInvoiceToCostLine } from '@/lib/invoice/cost-line-matcher';
 import { getCategoryById } from '@/lib/constants/categories';
+import { isAccessDenied, requireUploadProjectAccess } from '@/lib/auth/project-access';
 
 /**
  * POST /api/projects/[projectId]/invoices/upload
@@ -21,6 +22,12 @@ export async function POST(
 ) {
   try {
     const { projectId } = await params;
+    const access = await requireUploadProjectAccess({
+      projectId,
+      incomingDocumentCount: 1,
+    });
+    if (isAccessDenied(access)) return access.response;
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 

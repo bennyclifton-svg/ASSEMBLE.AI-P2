@@ -1,11 +1,10 @@
 /**
  * useProjectEvents — subscribes to /api/projects/[projectId]/events and
- * invokes a callback for each entity_updated event.
+ * invokes a callback for each project event.
  *
  * Callback-style (not state) so consumers can call refetch() in their own
  * data hooks without forcing a re-render on every event. Mirrors the
- * shape of use-chat-stream.ts but minimal — there is only one event type
- * to handle today.
+ * shape of use-chat-stream.ts but minimal.
  */
 
 import { useEffect, useRef } from 'react';
@@ -13,13 +12,16 @@ import { useEffect, useRef } from 'react';
 export type EntityUpdatedEvent = {
     type: 'entity_updated';
     entity:
+        | 'ai_memory'
         | 'cost_line'
         | 'invoice'
         | 'note'
+        | 'rfi'
         | 'risk'
         | 'variation'
         | 'meeting'
         | 'report'
+        | 'rft'
         | 'objective'
         | 'program_activity'
         | 'program_milestone'
@@ -34,7 +36,16 @@ export type DocumentSelectionChangedEvent = {
     documentIds: string[];
 };
 
-export type ProjectEvent = EntityUpdatedEvent | DocumentSelectionChangedEvent;
+export type DocumentSyncStatusChangedEvent = {
+    type: 'document_sync_status_changed';
+    documentIds: string[];
+    documentSetId?: string | null;
+};
+
+export type ProjectEvent =
+    | EntityUpdatedEvent
+    | DocumentSelectionChangedEvent
+    | DocumentSyncStatusChangedEvent;
 
 export function useProjectEvents(
     projectId: string | null,
@@ -60,10 +71,12 @@ export function useProjectEvents(
         };
         source.addEventListener('entity_updated', handle as EventListener);
         source.addEventListener('document_selection_changed', handle as EventListener);
+        source.addEventListener('document_sync_status_changed', handle as EventListener);
 
         return () => {
             source.removeEventListener('entity_updated', handle as EventListener);
             source.removeEventListener('document_selection_changed', handle as EventListener);
+            source.removeEventListener('document_sync_status_changed', handle as EventListener);
             source.close();
         };
     }, [projectId]);

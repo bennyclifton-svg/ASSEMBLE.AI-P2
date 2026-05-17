@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronUp, MessageSquare, Send } from 'lucide-react';
+import { ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { MessageList } from './MessageList';
 import type { ChatMessageView } from './MessageBubble';
 import { useChatStream, type PendingApprovalView } from '@/lib/hooks/use-chat-stream';
@@ -22,6 +22,9 @@ const DEFAULT_HEIGHT = 360;
 const MIN_HEIGHT = 220;
 const MAX_HEIGHT_VH = 0.7;
 const COLLAPSED_HEIGHT = 44;
+// Horizontal inset matches the centre panel's px-6 (24px) Tabs padding so
+// the dock's left/right edges line up with the shells stacked above it.
+const SIDE_BUFFER_PX = 24;
 
 interface ThreadShape {
     id: string;
@@ -437,17 +440,16 @@ export function ChatDock({ projectId }: ChatDockProps) {
     const dock = (
         <div
             data-testid="chat-dock"
-            className={`${anchorEl ? 'absolute inset-x-0' : 'fixed'} bottom-0 z-40 flex flex-col`}
+            className={`${anchorEl ? 'absolute' : 'fixed'} bottom-0 z-40 flex flex-col`}
             style={{
-                left: anchorEl ? undefined : 0,
-                right: anchorEl ? 0 : undefined,
+                left: anchorEl ? SIDE_BUFFER_PX : 0,
+                right: anchorEl ? SIDE_BUFFER_PX : 0,
                 width: anchorEl ? undefined : '100%',
                 height: collapsed ? COLLAPSED_HEIGHT : height,
-                backgroundColor: 'var(--color-bg-primary)',
-                borderTop: '1px solid var(--color-border)',
-                borderLeft: anchorEl ? '1px solid var(--color-border)' : undefined,
-                borderRight: anchorEl ? '1px solid var(--color-border)' : undefined,
-                boxShadow: '0 -2px 8px rgba(0,0,0,0.08)',
+                background: 'var(--sw-paper)',
+                border: '1px solid var(--sw-rule)',
+                borderBottom: 'none',
+                boxShadow: '0 -2px 8px rgba(14, 16, 20, 0.08)',
                 transition: collapsed ? 'height 0.15s ease' : undefined,
             }}
         >
@@ -455,41 +457,79 @@ export function ChatDock({ projectId }: ChatDockProps) {
             {!collapsed && (
                 <div
                     className="w-full h-2 flex-shrink-0 cursor-row-resize select-none flex items-center justify-center"
-                    style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
+                    style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
                     onMouseDown={handleResizeMouseDown}
                     title="Drag to resize — double-click to collapse"
                 >
                     <div
                         className="w-8 h-0.5 rounded-full"
-                        style={{ backgroundColor: 'var(--color-border-strong)' }}
+                        style={{ backgroundColor: 'var(--sw-rule)' }}
                     />
                 </div>
             )}
 
-            {/* Header */}
+            {/* Header — Sitewise dialect, matches the // ASK card styling */}
             <button
                 type="button"
                 onClick={handleToggle}
-                className="flex items-center justify-between px-3 flex-shrink-0 hover:bg-[var(--color-bg-hover)] transition-colors"
+                className="flex items-center justify-between px-2 flex-shrink-0 transition-colors hover:bg-white"
                 style={{
                     height: collapsed ? '100%' : 36,
-                    borderBottom: collapsed ? undefined : '1px solid var(--color-border-subtle)',
+                    background: 'var(--sw-paper)',
+                    borderBottom: collapsed ? undefined : '1px solid var(--sw-rule-2)',
                 }}
                 data-testid="chat-dock-toggle"
             >
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider"
-                     style={{ color: 'var(--color-text-secondary)' }}>
-                    <MessageSquare size={14} />
-                    <span>Project Assistant</span>
+                <div className="flex items-center gap-2">
+                    <span
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            fontSize: 10,
+                            color: 'var(--sw-rose-dk)',
+                            letterSpacing: '0.1em',
+                            fontWeight: 600,
+                        }}
+                    >
+                        {'// ASK'}
+                    </span>
+                    <span
+                        style={{
+                            fontSize: 12,
+                            lineHeight: 1.45,
+                            color: 'var(--sw-ink)',
+                        }}
+                    >
+                        Project Assistant
+                    </span>
                     {stream.isConnected && !collapsed && (
                         <span
                             className="w-1.5 h-1.5 rounded-full"
-                            style={{ backgroundColor: 'var(--color-success)' }}
+                            style={{ backgroundColor: 'var(--sw-rose)' }}
                             title="Live"
                         />
                     )}
                 </div>
-                {collapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                <div className="flex items-center gap-2">
+                    {collapsed && (
+                        <span
+                            style={{
+                                background: 'var(--sw-rose)',
+                                color: 'var(--sw-ink)',
+                                padding: '2px 6px',
+                                fontSize: 10,
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontWeight: 700,
+                            }}
+                        >
+                            ↵
+                        </span>
+                    )}
+                    {collapsed ? (
+                        <ChevronUp size={20} strokeWidth={2.5} style={{ color: 'var(--sw-rose)' }} />
+                    ) : (
+                        <ChevronDown size={20} strokeWidth={2.5} style={{ color: 'var(--sw-rose)' }} />
+                    )}
+                </div>
             </button>
 
             {/* Body */}
@@ -504,20 +544,20 @@ export function ChatDock({ projectId }: ChatDockProps) {
 
                     {visibleError && (
                         <div
-                            className="text-xs px-3 py-1.5 flex-shrink-0"
+                            className="text-xs px-1.5 py-1.5 flex-shrink-0"
                             style={{
-                                color: 'var(--color-error)',
-                                borderTop: '1px solid var(--color-border-subtle)',
+                                color: 'var(--sw-rose-dk)',
+                                borderTop: '1px solid var(--sw-rule-2)',
                             }}
                         >
                             {visibleError}
                         </div>
                     )}
 
-                    {/* Input */}
+                    {/* Input — styled to mirror the // ASK card */}
                     <div
-                        className="flex-shrink-0 flex items-end gap-2 p-2"
-                        style={{ borderTop: '1px solid var(--color-border-subtle)' }}
+                        className="flex-shrink-0 flex items-end gap-2 p-1.5"
+                        style={{ borderTop: '1px solid var(--sw-rule-2)', background: 'var(--sw-paper)' }}
                     >
                         <textarea
                             value={draft}
@@ -531,11 +571,13 @@ export function ChatDock({ projectId }: ChatDockProps) {
                             placeholder="Ask about the project or request an action..."
                             rows={2}
                             disabled={isSending || stream.activeRun !== null}
-                            className="flex-1 resize-none rounded px-2 py-1.5 text-sm focus:outline-none"
+                            className="flex-1 resize-none px-2 py-1.5 text-sm focus:outline-none"
                             style={{
-                                backgroundColor: 'var(--color-bg-secondary)',
-                                color: 'var(--color-text-primary)',
-                                border: '1px solid var(--color-border)',
+                                background: 'white',
+                                color: 'var(--sw-ink)',
+                                border: '1px solid var(--sw-rule)',
+                                fontSize: 12,
+                                lineHeight: 1.45,
                             }}
                             data-testid="chat-dock-input"
                         />
@@ -543,13 +585,15 @@ export function ChatDock({ projectId }: ChatDockProps) {
                             type="button"
                             onClick={handleSend}
                             disabled={!draft.trim() || isSending || stream.activeRun !== null}
-                            className="flex items-center justify-center w-8 h-8 rounded disabled:opacity-50 transition-colors"
+                            className="flex items-center justify-center w-8 h-8 disabled:opacity-50 transition-colors"
                             style={{
-                                backgroundColor: 'var(--color-accent-primary)',
-                                color: 'var(--color-on-accent)',
+                                background: 'var(--sw-rose)',
+                                color: 'var(--sw-ink)',
+                                fontFamily: 'var(--sw-font-mono)',
                             }}
                             data-testid="chat-dock-send"
                             aria-label="Send message"
+                            title="Send (↵)"
                         >
                             <Send size={14} />
                         </button>

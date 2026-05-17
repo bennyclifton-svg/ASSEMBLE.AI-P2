@@ -4,6 +4,11 @@ import { costLines, projectStakeholders } from '@/lib/db';
 import { eq, isNull, and, desc } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import type { CreateCostLineInput } from '@/types/cost-plan';
+import {
+    isAccessDenied,
+    requireProjectReadAccess,
+    requireWritableProjectAccess,
+} from '@/lib/auth/project-access';
 
 /**
  * GET /api/projects/[projectId]/cost-lines
@@ -15,6 +20,8 @@ export async function GET(
 ) {
     try {
         const { projectId } = await params;
+        const access = await requireProjectReadAccess(projectId);
+        if (isAccessDenied(access)) return access.response;
 
         const { searchParams } = new URL(request.url);
         const stakeholderId = searchParams.get('stakeholderId');
@@ -69,6 +76,9 @@ export async function POST(
 ) {
     try {
         const { projectId } = await params;
+        const access = await requireWritableProjectAccess(projectId);
+        if (isAccessDenied(access)) return access.response;
+
         const body: CreateCostLineInput = await request.json();
 
         // Validate required fields

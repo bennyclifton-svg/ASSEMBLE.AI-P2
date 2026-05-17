@@ -11,6 +11,10 @@ import type { ToolContext } from './_context';
 export interface AgentToolDefinition<TInput = unknown, TOutput = unknown> {
     /** Tool name as exposed to the model. Must match the name in the JSON schema. */
     spec: AgentTool;
+    /** Present when the tool is generated from a registered application action. */
+    actionBacked?: {
+        actionId: string;
+    };
     /**
      * Whether the tool mutates data. Read-only tools run immediately; mutating
      * tools (Phase 3+) propose a change and wait for user approval.
@@ -38,6 +42,10 @@ export function registerTool<TIn, TOut>(def: AgentToolDefinition<TIn, TOut>): vo
 
 export function getTool(name: string): AgentToolDefinition | undefined {
     return registry.get(name);
+}
+
+export function listToolDefinitions(): AgentToolDefinition[] {
+    return Array.from(registry.values());
 }
 
 /**

@@ -18,26 +18,27 @@ export interface Chunk {
 const CHUNK_SIZES = {
     specifications: { min: 1000, max: 1500 },
     drawingSchedules: { min: 500, max: 800 },
-    correspondence: { min: 0, max: Infinity }, // Full document
+    correspondence: { min: 500, max: 1200 },
     reports: { min: 800, max: 1200 },
     regulatory: { min: 400, max: 800 },         // Small for precision
     knowledgeGuide: { min: 600, max: 1000 },    // Medium for best-practice
     default: { min: 800, max: 1200 },
 };
 
+const DEFAULT_OVERLAP_RATIO = 0.15;
+const MAX_OVERLAP_TOKENS = 128;
+
 // Construction document patterns
-const CLAUSE_PATTERN = /^(\d+(?:\.\d+)*)\s+(.+)$/gm; // e.g., "3.2.1 Concrete Mix"
-const SECTION_PATTERN = /^#+\s+(.+)$/gm; // Markdown headers
-const SPEC_SECTION_PATTERN = /^(PART\s+\d+|SECTION\s+\d+)/gim;
+const SPEC_SECTION_PATTERN = /^\s*(PART\s+\d+|SECTION\s+\d+)/gim;
 
 // NCC (National Construction Code) patterns
-const NCC_CLAUSE_PATTERN = /^([A-Z]\d+(?:\.\d+)*)\s+(.+)$/gm;
-const NCC_PERFORMANCE_PATTERN = /^(P\d+(?:\.\d+)*)\s+(.+)$/gm;
-const NCC_SPEC_PATTERN = /^(Specification\s+[A-Z]\d+(?:\.\d+)*)/gim;
+const NCC_CLAUSE_PATTERN = /^\s*([A-Z]\d+(?:\.\d+)*)\s+(.+)$/gm;
+const NCC_PERFORMANCE_PATTERN = /^\s*(P\d+(?:\.\d+)*)\s+(.+)$/gm;
+const NCC_SPEC_PATTERN = /^\s*(Specification\s+[A-Z]\d+(?:\.\d+)*)/gim;
 
 // Australian Standards (AS) patterns
-const AS_SECTION_PATTERN = /^(Section\s+\d+|Appendix\s+[A-Z])/gim;
-const AS_CLAUSE_PATTERN = /^(\d+(?:\.\d+)+)\s+(.+)$/gm;
+const AS_SECTION_PATTERN = /^\s*(Section\s+\d+|Appendix\s+[A-Z])/gim;
+const AS_CLAUSE_PATTERN = /^\s*(\d+(?:\.\d+)+)\s+(.+)$/gm;
 
 /**
  * Estimate token count (rough approximation: ~4 chars per token)
@@ -59,6 +60,16 @@ function generateChunkId(): string {
 function detectDocumentType(content: string): keyof typeof CHUNK_SIZES {
     const lowerContent = content.toLowerCase();
 
+    SPEC_SECTION_PATTERN.lastIndex = 0;
+    NCC_SPEC_PATTERN.lastIndex = 0;
+    if (
+        SPEC_SECTION_PATTERN.test(content) ||
+        NCC_SPEC_PATTERN.test(content) ||
+        lowerContent.includes('specification')
+    ) {
+        return 'specifications';
+    }
+
     // Regulatory documents: NCC clauses (e.g., "A1.1 General Requirements") or performance requirements (e.g., "P2.1")
     NCC_CLAUSE_PATTERN.lastIndex = 0;
     NCC_PERFORMANCE_PATTERN.lastIndex = 0;
@@ -76,18 +87,17 @@ function detectDocumentType(content: string): keyof typeof CHUNK_SIZES {
         return 'knowledgeGuide';
     }
 
-    SPEC_SECTION_PATTERN.lastIndex = 0;
-    if (SPEC_SECTION_PATTERN.test(content) || lowerContent.includes('specification')) {
-        return 'specifications';
-    }
     if (lowerContent.includes('schedule') || lowerContent.includes('drawing list')) {
         return 'drawingSchedules';
     }
-    if (lowerContent.includes('dear') || lowerContent.includes('regards') || lowerContent.includes('sincerely')) {
-        return 'correspondence';
-    }
     if (lowerContent.includes('report') || lowerContent.includes('summary')) {
         return 'reports';
+    }
+    if (
+        /^\s*dear\b/im.test(content) ||
+        /^\s*(regards|sincerely|yours faithfully|kind regards)\b/im.test(content)
+    ) {
+        return 'correspondence';
     }
 
     return 'default';
@@ -109,7 +119,7 @@ function extractClauseStructure(content: string): Array<{
         startIndex: number;
     }> = [];
 
-    const regex = /^(\d+(?:\.\d+)*)\s+(.+)$/gm;
+    const regex = /^\s*(\d+(?:\.\d+)*)\s+(.+)$/gm;
     let match;
     const matches: Array<{ clauseNumber: string; title: string; startIndex: number }> = [];
 
@@ -138,23 +148,66 @@ function extractClauseStructure(content: string): Array<{
     return clauses;
 }
 
+function extractSpecificationParts(content: string): Array<{
+    partNumber: string;
+    title: string;
+    startIndex: number;
+}> {
+    const parts: Array<{ partNumber: string; title: string; startIndex: number }> = [];
+    const regex = /^\s*PART\s+(\d+)\s*[-:–—]?\s*(.*)$/gim;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+        const partNumber = match[1];
+        const suffix = match[2]?.trim();
+        parts.push({
+            partNumber,
+            title: suffix ? `PART ${partNumber} - ${suffix}` : `PART ${partNumber}`,
+            startIndex: match.index,
+        });
+    }
+
+    return parts;
+}
+
+function findNearestPart(
+    parts: Array<{ partNumber: string; title: string; startIndex: number; chunkId: string }>,
+    startIndex: number
+): { partNumber: string; title: string; startIndex: number; chunkId: string } | null {
+    let nearest: { partNumber: string; title: string; startIndex: number; chunkId: string } | null = null;
+    for (const part of parts) {
+        if (part.startIndex <= startIndex) {
+            nearest = part;
+        } else {
+            break;
+        }
+    }
+    return nearest;
+}
+
 /**
- * Split text by semantic boundaries (paragraph breaks, headers)
+ * Split text by semantic boundaries (paragraph breaks, headers) with overlap.
  */
-function splitBySemantic(text: string, maxTokens: number): string[] {
-    const paragraphs = text.split(/\n\n+/);
+function splitTextToTokenBudget(text: string, maxTokens: number): string[] {
+    const sentences = text
+        .split(/(?<=[.!?])\s+/)
+        .map((sentence) => sentence.trim())
+        .filter(Boolean);
     const chunks: string[] = [];
     let currentChunk = '';
 
-    for (const paragraph of paragraphs) {
-        const paragraphTokens = estimateTokens(paragraph);
+    const units = sentences.length > 1 ? sentences : text.split(/\s+/);
+    const separator = sentences.length > 1 ? ' ' : ' ';
+
+    for (const unit of units) {
+        const unitTokens = estimateTokens(unit);
         const currentTokens = estimateTokens(currentChunk);
 
-        if (currentTokens + paragraphTokens > maxTokens && currentChunk) {
+        if (currentTokens + unitTokens > maxTokens && currentChunk) {
             chunks.push(currentChunk.trim());
-            currentChunk = paragraph;
+            currentChunk = unit;
         } else {
-            currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+            currentChunk += (currentChunk ? separator : '') + unit;
         }
     }
 
@@ -163,6 +216,88 @@ function splitBySemantic(text: string, maxTokens: number): string[] {
     }
 
     return chunks;
+}
+
+function getOverlapTail(text: string, overlapTokens: number): string {
+    if (overlapTokens <= 0) return '';
+    const maxChars = overlapTokens * 4;
+    if (text.length <= maxChars) return text;
+
+    const tail = text.slice(-maxChars);
+    const sentenceBoundary = tail.search(/[.!?]\s+/);
+    return sentenceBoundary > 0 ? tail.slice(sentenceBoundary + 1).trim() : tail.trim();
+}
+
+function splitBySemantic(text: string, maxTokens: number): string[] {
+    if (!text.trim()) return [];
+
+    const overlapTokens = Math.min(
+        MAX_OVERLAP_TOKENS,
+        Math.floor(maxTokens * DEFAULT_OVERLAP_RATIO)
+    );
+    const targetTokens = Math.max(100, maxTokens - overlapTokens);
+    const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+    const rawChunks: string[] = [];
+    let currentChunk = '';
+
+    for (const paragraph of paragraphs) {
+        const paragraphParts = estimateTokens(paragraph) > targetTokens
+            ? splitTextToTokenBudget(paragraph, targetTokens)
+            : [paragraph];
+
+        for (const part of paragraphParts) {
+            const partTokens = estimateTokens(part);
+            const currentTokens = estimateTokens(currentChunk);
+
+            if (currentTokens + partTokens > targetTokens && currentChunk) {
+                rawChunks.push(currentChunk.trim());
+                currentChunk = part;
+            } else {
+                currentChunk += (currentChunk ? '\n\n' : '') + part;
+            }
+        }
+    }
+
+    if (currentChunk.trim()) rawChunks.push(currentChunk.trim());
+
+    return rawChunks.map((chunk, index) => {
+        if (index === 0) return chunk;
+        const overlap = getOverlapTail(rawChunks[index - 1], overlapTokens);
+        return overlap ? `${overlap}\n\n${chunk}` : chunk;
+    });
+}
+
+function isLikelySectionHeading(paragraph: string): boolean {
+    const lines = paragraph.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (lines.length === 0 || lines.length > 2) return false;
+
+    const heading = lines[0];
+    if (heading.length > 80 || /[.!?]$/.test(heading)) return false;
+    if (heading.split(/\s+/).length > 8) return false;
+
+    return /^[A-Z][A-Za-z0-9 &/(),:'-]+$/.test(heading);
+}
+
+function splitReportSections(text: string, maxTokens: number): string[] {
+    const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+    const sections: string[] = [];
+    let currentSection = '';
+
+    for (const paragraph of paragraphs) {
+        if (isLikelySectionHeading(paragraph) && currentSection.trim()) {
+            sections.push(currentSection.trim());
+            currentSection = paragraph;
+        } else {
+            currentSection += (currentSection ? '\n\n' : '') + paragraph;
+        }
+    }
+
+    if (currentSection.trim()) sections.push(currentSection.trim());
+    if (sections.length <= 1) return splitBySemantic(text, maxTokens);
+
+    return sections.flatMap((section) =>
+        estimateTokens(section) > maxTokens ? splitBySemantic(section, maxTokens) : [section]
+    );
 }
 
 /**
@@ -182,8 +317,8 @@ export function chunkDocument(
 
     const chunks: Chunk[] = [];
 
-    // For correspondence, return as single chunk
-    if (documentType === 'correspondence') {
+    // Short correspondence is best kept intact; long letters still need chunks.
+    if (documentType === 'correspondence' && estimateTokens(content) <= chunkSizes.max) {
         chunks.push({
             id: generateChunkId(),
             content: content.trim(),
@@ -202,8 +337,27 @@ export function chunkDocument(
         const clauses = extractClauseStructure(content);
 
         if (clauses.length > 0) {
+            const parts = extractSpecificationParts(content).map((part) => ({
+                ...part,
+                chunkId: generateChunkId(),
+            }));
+
+            for (const part of parts) {
+                chunks.push({
+                    id: part.chunkId,
+                    content: part.title,
+                    hierarchyLevel: 1,
+                    hierarchyPath: part.partNumber,
+                    sectionTitle: part.title,
+                    clauseNumber: null,
+                    parentId: null,
+                    tokenCount: estimateTokens(part.title),
+                });
+            }
+
             for (const clause of clauses) {
                 const clauseTokens = estimateTokens(clause.content);
+                const nearestPart = findNearestPart(parts, clause.startIndex);
 
                 // If clause fits within limits, keep as single chunk
                 if (clauseTokens <= chunkSizes.max) {
@@ -214,7 +368,7 @@ export function chunkDocument(
                         hierarchyPath: clause.clauseNumber,
                         sectionTitle: clause.title,
                         clauseNumber: clause.clauseNumber,
-                        parentId: null,
+                        parentId: nearestPart?.chunkId ?? null,
                         tokenCount: clauseTokens,
                     });
                 } else {
@@ -230,7 +384,7 @@ export function chunkDocument(
                         hierarchyPath: clause.clauseNumber,
                         sectionTitle: clause.title,
                         clauseNumber: clause.clauseNumber,
-                        parentId: null,
+                        parentId: nearestPart?.chunkId ?? null,
                         tokenCount: estimateTokens(`${clause.clauseNumber} ${clause.title}`),
                     });
 
@@ -255,7 +409,9 @@ export function chunkDocument(
     }
 
     // Default semantic splitting
-    const semanticChunks = splitBySemantic(content, chunkSizes.max);
+    const semanticChunks = documentType === 'reports'
+        ? splitReportSections(content, chunkSizes.max)
+        : splitBySemantic(content, chunkSizes.max);
 
     for (let i = 0; i < semanticChunks.length; i++) {
         chunks.push({
