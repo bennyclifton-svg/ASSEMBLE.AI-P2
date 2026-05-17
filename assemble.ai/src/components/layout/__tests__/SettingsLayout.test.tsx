@@ -6,7 +6,7 @@ jest.mock('next/navigation', () => ({
     usePathname: jest.fn(),
 }));
 jest.mock('@/lib/auth-client', () => ({
-    useSession: jest.fn(),
+    useIsSuperAdmin: jest.fn(),
 }));
 // react-resizable-panels ships as ESM and isn't transformed by Jest's default
 // config; stub the panel primitives so the layout renders synchronously.
@@ -22,14 +22,13 @@ jest.mock('../UserProfileDropdown', () => ({
 }));
 
 const { usePathname } = jest.requireMock('next/navigation') as { usePathname: jest.Mock };
-const { useSession } = jest.requireMock('@/lib/auth-client') as { useSession: jest.Mock };
+const { useIsSuperAdmin } = jest.requireMock('@/lib/auth-client') as {
+    useIsSuperAdmin: jest.Mock;
+};
 
 describe('SettingsLayout', () => {
     beforeEach(() => {
-        useSession.mockReturnValue({
-            data: { user: { name: 'Test', email: 't@example.com', isSuperAdmin: false } },
-            isPending: false,
-        });
+        useIsSuperAdmin.mockReturnValue(false);
     });
 
     it('renders Account and Billing nav for non-admin', () => {
@@ -41,10 +40,7 @@ describe('SettingsLayout', () => {
     });
 
     it('renders admin subhead and links for super admin', () => {
-        useSession.mockReturnValue({
-            data: { user: { name: 'Admin', email: 'a@example.com', isSuperAdmin: true } },
-            isPending: false,
-        });
+        useIsSuperAdmin.mockReturnValue(true);
         usePathname.mockReturnValue('/settings/users');
         render(<SettingsLayout>content</SettingsLayout>);
         expect(screen.getByText(/admin/i)).toBeInTheDocument();

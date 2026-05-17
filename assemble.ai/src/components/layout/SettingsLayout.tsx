@@ -7,7 +7,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ArrowLeft, CreditCard, Cpu, HardDrive, Package, User, Users } from 'lucide-react';
 import { SitewiseWordmark } from '@/components/brand/SitewiseWordmark';
 import { UserProfileDropdown } from './UserProfileDropdown';
-import { useSession } from '@/lib/auth-client';
+import { useIsSuperAdmin } from '@/lib/auth-client';
 
 const STORAGE_KEY = 'settings-panel-sizes';
 const DEFAULT_SIZES = [17, 83];
@@ -46,9 +46,7 @@ interface SettingsLayoutProps {
  */
 export function SettingsLayout({ children }: SettingsLayoutProps) {
     const pathname = usePathname();
-    const { data: session } = useSession();
-    const isSuperAdmin =
-        (session?.user as { isSuperAdmin?: boolean } | undefined)?.isSuperAdmin === true;
+    const isSuperAdmin = useIsSuperAdmin();
 
     const [panelSizes, setPanelSizes] = useState<number[]>(() => {
         if (typeof window === 'undefined') return DEFAULT_SIZES;

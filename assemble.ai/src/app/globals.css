@@ -3425,6 +3425,12 @@ textarea:-webkit-autofill:active {
   color: var(--sw-muted);
 }
 
+.sitewise-button[data-state='active'] {
+  background: color-mix(in oklab, var(--sw-rose) 12%, transparent);
+  border-color: color-mix(in oklab, var(--sw-rose) 45%, var(--sw-rule));
+  color: var(--sw-ink);
+}
+
 .sitewise-icon-button {
   display: inline-flex;
   align-items: center;
