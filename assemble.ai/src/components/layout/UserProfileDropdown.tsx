@@ -1,9 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { CreditCard, ExternalLink, LogOut, Moon, Settings, Shield, Sun } from 'lucide-react';
+import { ExternalLink, LogOut, Settings } from 'lucide-react';
 import { useSession, signOut } from '@/lib/auth-client';
-import { useTheme } from '@/lib/hooks/use-theme';
 import { UserAvatar } from './UserAvatar';
 import {
   DropdownMenu,
@@ -27,9 +26,6 @@ import { cn } from '@/lib/utils';
 export function UserProfileDropdown() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
-  const { theme, toggleTheme, isLoaded: isThemeLoaded } = useTheme();
-
-  const isPrecisionDark = theme === 'precision';
 
   const handleSignOut = async () => {
     await signOut({
@@ -58,10 +54,6 @@ export function UserProfileDropdown() {
   }
 
   const { user } = session;
-  // isSuperAdmin is wired via better-auth additionalFields in src/lib/better-auth.ts.
-  // The client session type doesn't pick it up automatically (no inferAdditionalFields
-  // plugin), so we narrow at the read site.
-  const isSuperAdmin = (user as { isSuperAdmin?: boolean }).isSuperAdmin === true;
 
   return (
     <DropdownMenu>
@@ -105,31 +97,9 @@ export function UserProfileDropdown() {
           <span>Visit Website</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem onClick={() => handleNavigation('/billing')}>
-          <CreditCard className="mr-2 h-4 w-4" />
-          <span>Billing</span>
-        </DropdownMenuItem>
-
-        {isSuperAdmin && (
-          <DropdownMenuItem onClick={() => handleNavigation('/admin')}>
-            <Shield className="mr-2 h-4 w-4" />
-            <span>Admin</span>
-          </DropdownMenuItem>
-        )}
-
-        <DropdownMenuItem onClick={() => handleNavigation('/settings')} disabled>
+        <DropdownMenuItem onClick={() => handleNavigation('/settings')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
-          <span className="ml-auto text-[10px] text-[var(--color-text-muted)]">Soon</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem onClick={toggleTheme} disabled={!isThemeLoaded}>
-          {isPrecisionDark ? (
-            <Sun className="mr-2 h-4 w-4" />
-          ) : (
-            <Moon className="mr-2 h-4 w-4" />
-          )}
-          <span>{isPrecisionDark ? 'Light Mode' : 'Dark Mode'}</span>
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
