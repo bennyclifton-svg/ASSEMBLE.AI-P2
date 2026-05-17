@@ -41,11 +41,12 @@ describe('SettingsLayout', () => {
         useIsSuperAdmin.mockReturnValue(false);
     });
 
-    it('renders Account and Billing nav for non-admin', () => {
+    it('renders Account, Billing, and AI Memory nav for non-admin', () => {
         usePathname.mockReturnValue('/settings/account');
         render(<SettingsLayout>content</SettingsLayout>);
         expect(screen.getByRole('button', { name: /account/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /billing/i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /ai memory/i })).toBeInTheDocument();
         // Admin label is not in the group label when non-admin
         expect(screen.queryByText('Admin')).not.toBeInTheDocument();
     });

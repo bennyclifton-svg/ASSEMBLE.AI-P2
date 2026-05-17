@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { ArrowLeft, CreditCard, Cpu, HardDrive, Package, User, Users } from 'lucide-react';
+import { ArrowLeft, Brain, CreditCard, Cpu, HardDrive, Package, User, Users } from 'lucide-react';
 import { SitewiseNavGroup, SitewiseNavItem } from '@/components/dashboard/nav';
 import { UserProfileDropdown } from './UserProfileDropdown';
 import { useIsSuperAdmin } from '@/lib/auth-client';
@@ -22,6 +22,7 @@ interface NavItem {
 const ACCOUNT_ITEMS: NavItem[] = [
     { href: '/settings/account', label: 'Account', icon: User },
     { href: '/settings/billing', label: 'Billing', icon: CreditCard },
+    { href: '/settings/memory', label: 'AI Memory', icon: Brain },
 ];
 
 const ADMIN_ITEMS: NavItem[] = [
