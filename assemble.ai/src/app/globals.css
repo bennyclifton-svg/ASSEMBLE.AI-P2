@@ -133,323 +133,37 @@
 }
 
 /* ============================================
-   TIER 2: SEMANTIC TOKENS - PRECISION THEME
-   "Architectural Precision" Dark - Copper on Slate
-   ============================================ */
-[data-theme="precision"],
-:root:not([data-theme="precision-light"]):not([data-theme="sitewise"]) {
-  /* Backgrounds - Deep slate with warmth */
-  --color-bg-primary: var(--primitive-slate-900);
-  --color-bg-secondary: var(--primitive-slate-950);
-  --color-bg-tertiary: var(--primitive-slate-850);
-  --color-bg-elevated: rgba(26, 29, 33, 0.7);
-  --color-bg-hover: rgba(255, 255, 255, 0.10);
-  --color-bg-inverse: var(--primitive-copper-lighter);
-
-  /* Text - Warm off-whites */
-  --color-text-primary: #E8E6E3;
-  --color-text-secondary: #9CA3AF;
-  --color-text-muted: #6B7280;
-  --color-text-inverse: var(--primitive-slate-900);
-
-  /* Borders - Copper-tinted neutrals */
-  --color-border: rgba(107, 114, 128, 0.25);
-  --color-border-subtle: rgba(107, 114, 128, 0.15);
-  --color-border-strong: rgba(107, 114, 128, 0.4);
-  --color-border-accent: rgba(212, 165, 116, 0.18);
-
-  /* Primary accent is Aurora Blue (Northern Lights) */
-  --color-accent-primary: #1776c1;
-  /* Aurora Blue */
-  --color-accent-primary-hover: #5198D1;
-  /* Lighter Blue */
-  --color-accent-primary-muted: #125E9A;
-  /* Muted Blue */
-  --color-accent-primary-tint: rgba(23, 118, 193, 0.12);
-  --color-on-accent: #FFFFFF;
-
-  /* Aurora Secondary Accents */
-  --color-accent-blue: #0080FF;
-  --color-accent-magenta: #FF1493;
-  --color-accent-violet: #8B5CF6;
-
-  /* Status accents (unchanged for clarity) */
-  --color-accent-green: #7A9E7E;
-  --color-accent-yellow: #E8B931;
-  --color-accent-coral: #CC7070;
-  --color-accent-teal: #14B8A6;
-  --color-accent-purple: #8B5CF6;
-  --color-accent-copper: var(--primitive-aurora-cyan);
-
-  /* Accent Tints */
-  --color-accent-green-tint: rgba(122, 158, 126, 0.15);
-  --color-accent-yellow-tint: rgba(232, 185, 49, 0.15);
-  --color-accent-coral-tint: rgba(204, 112, 112, 0.15);
-  --color-accent-teal-tint: rgba(20, 184, 166, 0.15);
-  --color-accent-purple-tint: rgba(139, 92, 246, 0.15);
-  --color-accent-copper-tint: rgba(23, 118, 193, 0.12);
-  --color-accent-copper-solid: #14222c;
-  --color-accent-cyan-tint: rgba(23, 118, 193, 0.08);
-  --color-accent-blue-tint: rgba(0, 128, 255, 0.12);
-  --color-accent-magenta-tint: rgba(255, 20, 147, 0.12);
-  --color-accent-violet-tint: rgba(139, 92, 246, 0.12);
-
-  /* Document schedule header - teal in dark theme */
-  --color-document-header: var(--color-accent-teal);
-
-  /* Semantic States - Earth tones */
-  --color-success: #7A9E7E;
-  --color-warning: #E8B931;
-  --color-error: #CC7070;
-  --color-info: var(--primitive-copper);
-
-  /* Shadows - Deep with Aurora glow */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(23, 118, 193, 0.2);
-  --shadow-aurora: 0 0 30px rgba(23, 118, 193, 0.15), 0 0 60px rgba(0, 128, 255, 0.1);
-  --shadow-aurora-intense: 0 0 20px rgba(23, 118, 193, 0.3), 0 0 40px rgba(139, 92, 246, 0.2), 0 0 60px rgba(255, 20, 147, 0.1);
-
-  /* Soft UI Evolution Shadows - Dark */
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.25), 0 1px 3px rgba(0, 0, 0, 0.15);
-  --shadow-soft-elevated: 0 4px 16px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.2);
-  --shadow-soft-hover: 0 8px 24px rgba(0, 0, 0, 0.35), 0 4px 8px rgba(0, 0, 0, 0.25);
-  --shadow-soft-inner: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  --shadow-soft-inner-highlight: inset 0 1px 0 rgba(23, 118, 193, 0.08);
-  --shadow-soft-pressed: inset 0 2px 4px rgba(0, 0, 0, 0.15);
-
-  /* Scrollbar */
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(232, 230, 227, 0.18);
-  --scrollbar-thumb-hover: rgba(232, 230, 227, 0.32);
-
-  /* Firm Card Colors - warm amber for dark mode */
-  --color-card-firm: rgba(255, 255, 255, 0.04);
-  --color-card-firm-hover: rgba(255, 255, 255, 0.08);
-  --color-card-firm-selected: rgba(217, 170, 55, 0.28);
-  --color-card-firm-border: rgba(255, 255, 255, 0.10);
-  --color-card-firm-text: #E8E6E3;
-  --color-card-firm-accent: rgba(217, 170, 55, 0.30);
-  --color-card-firm-accent-bright: rgba(217, 170, 55, 0.80);
-
-  /* Procurement Route Card Colors - deep violet for dark mode */
-  --color-card-procurement: rgba(50, 38, 75, 0.55);
-  --color-card-procurement-hover: rgba(120, 100, 220, 0.14);
-  --color-card-procurement-selected: rgba(120, 100, 220, 0.45);
-  --color-card-procurement-border: rgba(255, 255, 255, 0.10);
-  --color-card-procurement-text: #E8E6E3;
-  --color-card-procurement-accent: rgba(120, 100, 220, 0.30);
-  --color-card-procurement-accent-bright: rgba(120, 100, 220, 0.80);
-
-  /* Work Scope Card Colors - emerald for dark mode */
-  --color-card-scope: rgba(52, 211, 153, 0.06);
-  --color-card-scope-hover: rgba(52, 211, 153, 0.11);
-  --color-card-scope-selected: rgba(52, 211, 153, 0.24);
-  --color-card-scope-border: rgba(255, 255, 255, 0.10);
-  --color-card-scope-text: #6ee7b7;
-  --color-card-scope-accent: rgba(52, 211, 153, 0.30);
-  --color-card-scope-accent-bright: rgba(52, 211, 153, 0.80);
-
-  /* Tailwind CSS Theme Integration */
-  --background: var(--color-bg-primary);
-  --foreground: var(--color-text-primary);
-  --card: var(--color-bg-secondary);
-  --card-foreground: var(--color-text-primary);
-  --popover: var(--color-bg-secondary);
-  --popover-foreground: var(--color-text-primary);
-  --primary: var(--color-accent-primary);
-  --primary-foreground: var(--primitive-slate-900);
-  --secondary: var(--color-bg-tertiary);
-  --secondary-foreground: var(--color-text-primary);
-  --muted: var(--color-bg-tertiary);
-  --muted-foreground: var(--color-text-muted);
-  --accent: var(--color-accent-primary);
-  --accent-foreground: var(--primitive-slate-900);
-  --destructive: var(--color-error);
-  --destructive-foreground: var(--primitive-white);
-  --border: var(--color-border);
-  --input: var(--color-border);
-  --ring: var(--color-accent-primary);
-}
-
-/* ============================================
-   TIER 2: SEMANTIC TOKENS - PRECISION LIGHT THEME
-   "Architectural Precision" Light - Warm Cream with Copper
-   ============================================ */
-[data-theme="precision-light"] {
-  /* Backgrounds - Cool tech aesthetic */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #f0f0f0;
-  --color-bg-elevated: #FFFFFF;
-  --color-bg-hover: rgba(0, 0, 0, 0.10);
-  --color-bg-inverse: var(--primitive-cool-gray-900);
-
-  /* Text - High contrast / Deep Slate */
-  --color-text-primary: var(--primitive-cool-gray-900);
-  --color-text-secondary: var(--primitive-cool-gray-600);
-  --color-text-muted: var(--primitive-cool-gray-500);
-  --color-text-inverse: #FFFFFF;
-
-  /* Borders - Crisp cool greys */
-  --color-border: var(--primitive-cool-gray-200);
-  --color-border-subtle: var(--primitive-cool-gray-100);
-  --color-border-strong: var(--primitive-cool-gray-300);
-  --color-border-accent: rgba(184, 137, 90, 0.4);
-
-  /* Primary accent - Deep Aurora Blue (High contrast on light) */
-  --color-accent-primary: #0066CC;
-  /* Deep Azure */
-  --color-accent-primary-hover: #004D99;
-  /* Darker on Hover */
-  --color-accent-primary-muted: #3399FF;
-  /* Muted Blue */
-  --color-accent-primary-tint: rgba(0, 102, 204, 0.1);
-  --color-on-accent: #FFFFFF;
-
-  /* Aurora Secondary Accents for Light Theme */
-  --color-accent-blue: #0066CC;
-  --color-accent-magenta: #C71585;
-  --color-accent-violet: #6D28D9;
-
-  /* Status accents - Adjusted for light background */
-  --color-accent-green: #15803d;
-  /* emerald-700 */
-  --color-accent-yellow: #ca8a04;
-  /* yellow-600 */
-  --color-accent-coral: #b91c1c;
-  /* red-700 */
-  --color-accent-teal: #0f766e;
-  /* teal-700 */
-  --color-accent-purple: #6D28D9;
-  /* violet-700 */
-  --color-accent-copper: #0066CC;
-
-  /* Accent Tints - Aurora-styled */
-  --color-accent-green-tint: rgba(21, 128, 61, 0.1);
-  --color-accent-yellow-tint: rgba(202, 138, 4, 0.1);
-  --color-accent-coral-tint: rgba(185, 28, 28, 0.1);
-  --color-accent-teal-tint: rgba(15, 118, 110, 0.1);
-  --color-accent-purple-tint: rgba(109, 40, 217, 0.1);
-  --color-accent-copper-tint: rgba(0, 102, 204, 0.1);
-  --color-accent-copper-solid: #e6f0fa;
-  --color-accent-cyan-tint: rgba(0, 102, 204, 0.06);
-  --color-accent-blue-tint: rgba(0, 102, 204, 0.1);
-  --color-accent-magenta-tint: rgba(199, 21, 133, 0.1);
-  --color-accent-violet-tint: rgba(109, 40, 217, 0.1);
-
-  /* Document schedule header - blue in light theme */
-  --color-document-header: var(--color-accent-blue);
-
-  /* Semantic States */
-  --color-success: #15803d;
-  --color-warning: #ca8a04;
-  --color-error: #b91c1c;
-  --color-info: #B8895A;
-
-  /* Shadows - Crisp with Aurora accent */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-glow: 0 0 15px rgba(0, 102, 204, 0.2);
-  --shadow-aurora: 0 0 20px rgba(0, 102, 204, 0.15), 0 0 40px rgba(109, 40, 217, 0.08);
-  --shadow-aurora-intense: 0 0 15px rgba(0, 102, 204, 0.25), 0 0 30px rgba(109, 40, 217, 0.15);
-
-  /* Soft UI Evolution Shadows - Light */
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-soft-elevated: 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.05);
-  --shadow-soft-hover: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.06);
-  --shadow-soft-inner: inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  --shadow-soft-inner-highlight: inset 0 1px 0 rgba(255, 255, 255, 1);
-  --shadow-soft-pressed: inset 0 2px 4px rgba(0, 0, 0, 0.04);
-
-  /* Scrollbar */
-  --scrollbar-track: transparent;
-  --scrollbar-thumb: rgba(92, 85, 76, 0.18);
-  --scrollbar-thumb-hover: rgba(92, 85, 76, 0.32);
-
-  /* Firm tile - warm gold frosted glass */
-  --color-card-firm: rgba(255, 255, 255, 0.50);
-  --color-card-firm-hover: rgba(255, 255, 255, 0.62);
-  --color-card-firm-selected: rgba(245, 200, 80, 0.35);
-  --color-card-firm-border: rgba(0, 0, 0, 0.07);
-  --color-card-firm-text: #1a1a1a;
-  --color-card-firm-accent: rgba(190, 145, 25, 0.50);
-  --color-card-firm-accent-bright: rgba(190, 145, 25, 0.85);
-
-  /* Procurement route tile - violet frosted glass */
-  --color-card-procurement: rgba(255, 255, 255, 0.50);
-  --color-card-procurement-hover: rgba(255, 255, 255, 0.62);
-  --color-card-procurement-selected: rgba(155, 135, 240, 0.32);
-  --color-card-procurement-border: rgba(0, 0, 0, 0.07);
-  --color-card-procurement-text: #1a1a1a;
-  --color-card-procurement-accent: rgba(100, 65, 210, 0.50);
-  --color-card-procurement-accent-bright: rgba(100, 65, 210, 0.85);
-
-  /* Work scope tile - emerald frosted glass */
-  --color-card-scope: rgba(255, 255, 255, 0.50);
-  --color-card-scope-hover: rgba(255, 255, 255, 0.62);
-  --color-card-scope-selected: rgba(80, 220, 160, 0.30);
-  --color-card-scope-border: rgba(0, 0, 0, 0.07);
-  --color-card-scope-text: #1a1a1a;
-  --color-card-scope-accent: rgba(16, 150, 72, 0.50);
-  --color-card-scope-accent-bright: rgba(16, 150, 72, 0.85);
-
-  /* Tailwind CSS Theme Integration */
-  --background: var(--color-bg-primary);
-  --foreground: var(--color-text-primary);
-  --card: var(--color-bg-secondary);
-  --card-foreground: var(--color-text-primary);
-  --popover: var(--color-bg-secondary);
-  --popover-foreground: var(--color-text-primary);
-  --primary: var(--color-accent-primary);
-  --primary-foreground: #FFFFFF;
-  --secondary: var(--color-bg-tertiary);
-  --secondary-foreground: var(--color-text-primary);
-  --muted: var(--color-bg-tertiary);
-  --muted-foreground: var(--color-text-muted);
-  --accent: var(--color-accent-primary);
-  --accent-foreground: #FFFFFF;
-  --destructive: var(--color-error);
-  --destructive-foreground: #FFFFFF;
-  --border: var(--color-border);
-  --input: var(--color-border);
-  --ring: var(--color-accent-primary);
-}
-
-/* ============================================
    TIER 2: SEMANTIC TOKENS — SITEWISE / FIELD CONSOLE
    Devtools Rose dialect. Maps existing semantic tokens onto the
    Sitewise primitive set so any component using --color-bg-primary,
    --color-accent-primary, etc. inherits the new look without per-file edits.
    ============================================ */
 [data-theme="sitewise"] {
-  /* Backgrounds — warm paper / ink */
-  --color-bg-primary: var(--sw-paper-2);          /* sidebars, secondary chrome */
-  --color-bg-secondary: var(--sw-paper);          /* cards, popovers */
-  --color-bg-tertiary: var(--sw-paper);           /* main canvas */
+  /* Backgrounds — dark cool-slate canvas wraps white card surfaces */
+  --color-bg-primary: var(--sw-bg);           /* body / canvas — dark */
+  --color-bg-secondary: var(--sw-paper);      /* card surface — white */
+  --color-bg-tertiary: var(--sw-paper);
   --color-bg-elevated: var(--sw-paper);
-  --color-bg-hover: rgba(14, 16, 20, 0.05);
-  --color-bg-inverse: var(--sw-ink);
+  --color-bg-hover: rgba(255, 255, 255, 0.04);
+  --color-bg-inverse: var(--sw-paper);
 
-  /* Text — ink on paper, mono-friendly muted */
+  /* Text — dark on the light card/canvas surfaces. The dark chrome strips
+     (sidebar header, right-panel "Documents" header) reference `var(--sw-paper)`
+     directly for their light-on-dark text instead of going through this token. */
   --color-text-primary: var(--sw-ink);
   --color-text-secondary: var(--sw-muted);
-  --color-text-muted: rgba(107, 107, 102, 0.78);
+  --color-text-muted: rgba(138, 148, 163, 0.7);
   --color-text-inverse: var(--sw-paper);
 
-  /* Borders — drafting-rule */
+  /* Borders — drafting-rule, dark-translucent for white cards */
   --color-border: var(--sw-rule);
   --color-border-subtle: var(--sw-rule-2);
   --color-border-strong: rgba(14, 16, 20, 0.32);
-  --color-border-accent: rgba(248, 101, 122, 0.28);
+  --color-border-accent: rgba(79, 182, 190, 0.28);
 
-  /* Primary accent — Devtools Rose */
+  /* Primary accent — teal-cyan */
   --color-accent-primary: var(--sw-rose);
-  --color-accent-primary-hover: var(--sw-rose-dk);
+  --color-accent-primary-hover: #5DCDD6;
   --color-accent-primary-muted: var(--sw-rose-dk);
   --color-accent-primary-tint: var(--sw-rose-tint);
   --color-on-accent: var(--sw-ink);
@@ -477,7 +191,7 @@
   --color-accent-copper-solid: rgba(245, 164, 114, 0.18);
   --color-accent-cyan-tint: rgba(122, 184, 194, 0.10);
   --color-accent-blue-tint: rgba(122, 184, 194, 0.10);
-  --color-accent-magenta-tint: rgba(248, 101, 122, 0.10);
+  --color-accent-magenta-tint: rgba(79, 182, 190, 0.10);
   --color-accent-violet-tint: rgba(168, 156, 217, 0.10);
 
   --color-document-header: var(--sw-cyan);
@@ -493,9 +207,9 @@
   --shadow: 0 2px 4px rgba(14, 16, 20, 0.08), 0 1px 2px rgba(14, 16, 20, 0.04);
   --shadow-md: 0 4px 12px rgba(14, 16, 20, 0.10);
   --shadow-lg: 0 12px 32px -8px rgba(14, 16, 20, 0.18);
-  --shadow-glow: 0 0 18px rgba(248, 101, 122, 0.18);
-  --shadow-aurora: 0 6px 24px -8px rgba(248, 101, 122, 0.20);
-  --shadow-aurora-intense: 0 8px 28px -6px rgba(248, 101, 122, 0.28), 0 0 60px rgba(168, 156, 217, 0.10);
+  --shadow-glow: 0 0 18px rgba(79, 182, 190, 0.18);
+  --shadow-aurora: 0 6px 24px -8px rgba(79, 182, 190, 0.20);
+  --shadow-aurora-intense: 0 8px 28px -6px rgba(79, 182, 190, 0.28), 0 0 60px rgba(154, 164, 224, 0.10);
 
   --shadow-soft: 0 2px 8px rgba(14, 16, 20, 0.06), 0 1px 3px rgba(14, 16, 20, 0.04);
   --shadow-soft-elevated: 0 4px 16px rgba(14, 16, 20, 0.08), 0 2px 6px rgba(14, 16, 20, 0.05);
@@ -544,13 +258,13 @@
   --popover: var(--color-bg-secondary);
   --popover-foreground: var(--color-text-primary);
   --primary: var(--color-accent-primary);
-  --primary-foreground: var(--sw-ink);
+  --primary-foreground: var(--color-on-accent);
   --secondary: var(--color-bg-tertiary);
   --secondary-foreground: var(--color-text-primary);
   --muted: var(--color-bg-tertiary);
   --muted-foreground: var(--color-text-muted);
   --accent: var(--color-accent-primary);
-  --accent-foreground: var(--sw-ink);
+  --accent-foreground: var(--color-on-accent);
   --destructive: var(--color-error);
   --destructive-foreground: var(--sw-paper);
   --border: var(--color-border);
@@ -887,768 +601,31 @@ textarea:-webkit-autofill:active {
   outline-color: var(--color-accent-copper);
 }
 
-/* ============================================
-   AURORA THEME UTILITIES - DARK
-   ============================================ */
-/* Translucent card style */
-[data-theme="precision"] .card-translucent {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  backdrop-filter: blur(8px);
-}
-
-/* Aurora glass card - gradient border with glow */
-[data-theme="precision"] .card-aurora {
-  background: rgba(20, 22, 24, 0.8);
-  border: 1px solid transparent;
-  background-image: linear-gradient(rgba(20, 22, 24, 0.9), rgba(20, 22, 24, 0.9)),
-                    linear-gradient(135deg, rgba(0, 128, 255, 0.3), rgba(23, 118, 193, 0.2), rgba(139, 92, 246, 0.3));
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  backdrop-filter: blur(12px);
-  box-shadow: 0 0 20px rgba(23, 118, 193, 0.08), inset 0 1px 0 rgba(23, 118, 193, 0.1);
-  transition: all 0.3s ease;
-}
-
-[data-theme="precision"] .card-aurora:hover {
-  box-shadow: 0 0 30px rgba(23, 118, 193, 0.15), 0 0 60px rgba(0, 128, 255, 0.08), inset 0 1px 0 rgba(23, 118, 193, 0.15);
-}
-
-/* Aurora glow card - intense glow effect */
-[data-theme="precision"] .card-aurora-glow {
-  background: rgba(20, 22, 24, 0.85);
-  border: 1px solid rgba(23, 118, 193, 0.2);
-  box-shadow: var(--shadow-aurora);
-  transition: all 0.3s ease;
-}
-
-[data-theme="precision"] .card-aurora-glow:hover {
-  border-color: rgba(23, 118, 193, 0.4);
-  box-shadow: var(--shadow-aurora-intense);
-}
-
-/* Legacy copper card alias - now uses Aurora */
-[data-theme="precision"] .card-copper {
-  background: rgba(0, 128, 255, 0.06);
-  border: 1px solid rgba(23, 118, 193, 0.18);
-}
-
-/* ============================================
-   SOFT UI EVOLUTION CARDS - DARK
-   Modern soft shadows with improved depth & contrast
-   ============================================ */
-
-/* Base soft card - subtle depth with inner highlight */
-[data-theme="precision"] .card-soft {
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.25),
-    0 1px 3px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-[data-theme="precision"] .card-soft:hover {
-  border-color: var(--color-border-strong);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-/* Elevated soft card - stronger lift effect */
-[data-theme="precision"] .card-soft-elevated {
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    0 2px 6px rgba(0, 0, 0, 0.2),
-    0 0 0 1px rgba(23, 118, 193, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
-}
-
-[data-theme="precision"] .card-soft-elevated:hover {
-  transform: translateY(-2px);
-  border-color: rgba(23, 118, 193, 0.15);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.35),
-    0 4px 8px rgba(0, 0, 0, 0.25),
-    0 0 0 1px rgba(23, 118, 193, 0.08),
-    0 0 20px rgba(23, 118, 193, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-/* Interactive soft card - for clickable cards */
-[data-theme="precision"] .card-soft-interactive {
-  background: var(--color-bg-tertiary);
-  border: 1px solid var(--color-border);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.25),
-    0 1px 3px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
-  transition: all 0.2s ease;
-}
-
-[data-theme="precision"] .card-soft-interactive:hover {
-  background: linear-gradient(145deg, var(--color-bg-tertiary) 0%, rgba(23, 118, 193, 0.02) 100%);
-  border-color: rgba(23, 118, 193, 0.2);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.3),
-    0 2px 6px rgba(0, 0, 0, 0.2),
-    0 0 15px rgba(23, 118, 193, 0.06),
-    inset 0 1px 0 rgba(23, 118, 193, 0.08);
-}
-
-[data-theme="precision"] .card-soft-interactive:active {
-  transform: scale(0.99);
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.3),
-    0 1px 2px rgba(0, 0, 0, 0.2),
-    inset 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Divider with Aurora gradient */
-[data-theme="precision"] .divider-gradient {
-  height: 1px;
-  background: linear-gradient(90deg, rgba(23, 118, 193, 0.4), rgba(139, 92, 246, 0.2), transparent);
-}
-
-/* Aurora glow effect */
-[data-theme="precision"] .glow-aurora {
-  box-shadow: var(--shadow-aurora);
-}
-
-[data-theme="precision"] .glow-aurora-intense {
-  box-shadow: var(--shadow-aurora-intense);
-}
-
-/* Legacy copper glow alias */
-[data-theme="precision"] .glow-copper {
-  box-shadow: var(--shadow-glow);
-}
-
-/* Border utilities */
-[data-theme="precision"] .border-aurora {
-  border-color: rgba(23, 118, 193, 0.25);
-}
-
-[data-theme="precision"] .border-aurora-strong {
-  border-color: rgba(23, 118, 193, 0.4);
-}
-
-/* Legacy copper border alias */
-[data-theme="precision"] .border-copper {
-  border-color: rgba(23, 118, 193, 0.25);
-}
-
-[data-theme="precision"] .border-copper-strong {
-  border-color: rgba(23, 118, 193, 0.4);
-}
-
-/* ============================================
-   AURORA THEME UTILITIES - LIGHT
-   ============================================ */
-/* Card styles */
-[data-theme="precision-light"] .card-translucent {
-  background: var(--color-bg-elevated);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow);
-}
-
-/* Aurora glass card - gradient border with subtle glow */
-[data-theme="precision-light"] .card-aurora {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid transparent;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)),
-                    linear-gradient(135deg, rgba(0, 102, 204, 0.3), rgba(8, 145, 178, 0.2), rgba(109, 40, 217, 0.3));
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  box-shadow: 0 2px 12px rgba(0, 102, 204, 0.08);
-  transition: all 0.3s ease;
-}
-
-[data-theme="precision-light"] .card-aurora:hover {
-  box-shadow: 0 4px 20px rgba(0, 102, 204, 0.12), 0 0 30px rgba(109, 40, 217, 0.06);
-}
-
-/* Aurora glow card */
-[data-theme="precision-light"] .card-aurora-glow {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0, 102, 204, 0.2);
-  box-shadow: var(--shadow-aurora);
-  transition: all 0.3s ease;
-}
-
-[data-theme="precision-light"] .card-aurora-glow:hover {
-  border-color: rgba(0, 102, 204, 0.35);
-  box-shadow: var(--shadow-aurora-intense);
-}
-
-/* Legacy copper card alias */
-[data-theme="precision-light"] .card-copper {
-  background: linear-gradient(135deg, rgba(0, 102, 204, 0.06), rgba(0, 102, 204, 0.02));
-  border: 1px solid rgba(0, 102, 204, 0.2);
-}
-
-/* ============================================
-   SOFT UI EVOLUTION CARDS - LIGHT
-   Modern soft shadows with improved depth & contrast
-   ============================================ */
-
-/* Base soft card - subtle depth with inner highlight */
-[data-theme="precision-light"] .card-soft {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.06),
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-[data-theme="precision-light"] .card-soft:hover {
-  border-color: var(--color-border-strong);
-  box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.08),
-    0 2px 4px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-}
-
-/* Elevated soft card - stronger lift effect */
-[data-theme="precision-light"] .card-soft-elevated {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.05),
-    0 0 0 1px rgba(0, 102, 204, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
-}
-
-[data-theme="precision-light"] .card-soft-elevated:hover {
-  transform: translateY(-2px);
-  border-color: rgba(0, 102, 204, 0.15);
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.1),
-    0 4px 8px rgba(0, 0, 0, 0.06),
-    0 0 0 1px rgba(0, 102, 204, 0.08),
-    0 0 20px rgba(0, 102, 204, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-}
-
-/* Interactive soft card - for clickable cards */
-[data-theme="precision-light"] .card-soft-interactive {
-  background: var(--color-bg-secondary);
-  border: 1px solid var(--color-border);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.06),
-    0 1px 3px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  transition: all 0.2s ease;
-}
-
-[data-theme="precision-light"] .card-soft-interactive:hover {
-  background: linear-gradient(145deg, var(--color-bg-secondary) 0%, rgba(0, 102, 204, 0.02) 100%);
-  border-color: rgba(0, 102, 204, 0.2);
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.05),
-    0 0 15px rgba(0, 102, 204, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 1);
-}
-
-[data-theme="precision-light"] .card-soft-interactive:active {
-  transform: scale(0.99);
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.06),
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    inset 0 2px 4px rgba(0, 0, 0, 0.03);
-}
-
-/* Divider gradient - Aurora */
-[data-theme="precision-light"] .divider-gradient {
-  height: 1px;
-  background: linear-gradient(90deg, rgba(0, 102, 204, 0.4), rgba(109, 40, 217, 0.2), transparent);
-}
-
-/* Aurora glow */
-[data-theme="precision-light"] .glow-aurora {
-  box-shadow: var(--shadow-aurora);
-}
-
-[data-theme="precision-light"] .glow-aurora-intense {
-  box-shadow: var(--shadow-aurora-intense);
-}
-
-/* Legacy copper glow alias */
-[data-theme="precision-light"] .glow-copper {
-  box-shadow: var(--shadow-glow);
-}
-
-/* Border utilities */
-[data-theme="precision-light"] .border-aurora {
-  border-color: rgba(0, 102, 204, 0.25);
-}
-
-[data-theme="precision-light"] .border-aurora-strong {
-  border-color: rgba(0, 102, 204, 0.4);
-}
-
-/* Legacy copper border alias */
-[data-theme="precision-light"] .border-copper {
-  border-color: rgba(0, 102, 204, 0.25);
-}
-
-[data-theme="precision-light"] .border-copper-strong {
-  border-color: rgba(0, 102, 204, 0.4);
-}
-
-/* ============================================
-   PRECISION BADGES - DARK
-   ============================================ */
-[data-theme="precision"] .badge-active {
-  background: rgba(212, 165, 116, 0.2);
-  color: var(--primitive-copper);
-  border: 1px solid rgba(212, 165, 116, 0.4);
-}
-
-[data-theme="precision"] .badge-complete {
-  background: rgba(122, 158, 126, 0.2);
-  color: #7A9E7E;
-  border: 1px solid rgba(122, 158, 126, 0.4);
-}
-
-[data-theme="precision"] .badge-review {
-  background: rgba(232, 185, 49, 0.2);
-  color: #E8B931;
-  border: 1px solid rgba(232, 185, 49, 0.4);
-}
-
-[data-theme="precision"] .badge-draft {
-  background: rgba(107, 114, 128, 0.2);
-  color: #9CA3AF;
-  border: 1px solid rgba(107, 114, 128, 0.4);
-}
-
-/* ============================================
-   PRECISION BADGES - LIGHT
-   ============================================ */
-[data-theme="precision-light"] .badge-active {
-  background: rgba(184, 137, 90, 0.15);
-  color: #9A7348;
-  border: 1px solid rgba(184, 137, 90, 0.4);
-}
-
-[data-theme="precision-light"] .badge-complete {
-  background: rgba(93, 126, 95, 0.15);
-  color: #4A6B4C;
-  border: 1px solid rgba(93, 126, 95, 0.4);
-}
-
-[data-theme="precision-light"] .badge-review {
-  background: rgba(196, 150, 12, 0.15);
-  color: #8B6914;
-  border: 1px solid rgba(196, 150, 12, 0.4);
-}
-
-[data-theme="precision-light"] .badge-draft {
-  background: rgba(138, 130, 121, 0.15);
-  color: #5C554C;
-  border: 1px solid rgba(138, 130, 121, 0.35);
-}
-
-/* ============================================
-   AURORA BUTTONS - DARK
-   ============================================ */
-[data-theme="precision"] {
-  /* Aurora gradient button - primary action */
-  .btn-aurora {
-    background: linear-gradient(135deg, #0080FF 0%, #1776c1 50%, #14B8A6 100%);
-    color: var(--primitive-slate-900);
-    font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 128, 255, 0.25), 0 0 20px rgba(23, 118, 193, 0.1);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-aurora::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, #1776c1 0%, #8B5CF6 50%, #FF1493 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .btn-aurora:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 128, 255, 0.35), 0 0 30px rgba(23, 118, 193, 0.2);
-  }
-
-  .btn-aurora:hover::before {
-    opacity: 1;
-  }
-
-  .btn-aurora span {
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Legacy copper alias - now uses Aurora */
-  .btn-copper {
-    background: linear-gradient(135deg, #0080FF 0%, #1776c1 100%);
-    color: var(--primitive-slate-900);
-    font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 128, 255, 0.25);
-  }
-
-  .btn-copper:hover {
-    filter: brightness(1.1);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(23, 118, 193, 0.3);
-  }
-
-  .btn-copper-ghost,
-  .btn-aurora-ghost {
-    background: transparent;
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-strong);
-    transition: all 0.2s ease;
-  }
-
-  .btn-copper-ghost:hover,
-  .btn-aurora-ghost:hover {
-    background: rgba(23, 118, 193, 0.08);
-    border-color: rgba(23, 118, 193, 0.4);
-    box-shadow: 0 0 15px rgba(23, 118, 193, 0.1);
-  }
-
-  .btn-copper-outline,
-  .btn-aurora-outline {
-    background: transparent;
-    color: #1776c1;
-    border: 1px solid rgba(23, 118, 193, 0.4);
-    transition: all 0.2s ease;
-  }
-
-  .btn-copper-outline:hover,
-  .btn-aurora-outline:hover {
-    background: rgba(23, 118, 193, 0.1);
-    border-color: rgba(23, 118, 193, 0.6);
-    box-shadow: 0 0 20px rgba(23, 118, 193, 0.15);
-  }
-}
-
-/* ============================================
-   AURORA BUTTONS - LIGHT
-   ============================================ */
-[data-theme="precision-light"] {
-  /* Aurora gradient button - primary action */
-  .btn-aurora {
-    background: linear-gradient(135deg, #0066CC 0%, #0891B2 50%, #0F766E 100%);
-    color: var(--primitive-white);
-    font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-aurora::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, #0891B2 0%, #6D28D9 50%, #C71585 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  .btn-aurora:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 102, 204, 0.35), 0 0 20px rgba(109, 40, 217, 0.15);
-  }
-
-  .btn-aurora:hover::before {
-    opacity: 1;
-  }
-
-  .btn-aurora span {
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Legacy copper alias - now uses Aurora */
-  .btn-copper {
-    background: linear-gradient(135deg, #0066CC 0%, #0891B2 100%);
-    color: var(--primitive-white);
-    font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 102, 204, 0.25);
-  }
-
-  .btn-copper:hover {
-    filter: brightness(1.08);
-    box-shadow: 0 4px 12px rgba(0, 102, 204, 0.35);
-    transform: translateY(-1px);
-  }
-
-  .btn-copper-ghost,
-  .btn-aurora-ghost {
-    background: transparent;
-    color: var(--color-text-primary);
-    border: 1px solid var(--color-border-strong);
-    transition: all 0.2s ease;
-  }
-
-  .btn-copper-ghost:hover,
-  .btn-aurora-ghost:hover {
-    background: rgba(0, 102, 204, 0.08);
-    border-color: rgba(0, 102, 204, 0.5);
-  }
-
-  .btn-copper-outline,
-  .btn-aurora-outline {
-    background: transparent;
-    color: #0066CC;
-    border: 1px solid rgba(0, 102, 204, 0.5);
-    transition: all 0.2s ease;
-  }
-
-  .btn-copper-outline:hover,
-  .btn-aurora-outline:hover {
-    background: rgba(0, 102, 204, 0.1);
-    border-color: rgba(0, 102, 204, 0.7);
-  }
-}
-
-
-/* ============================================
-   AURORA INTERACTIVE STATES
-   ============================================ */
-[data-theme="precision"] {
-  .interactive-row:hover {
-    background-color: rgba(23, 118, 193, 0.04);
-    border-color: rgba(23, 118, 193, 0.25);
-  }
-
-  .hover-lift:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(23, 118, 193, 0.08);
-  }
-
-  .hover-glow:hover {
-    box-shadow: 0 0 20px rgba(23, 118, 193, 0.2);
-  }
-}
-
-[data-theme="precision-light"] {
-  .interactive-row:hover {
-    background-color: rgba(0, 102, 204, 0.04);
-    border-color: rgba(0, 102, 204, 0.25);
-  }
-
-  .hover-lift:hover {
-    box-shadow: 0 4px 12px rgba(0, 102, 204, 0.12);
-  }
-
-  .hover-glow:hover {
-    box-shadow: 0 0 16px rgba(0, 102, 204, 0.15);
-  }
-}
-
-/* ============================================
-   AURORA TAB STYLES
-   Dark theme: Aurora gradient with glow
-   Light theme: Solid color (matches left nav)
-   ============================================ */
-
-/* === MAIN TABS (Cost Planning, Program, etc.) === */
-
-/* Dark theme - Main tabs with Aurora gradient */
-[data-theme="precision"] .tab-aurora-main {
-  position: relative;
-}
-
-[data-theme="precision"] .tab-aurora-main::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 2px;
-  background: #1776c1;
-  opacity: 0.4;
-  border-radius: 2px 2px 0 0;
-  transition: all 0.2s ease;
-}
-
-[data-theme="precision"] .tab-aurora-main:hover::before {
-  width: 2rem;
-  opacity: 0.6;
-}
-
-[data-theme="precision"] .tab-aurora-main[data-state="active"] {
-  color: #1776c1;
-}
-
-[data-theme="precision"] .tab-aurora-main[data-state="active"]::before {
-  display: none;
-}
-
-[data-theme="precision"] .tab-aurora-main[data-state="active"]::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #0080FF 0%, #1776c1 50%, #14B8A6 100%);
-  border-radius: 2px 2px 0 0;
-  box-shadow: 0 0 10px rgba(23, 118, 193, 0.4);
-}
-
-/* Light theme - Main tabs with solid color (matches left nav) */
-[data-theme="precision-light"] .tab-aurora-main {
-  position: relative;
-}
-
-[data-theme="precision-light"] .tab-aurora-main::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 2px;
-  background: #0066CC;
-  opacity: 0.4;
-  border-radius: 2px 2px 0 0;
-  transition: all 0.2s ease;
-}
-
-[data-theme="precision-light"] .tab-aurora-main:hover::before {
-  width: 2rem;
-  opacity: 0.6;
-}
-
-[data-theme="precision-light"] .tab-aurora-main[data-state="active"] {
-  color: #0066CC;
-}
-
-[data-theme="precision-light"] .tab-aurora-main[data-state="active"]::before {
-  display: none;
-}
-
-[data-theme="precision-light"] .tab-aurora-main[data-state="active"]::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: #0066CC;
-  border-radius: 2px 2px 0 0;
-}
-
-/* === SUB TABS (Cost Plan, Variations, Invoices) === */
-
-/* Dark theme - Sub tabs matching main tab style */
-[data-theme="precision"] .tab-aurora-sub {
-  position: relative;
-}
-
-[data-theme="precision"] .tab-aurora-sub::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 2px;
-  background: #1776c1;
-  opacity: 0.4;
-  border-radius: 2px 2px 0 0;
-  transition: all 0.2s ease;
-}
-
-[data-theme="precision"] .tab-aurora-sub:hover::before {
-  width: 2rem;
-  opacity: 0.6;
-}
-
-[data-theme="precision"] .tab-aurora-sub[data-state="active"] {
-  color: #1776c1;
-  background: transparent;
-}
-
-[data-theme="precision"] .tab-aurora-sub[data-state="active"]::before {
-  display: none;
-}
-
-[data-theme="precision"] .tab-aurora-sub[data-state="active"]::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--sw-rose);
-  border-radius: 2px 2px 0 0;
-}
-
-/* Light theme - Sub tabs matching main tab style */
-[data-theme="precision-light"] .tab-aurora-sub {
-  position: relative;
-  background: transparent;
-}
-
-[data-theme="precision-light"] .tab-aurora-sub::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 2px;
-  background: #0066CC;
-  opacity: 0.4;
-  border-radius: 2px 2px 0 0;
-  transition: all 0.2s ease;
-}
-
-[data-theme="precision-light"] .tab-aurora-sub:hover::before {
-  width: 2rem;
-  opacity: 0.6;
-}
-
-[data-theme="precision-light"] .tab-aurora-sub[data-state="active"] {
-  color: #0066CC;
-  background: transparent;
-}
-
-[data-theme="precision-light"] .tab-aurora-sub[data-state="active"]::before {
-  display: none;
-}
-
-[data-theme="precision-light"] .tab-aurora-sub[data-state="active"]::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--sw-rose);
-  border-radius: 2px 2px 0 0;
-}
-
-/* Sitewise — rose underline on active sub-tab */
+/* Sitewise — rose underline on active sub-tab, rose hover indicator */
 [data-theme="sitewise"] .tab-aurora-sub {
   position: relative;
+}
+
+[data-theme="sitewise"] .tab-aurora-sub::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  transform: translateX(-50%);
+  background: var(--sw-rose);
+  opacity: 0.45;
+  transition: width 160ms ease, opacity 160ms ease;
+}
+
+[data-theme="sitewise"] .tab-aurora-sub:hover::before {
+  width: 2rem;
+  opacity: 0.7;
+}
+
+[data-theme="sitewise"] .tab-aurora-sub[data-state="active"]::before {
+  display: none;
 }
 
 [data-theme="sitewise"] .tab-aurora-sub[data-state="active"] {
@@ -1687,42 +664,6 @@ textarea:-webkit-autofill:active {
 .tab-aurora-sub.tab-contractor-copper-hover[data-state="active"]::after {
   background: var(--contractor-tab-accent);
   box-shadow: 0 0 8px color-mix(in srgb, var(--contractor-tab-accent) 35%, transparent);
-}
-
-/* === LEGACY: tab-aurora-indicator (keep for backwards compatibility) === */
-[data-theme="precision"] .tab-aurora-indicator {
-  position: relative;
-}
-
-[data-theme="precision"] .tab-aurora-indicator[data-state="active"]::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #0080FF 0%, #1776c1 50%, #14B8A6 100%);
-  border-radius: 2px 2px 0 0;
-  box-shadow: 0 0 8px rgba(23, 118, 193, 0.4);
-}
-
-[data-theme="precision"] .tab-aurora-indicator[data-state="active"] {
-  color: #1776c1;
-}
-
-[data-theme="precision-light"] .tab-aurora-indicator[data-state="active"]::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #0066CC;
-  border-radius: 2px 2px 0 0;
-}
-
-[data-theme="precision-light"] .tab-aurora-indicator[data-state="active"] {
-  color: #0066CC;
 }
 
 /* ============================================
@@ -1928,18 +869,6 @@ textarea:-webkit-autofill:active {
   opacity: 0;
 }
 
-/* Dark theme: white SVG, barely visible on dark bg */
-[data-theme="precision"] .panel-watermark,
-:root:not([data-theme="precision-light"]) .panel-watermark {
-  opacity: 0.035;
-}
-
-/* Light theme: invert to dark, barely visible on light bg */
-[data-theme="precision-light"] .panel-watermark {
-  filter: brightness(0);
-  opacity: 0.03;
-}
-
 /* ============================================
    NAVIGATION PANEL SYSTEM
    Unified styling for left nav panels with
@@ -2031,54 +960,6 @@ textarea:-webkit-autofill:active {
 
 /* Active section chevron/icon - gradient applied via SVG prop */
 .nav-panel-section.nav-panel-active .nav-panel-chevron {
-  /* Gradient is applied via SVG gradient prop, no CSS needed */
-}
-
-/* Light theme adjustments for unified sections */
-[data-theme="precision-light"] .nav-panel-section {
-  background: transparent;
-}
-
-[data-theme="precision-light"] .nav-panel-section:hover {
-  background: rgba(0, 102, 204, 0.04);
-}
-
-/* Light theme - hover bar on right side */
-[data-theme="precision-light"] .nav-panel-section::before {
-  background: #0066CC;
-}
-
-[data-theme="precision-light"] .nav-panel-section:hover::before {
-  height: 2rem;
-  opacity: 0.6;
-}
-
-[data-theme="precision-light"] .nav-panel-section.nav-panel-active {
-  background: rgba(0, 102, 204, 0.06);
-}
-
-/* Light theme - hide hover bar when active */
-[data-theme="precision-light"] .nav-panel-section.nav-panel-active::before {
-  display: none;
-}
-
-/* Light theme - full height bar on right side (solid color, no glow) */
-[data-theme="precision-light"] .nav-panel-section.nav-panel-active::after {
-  background: #0066CC;
-  box-shadow: none;
-}
-
-[data-theme="precision-light"] .nav-panel-section.nav-panel-active .nav-panel-title {
-  background: linear-gradient(90deg, #0066CC 0%, #0891B2 50%, #6D28D9 100%) !important;
-  background-size: 100vw 100% !important;
-  background-position: left center !important;
-  -webkit-background-clip: text !important;
-  background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  color: transparent !important;
-}
-
-[data-theme="precision-light"] .nav-panel-section.nav-panel-active .nav-panel-chevron {
   /* Gradient is applied via SVG gradient prop, no CSS needed */
 }
 
@@ -2175,48 +1056,6 @@ textarea:-webkit-autofill:active {
   opacity: 1;
 }
 
-/* Light theme adjustments - Aurora */
-[data-theme="precision-light"] .nav-panel:hover {
-  border-color: rgba(0, 102, 204, 0.3);
-  background: linear-gradient(135deg,
-      var(--color-bg-primary) 0%,
-      rgba(0, 102, 204, 0.04) 100%);
-}
-
-[data-theme="precision-light"] .nav-panel-active,
-[data-theme="precision-light"] .nav-panel.nav-panel-active {
-  border-color: #0066CC;
-  background: linear-gradient(135deg,
-      rgba(0, 102, 204, 0.08) 0%,
-      rgba(0, 102, 204, 0.04) 50%,
-      var(--color-bg-primary) 100%);
-  box-shadow:
-    0 0 0 1px rgba(0, 102, 204, 0.15),
-    0 0 20px rgba(0, 102, 204, 0.08),
-    inset 0 1px 0 rgba(0, 102, 204, 0.1);
-}
-
-
-[data-theme="precision-light"] .nav-panel-active .nav-panel-title {
-  color: #0066CC;
-}
-
-[data-theme="precision-light"] .nav-panel-header:hover .nav-panel-title {
-  color: #0066CC;
-}
-
-[data-theme="precision-light"] .nav-panel-header:hover .nav-panel-chevron {
-  color: #0066CC;
-}
-
-[data-theme="precision-light"] .nav-panel-section:hover .nav-panel-title {
-  color: #0066CC;
-}
-
-[data-theme="precision-light"] .nav-panel-section:hover .nav-panel-chevron {
-  color: #0066CC;
-}
-
 /* ============================================
    LEFT PANEL COLLAPSED STATE
    When documents panel is expanded, left panel collapses to icon-only
@@ -2254,34 +1093,19 @@ textarea:-webkit-autofill:active {
   width: 100%;
 }
 
-/* Sitewise icon nav: compact state used when the document repository is expanded */
+/* Sitewise icon nav: compact state used when the document repository is expanded.
+   Icons stay anchored to the same x-position as the expanded state — only the
+   labels disappear. Padding and button geometry are inherited from the
+   expanded styles so nothing visually shifts. */
 .left-panel-collapsed .sitewise-left-nav {
-  align-items: center;
-  gap: 8px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px 4px;
 }
 
-.left-panel-collapsed .sitewise-nav-group {
-  align-items: center;
-  width: 100%;
-}
-
-.left-panel-collapsed .sitewise-nav-item {
-  height: 32px;
-  width: 32px;
-  justify-content: center;
-  gap: 0;
-  padding: 0;
-}
-
-.left-panel-collapsed .sitewise-nav-icon-grid,
-.left-panel-collapsed .sitewise-project-icon-grid,
+/* The Ask card hides its icon in expanded mode (the card shows the // ASK copy
+   instead). When collapsed, swap to icon-only by revealing the icon. */
 .left-panel-collapsed .sitewise-ask-icon-grid {
   display: flex;
-  height: 28px;
-  width: 28px;
 }
 
 .left-panel-collapsed .sitewise-nav-label,
@@ -2296,27 +1120,8 @@ textarea:-webkit-autofill:active {
   display: none;
 }
 
-.left-panel-collapsed .sitewise-project-switcher-card,
-.left-panel-collapsed .sitewise-ask-card {
-  align-items: center;
-  display: flex;
-  height: 32px;
-  justify-content: center;
-  padding: 0;
-  width: 32px;
-}
-
-.left-panel-collapsed .sitewise-project-switcher-card > div,
-.left-panel-collapsed .sitewise-project-switcher-card button {
-  width: auto;
-}
-
-.left-panel-collapsed .sitewise-project-switcher-card button {
-  justify-content: center;
-}
-
 /* ============================================
-   PRECISION THEME ANIMATIONS & MICRO-INTERACTIONS
+   ANIMATIONS & MICRO-INTERACTIONS
    ============================================ */
 
 /* Keyframe Animations */
@@ -2577,11 +1382,6 @@ textarea:-webkit-autofill:active {
   background: linear-gradient(135deg, rgba(0, 128, 255, 0.1) 0%, rgba(23, 118, 193, 0.05) 50%, rgba(139, 92, 246, 0.1) 100%);
 }
 
-/* Light theme Aurora gradient utilities */
-[data-theme="precision-light"] .bg-aurora-gradient-subtle {
-  background: linear-gradient(135deg, rgba(0, 102, 204, 0.08) 0%, rgba(8, 145, 178, 0.04) 50%, rgba(109, 40, 217, 0.08) 100%);
-}
-
 /* Animation Delay Utilities */
 .animate-delay-100 {
   animation-delay: 100ms;
@@ -2627,11 +1427,6 @@ textarea:-webkit-autofill:active {
 .hover-aurora:hover {
   box-shadow: 0 0 20px rgba(23, 118, 193, 0.2), 0 0 40px rgba(0, 128, 255, 0.1);
   border-color: rgba(23, 118, 193, 0.4);
-}
-
-[data-theme="precision-light"] .hover-aurora:hover {
-  box-shadow: 0 0 15px rgba(0, 102, 204, 0.15), 0 0 30px rgba(109, 40, 217, 0.08);
-  border-color: rgba(0, 102, 204, 0.35);
 }
 
 .active-press:active {
@@ -2708,85 +1503,6 @@ textarea:-webkit-autofill:active {
    Gradient header styling for evaluation tables
    ============================================ */
 
-/* Dark theme - Aurora gradient headers */
-[data-theme="precision"] .table-header-aurora {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 128, 255, 0.12) 0%,
-    rgba(23, 118, 193, 0.08) 50%,
-    rgba(139, 92, 246, 0.10) 100%
-  );
-  border-bottom: 1px solid rgba(23, 118, 193, 0.2);
-  position: relative;
-}
-
-[data-theme="precision"] .table-header-aurora::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(0, 128, 255, 0.4) 20%,
-    rgba(23, 118, 193, 0.5) 50%,
-    rgba(139, 92, 246, 0.4) 80%,
-    transparent 100%
-  );
-}
-
-/* Dark theme - Aurora header text */
-[data-theme="precision"] .table-header-aurora th {
-  color: rgba(23, 118, 193, 0.9);
-  text-shadow: 0 0 10px rgba(23, 118, 193, 0.2);
-}
-
-/* Dark theme - Subtle hover glow on header cells */
-[data-theme="precision"] .table-header-aurora th:hover {
-  background: rgba(23, 118, 193, 0.08);
-}
-
-/* Light theme - Aurora gradient headers */
-[data-theme="precision-light"] .table-header-aurora {
-  background: linear-gradient(
-    135deg,
-    rgba(0, 102, 204, 0.08) 0%,
-    rgba(8, 145, 178, 0.05) 50%,
-    rgba(109, 40, 217, 0.06) 100%
-  );
-  border-bottom: 1px solid rgba(0, 102, 204, 0.15);
-  position: relative;
-}
-
-[data-theme="precision-light"] .table-header-aurora::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(0, 102, 204, 0.3) 20%,
-    rgba(8, 145, 178, 0.4) 50%,
-    rgba(109, 40, 217, 0.3) 80%,
-    transparent 100%
-  );
-}
-
-/* Light theme - Aurora header text */
-[data-theme="precision-light"] .table-header-aurora th {
-  color: #0066CC;
-}
-
-/* Light theme - Subtle hover on header cells */
-[data-theme="precision-light"] .table-header-aurora th:hover {
-  background: rgba(0, 102, 204, 0.06);
-}
-
 /* Default/fallback (no theme attribute) - Dark theme */
 :root:not([data-theme]) .table-header-aurora {
   background: linear-gradient(
@@ -2829,36 +1545,6 @@ textarea:-webkit-autofill:active {
    EVALUATION TABLE SECTION HEADERS
    Prominent styling for Initial Price and Adds & Subs section titles
    ============================================ */
-
-/* Dark theme - Section header title cell */
-[data-theme="precision"] .table-section-header {
-  background: linear-gradient(
-    90deg,
-    rgba(0, 128, 255, 0.18) 0%,
-    rgba(23, 118, 193, 0.12) 100%
-  );
-  font-weight: 600 !important;
-  font-size: 0.8125rem !important;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: rgba(23, 118, 193, 0.95) !important;
-  border-bottom: 2px solid rgba(23, 118, 193, 0.3) !important;
-}
-
-/* Light theme - Section header title cell */
-[data-theme="precision-light"] .table-section-header {
-  background: linear-gradient(
-    90deg,
-    rgba(0, 102, 204, 0.12) 0%,
-    rgba(8, 145, 178, 0.08) 100%
-  );
-  font-weight: 600 !important;
-  font-size: 0.8125rem !important;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #0066CC !important;
-  border-bottom: 2px solid rgba(0, 102, 204, 0.25) !important;
-}
 
 /* Default/fallback - Section header */
 :root:not([data-theme]) .table-section-header {
@@ -2927,26 +1613,56 @@ textarea:-webkit-autofill:active {
    landing components — does NOT replace existing theme tokens.
    ============================================ */
 :root {
-  /* Surface */
-  --sw-ink: #0E1014;
-  --sw-ink-2: #17181D;
-  --sw-paper: #F1EDE3;
-  --sw-paper-2: #E6E1D3;
-  --sw-linen: #DCD5C2;
-  --sw-muted: #6B6B66;
+  /* PRIMITIVE — cool-slate dark chrome + white cards.
+     Cards across the app hardcode `background: 'white'` and `color: var(--sw-ink)`,
+     so --sw-paper / --sw-ink keep their light-card semantics. --sw-paper-2 is
+     used directly by the dashboard chrome strips (sidebar header, right panel
+     header in ResizableLayout), so it carries the dark navy chrome colour. */
+  --sw-paper: #FFFFFF;          /* card surface — white */
+  --sw-paper-2: #1E2327;        /* chrome strip — deep cool navy (left sidebar + right-panel header) */
+  --sw-ink: #353C44;            /* dark ink — used for card text + dark header strips */
+  --sw-ink-2: #2A2D34;          /* slightly lighter dark ink */
+  --sw-linen: #DCD5C2;          /* legacy — retained for back-compat */
+  --sw-muted: #8A94A3;          /* cool mid-grey — readable on both dark + white */
 
-  /* Devtools Rose syntax palette — pulled from Next.js dev-error screen */
-  --sw-rose: #F8657A;          /* primary, errors, hi-viz role */
-  --sw-rose-dk: #C0354A;       /* AA on paper */
-  --sw-rose-tint: #FBE4E8;     /* warning tint on light surfaces */
-  --sw-lav: #A89CD9;           /* identifiers (variation IDs) */
-  --sw-peach: #F5A472;         /* strings / currency */
-  --sw-cyan: #7AB8C2;          /* types / drawings */
-  --sw-amber: #E8A33D;         /* status dots */
+  /* Body / chrome backgrounds (dark canvas) */
+  --sw-bg: #1A2230;             /* main canvas — deep cool charcoal */
+  --sw-bg-2: #141A24;           /* sidebar / panels */
+  --sw-bg-3: #232C3B;           /* elevated card on dark canvas */
 
-  /* Rules */
-  --sw-rule: rgba(14, 16, 20, 0.18);
-  --sw-rule-2: rgba(14, 16, 20, 0.10);
+  /* Middle-panel canvas — the slate grey behind every tab's content (Brief,
+     Cost Planning, Programme, Procurement, Records, Correspondence, Meet &
+     Report, Stakeholders, Knowledge). Set on the centre Panel in ResizableLayout
+     and referenced for row-hover states. */
+  --sw-canvas: #E5E8ED;
+
+  /* Shell surface — the fill behind cards, tables, list items, and section
+     shells (Brief's CardShell, programme rows, procurement shells, cost-plan
+     line rows, records / meetings / stakeholders / knowledge list items).
+     Sits one tone above the canvas so shells lift off the middle-panel canvas. */
+  --sw-shell: #F6FAFB;
+
+  /* PRIMARY ACCENT — teal-cyan */
+  --sw-rose: #4FB6BE;           /* accent now reads as the teal CTA */
+  --sw-rose-dk: #2E8A92;        /* darker on light surfaces, AA on white */
+  --sw-rose-tint: rgba(79, 182, 190, 0.14);
+
+  /* PRIMARY CTA — solid-fill buttons (Generate brief, Clear all, Add activity, etc.).
+     Use `var(--sw-cta)` for the background and `var(--sw-cta-fg)` for the label so every
+     panel's primary action stays in lockstep. */
+  --sw-cta: #20698A;
+  --sw-cta-hover: #2A7DA3;
+  --sw-cta-fg: #FFFFFF;
+
+  /* SECONDARIES — syntax-role idea, cool-tuned */
+  --sw-peach: #E3A66B;          /* money — slightly warmer amber on dark */
+  --sw-lav: #9AA4E0;            /* IDs — cooler periwinkle */
+  --sw-cyan: #4FB6BE;           /* type — same family as primary (intentional) */
+  --sw-amber: #E3B658;          /* status dot — warm pop */
+
+  /* Rules — dark-translucent so card hairlines remain visible on white */
+  --sw-rule: rgba(14, 16, 20, 0.12);
+  --sw-rule-2: rgba(14, 16, 20, 0.06);
   --sw-rule-dk: rgba(255, 255, 255, 0.10);
   --sw-rule-dk-2: rgba(255, 255, 255, 0.18);
 
@@ -2958,6 +1674,33 @@ textarea:-webkit-autofill:active {
      which was rendered with the designer's system default mono.
      ui-monospace is the modern browser default fallback. */
   --sw-font-mono: 'Menlo', 'SF Mono', 'Cascadia Mono', Consolas, ui-monospace, 'JetBrains Mono', monospace;
+
+  /* ----- Semantic roles, type shorthands, motion -----
+     Type tokens use the CSS font shorthand so a component can write
+       font: var(--type-h2); letter-spacing: var(--type-h2-tracking);
+     and pick up weight/size/line-height/family in one go. Tracking
+     can't ride inside the shorthand, so it is a paired token.
+     Role tokens alias --sw-* primitives — single source of truth. */
+  --type-title:          700 30px/1.1 var(--sw-font-sans);
+  --type-title-tracking: -0.025em;
+  --type-h2:             700 20px/1.2 var(--sw-font-sans);
+  --type-h2-tracking:    -0.02em;
+  --type-h3:             600 15px/1.3 var(--sw-font-sans);
+  --type-h3-tracking:    -0.01em;
+  --type-body:           500 13px/1.5 var(--sw-font-sans);
+  --type-mono:           500 11px/1.4 var(--sw-font-mono);
+  --type-mono-tracking:  0.05em;
+
+  --role-id:        var(--sw-lav);     /* identifiers, variation IDs, codes */
+  --role-money:     var(--sw-peach);   /* currency, $ figures */
+  --role-type:      var(--sw-cyan);    /* categories, types, drawings */
+  --role-attention: #E26F7F;           /* keep a rose-ish error/attention */
+  --role-system:    var(--sw-muted);   /* timestamps, hints, system text */
+
+  --t-fast: 120ms;
+  --t-base: 280ms;
+  --t-slow: 600ms;
+  --ease:   cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 /* Sitewise aggregate slider — subtle brown dot on a paper rule.
