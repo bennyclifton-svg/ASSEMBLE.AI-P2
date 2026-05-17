@@ -205,6 +205,6 @@ export function createSubscriptionErrorResponse(error: SubscriptionError) {
         code: 'SUBSCRIPTION_REQUIRED',
         currentTier: error.currentTier,
         requiredTier: error.requiredTier,
-        upgradeUrl: `/billing?upgrade=${error.requiredTier}`,
+        upgradeUrl: `/settings/billing?upgrade=${error.requiredTier}`,
     };
 }

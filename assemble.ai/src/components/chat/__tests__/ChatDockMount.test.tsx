@@ -49,8 +49,8 @@ describe('ChatDockMount route detection', () => {
         expect(queryByTestId('chat-dock-stub')).toBeNull();
     });
 
-    it('does NOT render on /admin/users', () => {
-        mockUsePathname.mockReturnValue('/admin/users');
+    it('does NOT render on /settings/users', () => {
+        mockUsePathname.mockReturnValue('/settings/users');
         const { queryByTestId } = render(<ChatDockMount />);
         expect(queryByTestId('chat-dock-stub')).toBeNull();
     });

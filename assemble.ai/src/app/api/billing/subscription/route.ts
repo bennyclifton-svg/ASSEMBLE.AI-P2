@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { polarCustomer, polarSubscription } from '@/lib/db/auth-schema';
 import { eq, desc } from 'drizzle-orm';
 import { getPlanByPolarProductId } from '@/lib/polar/plans';
+import { getEntitlementsForUser } from '@/lib/subscription/entitlements';
 
 export async function GET() {
     try {
@@ -23,6 +24,7 @@ export async function GET() {
         let subscriptionStatus = 'free';
         let currentPeriodEnd: number | null = null;
         let cancelAtPeriodEnd = false;
+        let hasPolarCustomer = false;
 
         // Get subscription info from database
         const customer = await db
@@ -32,6 +34,7 @@ export async function GET() {
             .limit(1);
 
         if (customer.length > 0) {
+            hasPolarCustomer = true;
             const subscriptions = await db
                 .select()
                 .from(polarSubscription)
@@ -76,11 +79,22 @@ export async function GET() {
             }
         }
 
+        const entitlements = await getEntitlementsForUser(userId);
+        if (entitlements) {
+            currentPlanId = entitlements.planId;
+            subscriptionStatus = entitlements.state;
+        }
+
         return NextResponse.json({
             currentPlanId,
             subscriptionStatus,
             currentPeriodEnd,
             cancelAtPeriodEnd,
+            hasPolarCustomer,
+            entitlementState: entitlements?.state ?? null,
+            readOnly: entitlements?.readOnly ?? false,
+            allowances: entitlements?.allowances ?? null,
+            billingUrl: entitlements?.billingUrl ?? '/settings/billing',
         });
     } catch (error) {
         console.error('[Billing API] Error fetching subscription:', error);

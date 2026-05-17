@@ -27,7 +27,7 @@ export async function requireSuperAdminPage(): Promise<SuperAdminContext> {
     const session = await auth.api.getSession({ headers: await headers() });
 
     if (!session?.user) {
-        redirect('/login?redirect=/admin');
+        redirect('/login?redirect=/settings/users');
     }
 
     const [row] = await db

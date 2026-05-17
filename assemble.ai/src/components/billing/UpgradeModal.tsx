@@ -100,7 +100,7 @@ export function UpgradeModal({
                         Maybe Later
                     </button>
                     <Link
-                        href={`/billing?upgrade=${requiredPlan}`}
+                        href={`/settings/billing?upgrade=${requiredPlan}`}
                         className="sitewise-button sitewise-button-primary flex-1"
                         onClick={onClose}
                     >

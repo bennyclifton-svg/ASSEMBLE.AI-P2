@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CreditCard, Settings } from 'lucide-react';
 import { SitewiseWordmark } from '@/components/brand/SitewiseWordmark';
 import { UserProfileDropdown } from './UserProfileDropdown';
 
@@ -39,6 +39,16 @@ export function BillingLayout({ children }: BillingLayoutProps) {
                                 <ArrowLeft className="h-4 w-4" />
                                 Dashboard
                             </Link>
+                            <div className="mt-4 grid gap-2">
+                                <Link href="/settings/account" className="sitewise-button">
+                                    <Settings className="h-4 w-4" />
+                                    Account
+                                </Link>
+                                <Link href="/settings/billing" className="sitewise-button">
+                                    <CreditCard className="h-4 w-4" />
+                                    Billing
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </Panel>

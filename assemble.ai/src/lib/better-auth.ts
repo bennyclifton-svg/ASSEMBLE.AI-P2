@@ -14,19 +14,47 @@ import { organizations, knowledgeLibraries } from "./db/pg-schema";
 import * as authSchema from "./db/auth-schema";
 import { user as userTable } from "./db/auth-schema";
 import { KNOWLEDGE_LIBRARY_TYPES } from "./constants/libraries";
+import { completeNewUserSignup } from "./auth/signup-lifecycle";
+import { processValidatedPolarWebhook } from "./billing/polar-webhook-service";
+import {
+    sendAccountVerificationEmail,
+    sendPasswordResetEmail,
+} from "./email/transactional";
+import { getPublicPlans } from "./polar/plans";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 
-// Check if Polar is configured
-const isPolarConfigured = !!(
+const hasPolarCredentials = !!(
     process.env.POLAR_ACCESS_TOKEN &&
     process.env.POLAR_STARTER_PRODUCT_ID &&
     process.env.POLAR_PROFESSIONAL_PRODUCT_ID
 );
 
+const isPolarEnabled =
+    process.env.POLAR_ENABLED === 'true' ||
+    (process.env.NODE_ENV === 'production' && process.env.POLAR_ENABLED !== 'false');
+
+// Check if Polar is configured. Local/private development stays auth-only unless
+// explicitly opted in, so sign-up works without outbound billing network calls.
+const isPolarConfigured = isPolarEnabled && hasPolarCredentials;
+
 if (!isPolarConfigured) {
     console.log('[Better Auth] Polar billing not configured - running in auth-only mode');
 }
+
+const requireEmailVerification =
+    process.env.EMAIL_VERIFICATION_REQUIRED === 'true' ||
+    (process.env.NODE_ENV === 'production' && process.env.EMAIL_VERIFICATION_REQUIRED !== 'false');
+
+const localTrustedOrigins =
+    process.env.NODE_ENV === 'production'
+        ? []
+        : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+const configuredTrustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
+    ?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? [];
 
 // Initialize Polar client for Better Auth integration (only if configured)
 const polarClient = isPolarConfigured
@@ -46,7 +74,27 @@ export const auth = betterAuth({
     // Email and password authentication
     emailAndPassword: {
         enabled: true,
-        requireEmailVerification: false, // Enable later after migration
+        requireEmailVerification,
+        sendResetPassword: async ({ user, url }) => {
+            await sendPasswordResetEmail({
+                to: user.email,
+                name: user.name,
+                url,
+            });
+        },
+    },
+
+    emailVerification: {
+        sendOnSignUp: requireEmailVerification,
+        sendOnSignIn: requireEmailVerification,
+        autoSignInAfterVerification: true,
+        sendVerificationEmail: async ({ user, url }) => {
+            await sendAccountVerificationEmail({
+                to: user.email,
+                name: user.name,
+                url,
+            });
+        },
     },
 
     // Session configuration - matches existing 24-hour sessions
@@ -61,6 +109,7 @@ export const auth = betterAuth({
 
     // App configuration
     baseURL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    trustedOrigins: [...localTrustedOrigins, ...configuredTrustedOrigins],
     secret: process.env.BETTER_AUTH_SECRET || process.env.SESSION_SECRET,
 
     // Plugins - only include Polar if configured
@@ -71,24 +120,18 @@ export const auth = betterAuth({
                 createCustomerOnSignUp: true,
                 use: [
                     checkout({
-                        products: [
-                            {
-                                productId: process.env.POLAR_STARTER_PRODUCT_ID!,
-                                slug: "starter",
-                            },
-                            {
-                                productId: process.env.POLAR_PROFESSIONAL_PRODUCT_ID!,
-                                slug: "professional",
-                            },
-                        ],
-                        successUrl: "/billing?success=true",
+                        products: getPublicPlans().map((plan) => ({
+                            productId: plan.polarProductId!,
+                            slug: plan.slug,
+                        })),
+                        successUrl: "/settings/billing?success=true",
                     }),
                     portal(),
                     webhooks({
                         secret: process.env.POLAR_WEBHOOK_SECRET!,
                         onPayload: async (payload) => {
-                            // Log the webhook event
                             console.log("[Polar Webhook]", payload.type);
+                            await processValidatedPolarWebhook(payload);
                         },
                     }),
                 ],
@@ -98,9 +141,11 @@ export const auth = betterAuth({
 
     // Advanced options
     advanced: {
-        // Generate secure IDs
-        generateId: () => {
-            return randomUUID();
+        database: {
+            // Generate secure IDs
+            generateId: () => {
+                return randomUUID();
+            },
         },
     },
 
@@ -121,6 +166,38 @@ export const auth = betterAuth({
                 defaultValue: false,
                 input: false,
             },
+            trialPlanId: {
+                type: "string",
+                required: false,
+            },
+            trialStartedAt: {
+                type: "date",
+                required: false,
+                input: false,
+            },
+            trialEndsAt: {
+                type: "date",
+                required: false,
+                input: false,
+            },
+            trialStatus: {
+                type: "string",
+                required: false,
+                input: false,
+            },
+            trialReminderSentAt: {
+                type: "date",
+                required: false,
+                input: false,
+            },
+            termsAcceptedAt: {
+                type: "date",
+                required: false,
+            },
+            privacyAcceptedAt: {
+                type: "date",
+                required: false,
+            },
         },
     },
 
@@ -130,36 +207,24 @@ export const auth = betterAuth({
             create: {
                 after: async (user) => {
                     try {
-                        const now = Math.floor(Date.now() / 1000);
-                        const displayName = user.name || user.email.split('@')[0];
-
-                        // Create organization for the new user
-                        const organizationId = randomUUID();
-                        await db.insert(organizations).values({
-                            id: organizationId,
-                            name: `${displayName}'s Organization`,
-                            defaultSettings: '{}',
-                            createdAt: now,
-                            updatedAt: now,
+                        const { organizationId } = await completeNewUserSignup({
+                            user,
+                            libraryTypes: KNOWLEDGE_LIBRARY_TYPES,
+                            store: {
+                                createOrganization: async (values) => {
+                                    await db.insert(organizations).values(values);
+                                },
+                                updateUser: async (userId, values) => {
+                                    await db
+                                        .update(userTable)
+                                        .set(values)
+                                        .where(eq(userTable.id, userId));
+                                },
+                                createKnowledgeLibrary: async (values) => {
+                                    await db.insert(knowledgeLibraries).values(values);
+                                },
+                            },
                         });
-
-                        // Update user with organizationId
-                        await db
-                            .update(userTable)
-                            .set({ organizationId })
-                            .where(eq(userTable.id, user.id));
-
-                        // Create knowledge libraries for the organization
-                        for (const libraryType of KNOWLEDGE_LIBRARY_TYPES) {
-                            await db.insert(knowledgeLibraries).values({
-                                id: randomUUID(),
-                                organizationId,
-                                type: libraryType.id,
-                                documentCount: 0,
-                                createdAt: now,
-                                updatedAt: now,
-                            });
-                        }
 
                         console.log(`[Better Auth] Created organization ${organizationId} for user ${user.id}`);
                     } catch (error) {

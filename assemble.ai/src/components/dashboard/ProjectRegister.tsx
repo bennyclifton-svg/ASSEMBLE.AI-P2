@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, FolderOpen, Calendar, ChevronRight, Loader2, Pencil, Check, X } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
@@ -19,6 +19,14 @@ interface ProjectRegisterProps {
   onSelectProject?: (project: Project) => void;
 }
 
+interface EntitlementSnapshot {
+  readOnly: boolean;
+  billingUrl: string;
+  allowances: {
+    write: boolean;
+  } | null;
+}
+
 export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -35,8 +43,13 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [entitlement, setEntitlement] = useState<EntitlementSnapshot | null>(null);
 
-  const fetchProjects = async () => {
+  const canWrite = entitlement?.allowances?.write !== false;
+  const billingUrl = entitlement?.billingUrl ?? '/settings/billing';
+  const readOnlyMessage = 'Your workspace is read-only. Upgrade to create or edit projects.';
+
+  const fetchProjects = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -57,11 +70,29 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
+
+  const fetchEntitlements = useCallback(async () => {
+    try {
+      const res = await fetch('/api/billing/subscription');
+      if (!res.ok) return;
+      const data = await res.json();
+      setEntitlement({
+        readOnly: Boolean(data.readOnly),
+        billingUrl: typeof data.billingUrl === 'string' ? data.billingUrl : '/settings/billing',
+        allowances: data.allowances && typeof data.allowances.write === 'boolean'
+          ? { write: data.allowances.write }
+          : null,
+      });
+    } catch {
+      setEntitlement(null);
+    }
+  }, []);
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+    fetchEntitlements();
+  }, [fetchEntitlements, fetchProjects]);
 
   const handleProjectClick = (project: Project) => {
     // Don't navigate if we're editing
@@ -76,6 +107,7 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
 
   const handleStartEdit = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
+    if (!canWrite) return;
     setEditingProjectId(project.id);
     setEditingName(project.name);
   };
@@ -90,6 +122,10 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
     e.stopPropagation();
 
     if (!editingName.trim()) return;
+    if (!canWrite) {
+      setError(readOnlyMessage);
+      return;
+    }
 
     setIsSavingEdit(true);
     try {
@@ -132,6 +168,11 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
     e.preventDefault();
 
     if (!formData.name.trim()) return;
+    if (!canWrite) {
+      setIsModalOpen(false);
+      router.push(billingUrl);
+      return;
+    }
 
     setIsCreating(true);
 
@@ -239,8 +280,13 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
             <FolderOpen className="w-16 h-16 text-[var(--color-border)] mx-auto mb-4" />
             <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">No projects yet</h3>
             <p className="text-[var(--color-text-muted)] mb-6">Create your first project to get started</p>
+            {!canWrite && (
+              <p className="text-sm text-[var(--color-text-muted)] mb-4">{readOnlyMessage}</p>
+            )}
             <Button
               onClick={() => setIsModalOpen(true)}
+              disabled={!canWrite}
+              title={!canWrite ? readOnlyMessage : undefined}
               className="bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -261,6 +307,7 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
             isCreating={isCreating}
             onSubmit={handleCreateProject}
             onCancel={() => setIsModalOpen(false)}
+            canWrite={canWrite}
           />
         </Modal>
       </div>
@@ -273,8 +320,19 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
       {/* Header */}
       <div className="p-4 border-b border-[var(--color-border)] flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Project Register</h2>
+        {!canWrite && (
+          <button
+            type="button"
+            onClick={() => router.push(billingUrl)}
+            className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+          >
+            Read-only. Upgrade to edit.
+          </button>
+        )}
         <Button
           onClick={() => setIsModalOpen(true)}
+          disabled={!canWrite}
+          title={!canWrite ? readOnlyMessage : undefined}
           variant="ghost"
           size="sm"
           className="text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
@@ -337,8 +395,9 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
                     </span>
                     <button
                       onClick={(e) => handleStartEdit(e, project)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--color-border)] rounded transition-opacity"
-                      title="Edit project name"
+                      disabled={!canWrite}
+                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--color-border)] rounded transition-opacity disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={canWrite ? 'Edit project name' : readOnlyMessage}
                     >
                       <Pencil className="w-3 h-3 text-[var(--color-text-muted)]" />
                     </button>
@@ -372,6 +431,7 @@ export function ProjectRegister({ onSelectProject }: ProjectRegisterProps) {
           isCreating={isCreating}
           onSubmit={handleCreateProject}
           onCancel={() => setIsModalOpen(false)}
+          canWrite={canWrite}
         />
       </Modal>
     </div>
@@ -395,6 +455,7 @@ interface CreateProjectFormProps {
   isCreating: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
+  canWrite: boolean;
 }
 
 function CreateProjectForm({
@@ -403,6 +464,7 @@ function CreateProjectForm({
   isCreating,
   onSubmit,
   onCancel,
+  canWrite,
 }: CreateProjectFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -416,7 +478,7 @@ function CreateProjectForm({
           value={formData.name}
           onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
           className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]"
-          disabled={isCreating}
+          disabled={isCreating || !canWrite}
           required
           autoFocus
         />
@@ -432,7 +494,7 @@ function CreateProjectForm({
           value={formData.code}
           onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
           className="bg-[var(--color-bg-primary)] border-[var(--color-border)] text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)]"
-          disabled={isCreating}
+          disabled={isCreating || !canWrite}
         />
       </div>
 
@@ -449,7 +511,7 @@ function CreateProjectForm({
             }))
           }
           className="w-full px-3 py-2 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded text-[var(--color-text-primary)] focus:border-[var(--color-accent-primary)] focus:outline-none"
-          disabled={isCreating}
+          disabled={isCreating || !canWrite}
         >
           <option value="active">Active</option>
           <option value="pending">Pending</option>
@@ -469,7 +531,7 @@ function CreateProjectForm({
         </Button>
         <Button
           type="submit"
-          disabled={isCreating || !formData.name.trim()}
+          disabled={isCreating || !canWrite || !formData.name.trim()}
           className="bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] text-white"
         >
           {isCreating ? (
