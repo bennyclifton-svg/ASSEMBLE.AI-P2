@@ -137,8 +137,9 @@
    Devtools Rose dialect. Maps existing semantic tokens onto the
    Sitewise primitive set so any component using --color-bg-primary,
    --color-accent-primary, etc. inherits the new look without per-file edits.
+   Light-only — applied unconditionally to :root.
    ============================================ */
-[data-theme="sitewise"] {
+:root {
   /* Backgrounds — dark cool-slate canvas wraps white card surfaces */
   --color-bg-primary: var(--sw-bg);           /* body / canvas — dark */
   --color-bg-secondary: var(--sw-paper);      /* card surface — white */
@@ -602,11 +603,11 @@ textarea:-webkit-autofill:active {
 }
 
 /* Sitewise — rose underline on active sub-tab, rose hover indicator */
-[data-theme="sitewise"] .tab-aurora-sub {
+.tab-aurora-sub {
   position: relative;
 }
 
-[data-theme="sitewise"] .tab-aurora-sub::before {
+.tab-aurora-sub::before {
   content: '';
   position: absolute;
   bottom: 0;
@@ -619,21 +620,21 @@ textarea:-webkit-autofill:active {
   transition: width 160ms ease, opacity 160ms ease;
 }
 
-[data-theme="sitewise"] .tab-aurora-sub:hover::before {
+.tab-aurora-sub:hover::before {
   width: 2rem;
   opacity: 0.7;
 }
 
-[data-theme="sitewise"] .tab-aurora-sub[data-state="active"]::before {
+.tab-aurora-sub[data-state="active"]::before {
   display: none;
 }
 
-[data-theme="sitewise"] .tab-aurora-sub[data-state="active"] {
+.tab-aurora-sub[data-state="active"] {
   background: transparent;
   color: var(--sw-ink);
 }
 
-[data-theme="sitewise"] .tab-aurora-sub[data-state="active"]::after {
+.tab-aurora-sub[data-state="active"]::after {
   content: '';
   position: absolute;
   bottom: -1px;
@@ -828,9 +829,6 @@ textarea:-webkit-autofill:active {
 /* Interactive row hover with subtle highlight */
 .interactive-row {
   transition: background-color 0.1s ease, border-color 0.1s ease;
-}
-
-.interactive-row:not([data-theme]) {
   background-color: var(--color-bg-tertiary);
 }
 
@@ -1503,8 +1501,8 @@ textarea:-webkit-autofill:active {
    Gradient header styling for evaluation tables
    ============================================ */
 
-/* Default/fallback (no theme attribute) - Dark theme */
-:root:not([data-theme]) .table-header-aurora {
+/* Base table header styling (light-only app). */
+.table-header-aurora {
   background: linear-gradient(
     135deg,
     rgba(0, 128, 255, 0.12) 0%,
@@ -1515,7 +1513,7 @@ textarea:-webkit-autofill:active {
   position: relative;
 }
 
-:root:not([data-theme]) .table-header-aurora::after {
+.table-header-aurora::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -1532,12 +1530,12 @@ textarea:-webkit-autofill:active {
   );
 }
 
-:root:not([data-theme]) .table-header-aurora th {
+.table-header-aurora th {
   color: rgba(23, 118, 193, 0.9);
   text-shadow: 0 0 10px rgba(23, 118, 193, 0.2);
 }
 
-:root:not([data-theme]) .table-header-aurora th:hover {
+.table-header-aurora th:hover {
   background: rgba(23, 118, 193, 0.08);
 }
 
@@ -1546,8 +1544,8 @@ textarea:-webkit-autofill:active {
    Prominent styling for Initial Price and Adds & Subs section titles
    ============================================ */
 
-/* Default/fallback - Section header */
-:root:not([data-theme]) .table-section-header {
+/* Base section header styling (light-only app). */
+.table-section-header {
   background: linear-gradient(
     90deg,
     rgba(0, 128, 255, 0.18) 0%,
@@ -1608,9 +1606,9 @@ textarea:-webkit-autofill:active {
 /* ============================================
    SITEWISE — Field Console (Devtools Rose)
    Palette + typography for the new public surface.
-   Lives alongside TESSERA; not theme-scoped so it works
-   regardless of [data-theme]. Only consumed by Sitewise
-   landing components — does NOT replace existing theme tokens.
+   Lives alongside TESSERA; applied unconditionally to :root
+   in this light-only build. Provides --sw-* primitives that
+   the semantic tokens above reference.
    ============================================ */
 :root {
   /* PRIMITIVE — cool-slate dark chrome + white cards.
@@ -1891,11 +1889,11 @@ textarea:-webkit-autofill:active {
 /* Sitewise control surfaces - shared by operator admin and billing.
    Mirrors the Brief tab language: paper surfaces, ink text, rose accents,
    mono micro-labels, 1px drafting rules, and a quiet logo-mask graphic. */
-[data-theme="sitewise"] .tab-aurora-main {
+.tab-aurora-main {
   position: relative;
 }
 
-[data-theme="sitewise"] .tab-aurora-main::before {
+.tab-aurora-main::before {
   content: '';
   position: absolute;
   bottom: 0;
@@ -1908,20 +1906,20 @@ textarea:-webkit-autofill:active {
   transition: width 160ms ease, opacity 160ms ease;
 }
 
-[data-theme="sitewise"] .tab-aurora-main:hover::before {
+.tab-aurora-main:hover::before {
   width: 2rem;
   opacity: 0.7;
 }
 
-[data-theme="sitewise"] .tab-aurora-main[data-state="active"] {
+.tab-aurora-main[data-state="active"] {
   color: var(--sw-ink);
 }
 
-[data-theme="sitewise"] .tab-aurora-main[data-state="active"]::before {
+.tab-aurora-main[data-state="active"]::before {
   display: none;
 }
 
-[data-theme="sitewise"] .tab-aurora-main[data-state="active"]::after {
+.tab-aurora-main[data-state="active"]::after {
   content: '';
   position: absolute;
   bottom: -1px;
@@ -1931,7 +1929,7 @@ textarea:-webkit-autofill:active {
   background: var(--sw-rose);
 }
 
-[data-theme="sitewise"] .panel-watermark {
+.panel-watermark {
   filter: brightness(0);
   opacity: 0.026;
 }

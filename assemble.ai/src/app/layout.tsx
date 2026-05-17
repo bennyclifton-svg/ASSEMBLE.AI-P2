@@ -50,44 +50,13 @@ export const metadata: Metadata = {
   description: "Architectural Precision in Procurement - AI-powered tender management platform",
 };
 
-// Theme initialization script - runs before React hydration to prevent flash.
-// Sitewise / Field Console (Devtools Rose) is the active brand.
-// Legacy Architectural Precision themes (precision, precision-light) remain switchable.
-const themeScript = `
-  (function() {
-    try {
-      const stored = localStorage.getItem('theme');
-      const validThemes = ['sitewise', 'precision', 'precision-light'];
-
-      if (stored && validThemes.includes(stored)) {
-        document.documentElement.setAttribute('data-theme', stored);
-      } else {
-        document.documentElement.setAttribute('data-theme', 'sitewise');
-      }
-
-      // Prevent transition flash on load
-      document.documentElement.classList.add('no-transitions');
-      window.addEventListener('DOMContentLoaded', function() {
-        requestAnimationFrame(function() {
-          document.documentElement.classList.remove('no-transitions');
-        });
-      });
-    } catch (e) {
-      document.documentElement.setAttribute('data-theme', 'sitewise');
-    }
-  })();
-`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="en">
       <body
         className={`${dmSans.variable} ${spectral.variable} ${exo2.variable} ${interTight.variable} ${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
