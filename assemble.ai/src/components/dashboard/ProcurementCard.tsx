@@ -12,7 +12,7 @@ import { ProgramPanel } from '@/components/program/ProgramPanel';
 import { BriefPanel } from '@/components/brief/BriefPanel';
 import { StakeholderPanel } from '@/components/stakeholders/StakeholderPanel';
 import { KnowledgePanel } from '@/components/knowledge/KnowledgePanel';
-import { CorrespondencePanel } from '@/components/correspondence/CorrespondencePanel';
+import { AiMemoryPanel } from '@/components/ai-memory';
 import { MeetingsReportsContainer } from '@/components/notes-meetings-reports/MeetingsReportsContainer';
 import { NotesPanel } from '@/components/notes-meetings-reports/NotesPanel';
 import { ProcurementCardShell } from '@/components/procurement';
@@ -35,8 +35,6 @@ interface ProcurementCardProps {
     onProfileLoad?: (buildingClass: BuildingClass, projectType: ProjectType) => void;
     activeMainTab?: string;
     onMainTabChange?: (tab: string) => void;
-    activeSubTab?: string;
-    onSubTabChange?: (sub: string) => void;
     detailsData?: unknown;
     onDetailsUpdate?: () => void;
     onProjectNameChange?: () => void;
@@ -176,8 +174,6 @@ export function ProcurementCard({
     onProfileLoad,
     activeMainTab: externalActiveMainTab,
     onMainTabChange,
-    activeSubTab,
-    onSubTabChange,
     detailsData,
     onDetailsUpdate,
     onProjectNameChange,
@@ -297,15 +293,18 @@ export function ProcurementCard({
         return () => window.clearTimeout(timeoutId);
     }, [fetchProfileStatus, projectId]);
 
-    // Re-fetch profile data when navigating to the Building sub-tab of the Brief tab
+    // Re-fetch profile data when navigating into the Brief tab.
+    // The Lot / Building sub-tabs were merged — the building profile is
+    // always visible in the brief view, so we refetch whenever the user
+    // (re)enters brief rather than gating on a sub-tab value.
     useEffect(() => {
-        if (activeMainTab === 'brief' && activeSubTab === 'building') {
+        if (activeMainTab === 'brief') {
             const timeoutId = window.setTimeout(() => {
                 void fetchProfileStatus();
             }, 0);
             return () => window.clearTimeout(timeoutId);
         }
-    }, [activeMainTab, activeSubTab, fetchProfileStatus]);
+    }, [activeMainTab, fetchProfileStatus]);
 
     // Check if profile is complete enough for Cost/Program tabs
     const isProfileComplete = profileStatus.hasProfile && profileStatus.buildingClass && profileStatus.projectType;
@@ -406,8 +405,6 @@ export function ProcurementCard({
                     <BriefPanel
                         projectId={projectId}
                         projectName={projectName}
-                        activeSubTab={activeSubTab ?? 'lot'}
-                        onSubTabChange={onSubTabChange ?? (() => {})}
                         detailsData={detailsData}
                         onDetailsUpdate={onDetailsUpdate ?? (() => {})}
                         onProjectNameChange={onProjectNameChange}
@@ -426,6 +423,8 @@ export function ProcurementCard({
                             onProfileLoad?.(loadedClass, loadedType);
                             fetchProfileStatus(); // Refresh profile status after load
                         }}
+                        selectedDocumentIds={selectedDocumentIds}
+                        onSetSelectedDocumentIds={onSetSelectedDocumentIds}
                     />
                 </TabsContent>
 
@@ -437,11 +436,6 @@ export function ProcurementCard({
                                     projectName={projectName}
                                     activeLabel={activeProcurementName.toLowerCase()}
                                 />
-                                <div className="flex gap-1.5">
-                                    <ProcurementStatusPill label={`consultants: ${consultantStakeholders.length}`} />
-                                    <ProcurementStatusPill label={`contractors: ${contractorStakeholders.length}`} />
-                                    <ProcurementStatusPill label={`active: ${activeProcurementName}`} tone="dark" />
-                                </div>
                             </div>
 
                             <div className="flex items-end justify-between mb-2">
@@ -623,6 +617,10 @@ export function ProcurementCard({
                     />
                 </TabsContent>
 
+                <TabsContent value="memory" className="flex-1 mt-0 min-h-0 overflow-hidden">
+                    <AiMemoryPanel projectId={projectId} projectName={projectName} />
+                </TabsContent>
+
                 {/* Notes Tab Content */}
                 <TabsContent value="notes" className="flex-1 mt-0 min-h-0 overflow-y-auto">
                     <NotesPanel
@@ -634,10 +632,6 @@ export function ProcurementCard({
                         onSaveTransmittal={handleSaveNoteTransmittal}
                         onLoadTransmittal={handleLoadNoteTransmittal}
                     />
-                </TabsContent>
-
-                <TabsContent value="correspondence" className="flex-1 mt-0 min-h-0 overflow-hidden section-procurement procurement-workspace">
-                    <CorrespondencePanel projectId={projectId} projectName={projectName} />
                 </TabsContent>
 
                 {/* Meetings/Reports Tab Content - T096, T099 */}

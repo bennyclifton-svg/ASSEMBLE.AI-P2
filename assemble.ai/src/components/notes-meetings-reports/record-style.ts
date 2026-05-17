@@ -11,6 +11,7 @@ export const RECORD_TYPE_ORDER: NoteType[] = [
     'risk',
     'transmittal',
     'defect',
+    'email',
 ];
 
 export const RECORD_TYPE_LABELS: Record<NoteType, string> = {
@@ -23,6 +24,7 @@ export const RECORD_TYPE_LABELS: Record<NoteType, string> = {
     transmittal: 'transmittal',
     review: 'review',
     note: 'note',
+    email: 'email',
 };
 
 export const RECORD_TYPE_ACCENTS: Record<NoteType, string> = {
@@ -35,6 +37,7 @@ export const RECORD_TYPE_ACCENTS: Record<NoteType, string> = {
     transmittal: 'var(--sw-cyan)',
     review: 'var(--sw-lav)',
     note: 'var(--sw-cyan)',
+    email: 'var(--sw-cyan)',
 };
 
 export const RECORD_TYPE_COLORS: Record<NoteType, NoteColor> = {
@@ -47,6 +50,7 @@ export const RECORD_TYPE_COLORS: Record<NoteType, NoteColor> = {
     transmittal: 'blue',
     review: 'purple',
     note: 'blue',
+    email: 'blue',
 };
 
 export function getRecordTypeAccent(type: NoteType): string {

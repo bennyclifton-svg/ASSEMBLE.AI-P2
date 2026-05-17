@@ -8,7 +8,6 @@ import {
     FileSignature,
     FileStack,
     Library,
-    Mails,
     Network,
     Presentation,
     Settings as SettingsIcon,
@@ -47,7 +46,6 @@ const NAV_ITEMS: Array<{ tab: string; label: string }> = [
     { tab: 'program',          label: 'Programme' },
     { tab: 'procurement',      label: 'Procurement' },
     { tab: 'notes',            label: 'Records' },
-    { tab: 'correspondence',   label: 'Correspondence' },
     { tab: 'meetings-reports', label: 'Meet & Report' },
     { tab: 'knowledge',        label: 'Knowledge' },
 ];
@@ -58,7 +56,6 @@ const NAV_ICONS = {
     program: ChartGantt,
     procurement: FileSignature,
     notes: FileStack,
-    correspondence: Mails,
     'meetings-reports': Presentation,
     stakeholders: Network,
     knowledge: Library,

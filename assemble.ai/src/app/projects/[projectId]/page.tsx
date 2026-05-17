@@ -89,6 +89,22 @@ export default function ProjectWorkspace() {
       window.history.replaceState(null, '', `/projects/${projectId}?${next.toString()}`);
       setCenterActiveTabState('brief');
     }
+    // RFI register is now a typed register inside the Records tab.
+    if (tabParam === 'rfis') {
+      const next = new URLSearchParams(searchParams.toString());
+      next.set('tab', 'notes');
+      next.set('recordType', 'rfi');
+      window.history.replaceState(null, '', `/projects/${projectId}?${next.toString()}`);
+      setCenterActiveTabState('notes');
+    }
+    // Correspondence is now an Email typed register inside the Records tab.
+    if (tabParam === 'correspondence') {
+      const next = new URLSearchParams(searchParams.toString());
+      next.set('tab', 'notes');
+      next.set('recordType', 'email');
+      window.history.replaceState(null, '', `/projects/${projectId}?${next.toString()}`);
+      setCenterActiveTabState('notes');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -107,21 +123,6 @@ export default function ProjectWorkspace() {
         '',
         `/projects/${projectId}?${next.toString()}`
       );
-    },
-    [projectId, searchParams]
-  );
-
-  const setCenterActiveSubTab = useCallback(
-    (sub: string) => {
-      const next = new URLSearchParams(searchParams.toString());
-      next.set('tab', 'brief');
-      next.set('sub', sub);
-      window.history.replaceState(
-        null,
-        '',
-        `/projects/${projectId}?${next.toString()}`
-      );
-      setCenterActiveTabState('brief');
     },
     [projectId, searchParams]
   );
@@ -329,8 +330,6 @@ export default function ProjectWorkspace() {
               onProfileLoad={handleProfileLoad}
               activeMainTab={centerActiveTab}
               onMainTabChange={setCenterActiveTab}
-              activeSubTab={centerActiveSubTab}
-              onSubTabChange={setCenterActiveSubTab}
               detailsData={planningData?.details}
               onDetailsUpdate={fetchPlanningData}
               onProjectNameChange={handleProjectNameChange}

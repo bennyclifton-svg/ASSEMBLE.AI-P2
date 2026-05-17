@@ -9,42 +9,59 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ComponentType, type CSSProperties, type MouseEvent } from 'react';
 import {
     AlertCircle,
     ArrowDown,
     ArrowUp,
-    Bold,
     Check,
-    Eye,
-    EyeOff,
-    FileText,
-    Italic,
-    List,
     Minus,
     Plus,
-    RotateCcw,
     RotateCw,
-    Save,
     Trash,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AuroraConfirmDialog } from '@/components/ui/aurora-confirm-dialog';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { NotesRow } from './NotesRow';
 import { NoteContent } from './NoteContent';
+import { AttachmentSection } from './shared/AttachmentSection';
 import { getRecordTypeAccent, getRecordTypeColor, getRecordTypeLabel, RECORD_TYPE_ORDER } from './record-style';
 import { useNotes, useNoteMutations } from '@/lib/hooks/use-notes';
+import { useRfis } from '@/lib/hooks/use-rfis';
 import { useUiPreferences, type NotesSortDir, type NotesSortField } from '@/lib/hooks/use-ui-preferences';
 import { cn } from '@/lib/utils';
+import { RfiRegisterPanel } from '@/components/rfi';
+import { CorrespondencePanel } from '@/components/correspondence/CorrespondencePanel';
 import {
     getNoteType,
+    getNoteTypeLabel,
     type GenerateNoteContentResponse,
     type Note,
     type NoteType,
     type UpdateNoteRequest,
 } from '@/types/notes-meetings-reports';
+
+// Registry of typed-register panels (rfi, eot, defect, ...). When a single
+// type is selected and has a registered panel, NotesPanel renders that panel
+// in place of the generic notes table+detail grid. The createSignal prop is
+// bumped by the Records "+ New record" button to delegate creation into the
+// typed panel.
+//
+// EmailRegisterPanel wraps CorrespondencePanel so it conforms to the typed-
+// register panel signature (which carries optional `embedded` and
+// `createSignal` props that the email surface doesn't use).
+const EmailRegisterPanel: ComponentType<{ projectId: string; projectName: string; embedded?: boolean; createSignal?: number }> = ({
+    projectId,
+    projectName,
+}) => <CorrespondencePanel projectId={projectId} projectName={projectName} />;
+
+const TYPED_REGISTER_PANELS: Partial<Record<NoteType, ComponentType<{ projectId: string; projectName: string; embedded?: boolean; createSignal?: number }>>> = {
+    rfi: RfiRegisterPanel,
+    email: EmailRegisterPanel,
+};
 
 interface NoteWithCount extends Note {
     transmittalCount: number;
@@ -192,6 +209,7 @@ export function NotesPanel({
 }: NotesPanelProps) {
     const { notes, isLoading, error, refetch } = useNotes({ projectId });
     const { createNote, updateNote, deleteNote, copyNote } = useNoteMutations(projectId);
+    const { total: rfiTotal } = useRfis({ projectId });
     const { preferences, updatePreferences } = useUiPreferences(projectId);
 
     const prefNotes = preferences.notes ?? {};
@@ -205,8 +223,23 @@ export function NotesPanel({
 
     const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
     const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
+    // Tracks the most recently freshly-created note so the detail shell can open
+    // its title input pre-focused. Cleared on the next render after the prop has
+    // been consumed (via the NoteContent useEffect that reads it).
+    const [justCreatedNoteId, setJustCreatedNoteId] = useState<string | null>(null);
     const [lastSelectedNoteId, setLastSelectedNoteId] = useState<string | null>(null);
-    const [selectedTypes, setSelectedTypes] = useState<Set<NoteType>>(new Set());
+    const [selectedTypes, setSelectedTypes] = useState<Set<NoteType>>(() => {
+        // Seed from ?recordType=<type> so deep links land on the typed register pill.
+        if (typeof window === 'undefined') return new Set();
+        const param = new URLSearchParams(window.location.search).get('recordType');
+        if (!param) return new Set();
+        return RECORD_TYPE_ORDER.includes(param as NoteType)
+            ? new Set<NoteType>([param as NoteType])
+            : new Set();
+    });
+    const activeTypedRegisterType = selectedTypes.size === 1 ? Array.from(selectedTypes)[0] : null;
+    const TypedRegisterPanel = activeTypedRegisterType ? TYPED_REGISTER_PANELS[activeTypedRegisterType] : undefined;
+    const [typedCreateSignal, setTypedCreateSignal] = useState(0);
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
     const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
@@ -251,8 +284,9 @@ export function NotesPanel({
         notes.forEach((note) => {
             counts[getNoteType(note.type)] += 1;
         });
+        counts.rfi = rfiTotal;
         return counts;
-    }, [notes]);
+    }, [notes, rfiTotal]);
 
     const activeNote = useMemo(
         () => visibleNotes.find((note) => note.id === activeNoteId) ?? null,
@@ -305,17 +339,30 @@ export function NotesPanel({
     }, [activeNoteId, selectedNoteIds, visibleNotes]);
 
     const handleCreateNote = useCallback(async (initial?: { title?: string; content?: string }) => {
+        const initialType = selectedTypes.size === 1
+            ? Array.from(selectedTypes)[0]
+            : 'note';
         const created = await createNote({
             projectId,
-            type: 'note',
-            color: getRecordTypeColor('note'),
+            type: initialType,
+            color: getRecordTypeColor(initialType),
             ...initial,
         });
         setSelectedNoteIds(new Set([created.id]));
         setLastSelectedNoteId(created.id);
         setActiveNoteId(created.id);
+        setJustCreatedNoteId(created.id);
         return created;
-    }, [createNote, projectId]);
+    }, [createNote, projectId, selectedTypes]);
+
+    // Clear the auto-focus flag once the user navigates to a different note, so
+    // returning to the freshly-created note later doesn't re-open its title
+    // editor automatically.
+    useEffect(() => {
+        if (justCreatedNoteId && activeNoteId !== justCreatedNoteId) {
+            setJustCreatedNoteId(null);
+        }
+    }, [activeNoteId, justCreatedNoteId]);
 
     const handleUpdateNote = useCallback(async (noteId: string, data: Parameters<typeof updateNote>[1]) => {
         await updateNote(noteId, data);
@@ -356,14 +403,61 @@ export function NotesPanel({
         updatePreferences({ notes: { sortField: field, sortDir: nextDir, view: 'list' } });
     }, [effectiveSortDirByField, sortDir, sortField, updatePreferences]);
 
+    const handleReclassifySelectedNotes = useCallback(async (type: NoteType) => {
+        if (selectedNoteIds.size === 0) return;
+
+        const notesById = new Map(notes.map((note) => [note.id, note]));
+        const targetIds = Array.from(selectedNoteIds).filter((noteId) => {
+            const note = notesById.get(noteId);
+            return note && getNoteType(note.type) !== type;
+        });
+
+        if (targetIds.length === 0) return;
+
+        if (selectedTypes.size > 0) {
+            setSelectedTypes(new Set());
+        }
+
+        await Promise.all(
+            targetIds.map((noteId) => updateNote(noteId, { type, color: getRecordTypeColor(type) }))
+        );
+    }, [notes, selectedNoteIds, selectedTypes.size, updateNote]);
+
     const handleTypeFilterClick = useCallback((type: NoteType, event: MouseEvent<HTMLButtonElement>) => {
-        const additive = event.ctrlKey || event.metaKey;
+        const modifier = event.ctrlKey || event.metaKey;
+
+        // Ctrl/Cmd+click WITH a current selection: reclassify selected records
+        // to this type (existing reclassify flow).
+        if (modifier && selectedNoteIds.size > 0) {
+            event.preventDefault();
+            void handleReclassifySelectedNotes(type);
+            return;
+        }
+
+        // Ctrl/Cmd+click WITHOUT a current selection: bulk-select every record
+        // of this type — mirrors the doc-repo CategoryTile's Ctrl+click bulk
+        // select. Ignores the current type-filter so the user can stage a
+        // cross-type selection. The chip's own filter doesn't change.
+        if (modifier) {
+            event.preventDefault();
+            const matching = notes.filter((note) => getNoteType(note.type) === type);
+            if (matching.length === 0) return;
+            const ids = matching.map((note) => note.id);
+            setSelectedNoteIds((prev) => {
+                const next = new Set(prev);
+                ids.forEach((id) => next.add(id));
+                return next;
+            });
+            setLastSelectedNoteId(ids[ids.length - 1] ?? null);
+            setActiveNoteId(ids[ids.length - 1] ?? null);
+            return;
+        }
+
+        // Plain click: toggle the type filter (single-select; click an active
+        // chip again to clear back to "all").
         setSelectedTypes((prev) => {
             const next = new Set(prev);
-            if (additive) {
-                if (next.has(type)) next.delete(type);
-                else next.add(type);
-            } else if (next.size === 1 && next.has(type)) {
+            if (next.size === 1 && next.has(type)) {
                 next.clear();
             } else {
                 next.clear();
@@ -371,7 +465,7 @@ export function NotesPanel({
             }
             return next;
         });
-    }, []);
+    }, [handleReclassifySelectedNotes, notes, selectedNoteIds.size]);
 
     const handleSelectNote = useCallback((noteId: string, event: MouseEvent<HTMLTableRowElement>) => {
         const next = new Set(selectedNoteIds);
@@ -400,6 +494,14 @@ export function NotesPanel({
             }
             setLastSelectedNoteId(noteId);
         } else {
+            if (isAlreadySelected && activeNoteId === noteId && selectedNoteIds.size === 1) {
+                next.clear();
+                setLastSelectedNoteId(null);
+                setActiveNoteId(null);
+                setSelectedNoteIds(next);
+                return;
+            }
+
             next.clear();
             next.add(noteId);
             setLastSelectedNoteId(noteId);
@@ -433,7 +535,7 @@ export function NotesPanel({
 
     if (error) {
         return (
-            <div className={cn('flex h-full flex-col', className)} style={{ background: 'var(--sw-paper)' }}>
+            <div className={cn('flex h-full flex-col', className)} style={{ background: 'var(--sw-canvas)' }}>
                 <div className="flex flex-1 items-center justify-center p-8">
                     <div className="flex max-w-sm flex-col items-center justify-center border border-[var(--sw-rule)] bg-white p-8 text-center">
                         <div className="mb-4 bg-[var(--sw-rose-tint)] p-4">
@@ -453,14 +555,10 @@ export function NotesPanel({
     const selectedCount = selectedNoteIds.size;
 
     return (
-        <div className={cn('flex h-full flex-col', className)} style={{ background: 'var(--sw-paper)' }}>
+        <div className={cn('flex h-full flex-col', className)} style={{ background: 'var(--sw-canvas)' }}>
             <header className="shrink-0 px-4 pt-2 pb-3" style={{ borderBottom: '1px solid var(--sw-rule-2)' }}>
                 <div className="mb-2 flex items-center justify-between gap-4">
                     <RecordsBreadcrumb projectName={projectName} recordCrumb={recordCrumb} />
-                    <div className="flex gap-1.5">
-                        <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
-                        <StatusPill label="stage: detail design" tone="dark" />
-                    </div>
                 </div>
 
                 <div className="mb-2 flex items-end justify-between gap-4">
@@ -471,9 +569,11 @@ export function NotesPanel({
                         >
                             Records
                         </h2>
-                        <div className="mt-1 min-h-[18px] text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
-                            {visibleNotes.length} visible / {notes.length} total
-                        </div>
+                        {!TypedRegisterPanel && (
+                            <div className="mt-1 min-h-[18px] text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
+                                {visibleNotes.length} visible / {notes.length} total
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -486,24 +586,33 @@ export function NotesPanel({
                     />
                     {RECORD_TYPE_ORDER.map((type) => {
                         const selected = selectedTypes.has(type);
+                        const label = getRecordTypeLabel(type);
+                        const bulkHint = selectedNoteIds.size > 0
+                            ? `Ctrl+Click to reclassify selected records to ${label}`
+                            : `Ctrl+Click to select all ${label} records`;
                         return (
                             <RecordTypeFilterButton
                                 key={type}
-                                label={getRecordTypeLabel(type)}
+                                label={label}
                                 count={typeCounts[type]}
                                 accent={getRecordTypeAccent(type)}
                                 selected={selected}
                                 onClick={(event) => handleTypeFilterClick(type, event)}
+                                title={bulkHint}
                             />
                         );
                     })}
                     <button
                         type="button"
                         onClick={() => {
-                            void handleCreateNote();
+                            if (TypedRegisterPanel) {
+                                setTypedCreateSignal((n) => n + 1);
+                            } else {
+                                void handleCreateNote();
+                            }
                         }}
                         disabled={isLoading}
-                        className="ml-auto inline-flex h-7 items-center gap-1.5 bg-[var(--sw-rose)] px-3 text-[11px] font-bold uppercase text-[var(--sw-ink)] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-55"
+                        className="ml-auto inline-flex h-7 items-center gap-1.5 bg-[var(--sw-cta)] px-3 text-[11px] font-bold uppercase text-[var(--sw-cta-fg)] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-55"
                         style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.14em' }}
                     >
                         <Plus className="h-3.5 w-3.5" />
@@ -512,6 +621,16 @@ export function NotesPanel({
                 </div>
             </header>
 
+            {TypedRegisterPanel ? (
+                <div className="min-h-0 flex-1 overflow-hidden">
+                    <TypedRegisterPanel
+                        projectId={projectId}
+                        projectName={projectName}
+                        embedded
+                        createSignal={typedCreateSignal}
+                    />
+                </div>
+            ) : (
             <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-4 xl:grid-cols-[minmax(360px,0.82fr)_minmax(520px,1.18fr)]">
                 <section className="flex min-h-[260px] min-w-0 flex-col self-start overflow-hidden border border-[var(--sw-rule)] bg-white @container">
                     {isLoading ? (
@@ -521,29 +640,6 @@ export function NotesPanel({
                             <Skeleton className="mb-2 h-8" />
                             <Skeleton className="h-8" />
                         </div>
-                    ) : notes.length === 0 ? (
-                        <div className="flex flex-1 flex-col items-center justify-center gap-3 border border-dashed border-[var(--sw-rule)] bg-white m-3">
-                            <p className="text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
-                                No records yet.
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    void handleCreateNote();
-                                }}
-                                className="inline-flex items-center gap-1.5 border border-[var(--sw-rule)] px-3 py-1.5 text-[11px] font-semibold uppercase text-[var(--sw-ink)] transition-colors hover:border-[var(--sw-ink)] hover:bg-[var(--sw-rose-tint)]"
-                                style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.14em' }}
-                            >
-                                <Plus className="h-3.5 w-3.5" />
-                                New record
-                            </button>
-                        </div>
-                    ) : visibleNotes.length === 0 ? (
-                        <div className="m-3 flex flex-1 items-center justify-center border border-dashed border-[var(--sw-rule)] bg-white">
-                            <p className="text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
-                                No records match the current type filter.
-                            </p>
-                        </div>
                     ) : (
                         <div className="min-h-0 flex-1 overflow-y-auto">
                             <table
@@ -551,7 +647,7 @@ export function NotesPanel({
                                 style={{ fontFamily: 'var(--sw-font-mono)', lineHeight: 1.1 }}
                             >
                                 <TableHeader>
-                                    <TableRow className="border-[var(--sw-rule-2)] bg-white hover:bg-white">
+                                    <TableRow className="border-[var(--sw-rule-2)] bg-[var(--sw-shell)] hover:bg-[var(--sw-shell)]">
                                         <TypeSortableHead
                                             className="w-24 !px-3"
                                             label="Type"
@@ -583,16 +679,27 @@ export function NotesPanel({
                                             dir={sortDir}
                                             onClick={() => handleSortChange('date')}
                                         />
-                                        <TableHead className="w-8 !px-1 text-right">
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowBulkDeleteConfirm(true)}
-                                                disabled={selectedCount === 0 || isBulkDeleting}
-                                                className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)] disabled:cursor-not-allowed disabled:opacity-35"
-                                                title={selectedCount === 0 ? 'Select records to delete' : `Delete ${selectedCount} selected record${selectedCount !== 1 ? 's' : ''}`}
-                                            >
-                                                {isBulkDeleting ? <LoaderIcon /> : <Trash className="h-4 w-4" />}
-                                            </button>
+                                        <TableHead className="w-16 !px-1 text-right">
+                                            <div className="flex items-center justify-end gap-0.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { void handleCreateNote(); }}
+                                                    className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-ink)]"
+                                                    title="Create new record"
+                                                    aria-label="Create new record"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowBulkDeleteConfirm(true)}
+                                                    disabled={selectedCount === 0 || isBulkDeleting}
+                                                    className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)] disabled:cursor-not-allowed disabled:opacity-35"
+                                                    title={selectedCount === 0 ? 'Select records to delete' : `Delete ${selectedCount} selected record${selectedCount !== 1 ? 's' : ''}`}
+                                                >
+                                                    {isBulkDeleting ? <LoaderIcon /> : <Trash className="h-4 w-4" />}
+                                                </button>
+                                            </div>
                                         </TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -611,21 +718,31 @@ export function NotesPanel({
                                     ))}
                                 </TableBody>
                             </table>
+                            {visibleNotes.length === 0 && (
+                                <div className="flex items-center justify-center py-10">
+                                    <p className="text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
+                                        {notes.length === 0
+                                            ? 'No records yet. Click + to create one.'
+                                            : 'No records match the current type filter.'}
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </section>
 
                 <NoteDetailShell
                     note={activeNote}
-                    selectedCount={selectedCount}
                     onCreateRecord={handleCreateNote}
                     onUpdate={(data) => activeNote ? handleUpdateNote(activeNote.id, data) : Promise.resolve()}
                     onCopy={() => activeNote ? handleCopyNote(activeNote.id) : Promise.resolve()}
                     onSaveTransmittal={activeNote && onSaveTransmittal ? () => onSaveTransmittal(activeNote.id) : undefined}
                     onLoadTransmittal={activeNote && onLoadTransmittal ? () => onLoadTransmittal(activeNote.id) : undefined}
                     onSaveNewTransmittal={onSaveTransmittal}
+                    autoFocusTitleNoteId={justCreatedNoteId}
                 />
             </div>
+            )}
 
             <AuroraConfirmDialog
                 open={showBulkDeleteConfirm}
@@ -724,13 +841,17 @@ interface RecordTypeFilterButtonProps {
     selected: boolean;
     accent?: string;
     onClick: (event: MouseEvent<HTMLButtonElement>) => void;
+    /** Optional tooltip — used to advertise Ctrl/Cmd+click bulk-select on the
+        per-type chips (matches the doc-repo CategoryTile UX). */
+    title?: string;
 }
 
-function RecordTypeFilterButton({ label, count, selected, accent, onClick }: RecordTypeFilterButtonProps) {
+function RecordTypeFilterButton({ label, count, selected, accent, onClick, title }: RecordTypeFilterButtonProps) {
     return (
         <button
             type="button"
             onClick={onClick}
+            title={title}
             className={cn(
                 'inline-flex h-7 items-center gap-1.5 border px-2.5 text-[10px] font-semibold transition-colors',
                 selected
@@ -756,38 +877,48 @@ function RecordTypeFilterButton({ label, count, selected, accent, onClick }: Rec
 
 interface NoteDetailShellProps {
     note: NoteWithCount | null;
-    selectedCount: number;
     onCreateRecord: (initial?: { title?: string; content?: string }) => Promise<Note>;
     onUpdate: (data: UpdateNoteRequest) => Promise<void>;
     onCopy: () => Promise<void>;
     onSaveTransmittal?: () => void;
     onLoadTransmittal?: () => void;
     onSaveNewTransmittal?: (noteId: string) => void;
+    /** When set, the rendered NoteContent opens with the title input already
+        focused so a freshly-created record lets the user start typing the
+        title immediately (no second click needed). */
+    autoFocusTitleNoteId?: string | null;
 }
 
 function NoteDetailShell({
     note,
-    selectedCount,
     onCreateRecord,
     onUpdate,
     onCopy,
     onSaveTransmittal,
     onLoadTransmittal,
     onSaveNewTransmittal,
+    autoFocusTitleNoteId,
 }: NoteDetailShellProps) {
     const [viewMode, setViewMode] = useState<DetailViewMode>('long');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isCreatingDraft, setIsCreatingDraft] = useState(false);
-    const [showEmptyAttachments, setShowEmptyAttachments] = useState(true);
+    const [refreshStatus, setRefreshStatus] = useState<string | null>(null);
 
     const noteType = note ? getNoteType(note.type) : null;
-    const typeAccent = noteType ? getRecordTypeAccent(noteType) : 'var(--sw-rose)';
+    const blankNoteType: NoteType = 'note';
+    const typeAccent = noteType ? getRecordTypeAccent(noteType) : getRecordTypeAccent(blankNoteType);
     const detailDate = note ? formatDetailDate(note.noteDate) : '';
+    const detailHeader = noteType ? `Records / ${getNoteTypeLabel(noteType)}` : 'Records';
+
+    useEffect(() => {
+        setRefreshStatus(null);
+    }, [note?.id]);
 
     const handleRefresh = useCallback(async () => {
         if (!note) return;
 
         setIsRefreshing(true);
+        setRefreshStatus('Checking document size before AI review.');
         try {
             const response = await fetch('/api/ai/generate-note-content', {
                 method: 'POST',
@@ -807,9 +938,15 @@ function NoteDetailShell({
 
             const result: GenerateNoteContentResponse = await response.json();
             await onUpdate({ content: result.content });
+            setRefreshStatus(
+                result.notice || result.sourcesUsed.usedStagedSummary
+                    ? result.notice ?? 'This document is large, summarising in sections.'
+                    : null
+            );
             setViewMode('long');
         } catch (error) {
             console.error('[NotesPanel] Failed to refresh record content:', error);
+            setRefreshStatus('Refresh failed. Try again with a smaller document or prompt.');
         } finally {
             setIsRefreshing(false);
         }
@@ -824,23 +961,38 @@ function NoteDetailShell({
         }
     }, [onCreateRecord]);
 
+    const handleCreateBlankDraft = useCallback((initial?: { title?: string; content?: string }) => {
+        return handleCreateDraft({ title: 'New Note', ...initial });
+    }, [handleCreateDraft]);
+
+    const handleBlankSaveTransmittal = useCallback(async () => {
+        const created = await handleCreateBlankDraft();
+        onSaveNewTransmittal?.(created.id);
+    }, [handleCreateBlankDraft, onSaveNewTransmittal]);
+
     if (!note || !noteType) {
         return (
             <section className="flex min-h-[260px] min-w-0 flex-col overflow-hidden">
                 <div
-                    className="flex h-9 items-center gap-2 px-3"
+                    className="flex h-9 shrink-0 items-center gap-2 px-3"
                     style={{ background: 'var(--sw-ink)', color: 'var(--sw-paper)' }}
                 >
                     <span
                         aria-hidden="true"
                         className="inline-block rounded-full"
-                        style={{ width: 8, height: 8, background: 'var(--sw-rose)' }}
+                        style={{ width: 8, height: 8, background: typeAccent }}
                     />
                     <span
                         className="text-[10px] font-semibold uppercase"
                         style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.18em' }}
                     >
-                        Record selected
+                        Records / Note
+                    </span>
+                    <span
+                        className="ml-auto truncate text-[10px]"
+                        style={{ fontFamily: 'var(--sw-font-mono)', color: 'rgba(232,228,218,0.6)' }}
+                    >
+                        No date
                     </span>
                 </div>
 
@@ -853,185 +1005,109 @@ function NoteDetailShell({
                     }}
                 >
                     <div
-                        className="flex items-center justify-between gap-3 px-4 py-2"
+                        className="flex items-center justify-end gap-3 px-4 py-2"
                         style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
+                    >
+                        <div
+                            role="group"
+                            aria-label="View mode"
+                            className="inline-flex items-center"
+                            style={{
+                                border: '1px solid var(--sw-rule)',
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                letterSpacing: '0.05em',
+                            }}
+                        >
+                            <DetailViewModeButton
+                                label="Short"
+                                active={viewMode === 'short'}
+                                onClick={() => setViewMode('short')}
+                            />
+                            <DetailViewModeButton
+                                label="Long"
+                                active={viewMode === 'long'}
+                                onClick={() => setViewMode('long')}
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                void handleCreateBlankDraft();
+                            }}
+                            disabled={isCreatingDraft}
+                            title="Refresh record content"
+                            aria-label="Refresh record content"
+                            className="inline-flex items-center border border-[var(--sw-rule)] bg-transparent px-1.5 py-1 text-[var(--sw-rose-dk)] transition-colors hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55"
+                        >
+                            <RotateCw className={cn('h-3 w-3', isCreatingDraft && 'animate-spin')} />
+                        </button>
+                    </div>
+
+                    <div
+                        className={cn(
+                            'px-4 pb-4 pt-2 transition-colors note-colored-scrollbar note-dark-text',
+                            viewMode === 'long' ? 'min-h-[520px]' : 'min-h-[320px]'
+                        )}
+                        style={{
+                            backgroundColor: 'white',
+                            color: 'var(--sw-ink)',
+                            '--note-scrollbar-thumb': 'rgba(122, 184, 194, 0.58)',
+                            '--note-scrollbar-track': 'white',
+                        } as CSSProperties}
                     >
                         <button
                             type="button"
                             onClick={() => {
-                                void handleCreateDraft();
+                                void handleCreateBlankDraft();
                             }}
-                            className="min-w-0 text-left"
+                            className="block max-w-full text-left"
                         >
-                            <div
-                                className="truncate text-[10px] font-semibold uppercase text-[var(--sw-muted)]"
-                                style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.18em' }}
+                            <h2
+                                className="truncate text-lg font-semibold text-[var(--sw-muted)] transition-colors hover:text-[var(--sw-ink)]"
+                                title="Click to create note"
                             >
-                                Record type
-                            </div>
+                                New Note
+                            </h2>
                         </button>
-                        <div className="flex shrink-0 items-center gap-1.5">
-                            <div
-                                role="group"
-                                aria-label="View mode"
-                                className="inline-flex items-center"
-                                style={{
-                                    border: '1px solid var(--sw-rule)',
-                                    fontFamily: 'var(--sw-font-mono)',
-                                    fontSize: 10,
-                                    letterSpacing: '0.05em',
-                                }}
-                            >
-                                <DetailViewModeButton
-                                    label="Short"
-                                    active={viewMode === 'short'}
-                                    onClick={() => setViewMode('short')}
-                                />
-                                <DetailViewModeButton
-                                    label="Long"
-                                    active={viewMode === 'long'}
-                                    onClick={() => setViewMode('long')}
-                                />
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    void handleCreateDraft();
-                                }}
-                                disabled={isCreatingDraft}
-                                title="Refresh record content"
-                                aria-label="Refresh record content"
-                                className="inline-flex items-center border border-[var(--sw-rule)] bg-transparent px-1.5 py-1 text-[var(--sw-rose-dk)] transition-colors hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55"
-                            >
-                                <RotateCw className={cn('h-3 w-3', isCreatingDraft && 'animate-spin')} />
-                            </button>
-                        </div>
-                    </div>
 
-                    <button
-                        type="button"
-                        onClick={() => {
-                            void handleCreateDraft();
-                        }}
-                        className="block w-full px-4 py-3 text-left transition-colors hover:bg-[var(--sw-paper-2)]"
-                        style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
-                    >
-                        <span
-                            className="block text-lg font-semibold text-[var(--sw-muted)]"
-                            style={{ fontFamily: 'var(--sw-font-sans)' }}
+                        <div
+                            className="mt-4 min-h-0 flex-1"
+                            onClickCapture={() => {
+                                void handleCreateBlankDraft();
+                            }}
                         >
-                            Record title
-                        </span>
-                    </button>
-
-                    <div
-                        className="flex items-center gap-0.5 px-4 py-1"
-                        style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
-                    >
-                        {[
-                            { title: 'Bold', icon: Bold },
-                            { title: 'Italic', icon: Italic },
-                            { title: 'Bullet list', icon: List },
-                        ].map(({ title, icon: Icon }) => (
-                            <button
-                                key={title}
-                                type="button"
-                                onClick={() => {
-                                    void handleCreateDraft();
-                                }}
-                                className="p-1.5 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-ink)]"
-                                title={title}
-                            >
-                                <Icon className="h-4 w-4" />
-                            </button>
-                        ))}
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => {
-                            void handleCreateDraft();
-                        }}
-                        className="block min-h-[230px] w-full px-4 py-4 text-left transition-colors hover:bg-[var(--sw-paper-2)]"
-                    >
-                        <span
-                            className="block text-sm leading-7 text-[var(--sw-muted)]"
-                            style={{ fontFamily: 'var(--sw-font-body)' }}
-                        >
-                            Body text. Click here to start a new record.
-                        </span>
-                    </button>
-
-                    <div className="px-4 py-4" style={{ borderTop: '1px solid var(--sw-rule-2)' }}>
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                            <div
-                                className="text-sm font-semibold uppercase text-[var(--sw-ink)]"
-                                style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.08em' }}
-                            >
-                                Attachments
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        const created = await handleCreateDraft();
-                                        onSaveNewTransmittal?.(created.id);
-                                    }}
-                                    disabled={isCreatingDraft}
-                                    className="inline-flex h-7 items-center gap-1 border border-black/15 bg-black/5 px-2 text-xs font-medium text-black/60 transition-colors hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55"
-                                    title="Save selected documents"
-                                >
-                                    <Save className="h-3 w-3" />
-                                    Save
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        void handleCreateDraft();
-                                    }}
-                                    disabled={isCreatingDraft}
-                                    className="inline-flex h-7 items-center gap-1 border border-black/15 bg-black/5 px-2 text-xs font-medium text-black/60 transition-colors hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55"
-                                    title="Load attachments"
-                                >
-                                    <RotateCcw className="h-3 w-3" />
-                                    Load
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowEmptyAttachments((prev) => !prev)}
-                                    className="inline-flex h-7 w-7 items-center justify-center text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-ink)]"
-                                    title={showEmptyAttachments ? 'Hide attachments' : 'Show attachments'}
-                                >
-                                    {showEmptyAttachments ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                </button>
-                            </div>
+                            <RichTextEditor
+                                content=""
+                                onChange={() => undefined}
+                                transparentBg={true}
+                                variant="compact"
+                                toolbarVariant="mini"
+                                disabled={true}
+                                className="h-full"
+                            />
                         </div>
-                        {showEmptyAttachments && (
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    const created = await handleCreateDraft();
-                                    onSaveNewTransmittal?.(created.id);
+
+                        <div className="mt-4 shrink-0">
+                            <AttachmentSection
+                                documents={[]}
+                                onSave={() => {
+                                    void handleBlankSaveTransmittal();
                                 }}
-                                className="flex min-h-[110px] w-full flex-col items-center justify-center bg-white px-4 text-center text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-paper-2)]"
-                                style={{ fontFamily: 'var(--sw-font-mono)' }}
-                            >
-                                <FileText className="mb-2 h-8 w-8 opacity-45" />
-                                <span className="text-sm">No documents attached. Use Save to select documents from the repository.</span>
-                                <span className="mt-1 text-xs">Select documents, then use Save</span>
-                            </button>
-                        )}
+                                canSave={!isCreatingDraft}
+                                onLoad={() => undefined}
+                                canLoad={false}
+                                compact={true}
+                                accentColor={typeAccent}
+                            />
+                        </div>
                     </div>
                 </div>
             </section>
         );
     }
 
-    const meta = [
-        getRecordTypeLabel(noteType),
-        detailDate || 'No date',
-        selectedCount > 1 ? `${selectedCount} selected` : null,
-    ].filter(Boolean).join(' / ');
+    const headerDate = detailDate || 'No date';
 
     return (
         <section className="flex min-h-0 min-w-0 flex-col overflow-hidden">
@@ -1048,13 +1124,13 @@ function NoteDetailShell({
                     className="text-[10px] font-semibold uppercase"
                     style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.18em' }}
                 >
-                    Record selected
+                    {detailHeader}
                 </span>
                 <span
                     className="ml-auto truncate text-[10px]"
                     style={{ fontFamily: 'var(--sw-font-mono)', color: 'rgba(232,228,218,0.6)' }}
                 >
-                    {meta}
+                    {headerDate}
                 </span>
             </div>
 
@@ -1067,21 +1143,19 @@ function NoteDetailShell({
                 }}
             >
                 <div
-                    className="flex items-center justify-between gap-3 px-4 py-2"
+                    className="flex items-center justify-end gap-3 px-4 py-2"
                     style={{ borderBottom: '1px solid var(--sw-rule-2)' }}
                 >
-                    <div className="min-w-0">
-                        <div
-                            className="truncate text-[10px] font-semibold uppercase"
-                            style={{
-                                fontFamily: 'var(--sw-font-mono)',
-                                letterSpacing: '0.18em',
-                                color: typeAccent,
-                            }}
+                    {refreshStatus && (
+                        <span
+                            role="status"
+                            aria-live="polite"
+                            className="mr-auto min-w-0 truncate text-[10px] text-[var(--sw-muted)]"
+                            style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.02em' }}
                         >
-                            {getRecordTypeLabel(noteType)} record
-                        </div>
-                    </div>
+                            {refreshStatus}
+                        </span>
+                    )}
                     <div className="flex shrink-0 items-center gap-1.5">
                         <div
                             role="group"
@@ -1129,6 +1203,7 @@ function NoteDetailShell({
                     surface="sitewise"
                     editorToolbarVariant="mini"
                     showAiToolbar={false}
+                    autoFocusTitle={autoFocusTitleNoteId === note.id}
                     className={cn(
                         'flex min-h-0 flex-col',
                         viewMode === 'long' ? 'min-h-[520px]' : 'min-h-[320px]'

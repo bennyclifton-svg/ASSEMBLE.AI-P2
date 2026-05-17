@@ -63,6 +63,7 @@ export const NOTE_TYPES = [
   'transmittal',
   'review',
   'note',
+  'email',
 ] as const;
 
 export type NoteType = typeof NOTE_TYPES[number];
@@ -79,6 +80,7 @@ export const NOTE_TYPE_LABELS: Record<NoteType, string> = {
   transmittal: 'Transmittal',
   review: 'Review',
   note: 'Note',
+  email: 'Email',
 };
 
 export function isNoteType(value: unknown): value is NoteType {
@@ -425,9 +427,15 @@ export interface GenerateNoteContentRequest {
 
 export interface GenerateNoteContentResponse {
   content: string;
+  notice?: string;
   sourcesUsed: {
     attachedDocs: number;
     ragChunks: number;
+    documentChunks?: number;
+    sourceMode?: 'attached-document' | 'attached-document-summary' | 'rag';
+    estimatedDocumentTokens?: number;
+    estimatedDirectRequestTokens?: number;
+    usedStagedSummary?: boolean;
   };
 }
 
