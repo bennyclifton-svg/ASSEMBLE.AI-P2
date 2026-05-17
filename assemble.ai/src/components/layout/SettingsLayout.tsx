@@ -2,10 +2,11 @@
 
 import { ReactNode, useCallback, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Image from 'next/image';
+import { useRouter, usePathname } from 'next/navigation';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { ArrowLeft, CreditCard, Cpu, HardDrive, Package, User, Users } from 'lucide-react';
-import { SitewiseWordmark } from '@/components/brand/SitewiseWordmark';
+import { SitewiseNavGroup, SitewiseNavItem } from '@/components/dashboard/nav';
 import { UserProfileDropdown } from './UserProfileDropdown';
 import { useIsSuperAdmin } from '@/lib/auth-client';
 
@@ -34,18 +35,9 @@ interface SettingsLayoutProps {
     children: ReactNode;
 }
 
-/**
- * SettingsLayout - Two-panel layout for the consolidated Settings section.
- *
- * - Left panel: Sitewise wordmark, Back-to-Dashboard, Account/Billing nav,
- *   and (for super admins) an Admin subhead with Users/AI Models/Storage/Products.
- * - Right panel: User profile dropdown header, watermark, and scrollable content.
- *
- * Active nav state is driven by the current pathname (exact match or descendant
- * route). Panel sizes are persisted to localStorage under `settings-panel-sizes`.
- */
 export function SettingsLayout({ children }: SettingsLayoutProps) {
     const pathname = usePathname();
+    const router = useRouter();
     const isSuperAdmin = useIsSuperAdmin();
 
     const [panelSizes, setPanelSizes] = useState<number[]>(() => {
@@ -68,73 +60,78 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
         }
     }, []);
 
-    const renderItem = (item: NavItem) => {
+    const renderNavItem = (item: NavItem) => {
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-        const Icon = item.icon;
         return (
-            <Link
+            <SitewiseNavItem
                 key={item.href}
-                href={item.href}
-                data-state={active ? 'active' : 'inactive'}
-                aria-current={active ? 'page' : undefined}
-                className="sitewise-button"
-            >
-                <Icon className="h-4 w-4" />
-                {item.label}
-            </Link>
+                label={item.label}
+                icon={item.icon}
+                active={active}
+                onClick={() => router.push(item.href)}
+            />
         );
     };
 
     return (
-        <div className="sitewise-control-surface h-screen w-full relative bg-[var(--sw-paper)]">
+        <div className="h-screen w-full bg-[var(--sw-paper)]">
             <PanelGroup
                 direction="horizontal"
-                className="h-full w-full relative"
+                className="h-full w-full"
                 onLayout={handlePanelResize}
             >
                 <Panel
                     defaultSize={panelSizes[0]}
                     minSize={12}
-                    className="border-r border-[var(--sw-rule)]"
+                    className="shadow-xl z-10"
                 >
-                    <div className="h-full flex flex-col animate-slide-in-up">
-                        <header className="flex items-center px-6 py-3 border-b border-[var(--sw-rule)] bg-[var(--sw-paper-2)] flex-shrink-0 min-h-[57px]">
+                    <aside
+                        className="h-full flex flex-col animate-slide-in-up overflow-hidden"
+                        style={{ background: 'var(--sw-paper-2)' }}
+                    >
+                        <Link
+                            href="/dashboard"
+                            className="hover:opacity-80 transition-opacity flex-shrink-0 py-3 px-4"
+                            aria-label="Sitewise — dashboard"
+                        >
+                            <Image
+                                src="/images/sitewise-logo-light.png"
+                                alt="Sitewise"
+                                width={1038}
+                                height={554}
+                                priority
+                                style={{ height: 67, width: 'auto', display: 'block', marginLeft: 24 }}
+                            />
+                        </Link>
+                        <div className="flex flex-col flex-1 p-4 gap-4 overflow-auto">
                             <Link
                                 href="/dashboard"
-                                className="hover:opacity-80 transition-opacity"
-                                aria-label="Sitewise — dashboard"
+                                aria-label="Back to dashboard"
+                                className="flex items-center gap-2 px-3 py-2 text-left transition-colors"
+                                style={{
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    color: 'var(--sw-muted)',
+                                    border: '1px solid transparent',
+                                    borderLeft: '2px solid transparent',
+                                }}
                             >
-                                <SitewiseWordmark
-                                    size={20}
-                                    color="var(--color-text-primary)"
-                                    accent="var(--sw-rose)"
-                                />
+                                <ArrowLeft className="h-[18px] w-[18px]" strokeWidth={1.75} />
+                                <span>Dashboard</span>
                             </Link>
-                        </header>
-                        <div className="flex-1 overflow-auto bg-[var(--sw-paper-2)] px-4 py-4">
-                            <Link
-                                href="/dashboard"
-                                className="sitewise-button sitewise-button-muted"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                Dashboard
-                            </Link>
-                            <div className="mt-4 grid gap-2">
-                                {ACCOUNT_ITEMS.map(renderItem)}
-                            </div>
+                            <SitewiseNavGroup>
+                                {ACCOUNT_ITEMS.map(renderNavItem)}
+                            </SitewiseNavGroup>
                             {isSuperAdmin && (
-                                <>
-                                    <div className="mt-6 mb-2 px-2 sitewise-page-kicker text-[var(--sw-muted)]">
-                                        Admin
-                                    </div>
-                                    <div className="grid gap-2">{ADMIN_ITEMS.map(renderItem)}</div>
-                                </>
+                                <SitewiseNavGroup label="Admin" showDivider>
+                                    {ADMIN_ITEMS.map(renderNavItem)}
+                                </SitewiseNavGroup>
                             )}
                         </div>
-                    </div>
+                    </aside>
                 </Panel>
 
-                <PanelResizeHandle className="w-1 bg-[var(--sw-rule)] hover:bg-[var(--sw-rose)] transition-colors cursor-col-resize h-full" />
+                <PanelResizeHandle className="w-1 bg-[var(--sw-canvas)] hover:bg-[var(--sw-cta)] data-[resize-handle-state=drag]:bg-[var(--sw-cta)] transition-colors cursor-col-resize h-full" />
 
                 <Panel
                     defaultSize={panelSizes[1]}
@@ -142,18 +139,10 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                     className="bg-[var(--sw-paper)]"
                 >
                     <div className="h-full flex flex-col animate-slide-in-up animate-delay-100 relative">
-                        <header className="flex items-center justify-end px-6 py-3 border-b border-[var(--sw-rule)] bg-[var(--sw-paper-2)] flex-shrink-0 min-h-[57px]">
+                        <div className="absolute top-3 right-5 z-20">
                             <UserProfileDropdown />
-                        </header>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                            src="/images/logo-mask.svg"
-                            alt=""
-                            aria-hidden="true"
-                            draggable={false}
-                            className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none panel-watermark"
-                        />
-                        <div className="flex-1 min-h-0 overflow-auto relative z-10">
+                        </div>
+                        <div className="flex-1 min-h-0 overflow-auto">
                             {children}
                         </div>
                     </div>
