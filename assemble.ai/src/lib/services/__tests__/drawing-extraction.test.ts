@@ -84,6 +84,50 @@ describe('drawing extraction', () => {
         });
     });
 
+    it('extracts document register numbers from spaced decimal filenames', () => {
+        expect(extractFromFilename('CC 02.3 Site & Sediment Control Plan [E].pdf')).toMatchObject({
+            drawingNumber: 'CC 02.3',
+            drawingName: 'Site & Sediment Control Plan',
+            drawingRevision: 'E',
+            source: 'FILENAME',
+        });
+
+        expect(extractFromFilename('CC 02.11 Stormwater Management Plan [E].pdf')).toMatchObject({
+            drawingNumber: 'CC 02.11',
+            drawingName: 'Stormwater Management Plan',
+            drawingRevision: 'E',
+            source: 'FILENAME',
+        });
+    });
+
+    it('keeps trailing filename qualifiers while removing bracketed revisions', () => {
+        expect(extractFromFilename('CC 02.5 Site Plan Amenities Block 2 [E] - MU.pdf')).toMatchObject({
+            drawingNumber: 'CC 02.5',
+            drawingName: 'Site Plan Amenities Block 2 - MU',
+            drawingRevision: 'E',
+            source: 'FILENAME',
+        });
+    });
+
+    it('keeps filename register metadata for non-drawing document types', async () => {
+        const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+
+        try {
+            await expect(extractDrawingInfo({
+                fileBuffer: Buffer.from('Specification text'),
+                filename: 'CC 02.2 Specification E.pdf',
+                mimeType: 'application/pdf',
+            })).resolves.toMatchObject({
+                drawingNumber: 'CC 02.2',
+                drawingName: 'Specification',
+                drawingRevision: 'E',
+                source: 'FILENAME',
+            });
+        } finally {
+            consoleLogSpy.mockRestore();
+        }
+    });
+
     it('falls back to filename metadata when pdf vision extraction fails', async () => {
         mockMessagesCreate.mockRejectedValueOnce(new Error('vision unavailable'));
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);

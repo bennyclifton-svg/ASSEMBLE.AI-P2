@@ -26,7 +26,7 @@ export function SitewiseProjectSwitcherCard({
         <div
             className="sitewise-project-switcher-card px-3 py-2 transition-colors"
             style={{
-                background: '#2F363E',
+                background: 'var(--sw-paper-3)',
                 border: '1px solid transparent',
                 borderLeft: '2px solid var(--sw-rose)',
             }}

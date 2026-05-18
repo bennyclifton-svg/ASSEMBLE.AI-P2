@@ -19,7 +19,7 @@ export async function PATCH(
         if (isAccessDenied(access)) return access.response;
 
         const body = await request.json();
-        const { name, code, status } = body;
+        const { name, code, status, briefNarrativeOverride } = body;
 
         // Build update object with only provided fields
         const updateData: Record<string, unknown> = {
@@ -48,6 +48,22 @@ export async function PATCH(
                 );
             }
             updateData.status = status;
+        }
+
+        // Narrative override: a string sets the override, null/empty clears it
+        // and falls back to the auto-derived narrative on next render.
+        if (briefNarrativeOverride !== undefined) {
+            if (briefNarrativeOverride === null) {
+                updateData.briefNarrativeOverride = null;
+            } else if (typeof briefNarrativeOverride === 'string') {
+                const trimmed = briefNarrativeOverride.trim();
+                updateData.briefNarrativeOverride = trimmed === '' ? null : trimmed;
+            } else {
+                return NextResponse.json(
+                    { error: 'briefNarrativeOverride must be a string or null' },
+                    { status: 400 }
+                );
+            }
         }
 
         // Update project (ensuring it belongs to user's organization)

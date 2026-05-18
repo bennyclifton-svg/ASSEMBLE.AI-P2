@@ -1,5 +1,6 @@
 import { assembleContext } from './orchestrator';
 import type { AssembledContext, ModuleName } from './types';
+import type { DomainTag } from '@/lib/constants/knowledge-domains';
 
 export const DEFAULT_AGENT_CONTEXT_MODULES = [
     'projectInfo',
@@ -21,6 +22,7 @@ export function formatAgentContext(ctx: AssembledContext): string {
     return [
         ctx.projectSummary,
         ctx.moduleContext,
+        ctx.knowledgeContext,
         ctx.ragContext,
         ctx.aiMemoryContext,
         ctx.crossModuleInsights,
@@ -33,6 +35,7 @@ export async function assembleAgentContext(args: {
     projectId: string;
     task: string;
     modules: readonly ModuleName[];
+    domainTags?: readonly DomainTag[];
 }): Promise<string> {
     try {
         const ctx = await assembleContext({
@@ -40,7 +43,8 @@ export async function assembleAgentContext(args: {
             task: args.task,
             contextType: 'note',
             forceModules: [...args.modules],
-            includeKnowledgeDomains: false,
+            includeKnowledgeDomains: Boolean(args.domainTags?.length),
+            domainTags: args.domainTags ? [...args.domainTags] : undefined,
         });
         return formatAgentContext(ctx);
     } catch (err) {

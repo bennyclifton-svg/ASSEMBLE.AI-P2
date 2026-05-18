@@ -114,8 +114,8 @@ export function ResizableLayout({
                     data-chat-dock-anchor="center"
                     className="h-full flex flex-col animate-slide-in-up animate-delay-100 relative"
                 >
-                    {/* Maximize / restore center panel — height matches the Documents header (88px). pt-[37px] places the chevron centre at ~y=49 from the strip top, matching the right-panel chevron which centres on the 30px "Documents" text (text top at y=32, height 33, centre at y=48.5). */}
-                    <div className="absolute top-0 right-0 z-20 flex items-start px-5 pt-[37px] h-[88px] pointer-events-none">
+                    {/* Maximize / restore center panel — height matches the Documents header (76px). pt-[37px] places the chevron centre at ~y=49 from the strip top, matching the right-panel chevron which centres on the 30px "Documents" text (text top at y=32, height 33, centre at y=48.5). */}
+                    <div className="absolute top-0 right-0 z-20 flex items-start px-5 pt-[37px] h-[76px] pointer-events-none">
                         <button
                             type="button"
                             onClick={handleCenterMaximizeToggle}
@@ -148,10 +148,10 @@ export function ResizableLayout({
             <PanelResizeHandle className="w-1 bg-[var(--sw-canvas)] hover:bg-[var(--sw-cta)] data-[resize-handle-state=drag]:bg-[var(--sw-cta)] transition-colors cursor-col-resize h-full" />
             <Panel ref={rightPanelRef} defaultSize={RIGHT_PANEL_DEFAULT_SIZE} minSize={15} className="bg-[var(--sw-paper)]">
                 <div className="h-full flex flex-col animate-slide-in-up animate-delay-200">
-                    {/* Right Panel Header — Sitewise dialect. Fixed 88px height keeps the chevron on the same horizontal plane as the centre panel's maximize chevrons.
-                        items-start + pt-8 lifts "Documents" + chevron to ~32px from the top, matching the H1 "Brief" inside BriefPanel (pt-2 + breadcrumb + mb-2 stacks above its title row). The 88px height also pushes the category tiles below into the same horizontal band as GENERATE BRIEF. */}
+                    {/* Right Panel Header — Sitewise dialect. Fixed 76px height keeps the chevron on the same horizontal plane as the centre panel's maximize chevrons.
+                        items-start + pt-8 lifts "Documents" + chevron to ~32px from the top, matching the H1 "Brief" inside BriefPanel (pt-2 + breadcrumb + mb-2 stacks above its title row). The 76px height (combined with the shallow pt-1/pb-1 padding on the dark tile strip in DocumentRepository) lands the category tile row in the same horizontal band as GENERATE BRIEF in BriefPanel. */}
                     <header
-                        className="flex items-start justify-between px-5 pt-8 flex-shrink-0 h-[88px]"
+                        className="flex items-start justify-between px-5 pt-8 flex-shrink-0 h-[76px]"
                         style={{ background: 'var(--sw-paper-2)' }}
                     >
                         <button

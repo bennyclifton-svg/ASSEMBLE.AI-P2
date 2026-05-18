@@ -21,6 +21,13 @@ import {
   isAdvisory,
   type ProjectTypeConfig,
 } from '@/lib/constants/objective-section-config';
+import {
+  compactProfileLabel,
+  deliverableAssetLabel,
+  inferProjectNameAssetLabel,
+  intentAssetLabel,
+  shouldUseProjectNameAsset,
+} from '@/lib/objectives/project-name-intent';
 
 type ObjectiveBucket = ObjectiveType;
 
@@ -134,6 +141,7 @@ function renderExtractionSelectionPriorities(
 // ---------------------------------------------------------------------------
 
 export interface InferencePromptInput {
+  projectName?: string;
   projectType: ProjectType;
   buildingClass: string;
   classDescriptors?: string[];
@@ -168,10 +176,7 @@ const SCALE_LABELS: Record<string, string> = {
 };
 
 function compactLabel(value: string): string {
-  return value
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return compactProfileLabel(value);
 }
 
 function readScaleValue(scaleData: Record<string, number | string>, keys: string[]): string | null {
@@ -206,13 +211,8 @@ function shortJoin(values: string[], max = 4): string {
   return `${visible.join(', ')}${suffix}`;
 }
 
-function assetLabel(buildingClass: string, subclass: string[]): string {
-  if (subclass.some((item) => item.toLowerCase().includes('apartment'))) return 'apartment building';
-  if (subclass.length > 0) return compactLabel(subclass[0]);
-  return `${compactLabel(buildingClass)} building`;
-}
-
 function renderProfileAnchorBlock(input: {
+  projectName?: string;
   projectType: ProjectType;
   buildingClass: string;
   classDescriptors: string[];
@@ -235,7 +235,11 @@ function renderProfileAnchorBlock(input: {
   const units = readScaleValue(input.scaleData, ['units', 'dwellings', 'apartments']);
   const avgUnit = readScaleValue(input.scaleData, ['avg_unit_sqm', 'average_unit_size']);
   const parking = readScaleValue(input.scaleData, ['parking_bays', 'car_spaces']);
-  const asset = assetLabel(input.buildingClass, input.subclass);
+  const planningAsset = intentAssetLabel(input);
+  const deliverableAsset = deliverableAssetLabel(input);
+  const projectNameAsset = inferProjectNameAssetLabel(input.projectName);
+  const projectNameProvidesGenericAsset =
+    Boolean(projectNameAsset) && shouldUseProjectNameAsset(input.subclass);
 
   const civilScopes = filterScopes(input.workScopeLabels, [
     'demolition',
@@ -264,14 +268,19 @@ function renderProfileAnchorBlock(input: {
     'services',
   ]);
 
-  add('functional', storeys ? `Deliver ${storeys}-storey ${asset}` : `Deliver ${asset}`);
+  add('functional', storeys ? `Deliver ${storeys}-storey ${deliverableAsset}` : `Deliver ${deliverableAsset}`);
   add('functional', units ? `Provide ${units} apartments or dwellings` : null);
   add('functional', avgUnit ? `Maintain ${avgUnit} sqm average unit size` : null);
   add('functional', parking ? `Integrate ${parking} parking spaces` : null);
   add('functional', civilScopes.length ? `Coordinate civil scope: ${shortJoin(civilScopes)}` : null);
   add('functional', serviceScopes.length ? `Integrate building services: ${shortJoin(serviceScopes)}` : null);
 
-  add('planning', storeys ? `Obtain approvals for ${storeys}-storey ${asset}` : 'Obtain project planning approvals');
+  add(
+    'planning',
+    storeys
+      ? `Confirm approval pathway for ${storeys}-storey ${planningAsset}`
+      : `Confirm approval pathway for ${planningAsset}`,
+  );
   add('planning', civilScopes.length ? 'Coordinate civil, stormwater and site-work approvals' : null);
   add('planning', includesAny(civilScopes.join(' '), ['decontamination'])
     ? 'Confirm decontamination and site-clearance approvals'
@@ -294,6 +303,9 @@ function renderProfileAnchorBlock(input: {
   const lines = [
     '## PROFILE-DERIVED BRIEF ANCHORS',
     'Use these concrete profile signals before generic model knowledge. Prefer objectives that preserve a number, class signal, or selected work-scope item.',
+    projectNameProvidesGenericAsset
+      ? `Project name signal: ${input.projectName} -> use "${projectNameAsset}" as the asset/use label for this generic subclass.`
+      : '',
     scaleFacts.length ? `Profile scale facts: ${scaleFacts.join('; ')}` : '',
     scopeFacts.length ? `Selected work scope facts: ${scopeFacts.join('; ')}` : '',
     '',
@@ -307,13 +319,14 @@ function renderProfileAnchorBlock(input: {
     lines.push('');
   }
 
-  lines.push('Avoid vague replacements such as "standard DA approval", "standard quality construction", "urban constraints", or "authority inspections timely" unless tied to a concrete profile fact above.');
+  lines.push('Use the project name only as a soft asset/use hint for generic subclass selections. Avoid vague replacements such as "standard DA approval", "standard quality construction", "urban constraints", or "authority inspections timely" unless tied to a concrete profile fact above.');
 
   return lines.join('\n');
 }
 
 export function buildInferencePrompt(input: InferencePromptInput): string {
   const {
+    projectName,
     projectType,
     buildingClass,
     classDescriptors = [],
@@ -390,6 +403,7 @@ export function buildInferencePrompt(input: InferencePromptInput): string {
     .join('\n\n');
   const knowledgeContext = scopedDomainContext || domainContextSection;
   const profileAnchorBlock = renderProfileAnchorBlock({
+    projectName,
     projectType,
     buildingClass,
     classDescriptors,
@@ -401,7 +415,7 @@ export function buildInferencePrompt(input: InferencePromptInput): string {
   return `You are an expert construction project manager in Australia.
 
 PROJECT PROFILE:
-- Building Class: ${buildingClass}
+${projectName ? `- Project Name: ${projectName}\n` : ''}- Building Class: ${buildingClass}
 - Building Subclass(es): ${subclass.join(', ') || 'Not specified'}
 ${classDescriptorLine.trimEnd()}
 - Project Type: ${projectType}
@@ -427,6 +441,7 @@ Use exactly one source value for each objective object:
 SOURCE DISCIPLINE - NO DOCUMENTS ATTACHED:
 The knowledge context is reference material, not project evidence. Do NOT turn conditional seed-guide examples into project facts.
 Only mention heritage, contamination, remediation, site auditor, staging, partial occupation, overlays, unusual authority conditions, or existing-site constraints when they appear in the project profile, selected work scope, suggested items, or explicit knowledge source detail.
+Only name specific construction systems such as precast, post-tensioning, structural steel, mass timber, curtain wall, or lifts when they appear in the selected work scope, profile, or suggested items.
 Do NOT describe an 8-storey or multi-storey apartment project as low-rise.
 
 INSTRUCTIONS:

@@ -305,10 +305,10 @@ function ProgramGanttSection({
         };
     };
 
-    // All bars use consistent teal/blue color with transparency matching Program module
-    const getActivityColor = (): string => {
-        return 'rgba(13, 148, 136, 0.7)'; // Teal color with transparency
-    };
+    // Match the main Program page bar palette: sw-cyan border + 22% fill, ink text.
+    const BAR_BORDER = 'var(--sw-cyan)';
+    const BAR_FILL = 'rgba(122, 184, 194, 0.22)';
+    const BAR_TEXT = 'var(--sw-ink)';
 
     // Today line position
     const today = new Date();
@@ -320,34 +320,34 @@ function ProgramGanttSection({
     return (
         <div className="space-y-2">
             {headerRow}
-            <div ref={chartRef} className="border border-[var(--color-border)] rounded overflow-hidden bg-[var(--color-bg-primary)]">
+            <div ref={chartRef} className="border border-[var(--color-border)] rounded overflow-hidden bg-[var(--color-bg-secondary)]">
                 <div className="overflow-hidden">
                     <div style={{ width: '100%' }}>
                         {/* Header: Month row */}
-                        <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
+                        <div className="flex h-8 items-center border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
                             <div
-                                className="flex-shrink-0 px-3 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] truncate"
+                                className="flex-shrink-0 px-3 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] truncate"
                                 style={{ width: `${activityColumnWidth}px` }}
                             >
                                 Activity
                             </div>
                             <div
-                                className="flex-shrink-0 px-2 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center truncate"
+                                className="flex-shrink-0 px-2 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center truncate"
                                 style={{ width: `${dateColumnWidth}px` }}
                             >
                                 Start
                             </div>
                             <div
-                                className="flex-shrink-0 px-2 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center truncate"
+                                className="flex-shrink-0 px-2 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center truncate"
                                 style={{ width: `${dateColumnWidth}px` }}
                             >
                                 End
                             </div>
-                            <div className="flex">
+                            <div className="flex h-full items-center">
                                 {monthGroups.map((group, i) => (
                                     <div
                                         key={i}
-                                        className="truncate whitespace-nowrap text-center text-[var(--color-text-muted)] text-xs py-1.5 px-1 border-r border-[var(--color-border)] last:border-r-0"
+                                        className="truncate whitespace-nowrap text-center text-[var(--color-text-muted)] text-xs px-1 border-r border-[var(--color-border)] last:border-r-0"
                                         style={{ width: `${group.count * columnWidth}px` }}
                                         title={group.label}
                                     >
@@ -362,16 +362,15 @@ function ProgramGanttSection({
                             const barPos = calculateBarPosition(activity);
                             const isChild = !!activity.parentId;
                             const hasChildren = activities.some(a => a.parentId === activity.id);
-                            const color = getActivityColor();
 
                             return (
                                 <div
                                     key={activity.id}
-                                    className="flex border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-bg-tertiary)]"
+                                    className="flex h-8 border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-bg-tertiary)]"
                                 >
                                     {/* Activity name cell with indentation for children */}
                                     <div
-                                        className={`flex-shrink-0 py-2 border-r border-[var(--color-border)] flex items-center gap-2 ${isChild ? 'pl-6 pr-2' : 'px-3'}`}
+                                        className={`flex-shrink-0 border-r border-[var(--color-border)] flex items-center gap-2 ${isChild ? 'pl-6 pr-2' : 'px-3'}`}
                                         style={{ width: `${activityColumnWidth}px` }}
                                     >
                                         {/* Collapse indicator for parents - show expanded/collapsed state */}
@@ -392,7 +391,7 @@ function ProgramGanttSection({
                                         {isChild && (
                                             <div
                                                 className="w-1 h-4 flex-shrink-0"
-                                                style={{ backgroundColor: color }}
+                                                style={{ backgroundColor: BAR_BORDER }}
                                             />
                                         )}
                                         <span className={`text-xs truncate ${isChild ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-text-primary)] font-medium'}`}>
@@ -402,7 +401,7 @@ function ProgramGanttSection({
 
                                     {/* Start date cell */}
                                     <div
-                                        className="flex-shrink-0 px-2 py-2 border-r border-[var(--color-border)] text-center"
+                                        className="flex-shrink-0 px-2 flex items-center justify-center border-r border-[var(--color-border)] text-center"
                                         style={{ width: `${dateColumnWidth}px` }}
                                     >
                                         <span className="text-xs text-[var(--color-text-muted)]">
@@ -411,7 +410,7 @@ function ProgramGanttSection({
                                     </div>
                                     {/* End date cell */}
                                     <div
-                                        className="flex-shrink-0 px-2 py-2 border-r border-[var(--color-border)] text-center"
+                                        className="flex-shrink-0 px-2 flex items-center justify-center border-r border-[var(--color-border)] text-center"
                                         style={{ width: `${dateColumnWidth}px` }}
                                     >
                                         <span className="text-xs text-[var(--color-text-muted)]">
@@ -421,7 +420,7 @@ function ProgramGanttSection({
 
                                     {/* Timeline cell */}
                                     <div
-                                        className="relative py-2"
+                                        className="relative flex-1"
                                         style={{ width: `${timelineWidth}px` }}
                                     >
                                         {/* Grid lines */}
@@ -443,14 +442,16 @@ function ProgramGanttSection({
                                             />
                                         )}
 
-                                        {/* Activity bar with name - square edges */}
+                                        {/* Activity bar — sw-cyan border + 22% fill, ink text — matches main Program page */}
                                         {barPos && (
                                             <div
                                                 className="absolute top-1/2 -translate-y-1/2 h-5 flex items-center justify-center overflow-hidden"
                                                 style={{
                                                     left: `${barPos.left}px`,
                                                     width: `${barPos.width}px`,
-                                                    backgroundColor: color,
+                                                    backgroundColor: BAR_FILL,
+                                                    borderColor: BAR_BORDER,
+                                                    color: BAR_TEXT,
                                                 }}
                                                 title={activity.name}
                                             >

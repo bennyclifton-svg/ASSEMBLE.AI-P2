@@ -59,24 +59,6 @@ function slugifyProjectName(projectName: string): string {
   return projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
 }
 
-function deriveProfileCompletion(args: {
-  buildingClass?: string | null;
-  projectType?: string | null;
-  profile?: KnowledgePanelProps['profileData'];
-}): number {
-  const { buildingClass, projectType, profile } = args;
-  let filled = 0;
-  if (buildingClass) filled++;
-  if (projectType) filled++;
-  if ((profile?.subclass?.length ?? 0) > 0) filled++;
-  if (profile?.scaleData?.gfa_sqm != null) filled++;
-  if (profile?.scaleData?.storeys != null) filled++;
-  if (profile?.scaleData?.units != null) filled++;
-  if (profile?.complexity && Object.keys(profile.complexity).length >= 5) filled++;
-  if ((profile?.workScope?.length ?? 0) > 0) filled++;
-  return Math.round((filled / 8) * 100);
-}
-
 function KnowledgeBreadcrumb({
   projectName,
   activeCrumb,
@@ -103,31 +85,9 @@ function KnowledgeBreadcrumb({
   );
 }
 
-function StatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
-  const isDark = tone === 'dark';
-  return (
-    <span
-      style={{
-        fontFamily: 'var(--sw-font-mono)',
-        fontSize: 11,
-        padding: '4px 10px',
-        background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
-        border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
-        color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
-        letterSpacing: '0.02em',
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
 export function KnowledgePanel({
   projectId,
   projectName = 'project',
-  buildingClass,
-  projectType,
-  profileData,
   className,
 }: KnowledgePanelProps) {
   const {
@@ -216,16 +176,6 @@ export function KnowledgePanel({
   const activeSelectedCount = activeSelectedIds.length;
   const allActiveSelected = activeItems.length > 0 && activeSelectedCount === activeItems.length;
   const someActiveSelected = activeSelectedCount > 0;
-  const totalEntries = useMemo(
-    () => ALL_GROUPS.reduce((total, group) => total + (subcategories[group] || []).length, 0),
-    [subcategories]
-  );
-  const visibleCategoryCount = ALL_GROUPS.filter(group => visibility[group] !== false).length;
-  const profileCompletionPct = useMemo(
-    () => deriveProfileCompletion({ buildingClass, projectType, profile: profileData }),
-    [buildingClass, projectType, profileData]
-  );
-
   useEffect(() => {
     const availableIds = new Set(ALL_GROUPS.flatMap(group => (subcategories[group] || []).map(item => item.id)));
     setSelectedIds(prev => {
@@ -361,9 +311,6 @@ export function KnowledgePanel({
             >
               Knowledge
             </h2>
-            <div className="mt-1 min-h-[18px] text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
-              {ALL_GROUPS.length} categories / {totalEntries} entries / {visibleCategoryCount} visible
-            </div>
           </div>
         </div>
       </header>

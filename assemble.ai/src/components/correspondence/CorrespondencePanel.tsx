@@ -225,27 +225,6 @@ function CorrespondenceBreadcrumb({
     );
 }
 
-function CorrespondenceStatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
-    const isDark = tone === 'dark';
-    return (
-        <span
-            className="max-w-[220px] truncate"
-            style={{
-                fontFamily: 'var(--sw-font-mono)',
-                fontSize: 11,
-                padding: '4px 10px',
-                background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
-                border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
-                color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
-                letterSpacing: '0.02em',
-            }}
-            title={label}
-        >
-            {label}
-        </span>
-    );
-}
-
 function CorrespondenceMessageTabs({
     messages,
     activeMessageId,
@@ -492,19 +471,6 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
                         >
                             Correspondence
                         </h1>
-                        <div
-                            className="truncate"
-                            style={{
-                                fontFamily: 'var(--sw-font-mono)',
-                                fontSize: 12,
-                                color: muted,
-                                marginTop: 4,
-                                minHeight: 18,
-                            }}
-                            title={inbox?.emailAddress || undefined}
-                        >
-                            {inbox?.emailAddress || 'project inbox'} - thread register
-                        </div>
                     </div>
                 </div>
             </header>

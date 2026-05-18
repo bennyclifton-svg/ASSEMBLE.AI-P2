@@ -4,6 +4,7 @@ import { validateExcelFile } from '@/lib/excel-validation';
 import { storage } from '@/lib/storage';
 import { versioning } from '@/lib/versioning';
 import { db, documents, versions, fileAssets, categories, subcategories, projects, consultantDisciplines, contractorTrades } from '@/lib/db';
+import type { DrawingExtractionResult } from '@/lib/services/drawing-extraction';
 import { v4 as uuidv4 } from 'uuid';
 import { eq, sql } from 'drizzle-orm';
 import { getCategoryById } from '@/lib/constants/categories';
@@ -85,6 +86,14 @@ export async function POST(request: NextRequest) {
 
         const { path: storagePath, hash, size } = await storage.save(file, buffer);
 
+        let filenameExtraction: DrawingExtractionResult | null = null;
+        try {
+            const { extractFromFilename } = await import('@/lib/services/drawing-extraction');
+            filenameExtraction = extractFromFilename(file.name);
+        } catch (metadataError) {
+            console.warn('[documents POST] Failed to extract filename metadata:', metadataError);
+        }
+
         // 2. Create FileAsset record
         const fileAssetId = uuidv4();
         await db.insert(fileAssets).values({
@@ -95,6 +104,12 @@ export async function POST(request: NextRequest) {
             sizeBytes: size,
             hash,
             ocrStatus: 'PENDING',
+            ...(filenameExtraction ? {
+                drawingNumber: filenameExtraction.drawingNumber,
+                drawingName: filenameExtraction.drawingName,
+                drawingRevision: filenameExtraction.drawingRevision,
+                drawingExtractionConfidence: filenameExtraction.confidence,
+            } : {}),
         });
 
         // 2.5. Ensure category exists
@@ -238,7 +253,7 @@ export async function GET(request: NextRequest) {
         // Build query with filters
         // Note: subcategoryId can reference either the legacy subcategories table,
         // or consultantDisciplines/contractorTrades tables. We join all and use COALESCE.
-        let query = db.select({
+        const query = db.select({
             id: documents.id,
             categoryId: documents.categoryId,
             categoryName: categories.name,
@@ -282,7 +297,7 @@ export async function GET(request: NextRequest) {
         // Post-process documents to handle missing originalName
         // (can happen if latestVersionId is NULL - orphaned documents)
         const docsWithFallback = await Promise.all(docs.map(async (doc) => {
-            let result = { ...doc };
+            const result = { ...doc };
 
             // Fall back to category constants if categoryName is null but categoryId exists
             if (doc.categoryId && !doc.categoryName) {

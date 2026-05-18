@@ -266,7 +266,7 @@ export function StakeholderRow({
         />
       </td>
 
-      <td className="px-2 py-1">
+      <td className="pl-2 pr-3 py-1">
         {isConsultantOrContractor && tenderStatuses.length > 0 && (
           <div className="flex items-center gap-0.5">
             {TENDER_STATUS_ORDER.map((type) => {
@@ -322,7 +322,7 @@ export function StakeholderRow({
         {isClient && <span className="text-[var(--sw-muted)]">--</span>}
       </td>
 
-      <td className="w-8 px-1 py-1 text-right">
+      <td className="w-10 px-1 py-1 text-right">
         {onDelete && (
           <button
             type="button"
@@ -332,7 +332,7 @@ export function StakeholderRow({
             }}
             className={cn(
               'p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)]',
-              isHovered || isSelected ? 'opacity-100' : 'opacity-70'
+              !isHovered && !isSelected && 'invisible'
             )}
             title="Delete stakeholder"
           >

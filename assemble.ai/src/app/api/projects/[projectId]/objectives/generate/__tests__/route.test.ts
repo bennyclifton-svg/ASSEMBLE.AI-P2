@@ -123,6 +123,9 @@ describe('/api/projects/[projectId]/objectives/generate', () => {
           },
         ])
       )
+      .mockReturnValueOnce(selectResult([
+        { projectName: 'Amenities Block 2 Replacement', jurisdiction: 'Hawkesbury City Council', lotArea: 0 },
+      ]))
       .mockReturnValueOnce(selectWhereResult([]));
 
     mockDb.update.mockReturnValue({
@@ -180,6 +183,9 @@ describe('/api/projects/[projectId]/objectives/generate', () => {
           },
         ])
       )
+      .mockReturnValueOnce(selectResult([
+        { projectName: 'Amenities Block 2 Replacement', jurisdiction: 'Hawkesbury City Council', lotArea: 0 },
+      ]))
       .mockReturnValueOnce(selectWhereResult([]));
 
     mockDb.update.mockReturnValue({
@@ -242,6 +248,9 @@ describe('/api/projects/[projectId]/objectives/generate', () => {
           },
         ])
       )
+      .mockReturnValueOnce(selectResult([
+        { projectName: 'Amenities Block 2 Replacement', jurisdiction: 'Hawkesbury City Council', lotArea: 0 },
+      ]))
       .mockReturnValueOnce(selectWhereResult([{ documentId: 'doc-ppr' }]));
 
     mockGetDocumentChunksByIds.mockResolvedValue([{
@@ -331,6 +340,9 @@ describe('/api/projects/[projectId]/objectives/generate', () => {
           },
         ])
       )
+      .mockReturnValueOnce(selectResult([
+        { projectName: 'Amenities Block 2 Replacement', jurisdiction: 'Hawkesbury City Council', lotArea: 0 },
+      ]))
       .mockReturnValueOnce(selectWhereResult([{ documentId: 'doc-ppr' }]));
 
     mockGetDocumentChunksByIds.mockResolvedValue([{
@@ -372,6 +384,9 @@ describe('/api/projects/[projectId]/objectives/generate', () => {
           },
         ])
       )
+      .mockReturnValueOnce(selectResult([
+        { projectName: 'Amenities Block 2 Replacement', jurisdiction: 'Hawkesbury City Council', lotArea: 0 },
+      ]))
       .mockReturnValueOnce(selectWhereResult([{ documentId: 'doc-ppr' }]));
 
     mockGetDocumentChunksByIds.mockResolvedValue([{
@@ -416,6 +431,9 @@ describe('/api/projects/[projectId]/objectives/generate', () => {
           },
         ])
       )
+      .mockReturnValueOnce(selectResult([
+        { projectName: 'Amenities Block 2 Replacement', jurisdiction: 'Hawkesbury City Council', lotArea: 0 },
+      ]))
       .mockReturnValueOnce(selectWhereResult([{ documentId: 'doc-ppr' }]));
 
     mockGetDocumentChunksByIds.mockResolvedValue([{

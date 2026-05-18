@@ -40,6 +40,8 @@ export interface DrawingExtractionRequest {
  * Discipline prefixes: A (Arch), S (Struct), M (Mech), E (Elec), P (Plumb), L (Landscape)
  */
 const DRAWING_NUMBER_PATTERNS: RegExp[] = [
+    // Document register numbers with spaced decimal sections: CC 02.3, CC 02.11
+    /^[A-Z]{2,4}\s+\d{1,3}(?:\.\d{1,3}){1,3}[A-Z]?$/i,
     // Consultant/project prefix + discipline + sheet number: CC-A-102, ABC-AR-1001
     /^[A-Z]{2,4}-[A-Z]{1,2}-\d{2,4}[A-Z]?$/i,
     // Generic two-letter prefix with hyphen and number: CC-11, AB-01, XY-123
@@ -608,6 +610,72 @@ function buildFilenameDrawingName(parts: string[]): string | null {
     return name.trim().replace(/\s+-\s+$/g, '') || null;
 }
 
+interface FilenameRegisterNumber {
+    drawingNumber: string;
+    prefix: string;
+    number: string;
+}
+
+function extractRegisterNumberFromBaseName(baseName: string): FilenameRegisterNumber | null {
+    const match = baseName.match(/^(?:\d{4,6}[\s_-]+)?([A-Z]{2,4})[\s_-]+(\d{1,3}(?:\.\d{1,3}){1,3}[A-Z]?)\b/i);
+    if (!match) return null;
+
+    const prefix = match[1].toUpperCase();
+    const number = match[2];
+
+    return {
+        drawingNumber: `${prefix} ${number}`,
+        prefix,
+        number,
+    };
+}
+
+function normaliseFilenameNumberPart(value: string): string {
+    return value.toUpperCase().replace(/[^A-Z0-9.]/g, '');
+}
+
+function findRegisterNumberTokenSpan(
+    parts: string[],
+    registerNumber: FilenameRegisterNumber | null
+): { start: number; end: number } | null {
+    if (!registerNumber) return null;
+
+    const prefix = normaliseFilenameNumberPart(registerNumber.prefix);
+    const number = normaliseFilenameNumberPart(registerNumber.number);
+
+    for (let index = 0; index < parts.length; index++) {
+        const current = normaliseFilenameNumberPart(parts[index]);
+        const next = parts[index + 1] ? normaliseFilenameNumberPart(parts[index + 1]) : null;
+
+        if (current === prefix && next === number) {
+            return { start: index, end: index + 1 };
+        }
+
+        if (current === `${prefix}${number}`) {
+            return { start: index, end: index };
+        }
+    }
+
+    return null;
+}
+
+function extractBracketedRevisionPart(part: string): string | null {
+    if (!/^(\[[A-Z]\d*\]|\[\d{1,2}\]|\([A-Z]\d*\)|\(\d{1,2}\))$/i.test(part)) {
+        return null;
+    }
+
+    return parseRevisionToken(part);
+}
+
+function findBracketedRevisionPart(parts: string[]): { index: number; revision: string } | null {
+    for (let index = parts.length - 1; index >= 0; index--) {
+        const revision = extractBracketedRevisionPart(parts[index]);
+        if (revision) return { index, revision };
+    }
+
+    return null;
+}
+
 /**
  * Extract drawing number from filename as fallback
  */
@@ -618,6 +686,7 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
     let drawingNumber: string | null = null;
     let revision: string | null = null;
     let drawingName: string | null = null;
+    let revisionPartIndex: number | null = null;
 
     const shortFilenameMatch = baseName.match(/^([ASMEPL]\d{2,4})(?:[-~]|$)/i);
     if (shortFilenameMatch) {
@@ -633,6 +702,11 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
         // Strip from baseName so it doesn't interfere with other parsing
         baseName = baseName.replace(/-\((\d{1,2})\)$/, '');
         console.log(`[drawing-extraction] Extracted explicit filename revision: ${revision}`);
+    }
+
+    const registerNumber = extractRegisterNumberFromBaseName(baseName);
+    if (!drawingNumber && registerNumber) {
+        drawingNumber = registerNumber.drawingNumber;
     }
 
     // First pass: Find hyphenated drawing numbers directly in the filename
@@ -677,12 +751,21 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
 
     // Only look for revision in parts if we didn't find an explicit -(NN) revision
     if (!revision) {
+        const bracketedRevision = findBracketedRevisionPart(parts);
+        if (bracketedRevision) {
+            revision = bracketedRevision.revision;
+            revisionPartIndex = bracketedRevision.index;
+        }
+    }
+
+    if (!revision) {
         // Check for single letter revision at end FIRST (most common convention)
         // e.g., "1115 CC-11 LEVEL 08 E.pdf" -> revision "E"
         if (parts.length > 0) {
             const lastPart = parts[parts.length - 1];
             if (/^[A-Z]$/i.test(lastPart)) {
                 revision = lastPart.toUpperCase();
+                revisionPartIndex = parts.length - 1;
             }
         }
 
@@ -694,6 +777,7 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
                 const match = lastPart.match(revPattern);
                 if (match) {
                     revision = match[1] || match[0];
+                    revisionPartIndex = parts.length - 1;
                     break;
                 }
             }
@@ -702,20 +786,19 @@ export function extractFromFilename(filename: string): DrawingExtractionResult |
 
     // Extract drawing name from parts between drawing number and revision
     if (drawingNumber) {
+        const registerNumberSpan = findRegisterNumberTokenSpan(parts, registerNumber);
         const drawingNumIndex = parts.findIndex(p =>
             p.toUpperCase() === drawingNumber ||
             p.toUpperCase().includes(drawingNumber!)
         );
-        if (drawingNumIndex >= 0 && drawingNumIndex < parts.length - 1) {
-            // Check if last part is a revision (handles [C], (C), or just C)
-            const lastPart = parts[parts.length - 1];
-            const lastPartIsRevision = revision && (
-                lastPart.toUpperCase() === revision ||
-                lastPart.toUpperCase() === `[${revision}]` ||
-                lastPart.toUpperCase() === `(${revision})`
-            );
-            const endIndex = lastPartIsRevision ? parts.length - 1 : parts.length;
-            const nameParts = parts.slice(drawingNumIndex + 1, endIndex);
+        const nameStartIndex = registerNumberSpan
+            ? registerNumberSpan.end + 1
+            : drawingNumIndex + 1;
+
+        if ((registerNumberSpan || drawingNumIndex >= 0) && nameStartIndex < parts.length) {
+            const nameParts = parts
+                .slice(nameStartIndex)
+                .filter((_, offset) => nameStartIndex + offset !== revisionPartIndex);
             if (nameParts.length > 0) {
                 drawingName = buildFilenameDrawingName(nameParts);
             }
@@ -762,9 +845,18 @@ export async function extractDrawingInfo(
 ): Promise<DrawingExtractionResult> {
     const { fileBuffer, filename, mimeType } = request;
 
-    // Step 0: Check if filename indicates this is NOT a drawing (skip API calls entirely)
+    // Step 1: Always extract from filename first (free, fast)
+    const filenameResult = extractFromFilename(filename);
+    console.log(`[drawing-extraction] Filename extraction: ${filenameResult?.drawingNumber || 'none'}, rev: ${filenameResult?.drawingRevision || 'none'}`);
+
+    // Step 2: Check if filename indicates this is NOT a drawing (skip API calls entirely),
+    // but keep document-control metadata that was explicitly encoded in the filename.
     if (isNonDrawingFilename(filename)) {
         console.log(`[drawing-extraction] Skipping non-drawing file (filename pattern): ${filename}`);
+        if (filenameResult) {
+            return filenameResult;
+        }
+
         return {
             drawingNumber: null,
             drawingName: null,
@@ -774,11 +866,7 @@ export async function extractDrawingInfo(
         };
     }
 
-    // Step 1: Always extract from filename first (free, fast)
-    const filenameResult = extractFromFilename(filename);
-    console.log(`[drawing-extraction] Filename extraction: ${filenameResult?.drawingNumber || 'none'}, rev: ${filenameResult?.drawingRevision || 'none'}`);
-
-    // Step 2: For PDFs, use VISION-FIRST approach (single API call, no polling)
+    // Step 3: For PDFs, use VISION-FIRST approach (single API call, no polling)
     // This is much faster than LlamaParse which requires upload + polling + download
     if (mimeType === 'application/pdf') {
         console.log(`[drawing-extraction] Using fast vision extraction for: ${filename}`);
@@ -798,7 +886,7 @@ export async function extractDrawingInfo(
         }
     }
 
-    // Step 3: Text-based extraction (for non-PDFs or if vision failed)
+    // Step 4: Text-based extraction (for non-PDFs or if vision failed)
     let aiResult: DrawingExtractionResult | null = null;
 
     try {
@@ -833,7 +921,7 @@ export async function extractDrawingInfo(
         console.error('[drawing-extraction] Text extraction/AI failed:', error);
     }
 
-    // Step 4: Merge results
+    // Step 5: Merge results
     const merged = aiResult
         ? mergeExtractionResults(aiResult, filenameResult)
         : (filenameResult || createEmptyResult('FILENAME'));

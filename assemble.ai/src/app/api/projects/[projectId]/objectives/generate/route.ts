@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectProfiles, briefAttachments } from '@/lib/db/pg-schema';
+import { projectDetails, projectProfiles, briefAttachments } from '@/lib/db/pg-schema';
 import {
   projectObjectives,
   objectiveGenerationSessions,
@@ -143,6 +143,9 @@ interface GeneratedObjectiveItem {
 }
 
 interface ParsedProfileContext {
+  projectName?: string;
+  jurisdiction?: string;
+  lotAreaSqm?: number;
   buildingClass: string;
   projectType: ProjectType;
   subclass: string[];
@@ -239,8 +242,14 @@ function parseComplexity(raw: string | null | undefined): Record<string, string 
   }
 }
 
-function parseProfileContext(profile: typeof projectProfiles.$inferSelect): ParsedProfileContext {
+function parseProfileContext(
+  profile: typeof projectProfiles.$inferSelect,
+  projectDetail?: { projectName?: string | null; jurisdiction?: string | null; lotArea?: number | null },
+): ParsedProfileContext {
   return {
+    projectName: projectDetail?.projectName?.trim() || undefined,
+    jurisdiction: projectDetail?.jurisdiction ?? undefined,
+    lotAreaSqm: projectDetail?.lotArea ?? undefined,
     buildingClass: profile.buildingClass,
     projectType: profile.projectType as ProjectType,
     subclass: parseJsonArray(profile.subclass),
@@ -265,9 +274,10 @@ function buildDocumentPathProfileSummary(
   if (!profile) return '';
 
   const lines = [
+    profile.projectName ? `- Project Name: ${profile.projectName}` : '',
     `- Building Class: ${profile.buildingClass}`,
     `- Project Type: ${profile.projectType}`,
-  ];
+  ].filter(Boolean);
 
   if (profile.subclass.length > 0) {
     lines.push(`- Subclass(es): ${profile.subclass.map(formatProfileValue).join(', ')}`);
@@ -665,6 +675,16 @@ export async function POST(
       .where(eq(projectProfiles.projectId, projectId))
       .limit(1);
 
+    const [projectDetail] = await db
+      .select({
+        projectName: projectDetails.projectName,
+        jurisdiction: projectDetails.jurisdiction,
+        lotArea: projectDetails.lotArea,
+      })
+      .from(projectDetails)
+      .where(eq(projectDetails.projectId, projectId))
+      .limit(1);
+
     // The Brief screen's "Attach Documents" panel is the source of truth for
     // document-backed objective generation. When populated, generation uses the
     // full indexed document text. When empty, generation falls back to the
@@ -678,7 +698,7 @@ export async function POST(
     const sectionsToWrite: ObjectiveType[] = section
       ? [section]
       : VALID_OBJECTIVE_TYPES;
-    const profileContext = profile ? parseProfileContext(profile) : null;
+    const profileContext = profile ? parseProfileContext(profile, projectDetail) : null;
     const workScopeLabels = profileContext
       ? resolveWorkScopeLabels(profileContext.workScope, profileContext.projectType)
       : [];
@@ -867,8 +887,9 @@ export async function POST(
       } else {
         const projectData: ProjectData = {
           projectDetails: {
-            projectName: 'Project',
-            jurisdiction: undefined,
+            projectName: profileContext.projectName ?? 'Project',
+            jurisdiction: profileContext.jurisdiction,
+            lotAreaSqm: profileContext.lotAreaSqm,
           },
           profiler: {
             buildingClass,
@@ -901,6 +922,7 @@ export async function POST(
       if (!generatePlanning && !generateCompliance) planningRulesFormatted = '';
 
       const prompt = buildInferencePrompt({
+        projectName: profileContext.projectName,
         projectType,
         buildingClass,
         classDescriptors,
@@ -951,6 +973,7 @@ export async function POST(
       const strengthened = strengthenNoDocumentGeneratedObjectives(
         generated as Partial<Record<ObjectiveType, GeneratedObjectiveItem[]>>,
         {
+          projectName: profileContext.projectName,
           buildingClass: profileContext.buildingClass,
           projectType: profileContext.projectType,
           subclass: profileContext.subclass,
@@ -969,6 +992,7 @@ export async function POST(
 
     // Create profile context snapshot
     const profilerSnapshot = profileContext ? {
+      projectName: profileContext.projectName,
       buildingClass: profileContext.buildingClass,
       projectType: profileContext.projectType,
       subclass: profileContext.subclass,

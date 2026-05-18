@@ -568,6 +568,17 @@ h2,
   outline-offset: 2px;
 }
 
+/* react-resizable-panels — the resize handle is a 4px-wide full-height strip,
+   so the default 2px solid outline with 2px offset renders as a full-height
+   vertical line on each side of the centre panel when the handle takes keyboard
+   focus. The handle's background already shifts to var(--sw-cta) on hover/drag,
+   and we extend that to focus-visible below so keyboard users still get a clear
+   indicator without the runaway outline. */
+[data-panel-resize-handle-id]:focus-visible {
+  outline: none;
+  background: var(--sw-cta);
+}
+
 /* Contextual focus colors */
 .focus-teal:focus-visible {
   outline-color: var(--color-accent-teal);
@@ -1619,6 +1630,7 @@ textarea:-webkit-autofill:active {
      header in ResizableLayout), so it carries the dark navy chrome colour. */
   --sw-paper: #FFFFFF;          /* card surface — white */
   --sw-paper-2: #1E2327;        /* chrome strip — deep cool navy (left sidebar + right-panel header) */
+  --sw-paper-3: #2F363E;        /* elevated chrome — nav hover/active tile, project switcher card */
   --sw-ink: #353C44;            /* dark ink — used for card text + dark header strips */
   --sw-ink-2: #2A2D34;          /* slightly lighter dark ink */
   --sw-linen: #DCD5C2;          /* legacy — retained for back-compat */

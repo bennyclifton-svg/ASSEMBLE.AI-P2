@@ -315,6 +315,9 @@ export const projects = pgTable('projects', {
         ]
     }),
     drawingExtractionEnabled: boolean('drawing_extraction_enabled').default(true),
+    // User-edited override for the Brief Preview narrative paragraph.
+    // When NULL, BriefPreviewPane derives the narrative from profile facts.
+    briefNarrativeOverride: text('brief_narrative_override'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });

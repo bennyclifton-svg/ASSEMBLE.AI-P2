@@ -501,7 +501,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     return (
         <div className="h-full flex flex-col" style={{ background: '#F6FBFB' }}>
             {/* Category Upload Tiles */}
-            <div className="px-4 pt-3 pb-1.5 flex-shrink-0" style={{ background: '#1E2126' }}>
+            <div className="px-4 pt-1 pb-1 flex-shrink-0" style={{ background: '#1E2126' }}>
                 <CategoryUploadTiles
                     projectId={projectId}
                     onFilesDropped={handleFilesSelected}

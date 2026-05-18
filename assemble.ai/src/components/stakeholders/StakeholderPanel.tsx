@@ -53,24 +53,6 @@ function slugifyProjectName(projectName: string): string {
   return projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
 }
 
-function deriveProfileCompletion(args: {
-  buildingClass?: string | null;
-  projectType?: string | null;
-  profile?: StakeholderPanelProps['profileData'];
-}): number {
-  const { buildingClass, projectType, profile } = args;
-  let filled = 0;
-  if (buildingClass) filled++;
-  if (projectType) filled++;
-  if ((profile?.subclass?.length ?? 0) > 0) filled++;
-  if (profile?.scaleData?.gfa_sqm != null) filled++;
-  if (profile?.scaleData?.storeys != null) filled++;
-  if (profile?.scaleData?.units != null) filled++;
-  if (profile?.complexity && Object.keys(profile.complexity).length >= 5) filled++;
-  if ((profile?.workScope?.length ?? 0) > 0) filled++;
-  return Math.round((filled / 8) * 100);
-}
-
 function isTextEditingTarget(): boolean {
   const activeElement = document.activeElement;
   return activeElement?.tagName === 'INPUT' ||
@@ -99,31 +81,9 @@ function StakeholderBreadcrumb({ projectName, activeCrumb }: { projectName: stri
   );
 }
 
-function StatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
-  const isDark = tone === 'dark';
-  return (
-    <span
-      style={{
-        fontFamily: 'var(--sw-font-mono)',
-        fontSize: 11,
-        padding: '4px 10px',
-        background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
-        border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
-        color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
-        letterSpacing: '0.02em',
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
 export function StakeholderPanel({
   projectId,
   projectName = 'project',
-  buildingClass,
-  projectType,
-  profileData,
 }: StakeholderPanelProps) {
   const {
     stakeholders,
@@ -180,11 +140,6 @@ export function StakeholderPanel({
     [stakeholdersByGroup, visibleGroups]
   );
 
-  const profileCompletionPct = useMemo(
-    () => deriveProfileCompletion({ buildingClass, projectType, profile: profileData }),
-    [buildingClass, projectType, profileData]
-  );
-
   const activeCrumb = useMemo(() => {
     if (selectedGroups.size === 1) {
       const [group] = Array.from(selectedGroups);
@@ -193,7 +148,6 @@ export function StakeholderPanel({
     return 'ALL';
   }, [selectedGroups]);
 
-  const selectedCount = selectedIds.size;
   const deleteTargetIds = pendingDeleteIds ?? selectedIds;
   const deleteTargetCount = deleteTargetIds.size;
 
@@ -419,7 +373,7 @@ export function StakeholderPanel({
           <StakeholderBreadcrumb projectName={projectName} activeCrumb={activeCrumb} />
         </div>
 
-        <div className="mb-2 flex items-end justify-between gap-4">
+        <div className="mb-4 flex items-end justify-between gap-4">
           <div className="min-w-0">
             <h2
               className="text-[30px] font-bold leading-none text-[var(--sw-ink)]"
@@ -427,9 +381,6 @@ export function StakeholderPanel({
             >
               Stakeholders
             </h2>
-            <div className="mt-1 min-h-[18px] text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
-              {visibleStakeholders.length} visible / {stakeholders.length} total
-            </div>
           </div>
         </div>
 
@@ -450,21 +401,6 @@ export function StakeholderPanel({
               onClick={(event) => handleFilterClick(group, event)}
             />
           ))}
-          {selectedCount > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                setPendingDeleteIds(null);
-                setShowDeleteConfirm(true);
-              }}
-              disabled={isBulkDeleting}
-              className="ml-auto inline-flex h-7 items-center gap-1.5 bg-[var(--sw-rose)] px-3 text-[11px] font-bold uppercase text-[var(--sw-ink)] transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-55"
-              style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.14em' }}
-            >
-              <Trash className="h-3.5 w-3.5" />
-              Delete selected
-            </button>
-          )}
         </div>
       </header>
 
@@ -604,8 +540,8 @@ function GroupCard({
 
   return (
     <section className="flex min-w-0 flex-col overflow-hidden bg-[var(--sw-shell)]">
-      <div className="flex h-10 items-center justify-between gap-3 border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)] px-3">
-        <div className="flex min-w-0 items-center gap-2">
+      <div className="flex h-10 items-stretch border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)] pl-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 pr-2">
           <button
             type="button"
             onClick={() => onQuickAdd(group)}
@@ -638,22 +574,39 @@ function GroupCard({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onGenerate}
-          disabled={isGenerating}
-          className={cn(
-            'inline-flex h-7 items-center gap-1.5 border border-[var(--sw-rule)] bg-white px-2 text-[11px] font-semibold text-[var(--sw-ink)] transition-colors hover:border-[var(--sw-ink)] hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55'
-          )}
-          style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.02em' }}
-          title={isGenerating ? 'Generating...' : `Generate ${GROUP_LABELS[group]}`}
-        >
-          <DiamondIcon
-            className={cn('h-3.5 w-3.5 text-[var(--sw-rose-dk)]', isGenerating && 'animate-diamond-spin')}
-            variant="empty"
-          />
-          {isGenerating ? 'Generating...' : 'Generate'}
-        </button>
+        <div className="flex w-28 items-center px-3">
+          <button
+            type="button"
+            onClick={onGenerate}
+            disabled={isGenerating}
+            className={cn(
+              'inline-flex h-7 items-center gap-1.5 border border-[var(--sw-rule)] bg-white px-2 text-[11px] font-semibold text-[var(--sw-ink)] transition-colors hover:border-[var(--sw-ink)] hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55'
+            )}
+            style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.02em' }}
+            title={isGenerating ? 'Generating...' : `Generate ${GROUP_LABELS[group]}`}
+          >
+            <DiamondIcon
+              className={cn('h-3.5 w-3.5 text-[var(--sw-rose-dk)]', isGenerating && 'animate-diamond-spin')}
+              variant="empty"
+            />
+            {isGenerating ? 'Generating...' : 'Generate'}
+          </button>
+        </div>
+
+        <div className="flex w-10 items-center justify-end px-1">
+          <button
+            type="button"
+            onClick={handleTrashClick}
+            disabled={(stakeholders.length === 0 && !hasSelectedInGroup) || isDeleting}
+            className={cn(
+              'p-1 transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)] disabled:cursor-not-allowed disabled:opacity-35',
+              hasSelectedInGroup ? 'text-[var(--sw-rose-dk)]' : 'text-[var(--sw-muted)]'
+            )}
+            title={trashTitle}
+          >
+            <Trash className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="min-h-0 overflow-x-auto">
@@ -680,16 +633,8 @@ function GroupCard({
               <StakeholderHead className="w-32">Phone</StakeholderHead>
               <StakeholderHead className="w-44">Email</StakeholderHead>
               <StakeholderHead className="w-28">Status</StakeholderHead>
-              <th className="w-8 px-1 text-right">
-                <button
-                  type="button"
-                  onClick={handleTrashClick}
-                  disabled={(stakeholders.length === 0 && !hasSelectedInGroup) || isDeleting}
-                  className="p-1 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-rose-tint)] hover:text-[var(--sw-rose-dk)] disabled:cursor-not-allowed disabled:opacity-35"
-                  title={trashTitle}
-                >
-                  <Trash className="h-4 w-4" />
-                </button>
+              <th className="w-10 px-1" scope="col">
+                <span className="sr-only">Actions</span>
               </th>
             </tr>
           </thead>
@@ -713,7 +658,7 @@ function GroupCard({
                   </select>
                 </td>
                 <td className="px-3 py-1 text-[var(--sw-muted)]">--</td>
-                <td className="px-1 py-1 text-right">
+                <td className="w-10 px-1 py-1 text-right">
                   <button
                     type="button"
                     onClick={onQuickAddCancel}

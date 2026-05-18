@@ -248,7 +248,7 @@ export function RfiRegisterPanel({ projectId, projectName = 'project', embedded 
     const [exportingFormat, setExportingFormat] = useState<RfiExportFormat | null>(null);
     const [exportError, setExportError] = useState<string | null>(null);
 
-    const { rfis, total, isLoading, error } = useRfis({ projectId, filter });
+    const { rfis, isLoading, error } = useRfis({ projectId, filter });
     const {
         createRfi,
         updateRfi,
@@ -528,7 +528,6 @@ export function RfiRegisterPanel({ projectId, projectName = 'project', embedded 
         !isLifecycleSaving
     );
     const canGenerateExport = Boolean(activeRfi && !exportingFormat);
-    const visibleCountLabel = filter === 'all' ? `${total} RFIs` : `${total} shown`;
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[var(--sw-shell)]">
@@ -561,12 +560,6 @@ export function RfiRegisterPanel({ projectId, projectName = 'project', embedded 
                             >
                                 RFI Register
                             </h1>
-                            <div
-                                className="truncate"
-                                style={{ fontFamily: 'var(--sw-font-mono)', fontSize: 12, color: muted, marginTop: 4 }}
-                            >
-                                {visibleCountLabel}
-                            </div>
                         </div>
 
                         <div className="flex max-w-full shrink-0 items-center overflow-x-auto border border-[var(--sw-rule)] bg-white">

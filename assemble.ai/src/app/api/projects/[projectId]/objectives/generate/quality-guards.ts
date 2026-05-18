@@ -91,6 +91,16 @@ const UNSUPPORTED_ASSUMPTION_RULES: UnsupportedAssumptionRule[] = [
     objectivePattern: /\b(overlay|bushfire|flood|acid sulfate|rail corridor|flight path|mine subsidence)\b/i,
     evidencePattern: /\b(overlay|bushfire|flood|acid sulfate|rail corridor|flight path|mine subsidence)\b/i,
   },
+  {
+    reason: 'precast system is not selected in the work scope',
+    objectivePattern: /\bprecast\b/i,
+    evidencePattern: /\bprecast\b/i,
+  },
+  {
+    reason: 'post-tensioning system is not selected in the work scope',
+    objectivePattern: /\bpost[-\s]?tension/i,
+    evidencePattern: /\bpost tension/i,
+  },
 ];
 
 export function filterUnsupportedNoDocumentObjectives<T extends ObjectiveGuardItem>(
