@@ -8,6 +8,8 @@ import { auth } from '@/lib/better-auth';
 import { db } from '@/lib/db';
 import { user as userTable } from '@/lib/db/auth-schema';
 import { organizations } from '@/lib/db/pg-schema';
+import { isActiveTrial, type TrialStatus } from '@/lib/subscription/trial';
+import type { PublicPlanId } from '@/lib/subscription/plan-catalog';
 import { eq } from 'drizzle-orm';
 
 export interface CurrentUser {
@@ -15,6 +17,11 @@ export interface CurrentUser {
     email: string;
     displayName: string | null;
     organizationId: string | null;
+    trialPlanId?: PublicPlanId | null;
+    trialStatus?: TrialStatus | null;
+    trialStartedAt?: Date | null;
+    trialEndsAt?: Date | null;
+    isTrialActive?: boolean;
     organization?: {
         id: string;
         name: string;
@@ -90,6 +97,14 @@ export async function getCurrentUser(): Promise<AuthResult> {
                 email: userRecord.email,
                 displayName: userRecord.name || null,
                 organizationId: userRecord.organizationId || null,
+                trialPlanId: userRecord.trialPlanId as PublicPlanId | null,
+                trialStatus: userRecord.trialStatus as TrialStatus | null,
+                trialStartedAt: userRecord.trialStartedAt,
+                trialEndsAt: userRecord.trialEndsAt,
+                isTrialActive: isActiveTrial({
+                    trialStatus: userRecord.trialStatus,
+                    trialEndsAt: userRecord.trialEndsAt,
+                }),
                 organization,
             },
             status: 200,

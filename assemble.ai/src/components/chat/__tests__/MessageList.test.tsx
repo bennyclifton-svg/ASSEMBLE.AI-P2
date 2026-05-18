@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { MessageList } from '../MessageList';
-import type { PendingApprovalView } from '@/lib/hooks/use-chat-stream';
+import type { ActiveRunView, PendingApprovalView } from '@/lib/hooks/use-chat-stream';
 
 beforeAll(() => {
     Element.prototype.scrollIntoView = jest.fn();
@@ -50,6 +50,48 @@ describe('MessageList approvals', () => {
         expect(
             screen.queryByText('Ask the Finance agent about your cost plan or project documents.')
         ).not.toBeInTheDocument();
+    });
+
+    it('shows plain-language live tool activity while the agent is working', () => {
+        const activeRun: ActiveRunView = {
+            runId: 'run-1',
+            agentName: 'design',
+            turn: 1,
+            isThinking: true,
+            toolCalls: [
+                {
+                    id: 'tool-1',
+                    name: 'list_project_documents',
+                    input: { disciplineOrTrade: 'Electrical' },
+                    status: 'complete',
+                    durationMs: 52,
+                    error: null,
+                },
+                {
+                    id: 'tool-2',
+                    name: 'sync_project_documents_to_ai',
+                    input: { documentIds: ['doc-1', 'doc-2'], documentSetName: 'Electrical AI Documents' },
+                    status: 'running',
+                    durationMs: null,
+                    error: null,
+                },
+            ],
+        };
+
+        render(
+            <MessageList
+                messages={[]}
+                activeRun={activeRun}
+                approvals={{}}
+            />
+        );
+
+        expect(screen.getByText('Working through the next project command')).toBeInTheDocument();
+        expect(screen.getByText('1/2 steps complete - 1 running')).toBeInTheDocument();
+        expect(screen.getByText('Reading document repository')).toBeInTheDocument();
+        expect(screen.getByText('Looking through uploaded documents for "Electrical".')).toBeInTheDocument();
+        expect(screen.getByText('Preparing AI document sync')).toBeInTheDocument();
+        expect(screen.getByText('Preparing to sync 2 documents into Electrical AI Documents.')).toBeInTheDocument();
     });
 
     it('keeps resolved approval cards visible so users see the apply result', () => {

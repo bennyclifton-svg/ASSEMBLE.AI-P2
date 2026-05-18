@@ -19,7 +19,14 @@ const inputSchema = z.object({
     category: z.enum(VARIATION_CATEGORIES),
     description: z.string().trim().min(1),
     status: z.enum(VARIATION_STATUSES).optional(),
-    costLineId: z.string().optional(),
+    costLineId: z
+        .string()
+        .trim()
+        .min(
+            1,
+            'costLineId must be a non-empty id. If the user supplied a label, pass it as costLineReference.'
+        )
+        .optional(),
     costLineReference: z.string().trim().min(1).optional(),
     disciplineOrTrade: z.string().trim().min(1).optional(),
     amountForecastCents: z.number().int().nonnegative().optional(),
@@ -31,7 +38,7 @@ const inputSchema = z.object({
     _toolUseId: z.string().optional(),
 });
 
-type CreateVariationInput = z.infer<typeof inputSchema>;
+export type CreateVariationInput = z.infer<typeof inputSchema>;
 
 function moneyValue(value: unknown): string {
     const cents = typeof value === 'number' ? value : 0;

@@ -1,5 +1,5 @@
 /**
- * Migration script to add content_length column to report_templates table
+ * Migration script to add content_length column to rag_report_templates table
  * T099l: Content length for Long RFT
  */
 
@@ -18,7 +18,7 @@ async function migrate() {
         const checkResult = await client.query(`
             SELECT column_name
             FROM information_schema.columns
-            WHERE table_name = 'report_templates'
+            WHERE table_name = 'rag_report_templates'
             AND column_name = 'content_length'
         `);
 
@@ -27,7 +27,7 @@ async function migrate() {
         } else {
             console.log('Adding content_length column...');
             await client.query(`
-                ALTER TABLE report_templates
+                ALTER TABLE rag_report_templates
                 ADD COLUMN content_length TEXT DEFAULT 'concise'
             `);
             console.log('Column added successfully');

@@ -5,16 +5,75 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, desc } from 'drizzle-orm';
 import { db } from '@/lib/db';
-import { projectObjectives, VALID_OBJECTIVE_TYPES, type ObjectiveType } from '@/lib/db/objectives-schema';
-import { projectProfiles } from '@/lib/db/pg-schema';
+import {
+  projectObjectives,
+  objectiveGenerationSessions,
+  VALID_OBJECTIVE_TYPES,
+  type ObjectiveType,
+} from '@/lib/db/objectives-schema';
+import { projectProfiles, briefAttachments } from '@/lib/db/pg-schema';
 import { aiComplete } from '@/lib/ai/client';
 import { getCurrentUser } from '@/lib/auth/get-user';
 import { retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
 import { resolveProfileDomainTags, buildProfileSearchQuery } from '@/lib/constants/knowledge-domains';
+import { buildAttachedObjectiveDocumentContext } from '@/lib/services/objective-document-context';
 import { buildPolishPrompt } from './prompt-builder';
 import { handleLongFresh } from './long-fresh-handler';
+
+async function getAttachedObjectiveDocumentIds(projectId: string): Promise<string[]> {
+  const briefAttached = await db
+    .select({ documentId: briefAttachments.documentId })
+    .from(briefAttachments)
+    .where(eq(briefAttachments.projectId, projectId));
+
+  return [...new Set(briefAttached.map((attachment) => attachment.documentId))];
+}
+
+function sourceDetailKey(section: ObjectiveType, text: string): string {
+  return `${section}:${text.trim().toLowerCase()}`;
+}
+
+function readSourceDetailsFromGeneratedItems(value: unknown): Array<{ text: string; sourceDetail: string }> {
+  if (!value || typeof value !== 'object') return [];
+  const sourceDetails = (value as { source_details?: unknown }).source_details;
+  if (!Array.isArray(sourceDetails)) return [];
+
+  return sourceDetails.flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const text = String((item as { text?: unknown }).text ?? '').trim();
+    const sourceDetail = String((item as { sourceDetail?: unknown }).sourceDetail ?? '').trim();
+    return text && sourceDetail ? [{ text, sourceDetail }] : [];
+  });
+}
+
+async function getLatestObjectiveSourceDetailMap(
+  projectId: string,
+  sections: ObjectiveType[],
+): Promise<Map<string, string>> {
+  const detailMap = new Map<string, string>();
+
+  await Promise.all(sections.map(async (section) => {
+    const [session] = await db
+      .select({ generatedItems: objectiveGenerationSessions.generatedItems })
+      .from(objectiveGenerationSessions)
+      .where(
+        and(
+          eq(objectiveGenerationSessions.projectId, projectId),
+          eq(objectiveGenerationSessions.objectiveType, section),
+        )
+      )
+      .orderBy(desc(objectiveGenerationSessions.createdAt))
+      .limit(1);
+
+    for (const item of readSourceDetailsFromGeneratedItems(session?.generatedItems)) {
+      detailMap.set(sourceDetailKey(section, item.text), item.sourceDetail);
+    }
+  }));
+
+  return detailMap;
+}
 
 export async function POST(
   request: NextRequest,
@@ -95,6 +154,7 @@ export async function POST(
 
     let profileContext = '';
     let domainContextSection = '';
+    let attachedDocumentContext = '';
 
     if (profile) {
       const buildingClass = profile.buildingClass;
@@ -172,17 +232,46 @@ export async function POST(
       }
     }
 
+    try {
+      const attachedDocumentIds = await getAttachedObjectiveDocumentIds(projectId);
+      if (attachedDocumentIds.length > 0) {
+        const context = await buildAttachedObjectiveDocumentContext(attachedDocumentIds);
+        attachedDocumentContext = context.context;
+        console.log(
+          `[objectives-polish] Indexed document context: ${context.documentChunkCount} chunks, ` +
+          `${context.estimatedDocumentTokens} estimated tokens, ` +
+          `stagedSummary=${context.usedStagedSummary}`
+        );
+      }
+    } catch (error) {
+      console.warn('[objectives-polish] Attached document context failed, continuing without:', error);
+    }
+
     // Build the polish prompt. CRITICAL: always send the row's `text` (the
     // canonical short form). Sending `textPolished` would mean the AI re-polishes
     // its own output and the user's recent edits to Short would be invisible.
+    let sourceDetailMap = new Map<string, string>();
+    try {
+      sourceDetailMap = await getLatestObjectiveSourceDetailMap(
+        projectId,
+        Array.from(new Set(validRows.map((row) => row.objectiveType as ObjectiveType))),
+      );
+    } catch (error) {
+      console.warn('[objectives-polish] Source evidence lookup failed, continuing without:', error);
+    }
+
     const prompt = buildPolishPrompt({
       profileContext,
       domainContextSection,
-      bullets: validRows.map((r) => ({ text: r.text })),
+      attachedDocumentContext,
+      bullets: validRows.map((r) => ({
+        text: r.text,
+        sourceDetail: sourceDetailMap.get(sourceDetailKey(r.objectiveType as ObjectiveType, r.text)),
+      })),
     });
 
     const { text: aiText } = await aiComplete({
-      featureGroup: 'generation',
+      featureGroup: 'objectives_generation',
       maxTokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     });

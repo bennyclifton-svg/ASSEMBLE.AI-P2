@@ -127,13 +127,16 @@ export function CurrencyCell({
     }
   };
 
-  // Determine text color based on variance
+  // Determine text color based on variance.
+  // Variance keeps semantic success/error coloring; the default money case
+  // routes through --role-money so this cell stays consistent with the
+  // ledger panels (Invoices, Payment Schedule, Variations).
   const getTextColor = () => {
     if (showVarianceColor) {
       if (value > 0) return 'text-[var(--color-success)]'; // Green for positive
       if (value < 0) return 'text-[var(--color-error)]'; // Red for negative
     }
-    return 'text-[var(--color-text-primary)]';
+    return 'text-[var(--role-money)]';
   };
 
   const textAlign = align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : 'text-right';

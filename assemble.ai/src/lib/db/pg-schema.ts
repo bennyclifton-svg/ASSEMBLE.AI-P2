@@ -3,7 +3,7 @@
  * Converted from SQLite schema with subscription support
  */
 
-import { pgTable, text, integer, bigint, boolean, timestamp, serial, varchar, unique, index, primaryKey, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, bigint, boolean, timestamp, serial, varchar, unique, uniqueIndex, index, primaryKey, jsonb } from 'drizzle-orm/pg-core';
 import { sql, relations } from 'drizzle-orm';
 
 // ============================================================================
@@ -171,6 +171,124 @@ export const correspondenceAttachments = pgTable('correspondence_attachments', {
 }, (table) => [
     index('idx_correspondence_attachments_correspondence').on(table.correspondenceId),
     index('idx_correspondence_attachments_document').on(table.documentId),
+]);
+
+// ============================================================================
+// RFI REGISTER
+// ============================================================================
+
+export const rfiRecords = pgTable('rfi_records', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    rfiNumber: integer('rfi_number').notNull(),
+    title: text('title').notNull(),
+    question: text('question').notNull(),
+    status: text('status').notNull().$type<'draft' | 'open' | 'responded' | 'closed'>().default('draft'),
+    priority: text('priority').notNull().$type<'low' | 'medium' | 'high' | 'urgent'>().default('medium'),
+    responsibleStakeholderId: text('responsible_stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
+    dueDate: text('due_date'),
+    responseText: text('response_text'),
+    responseDate: text('response_date'),
+    sourceNoteId: text('source_note_id').references(() => notes.id, { onDelete: 'set null' }),
+    rowVersion: integer('row_version').notNull().default(1),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    deletedAt: timestamp('deleted_at'),
+}, (table) => [
+    unique('rfi_records_project_number_unique').on(table.projectId, table.rfiNumber),
+    unique('rfi_records_project_source_note_unique').on(table.projectId, table.sourceNoteId),
+    index('idx_rfi_records_project').on(table.projectId),
+    index('idx_rfi_records_org_project').on(table.organizationId, table.projectId),
+    index('idx_rfi_records_project_status').on(table.projectId, table.status),
+    index('idx_rfi_records_project_due_date').on(table.projectId, table.dueDate),
+    index('idx_rfi_records_project_response_date').on(table.projectId, table.responseDate),
+    index('idx_rfi_records_responsible').on(table.responsibleStakeholderId),
+    index('idx_rfi_records_source_note').on(table.sourceNoteId),
+]);
+
+export type RfiEvidenceTargetType = 'document' | 'note' | 'correspondence';
+
+export const rfiEvidenceLinks = pgTable('rfi_evidence_links', {
+    id: text('id').primaryKey(),
+    rfiId: text('rfi_id').references(() => rfiRecords.id, { onDelete: 'cascade' }).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    targetType: text('target_type').notNull().$type<RfiEvidenceTargetType>(),
+    targetId: text('target_id').notNull(),
+    label: text('label').notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    unique('rfi_evidence_links_target_unique').on(table.rfiId, table.targetType, table.targetId),
+    index('idx_rfi_evidence_links_rfi').on(table.rfiId),
+    index('idx_rfi_evidence_links_project').on(table.projectId),
+    index('idx_rfi_evidence_links_target').on(table.targetType, table.targetId),
+]);
+
+export type RfiAuditAction = 'response_recorded' | 'closed' | 'reopened';
+
+export const rfiAuditEvents = pgTable('rfi_audit_events', {
+    id: text('id').primaryKey(),
+    rfiId: text('rfi_id').references(() => rfiRecords.id, { onDelete: 'cascade' }).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    action: text('action').notNull().$type<RfiAuditAction>(),
+    actorId: text('actor_id').notNull(),
+    actorName: text('actor_name'),
+    previousStatus: text('previous_status').notNull().$type<'draft' | 'open' | 'responded' | 'closed'>(),
+    newStatus: text('new_status').notNull().$type<'draft' | 'open' | 'responded' | 'closed'>(),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    index('idx_rfi_audit_events_rfi').on(table.rfiId),
+    index('idx_rfi_audit_events_project').on(table.projectId),
+    index('idx_rfi_audit_events_org_project').on(table.organizationId, table.projectId),
+]);
+
+export const rfiIssuedArtefacts = pgTable('rfi_issued_artefacts', {
+    id: text('id').primaryKey(),
+    rfiId: text('rfi_id').references(() => rfiRecords.id, { onDelete: 'cascade' }).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    versionNumber: integer('version_number').notNull(),
+    format: text('format').notNull().$type<'pdf' | 'docx'>(),
+    fileAssetId: text('file_asset_id').references(() => fileAssets.id).notNull(),
+    filename: text('filename').notNull(),
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    hash: text('hash').notNull(),
+    sourceRfiRowVersion: integer('source_rfi_row_version').notNull(),
+    generatedBy: text('generated_by').notNull(),
+    generatedByName: text('generated_by_name'),
+    generatedAt: timestamp('generated_at').defaultNow(),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    unique('rfi_issued_artefacts_rfi_version_unique').on(table.rfiId, table.versionNumber),
+    index('idx_rfi_issued_artefacts_rfi').on(table.rfiId),
+    index('idx_rfi_issued_artefacts_project').on(table.projectId),
+    index('idx_rfi_issued_artefacts_org_project').on(table.organizationId, table.projectId),
+    index('idx_rfi_issued_artefacts_file_asset').on(table.fileAssetId),
+]);
+
+export const aiMemoryEntries = pgTable('ai_memory_entries', {
+    id: text('id').primaryKey(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    organizationId: text('organization_id').references(() => organizations.id, { onDelete: 'cascade' }).notNull(),
+    category: text('category').notNull().$type<
+        'preference' | 'recurring_context' | 'assumption' | 'style' | 'reporting'
+    >().default('preference'),
+    title: text('title').notNull(),
+    content: text('content').notNull(),
+    status: text('status').notNull().$type<'active' | 'inactive'>().default('active'),
+    source: text('source').notNull().$type<'manual' | 'agent' | 'workflow'>().default('manual'),
+    createdBy: text('created_by'),
+    updatedBy: text('updated_by'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+    deletedAt: timestamp('deleted_at'),
+}, (table) => [
+    index('idx_ai_memory_entries_project').on(table.projectId),
+    index('idx_ai_memory_entries_org_project').on(table.organizationId, table.projectId),
+    index('idx_ai_memory_entries_project_status').on(table.projectId, table.status),
 ]);
 
 // ============================================================================
@@ -684,18 +802,45 @@ export const evaluations = pgTable('evaluations', {
     projectId: text('project_id').references(() => projects.id).notNull(),
     stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
     deletedCostLineIds: text('deleted_cost_line_ids').default('[]'),
+    recommendationState: text('recommendation_state').notNull().default('draft'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
+
+export const tenderSubmissionPackages = pgTable('tender_submission_packages', {
+    id: text('id').primaryKey(),
+    evaluationId: text('evaluation_id')
+        .references(() => evaluations.id, { onDelete: 'cascade' })
+        .notNull(),
+    evaluationPriceId: text('evaluation_price_id')
+        .references(() => evaluationPrice.id, { onDelete: 'cascade' }),
+    firmId: text('firm_id').notNull(),
+    firmType: text('firm_type').notNull(),
+    status: text('status').default('active'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_tender_submission_packages_eval_firm').on(
+        table.evaluationId,
+        table.evaluationPriceId,
+        table.firmId
+    ),
+]);
 
 export const tenderSubmissions = pgTable('tender_submissions', {
     id: text('id').primaryKey(),
     evaluationId: text('evaluation_id')
         .references(() => evaluations.id, { onDelete: 'cascade' })
         .notNull(),
+    packageId: text('package_id')
+        .references(() => tenderSubmissionPackages.id, { onDelete: 'cascade' }),
+    evaluationPriceId: text('evaluation_price_id')
+        .references(() => evaluationPrice.id, { onDelete: 'cascade' }),
     firmId: text('firm_id').notNull(),
     firmType: text('firm_type').notNull(),
     filename: text('filename').notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'set null' }),
+    versionId: text('version_id').references(() => versions.id, { onDelete: 'set null' }),
     fileAssetId: text('file_asset_id').references(() => fileAssets.id),
     parsedAt: timestamp('parsed_at').defaultNow(),
     parserUsed: text('parser_used').default('claude'),
@@ -703,6 +848,51 @@ export const tenderSubmissions = pgTable('tender_submissions', {
     rawExtractedItems: text('raw_extracted_items'),
     createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const aiArtefacts = pgTable('ai_artefacts', {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(),
+    hash: text('hash').notNull(),
+    status: text('status').notNull().default('ready'),
+    payloadFileAssetId: text('payload_file_asset_id').references(() => fileAssets.id, { onDelete: 'set null' }),
+    evaluationId: text('evaluation_id').references(() => evaluations.id, { onDelete: 'cascade' }),
+    evaluationPriceId: text('evaluation_price_id').references(() => evaluationPrice.id, { onDelete: 'cascade' }),
+    packageId: text('package_id').references(() => tenderSubmissionPackages.id, { onDelete: 'cascade' }),
+    submissionId: text('submission_id').references(() => tenderSubmissions.id, { onDelete: 'cascade' }),
+    actionInvocationId: text('action_invocation_id'),
+    trrId: text('trr_id'),
+    metadata: jsonb('metadata'),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    index('idx_ai_artefacts_kind_hash').on(table.kind, table.hash),
+    index('idx_ai_artefacts_evaluation').on(table.evaluationId),
+    index('idx_ai_artefacts_package').on(table.packageId),
+    index('idx_ai_artefacts_trr').on(table.trrId),
+]);
+
+export const clarifications = pgTable('clarifications', {
+    id: text('id').primaryKey(),
+    evaluationId: text('evaluation_id').references(() => evaluations.id, { onDelete: 'cascade' }).notNull(),
+    evaluationPriceId: text('evaluation_price_id').references(() => evaluationPrice.id, { onDelete: 'cascade' }),
+    firmId: text('firm_id').notNull(),
+    firmType: text('firm_type').notNull(),
+    questionText: text('question_text').notNull(),
+    category: text('category'),
+    materiality: text('materiality').notNull().default('medium'),
+    status: text('status').notNull().default('draft'),
+    responseText: text('response_text'),
+    responseDocumentId: text('response_document_id').references(() => documents.id, { onDelete: 'set null' }),
+    responseFileAssetId: text('response_file_asset_id').references(() => fileAssets.id, { onDelete: 'set null' }),
+    linkedRowIds: text('linked_row_ids').notNull().default('[]'),
+    linkedAddendumId: text('linked_addendum_id').references(() => addenda.id, { onDelete: 'set null' }),
+    sourceAiArtefactId: text('source_ai_artefact_id').references(() => aiArtefacts.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+}, (table) => [
+    index('idx_clarifications_evaluation').on(table.evaluationId),
+    index('idx_clarifications_evaluation_status').on(table.evaluationId, table.status),
+    index('idx_clarifications_addendum').on(table.linkedAddendumId),
+]);
 
 export const evaluationRows = pgTable('evaluation_rows', {
     id: text('id').primaryKey(),
@@ -781,11 +971,13 @@ export const trr = pgTable('trr', {
     id: text('id').primaryKey(),
     projectId: text('project_id').references(() => projects.id).notNull(),
     stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    evaluationPriceId: text('evaluation_price_id').references(() => evaluationPrice.id, { onDelete: 'set null' }),
     trrNumber: integer('trr_number').notNull().default(1),
     executiveSummary: text('executive_summary'),
     clarifications: text('clarifications'),
     recommendation: text('recommendation'),
     reportDate: text('report_date'),
+    issueSnapshotArtefactId: text('issue_snapshot_artefact_id').references(() => aiArtefacts.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -1013,6 +1205,11 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     inbox: one(projectInboxes),
     correspondenceThreads: many(correspondenceThreads),
     correspondence: many(correspondence),
+    rfiRecords: many(rfiRecords),
+    rfiEvidenceLinks: many(rfiEvidenceLinks),
+    rfiAuditEvents: many(rfiAuditEvents),
+    rfiIssuedArtefacts: many(rfiIssuedArtefacts),
+    aiMemoryEntries: many(aiMemoryEntries),
 }));
 
 export const projectInboxesRelations = relations(projectInboxes, ({ one }) => ({
@@ -1054,6 +1251,84 @@ export const correspondenceAttachmentsRelations = relations(correspondenceAttach
     fileAsset: one(fileAssets, {
         fields: [correspondenceAttachments.fileAssetId],
         references: [fileAssets.id],
+    }),
+}));
+
+export const rfiRecordsRelations = relations(rfiRecords, ({ one, many }) => ({
+    project: one(projects, {
+        fields: [rfiRecords.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [rfiRecords.organizationId],
+        references: [organizations.id],
+    }),
+    responsibleStakeholder: one(projectStakeholders, {
+        fields: [rfiRecords.responsibleStakeholderId],
+        references: [projectStakeholders.id],
+    }),
+    evidenceLinks: many(rfiEvidenceLinks),
+    auditEvents: many(rfiAuditEvents),
+    issuedArtefacts: many(rfiIssuedArtefacts),
+}));
+
+export const rfiEvidenceLinksRelations = relations(rfiEvidenceLinks, ({ one }) => ({
+    rfi: one(rfiRecords, {
+        fields: [rfiEvidenceLinks.rfiId],
+        references: [rfiRecords.id],
+    }),
+    project: one(projects, {
+        fields: [rfiEvidenceLinks.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [rfiEvidenceLinks.organizationId],
+        references: [organizations.id],
+    }),
+}));
+
+export const rfiAuditEventsRelations = relations(rfiAuditEvents, ({ one }) => ({
+    rfi: one(rfiRecords, {
+        fields: [rfiAuditEvents.rfiId],
+        references: [rfiRecords.id],
+    }),
+    project: one(projects, {
+        fields: [rfiAuditEvents.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [rfiAuditEvents.organizationId],
+        references: [organizations.id],
+    }),
+}));
+
+export const rfiIssuedArtefactsRelations = relations(rfiIssuedArtefacts, ({ one }) => ({
+    rfi: one(rfiRecords, {
+        fields: [rfiIssuedArtefacts.rfiId],
+        references: [rfiRecords.id],
+    }),
+    project: one(projects, {
+        fields: [rfiIssuedArtefacts.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [rfiIssuedArtefacts.organizationId],
+        references: [organizations.id],
+    }),
+    fileAsset: one(fileAssets, {
+        fields: [rfiIssuedArtefacts.fileAssetId],
+        references: [fileAssets.id],
+    }),
+}));
+
+export const aiMemoryEntriesRelations = relations(aiMemoryEntries, ({ one }) => ({
+    project: one(projects, {
+        fields: [aiMemoryEntries.projectId],
+        references: [projects.id],
+    }),
+    organization: one(organizations, {
+        fields: [aiMemoryEntries.organizationId],
+        references: [organizations.id],
     }),
 }));
 
@@ -1113,6 +1388,7 @@ export const addendaRelations = relations(addenda, ({ one, many }) => ({
         references: [projectStakeholders.id],
     }),
     transmittals: many(addendumTransmittals),
+    clarifications: many(clarifications),
 }));
 
 export const addendumTransmittalsRelations = relations(addendumTransmittals, ({ one }) => ({
@@ -1159,6 +1435,8 @@ export const evaluationPriceRelations = relations(evaluationPrice, ({ one, many 
         references: [projectStakeholders.id],
     }),
     rows: many(evaluationRows),
+    artefacts: many(aiArtefacts),
+    clarifications: many(clarifications),
 }));
 
 export const evaluationsRelations = relations(evaluations, ({ one, many }) => ({
@@ -1172,16 +1450,99 @@ export const evaluationsRelations = relations(evaluations, ({ one, many }) => ({
     }),
     rows: many(evaluationRows),
     submissions: many(tenderSubmissions),
+    submissionPackages: many(tenderSubmissionPackages),
+    artefacts: many(aiArtefacts),
+    clarifications: many(clarifications),
 }));
 
-export const tenderSubmissionsRelations = relations(tenderSubmissions, ({ one }) => ({
+export const tenderSubmissionPackagesRelations = relations(tenderSubmissionPackages, ({ one, many }) => ({
+    evaluation: one(evaluations, {
+        fields: [tenderSubmissionPackages.evaluationId],
+        references: [evaluations.id],
+    }),
+    evaluationPriceInstance: one(evaluationPrice, {
+        fields: [tenderSubmissionPackages.evaluationPriceId],
+        references: [evaluationPrice.id],
+    }),
+    submissions: many(tenderSubmissions),
+    artefacts: many(aiArtefacts),
+}));
+
+export const tenderSubmissionsRelations = relations(tenderSubmissions, ({ one, many }) => ({
     evaluation: one(evaluations, {
         fields: [tenderSubmissions.evaluationId],
         references: [evaluations.id],
     }),
+    package: one(tenderSubmissionPackages, {
+        fields: [tenderSubmissions.packageId],
+        references: [tenderSubmissionPackages.id],
+    }),
+    evaluationPriceInstance: one(evaluationPrice, {
+        fields: [tenderSubmissions.evaluationPriceId],
+        references: [evaluationPrice.id],
+    }),
+    document: one(documents, {
+        fields: [tenderSubmissions.documentId],
+        references: [documents.id],
+    }),
+    version: one(versions, {
+        fields: [tenderSubmissions.versionId],
+        references: [versions.id],
+    }),
     fileAsset: one(fileAssets, {
         fields: [tenderSubmissions.fileAssetId],
         references: [fileAssets.id],
+    }),
+    artefacts: many(aiArtefacts),
+}));
+
+export const aiArtefactsRelations = relations(aiArtefacts, ({ one }) => ({
+    payloadFileAsset: one(fileAssets, {
+        fields: [aiArtefacts.payloadFileAssetId],
+        references: [fileAssets.id],
+    }),
+    evaluation: one(evaluations, {
+        fields: [aiArtefacts.evaluationId],
+        references: [evaluations.id],
+    }),
+    evaluationPriceInstance: one(evaluationPrice, {
+        fields: [aiArtefacts.evaluationPriceId],
+        references: [evaluationPrice.id],
+    }),
+    package: one(tenderSubmissionPackages, {
+        fields: [aiArtefacts.packageId],
+        references: [tenderSubmissionPackages.id],
+    }),
+    submission: one(tenderSubmissions, {
+        fields: [aiArtefacts.submissionId],
+        references: [tenderSubmissions.id],
+    }),
+}));
+
+export const clarificationsRelations = relations(clarifications, ({ one }) => ({
+    evaluation: one(evaluations, {
+        fields: [clarifications.evaluationId],
+        references: [evaluations.id],
+    }),
+    evaluationPriceInstance: one(evaluationPrice, {
+        fields: [clarifications.evaluationPriceId],
+        references: [evaluationPrice.id],
+    }),
+    responseDocument: one(documents, {
+        fields: [clarifications.responseDocumentId],
+        references: [documents.id],
+    }),
+    responseFileAsset: one(fileAssets, {
+        fields: [clarifications.responseFileAssetId],
+        references: [fileAssets.id],
+    }),
+    linkedAddendum: one(addenda, {
+        fields: [clarifications.linkedAddendumId],
+        references: [addenda.id],
+    }),
+    sourceAiArtefact: one(aiArtefacts, {
+        fields: [clarifications.sourceAiArtefactId],
+        references: [aiArtefacts.id],
     }),
 }));
 
@@ -1239,6 +1600,14 @@ export const trrRelations = relations(trr, ({ one, many }) => ({
     stakeholder: one(projectStakeholders, {
         fields: [trr.stakeholderId],
         references: [projectStakeholders.id],
+    }),
+    evaluationPriceInstance: one(evaluationPrice, {
+        fields: [trr.evaluationPriceId],
+        references: [evaluationPrice.id],
+    }),
+    issueSnapshotArtefact: one(aiArtefacts, {
+        fields: [trr.issueSnapshotArtefactId],
+        references: [aiArtefacts.id],
     }),
     transmittals: many(trrTransmittals),
 }));
@@ -1397,6 +1766,60 @@ export const objectivesTransmittals = pgTable('objectives_transmittals', {
     addedAt: text('added_at'),
 });
 
+// Briefing sessions â€” AI-led brief refinement interview.
+export type BriefingSessionStatus = 'active' | 'completed' | 'abandoned';
+export type BriefingEndedBy = 'agent' | 'user';
+export type BriefingMessageRole = 'system' | 'assistant' | 'user' | 'tool';
+export type BriefingCoverage = {
+    planning: boolean;
+    functional: boolean;
+    quality: boolean;
+    compliance: boolean;
+};
+
+export const briefingSessions = pgTable('briefing_sessions', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().$type<BriefingSessionStatus>().default('active'),
+    coverage: jsonb('coverage').$type<BriefingCoverage>().notNull().default({
+        planning: false,
+        functional: false,
+        quality: false,
+        compliance: false,
+    }),
+    startedAt: timestamp('started_at').defaultNow(),
+    completedAt: timestamp('completed_at'),
+    endedBy: text('ended_by').$type<BriefingEndedBy>(),
+}, (table) => [
+    index('idx_briefing_sessions_project').on(table.projectId),
+    uniqueIndex('idx_briefing_sessions_active_project')
+        .on(table.projectId)
+        .where(sql`${table.status} = 'active'`),
+]);
+
+export const briefingMessages = pgTable('briefing_messages', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    sessionId: text('session_id').notNull().references(() => briefingSessions.id, { onDelete: 'cascade' }),
+    role: text('role').notNull().$type<BriefingMessageRole>(),
+    content: text('content').notNull().default(''),
+    toolCalls: jsonb('tool_calls'),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (table) => [
+    index('idx_briefing_messages_session_created').on(table.sessionId, table.createdAt),
+]);
+
+export const briefAttachments = pgTable('brief_attachments', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    projectId: text('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+    documentId: text('document_id').notNull().references(() => documents.id, { onDelete: 'cascade' }),
+    attachedBy: text('attached_by').notNull(),
+    attachedAt: timestamp('attached_at').defaultNow(),
+}, (table) => [
+    unique('brief_attachments_project_document_unique').on(table.projectId, table.documentId),
+    index('idx_brief_attachments_project').on(table.projectId),
+    index('idx_brief_attachments_document').on(table.documentId),
+]);
+
 export const profilerObjectivesRelations = relations(profilerObjectives, ({ one, many }) => ({
     project: one(projects, {
         fields: [profilerObjectives.projectId],
@@ -1530,6 +1953,7 @@ export const projectStakeholdersRelations = relations(projectStakeholders, ({ on
     }),
     tenderStatuses: many(stakeholderTenderStatuses),
     submissionStatuses: many(stakeholderSubmissionStatuses),
+    rfiRecords: many(rfiRecords),
 }));
 
 export const stakeholderTenderStatusesRelations = relations(stakeholderTenderStatuses, ({ one }) => ({
@@ -2053,7 +2477,7 @@ export const approvals = pgTable('approvals', {
 
 // Unified action audit trail. This is the bridge between traditional UI
 // operations, chat-driven tools, and future workflow steps.
-export type ActionInvocationActorKind = 'user' | 'agent' | 'workflow' | 'system';
+export type ActionInvocationActorKind = 'user' | 'agent' | 'workflow' | 'system' | 'ai';
 export type ActionInvocationStatus = 'running' | 'applied' | 'proposed' | 'rejected' | 'error';
 
 export const actionInvocations = pgTable('action_invocations', {
@@ -2079,6 +2503,27 @@ export const actionInvocations = pgTable('action_invocations', {
     index('idx_action_invocations_project').on(table.projectId),
     index('idx_action_invocations_actor').on(table.actorKind, table.actorId),
     index('idx_action_invocations_approval').on(table.approvalId),
+]);
+
+export type AiUsageEventStatus = 'reserved' | 'succeeded' | 'failed';
+
+export const aiUsageEvents = pgTable('ai_usage_events', {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id').notNull(),
+    organizationId: text('organization_id').notNull().references(() => organizations.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }),
+    action: text('action').notNull(),
+    status: text('status').notNull().$type<AiUsageEventStatus>().default('reserved'),
+    periodStart: timestamp('period_start').notNull(),
+    metadata: jsonb('metadata').$type<Record<string, unknown>>().default({}),
+    error: text('error'),
+    createdAt: timestamp('created_at').defaultNow(),
+    completedAt: timestamp('completed_at'),
+    failedAt: timestamp('failed_at'),
+}, (table) => [
+    index('idx_ai_usage_events_user_period').on(table.userId, table.organizationId, table.periodStart),
+    index('idx_ai_usage_events_project').on(table.projectId),
+    index('idx_ai_usage_events_status').on(table.status),
 ]);
 
 export type WorkflowRunStatus =

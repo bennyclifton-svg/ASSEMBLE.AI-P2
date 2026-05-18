@@ -14,10 +14,13 @@ import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useEvaluation } from '@/lib/hooks/use-evaluation';
 import { EvaluationSheet } from './EvaluationSheet';
 import { MergeRowsDialog } from './MergeRowsDialog';
-import { Loader2, AlertCircle, CheckCircle2, Upload } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Upload, ArrowRightToLine, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import type { EvaluationTotals, EvaluationRow } from '@/types/evaluation';
+import { Button } from '@/components/ui/button';
+import type { EvaluationCellValueType, EvaluationFirm, EvaluationRow, EvaluationTableType } from '@/types/evaluation';
 import { EVALUATION_TABLE_COLUMNS } from '@/types/evaluation';
+import { calculateTenderEvaluationTotals } from '@/lib/evaluation/tender-commercial';
+import { CostPlanPushDialog, type CostPlanPushSection } from './CostPlanPushDialog';
 import {
     EVALUATION_PRICE_ACCENT_COLOR,
     EvaluationReportHeader,
@@ -31,6 +34,41 @@ interface EvaluationPriceTabProps {
     evaluationPriceNumber?: number; // Tab number (1, 2, etc.) for dynamic title
     issuedDate?: string | null;
     surface?: 'procurement' | 'record';
+}
+
+function getFirmCellValue(row: EvaluationRow, firm: EvaluationFirm) {
+    const cell = row.cells?.find(candidate => candidate.firmId === firm.id);
+    const valueType = (cell?.valueType || 'amount') as EvaluationCellValueType;
+    const contributesAmount = valueType === 'amount' || valueType === 'blank';
+
+    return {
+        amountCents: contributesAmount ? (cell?.amountCents || 0) : 0,
+        valueType,
+        contributesAmount,
+    };
+}
+
+function makeCostPlanPushRows(
+    rows: EvaluationRow[],
+    tableType: EvaluationTableType,
+    firm: EvaluationFirm | undefined,
+    defaultRequiresAmount = true
+) {
+    if (!firm) return [];
+
+    return rows
+        .filter(row => row.description.trim().length > 0)
+        .map(row => {
+            const cellValue = getFirmCellValue(row, firm);
+            return {
+                id: row.id,
+                tableType,
+                description: row.description,
+                amountCents: cellValue.amountCents,
+                valueType: cellValue.valueType,
+                defaultSelected: cellValue.contributesAmount && (!defaultRequiresAmount || cellValue.amountCents !== 0),
+            };
+        });
 }
 
 export function EvaluationPriceTab({
@@ -56,9 +94,13 @@ export function EvaluationPriceTab({
         mergeRows,
         updateRowDescription,
         reorderRow,
+        updateRowLock,
+        updateRowMeta,
+        refresh,
         shortlistedFirms,
         initialPriceRows,
         addSubsRows,
+        valueManagementRows,
     } = useEvaluation({
         projectId,
         stakeholderId,
@@ -76,11 +118,15 @@ export function EvaluationPriceTab({
     // T089-T093: Row selection state
     const [selectedInitialPriceRowIds, setSelectedInitialPriceRowIds] = useState<Set<string>>(new Set());
     const [selectedAddSubsRowIds, setSelectedAddSubsRowIds] = useState<Set<string>>(new Set());
+    const [selectedValueManagementRowIds, setSelectedValueManagementRowIds] = useState<Set<string>>(new Set());
     const [lastSelectedRowId, setLastSelectedRowId] = useState<string | null>(null);
 
     // T094-T097: Merge dialog state
     const [isMergeDialogOpen, setIsMergeDialogOpen] = useState(false);
     const [mergeTableType, setMergeTableType] = useState<'initial_price' | 'adds_subs'>('initial_price');
+    const [isCostPlanPushOpen, setIsCostPlanPushOpen] = useState(false);
+    const [isPushingCostPlan, setIsPushingCostPlan] = useState(false);
+    const [isRefreshingEvaluation, setIsRefreshingEvaluation] = useState(false);
 
     // Show save status indicator
     useEffect(() => {
@@ -130,62 +176,81 @@ export function EvaluationPriceTab({
         });
     }, [addSubsRows]);
 
+    const visibleValueManagementRows = useMemo(() => {
+        return valueManagementRows.filter(row => {
+            if (row.source === 'manual' || !row.source) {
+                return true;
+            }
+            const hasData = row.cells?.some(cell =>
+                cell.amountCents !== 0 ||
+                (!!cell.valueType && cell.valueType !== 'amount' && cell.valueType !== 'blank')
+            );
+            return hasData;
+        });
+    }, [valueManagementRows]);
+
     // Calculate totals
-    const totals = useMemo((): EvaluationTotals => {
-        const initialPriceSubtotals: { [firmId: string]: number } = {};
-        const addSubsSubtotals: { [firmId: string]: number } = {};
-        const grandTotals: { [firmId: string]: number } = {};
+    const totals = useMemo(() => calculateTenderEvaluationTotals(
+        [...initialPriceRows, ...addSubsRows, ...valueManagementRows],
+        shortlistedFirms
+    ), [shortlistedFirms, initialPriceRows, addSubsRows, valueManagementRows]);
 
-        // Initialize with 0 for all firms
-        shortlistedFirms.forEach(firm => {
-            initialPriceSubtotals[firm.id] = 0;
-            addSubsSubtotals[firm.id] = 0;
-            grandTotals[firm.id] = 0;
-        });
+    const awardedFirm = useMemo(
+        () => shortlistedFirms.find(firm => firm.awarded),
+        [shortlistedFirms]
+    );
 
-        // Calculate Initial Price subtotals
-        initialPriceRows.forEach(row => {
-            row.cells?.forEach(cell => {
-                if (initialPriceSubtotals[cell.firmId] !== undefined) {
-                    initialPriceSubtotals[cell.firmId] += cell.amountCents;
-                }
-            });
-        });
+    const costPlanPushSections = useMemo<CostPlanPushSection[]>(() => {
+        if (!awardedFirm) {
+            return [
+                { id: 'initial_price', title: 'Price', rows: [] },
+                { id: 'adds_subs', title: 'Adds & Subs', rows: [] },
+                { id: 'value_management', title: 'Adopted VM', rows: [] },
+            ];
+        }
 
-        // Calculate Adds & Subs subtotals
-        addSubsRows.forEach(row => {
-            row.cells?.forEach(cell => {
-                if (addSubsSubtotals[cell.firmId] !== undefined) {
-                    addSubsSubtotals[cell.firmId] += cell.amountCents;
-                }
-            });
-        });
+        const adoptedValueManagementRows = visibleValueManagementRows.filter(row =>
+            row.vmAdoptionStatus === 'adopted' && row.vmEmbeddedInBase !== true
+        );
 
-        // Calculate grand totals
-        shortlistedFirms.forEach(firm => {
-            grandTotals[firm.id] = initialPriceSubtotals[firm.id] + addSubsSubtotals[firm.id];
-        });
-
-        return { initialPriceSubtotals, addSubsSubtotals, grandTotals };
-    }, [shortlistedFirms, initialPriceRows, addSubsRows]);
+        return [
+            {
+                id: 'initial_price',
+                title: 'Price',
+                rows: makeCostPlanPushRows(visibleInitialPriceRows, 'initial_price', awardedFirm),
+            },
+            {
+                id: 'adds_subs',
+                title: 'Adds & Subs',
+                rows: makeCostPlanPushRows(visibleAddSubsRows, 'adds_subs', awardedFirm),
+            },
+            {
+                id: 'value_management',
+                title: 'Adopted VM',
+                rows: makeCostPlanPushRows(adoptedValueManagementRows, 'value_management', awardedFirm),
+            },
+        ];
+    }, [awardedFirm, visibleInitialPriceRows, visibleAddSubsRows, visibleValueManagementRows]);
 
     // Handle cell update
     const handleCellUpdate = useCallback(async (
         rowId: string,
         firmId: string,
-        amountCents: number
+        amountCents: number,
+        valueType: EvaluationCellValueType = 'amount'
     ) => {
         await updateCell({
             rowId,
             firmId,
             firmType,
             amountCents,
+            valueType,
             source: 'manual',
         });
     }, [firmType, updateCell]);
 
     // Handle add row for each table
-    const handleAddRow = useCallback((tableType: 'initial_price' | 'adds_subs') => {
+    const handleAddRow = useCallback((tableType: EvaluationTableType) => {
         addRow({
             tableType,
             description: '',
@@ -196,6 +261,87 @@ export function EvaluationPriceTab({
     const handleDeleteRow = useCallback(async (rowId: string) => {
         await deleteRow(rowId);
     }, [deleteRow]);
+
+    const handlePushCostPlan = useCallback(async (rowIds: string[]) => {
+        if (!stakeholderId || !awardedFirm) return;
+
+        setIsPushingCostPlan(true);
+        try {
+            const response = await fetch(
+                `/api/evaluation/${projectId}/stakeholder/${stakeholderId}/push-cost-plan`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        evaluationPriceId,
+                        firmId: awardedFirm.id,
+                        firmType: awardedFirm.firmType || firmType,
+                        rowIds,
+                    }),
+                }
+            );
+
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Failed to push awarded price to the cost plan');
+            }
+
+            toast({
+                title: 'Cost plan updated',
+                description: `${result.data.createdCount} lines pushed for ${awardedFirm.companyName}`,
+                variant: 'success',
+            });
+        } catch (err) {
+            toast({
+                title: 'Cost plan push failed',
+                description: err instanceof Error ? err.message : 'Failed to push awarded price to the cost plan',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsPushingCostPlan(false);
+        }
+    }, [stakeholderId, awardedFirm, projectId, evaluationPriceId, firmType, toast]);
+
+    const handleRefreshEvaluation = useCallback(async () => {
+        if (!stakeholderId) return;
+        setIsRefreshingEvaluation(true);
+        try {
+            const response = await fetch(
+                `/api/evaluation/${projectId}/stakeholder/${stakeholderId}/refresh`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ evaluationPriceId }),
+                }
+            );
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Failed to refresh evaluation');
+            }
+
+            await refresh();
+            const summary = result.data?.summary;
+            const changedCount = summary
+                ? (Object.values(summary.created) as number[]).reduce((sum, count) => sum + count, 0) +
+                    (Object.values(summary.updated) as number[]).reduce((sum, count) => sum + count, 0) +
+                    (Object.values(summary.removed) as number[]).reduce((sum, count) => sum + count, 0)
+                : 0;
+
+            toast({
+                title: 'Evaluation refreshed',
+                description: changedCount > 0 ? `${changedCount} AI row changes applied` : 'No row changes found',
+                variant: 'success',
+            });
+        } catch (err) {
+            toast({
+                title: 'Refresh failed',
+                description: err instanceof Error ? err.message : 'Failed to refresh evaluation',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsRefreshingEvaluation(false);
+        }
+    }, [stakeholderId, projectId, evaluationPriceId, refresh, toast]);
 
     // T048-T051: Handle file drop for tender parsing
     // Uses ref-based guard to prevent duplicate ingestion from rapid drops
@@ -253,18 +399,25 @@ export function EvaluationPriceTab({
     const handleRowSelect = useCallback((
         rowId: string,
         event: React.MouseEvent,
-        tableType: 'initial_price' | 'adds_subs',
+        tableType: EvaluationTableType,
         rows: EvaluationRow[]
     ) => {
         const setSelectedRowIds = tableType === 'initial_price'
             ? setSelectedInitialPriceRowIds
-            : setSelectedAddSubsRowIds;
+            : tableType === 'adds_subs'
+                ? setSelectedAddSubsRowIds
+                : setSelectedValueManagementRowIds;
 
         // Clear selection from other table
         if (tableType === 'initial_price') {
             setSelectedAddSubsRowIds(new Set());
+            setSelectedValueManagementRowIds(new Set());
+        } else if (tableType === 'adds_subs') {
+            setSelectedInitialPriceRowIds(new Set());
+            setSelectedValueManagementRowIds(new Set());
         } else {
             setSelectedInitialPriceRowIds(new Set());
+            setSelectedAddSubsRowIds(new Set());
         }
 
         setSelectedRowIds(prev => {
@@ -355,7 +508,7 @@ export function EvaluationPriceTab({
     const handleRowReorder = useCallback((
         rowId: string,
         newIndex: number,
-        tableType: 'initial_price' | 'adds_subs'
+        tableType: EvaluationTableType
     ) => {
         reorderRow(rowId, newIndex, tableType);
     }, [reorderRow]);
@@ -456,6 +609,38 @@ export function EvaluationPriceTab({
                             <span className="text-green-500">Saved</span>
                         </>
                     )}
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isRefreshingEvaluation}
+                        title="Refresh evaluation"
+                        onClick={handleRefreshEvaluation}
+                        className="h-7 rounded-none border-[var(--color-border)] px-2 text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-primary)]"
+                    >
+                        {isRefreshingEvaluation ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Refresh
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!awardedFirm || isPushingCostPlan}
+                        title={awardedFirm ? 'Push awarded price to cost plan' : 'Award a tenderer first'}
+                        onClick={() => setIsCostPlanPushOpen(true)}
+                        className="h-7 rounded-none border-[var(--color-border)] px-2 text-[11px] uppercase tracking-[0.08em] text-[var(--color-text-primary)]"
+                    >
+                        {isPushingCostPlan ? (
+                            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                            <ArrowRightToLine className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Push to Cost Plan
+                    </Button>
                 </div>
             </div>
 
@@ -473,6 +658,8 @@ export function EvaluationPriceTab({
                 onRowSelect={(rowId, event) => handleRowSelect(rowId, event, 'initial_price', visibleInitialPriceRows)}
                 onMergeClick={() => handleMergeClick('initial_price')}
                 onRowReorder={(rowId, newIndex) => handleRowReorder(rowId, newIndex, 'initial_price')}
+                onToggleRowLock={updateRowLock}
+                onRowMetaUpdate={updateRowMeta}
                 parsingFirmId={parsingFirmId}
                 subtotals={totals.initialPriceSubtotals}
                 title={`Price ${String(evaluationPriceNumber).padStart(2, '0')}`}
@@ -494,6 +681,8 @@ export function EvaluationPriceTab({
                 onRowSelect={(rowId, event) => handleRowSelect(rowId, event, 'adds_subs', visibleAddSubsRows)}
                 onMergeClick={() => handleMergeClick('adds_subs')}
                 onRowReorder={(rowId, newIndex) => handleRowReorder(rowId, newIndex, 'adds_subs')}
+                onToggleRowLock={updateRowLock}
+                onRowMetaUpdate={updateRowMeta}
                 parsingFirmId={parsingFirmId}
                 subtotals={totals.addSubsSubtotals}
                 title="Adds & Subs"
@@ -502,7 +691,29 @@ export function EvaluationPriceTab({
                 surface={surface}
             />
 
-            {/* Grand Total */}
+            {/* Value Management Table */}
+            <EvaluationSheet
+                rows={visibleValueManagementRows}
+                firms={shortlistedFirms}
+                tableType="value_management"
+                onCellUpdate={handleCellUpdate}
+                onDeleteRow={handleDeleteRow}
+                onAddRow={() => handleAddRow('value_management')}
+                onDescriptionUpdate={updateRowDescription}
+                selectedRowIds={selectedValueManagementRowIds}
+                onRowSelect={(rowId, event) => handleRowSelect(rowId, event, 'value_management', visibleValueManagementRows)}
+                onRowReorder={(rowId, newIndex) => handleRowReorder(rowId, newIndex, 'value_management')}
+                onToggleRowLock={updateRowLock}
+                onRowMetaUpdate={updateRowMeta}
+                parsingFirmId={parsingFirmId}
+                subtotals={totals.valueManagementSubtotals}
+                title="Value Management"
+                showFirmHeaders={false}
+                accentColor={EVALUATION_PRICE_ACCENT_COLOR}
+                surface={surface}
+            />
+
+            {/* Comparable and Award Basis Totals */}
             <div className="relative overflow-x-auto w-full">
                 <table className="border-collapse w-full table-fixed">
                     <colgroup>
@@ -514,8 +725,6 @@ export function EvaluationPriceTab({
                         {shortlistedFirms.map(firm => (
                             <col key={firm.id} style={{ width: `${EVALUATION_TABLE_COLUMNS.firmColumn}px` }} />
                         ))}
-                        {/* AI indicator column */}
-                        <col style={{ width: `${EVALUATION_TABLE_COLUMNS.aiIndicator}px` }} />
                         {/* Delete button column */}
                         <col style={{ width: `${EVALUATION_TABLE_COLUMNS.deleteButton}px` }} />
                     </colgroup>
@@ -529,7 +738,7 @@ export function EvaluationPriceTab({
                                 className="px-3 text-sm font-bold text-[var(--color-text-primary)]"
                                 style={{ height: 28 }}
                             >
-                                Grand Total
+                                Comparable Total
                             </td>
                             {shortlistedFirms.map(firm => (
                                 <td
@@ -537,13 +746,32 @@ export function EvaluationPriceTab({
                                     className="px-3 text-right text-sm font-bold"
                                     style={{ height: 28, color: EVALUATION_PRICE_ACCENT_COLOR }}
                                 >
-                                    {formatCurrency(totals.grandTotals[firm.id] || 0)}
+                                    {formatCurrency(totals.comparableTotals[firm.id] || 0)}
                                 </td>
                             ))}
-                            {/* Empty AI indicator cell */}
+                            {/* Empty delete cell */}
+                            <td style={{ height: 28 }} />
+                        </tr>
+                        <tr className="border-t border-[var(--color-border)]/70">
+                            {/* Empty drag handle cell */}
                             <td
                                 style={{ height: 28 }}
                             />
+                            <td
+                                className="px-3 text-sm font-semibold text-[var(--color-text-primary)]"
+                                style={{ height: 28 }}
+                            >
+                                Award Basis Total
+                            </td>
+                            {shortlistedFirms.map(firm => (
+                                <td
+                                    key={firm.id}
+                                    className="px-3 text-right text-sm font-semibold"
+                                    style={{ height: 28, color: EVALUATION_PRICE_ACCENT_COLOR }}
+                                >
+                                    {formatCurrency(totals.awardBasisTotals[firm.id] || 0)}
+                                </td>
+                            ))}
                             {/* Empty delete cell */}
                             <td style={{ height: 28 }} />
                         </tr>
@@ -558,6 +786,14 @@ export function EvaluationPriceTab({
                 selectedRows={selectedRowsForMerge}
                 firms={shortlistedFirms}
                 onConfirm={handleMergeConfirm}
+            />
+
+            <CostPlanPushDialog
+                open={isCostPlanPushOpen}
+                onOpenChange={setIsCostPlanPushOpen}
+                firmName={awardedFirm?.companyName || 'No awarded firm'}
+                sections={costPlanPushSections}
+                onConfirm={handlePushCostPlan}
             />
         </div>
     );

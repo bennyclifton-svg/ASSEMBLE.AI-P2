@@ -13,6 +13,7 @@ import { listStakeholdersTool } from '../list-stakeholders';
 import { listMeetingsTool } from '../list-meetings';
 import { listReportsTool } from '../list-reports';
 import { listAddendaTool } from '../list-addenda';
+import { listRfisTool } from '../list-rfis';
 import { createMeetingTool } from '../create-meeting';
 import { createRiskTool } from '../create-risk';
 import { updateRiskTool } from '../update-risk';
@@ -30,6 +31,10 @@ const updateNoteTool = getTool('update_note')!;
 const attachDocumentsToNoteTool = getTool('attach_documents_to_note')!;
 const createAddendumTool = getTool('create_addendum')!;
 const addTenderFirmsTool = getTool('add_tender_firms')!;
+const recordRfiResponseTool = getTool('record_rfi_response')!;
+const attachRfiEvidenceTool = getTool('attach_rfi_evidence')!;
+const syncProjectDocumentsToAiTool = getTool('sync_project_documents_to_ai')!;
+const updateRftBriefTool = getTool('update_rft_brief')!;
 
 describe('Phase 3X read tools', () => {
     it('registers the new tools in the catalog', () => {
@@ -43,10 +48,14 @@ describe('Phase 3X read tools', () => {
             'list_meetings',
             'list_reports',
             'list_addenda',
+            'list_rfis',
             'create_meeting',
             'create_report',
             'create_addendum',
             'add_tender_firms',
+            'record_rfi_response',
+            'attach_rfi_evidence',
+            'sync_project_documents_to_ai',
             'create_note',
             'update_note',
             'attach_documents_to_note',
@@ -58,6 +67,7 @@ describe('Phase 3X read tools', () => {
             'update_program_activity',
             'create_program_milestone',
             'update_program_milestone',
+            'update_rft_brief',
             'update_stakeholder',
             'start_issue_variation_workflow',
         ]);
@@ -67,9 +77,14 @@ describe('Phase 3X read tools', () => {
         expect(specs.map((spec) => spec.name)).toContain('create_meeting');
         expect(specs.map((spec) => spec.name)).toContain('create_report');
         expect(specs.map((spec) => spec.name)).toContain('create_addendum');
+        expect(specs.map((spec) => spec.name)).toContain('list_rfis');
+        expect(specs.map((spec) => spec.name)).toContain('record_rfi_response');
+        expect(specs.map((spec) => spec.name)).toContain('attach_rfi_evidence');
+        expect(specs.map((spec) => spec.name)).toContain('sync_project_documents_to_ai');
         expect(specs.map((spec) => spec.name)).toContain('add_tender_firms');
         expect(specs.map((spec) => spec.name)).toContain('attach_documents_to_note');
         expect(specs.map((spec) => spec.name)).toContain('create_program_activity');
+        expect(specs.map((spec) => spec.name)).toContain('update_rft_brief');
         expect(specs.map((spec) => spec.name)).toContain('start_issue_variation_workflow');
     });
 
@@ -91,6 +106,9 @@ describe('Phase 3X read tools', () => {
             query: 'PCG',
             includeSections: false,
         });
+        expect(listRfisTool.validate({ query: 'RFI 001' })).toEqual({
+            query: 'RFI 001',
+        });
         expect(listAddendaTool.validate({ stakeholderId: 'stk-1', includeDocuments: true })).toEqual({
             stakeholderId: 'stk-1',
             includeDocuments: true,
@@ -107,6 +125,7 @@ describe('Phase 3X read tools', () => {
             listMeetingsTool,
             listReportsTool,
             listAddendaTool,
+            listRfisTool,
         ]) {
             expect(tool.mutating).toBe(false);
         }
@@ -312,6 +331,76 @@ describe('Phase 3X write tool validation', () => {
         expect(() => updateStakeholderTool.validate({ id: 'stk-1' })).toThrow(/at least one/i);
     });
 
+    it('rejects staged RFT fee instructions without matching fee rows', () => {
+        expect(() => updateRftBriefTool.validate({
+            id: 'stakeholder-1',
+            briefFee: 'Request fee in 4 stages.',
+        })).toThrow(/exactly 4 fee row/);
+
+        expect(updateRftBriefTool.validate({
+            id: 'stakeholder-1',
+            briefFee: 'Request fee in 4 stages.',
+            feeStageCount: 4,
+            feeRows: [
+                { description: 'Stage 1 - Design criteria and calculations' },
+                { description: 'Stage 2 - Foundations and basement retention' },
+                { description: 'Stage 3 - Superstructure and lateral stability' },
+                { description: 'Stage 4 - Specifications, certification and inspections' },
+            ],
+        })).toEqual(expect.objectContaining({
+            id: 'stakeholder-1',
+            feeStageCount: 4,
+            feeRowsMode: 'append',
+        }));
+    });
+
+    it('validates RFI response, RFI evidence, and document AI sync tools', () => {
+        expect(
+            recordRfiResponseTool.validate({
+                rfiReference: 'RFI 001',
+                responseText: 'Confirmed from the lighting schedule.',
+                responseDate: '2026-05-15',
+                evidence: [{ targetType: 'document', targetId: 'doc-1' }],
+            })
+        ).toEqual({
+            rfiReference: 'RFI 001',
+            responseText: 'Confirmed from the lighting schedule.',
+            responseDate: '2026-05-15',
+            evidence: [{ targetType: 'document', targetId: 'doc-1' }],
+        });
+        expect(() =>
+            recordRfiResponseTool.validate({
+                responseText: 'Missing RFI selector.',
+            })
+        ).toThrow(/rfiId or rfiReference/);
+
+        expect(
+            attachRfiEvidenceTool.validate({
+                rfiReference: 'RFI-001',
+                documentIds: ['doc-1', 'doc-1', 'doc-2'],
+            })
+        ).toEqual({
+            rfiReference: 'RFI-001',
+            documentIds: ['doc-1', 'doc-2'],
+        });
+        expect(() => attachRfiEvidenceTool.validate({ rfiReference: 'RFI-001' })).toThrow(
+            /evidence, documentIds/
+        );
+
+        expect(
+            syncProjectDocumentsToAiTool.validate({
+                documentIds: ['doc-1', 'doc-1'],
+                disciplineOrTrade: 'Electrical',
+            })
+        ).toEqual({
+            documentIds: ['doc-1'],
+            disciplineOrTrade: 'Electrical',
+        });
+        expect(() => syncProjectDocumentsToAiTool.validate({ disciplineOrTrade: '' })).toThrow(
+            /documentIds/
+        );
+    });
+
     it('validates meeting creates', () => {
         expect(createMeetingTool.validate({ title: 'Pre-DA Meeting' })).toEqual({
             title: 'Pre-DA Meeting',
@@ -426,6 +515,7 @@ describe('Phase 3X write tool validation', () => {
             updateProgramActivityTool,
             createProgramMilestoneTool,
             updateProgramMilestoneTool,
+            updateRftBriefTool,
             updateStakeholderTool,
         ]) {
             expect(tool.mutating).toBe(true);

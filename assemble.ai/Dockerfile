@@ -31,12 +31,10 @@ COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build-time args needed by Next.js during static generation and client bundling
-# Pass via: docker build --build-arg DATABASE_URL=... --build-arg NEXT_PUBLIC_APP_URL=... .
-ARG DATABASE_URL
+# Build-time args are limited to public client-bundled values.
+# Server-only secrets such as DATABASE_URL must be supplied at runtime.
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_SENTRY_DSN
-ENV DATABASE_URL=${DATABASE_URL}
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 
@@ -77,8 +75,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Copy worker files
 COPY --from=builder --chown=nextjs:nodejs /app/dist/workers ./dist/workers
 
-# Install concurrently for running both processes
-RUN npm install -g concurrently
+# Runtime validation helper used by Dokploy service commands.
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/validate-saas-runtime.mjs ./scripts/validate-saas-runtime.mjs
 
 # Switch to non-root user
 USER nextjs
@@ -100,5 +98,6 @@ ENV NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN}
 # HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 #   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# Start both Next.js and worker processes
-CMD ["concurrently", "-n", "next,doc-worker,draw-worker", "node server.js", "node dist/workers/document-processor/index.js", "node dist/workers/drawing-extractor/index.js"]
+# Default service command is web-only. Dokploy worker services should override
+# the command as documented in docs/deployment/public-saas/README.md.
+CMD ["sh", "-c", "node scripts/validate-saas-runtime.mjs web && node server.js"]

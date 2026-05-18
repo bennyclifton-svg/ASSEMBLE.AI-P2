@@ -15,10 +15,12 @@ jest.mock('../_context', () => ({
     assertProjectOrg: (...args: unknown[]) => mockAssertProjectOrg(...args),
     CrossTenantAccessError: class CrossTenantAccessError extends Error {},
 }));
+jest.mock('@/lib/agents/project-events', () => ({ emitProjectEvent: jest.fn() }));
 
 jest.mock('../../approvals', () => ({
     proposeApproval: (...args: unknown[]) => mockProposeApproval(...args),
 }));
+jest.mock('uuid', () => ({ v4: () => 'test-id' }));
 
 import { createVariationTool } from '../create-variation';
 

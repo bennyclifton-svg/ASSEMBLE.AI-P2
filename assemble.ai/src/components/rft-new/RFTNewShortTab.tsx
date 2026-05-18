@@ -59,8 +59,7 @@ interface ProgramActivity {
     sortOrder: number;
 }
 
-type ZoomLevel = 'week' | 'month';
-const ZOOM_STORAGE_KEY = 'program-zoom-level';
+type TimelineGranularity = 'week' | 'month';
 
 interface RFTNewShortTabProps {
     projectId: string;
@@ -98,20 +97,20 @@ interface TimelineColumn {
     year: number;
 }
 
-function generateTimelineColumns(startDate: Date, endDate: Date, zoomLevel: ZoomLevel): TimelineColumn[] {
+function generateTimelineColumns(startDate: Date, endDate: Date, granularity: TimelineGranularity): TimelineColumn[] {
     const columns: TimelineColumn[] = [];
-    const current = zoomLevel === 'week' ? getWeekStart(startDate) : new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const current = granularity === 'week' ? getWeekStart(startDate) : new Date(startDate.getFullYear(), startDate.getMonth(), 1);
     const end = new Date(endDate);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
     while (current <= end) {
         columns.push({
             start: new Date(current),
-            label: zoomLevel === 'week' ? current.getDate().toString() : months[current.getMonth()],
+            label: granularity === 'week' ? current.getDate().toString() : months[current.getMonth()],
             month: months[current.getMonth()],
             year: current.getFullYear(),
         });
-        if (zoomLevel === 'week') {
+        if (granularity === 'week') {
             current.setDate(current.getDate() + 7);
         } else {
             current.setMonth(current.getMonth() + 1);
@@ -121,9 +120,9 @@ function generateTimelineColumns(startDate: Date, endDate: Date, zoomLevel: Zoom
 }
 
 // Group columns by month for header
-function groupColumnsByMonth(columns: TimelineColumn[], zoomLevel: ZoomLevel): { label: string; count: number }[] {
+function groupColumnsByMonth(columns: TimelineColumn[], granularity: TimelineGranularity): { label: string; count: number }[] {
     // In month view, each column IS a month, so just return one per column
-    if (zoomLevel === 'month') {
+    if (granularity === 'month') {
         return columns.map(col => ({
             label: `${col.month} ${col.year}`,
             count: 1,
@@ -185,20 +184,41 @@ function formatDateDisplay(dateStr: string | null): string {
 // Program Gantt Section Component - matches Program module appearance
 function ProgramGanttSection({
     activities,
-    zoomLevel,
     visible,
     onToggleVisible,
 }: {
     activities: ProgramActivity[];
-    zoomLevel: ZoomLevel;
     visible: boolean;
     onToggleVisible?: (v: boolean) => void;
 }) {
+    const chartRef = useRef<HTMLDivElement>(null);
+    const [chartWidth, setChartWidth] = useState(0);
+
     // Filter visible activities based on collapsed state
     const visibleActivities = flattenVisibleActivities(activities);
 
     // Filter activities with dates and calculate date range
     const activitiesWithDates = visibleActivities.filter(a => a.startDate && a.endDate);
+
+    useEffect(() => {
+        const chart = chartRef.current;
+        if (!chart) return;
+
+        const updateChartWidth = () => {
+            setChartWidth(chart.clientWidth);
+        };
+
+        updateChartWidth();
+
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', updateChartWidth);
+            return () => window.removeEventListener('resize', updateChartWidth);
+        }
+
+        const observer = new ResizeObserver(updateChartWidth);
+        observer.observe(chart);
+        return () => observer.disconnect();
+    }, [visible, activitiesWithDates.length]);
 
     const headerRow = (
         <div className="flex items-center gap-2 px-4">
@@ -247,12 +267,16 @@ function ProgramGanttSection({
     const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
 
-    // Generate timeline columns based on zoom level
-    const timelineColumns = generateTimelineColumns(minDate, maxDate, zoomLevel);
-    const monthGroups = groupColumnsByMonth(timelineColumns, zoomLevel);
+    // The RFT programme always uses its own fitted month view. It deliberately
+    // ignores the editable Programme tab's Week / Month / Fit state.
+    const timelineColumns = generateTimelineColumns(minDate, maxDate, 'month');
+    const monthGroups = groupColumnsByMonth(timelineColumns, 'month');
     const totalDuration = maxDate.getTime() - minDate.getTime();
-    // Use different column widths for week vs month view
-    const columnWidth = zoomLevel === 'week' ? 50 : 80;
+    const fittedWidth = chartWidth > 0 ? chartWidth : 720;
+    const activityColumnWidth = Math.min(160, fittedWidth * 0.36);
+    const dateColumnWidth = Math.min(70, fittedWidth * 0.13);
+    const timelineWidth = Math.max(1, fittedWidth - activityColumnWidth - (dateColumnWidth * 2));
+    const columnWidth = timelineColumns.length > 0 ? timelineWidth / timelineColumns.length : timelineWidth;
 
     // Use the already-filtered visibleActivities for rendering
     const orderedActivities = visibleActivities;
@@ -265,16 +289,19 @@ function ProgramGanttSection({
         const activityEnd = new Date(activity.endDate);
 
         if (totalDuration === 0) {
-            return { left: 0, width: timelineColumns.length * columnWidth };
+            return { left: 0, width: timelineWidth };
         }
 
         const leftPercent = (activityStart.getTime() - minDate.getTime()) / totalDuration;
         const widthPercent = (activityEnd.getTime() - activityStart.getTime()) / totalDuration;
-        const totalWidth = timelineColumns.length * columnWidth;
+        const totalWidth = timelineWidth;
+        const minBarWidth = Math.min(30, totalWidth);
+        const width = Math.min(totalWidth, Math.max(minBarWidth, widthPercent * totalWidth));
+        const left = Math.min(Math.max(0, leftPercent * totalWidth), Math.max(0, totalWidth - width));
 
         return {
-            left: Math.max(0, leftPercent * totalWidth),
-            width: Math.max(30, widthPercent * totalWidth), // min 30px to show some text
+            left,
+            width,
         };
     };
 
@@ -286,59 +313,49 @@ function ProgramGanttSection({
     // Today line position
     const today = new Date();
     const todayPosition = totalDuration > 0
-        ? ((today.getTime() - minDate.getTime()) / totalDuration) * (timelineColumns.length * columnWidth)
+        ? ((today.getTime() - minDate.getTime()) / totalDuration) * timelineWidth
         : null;
-    const showTodayLine = todayPosition !== null && todayPosition >= 0 && todayPosition <= timelineColumns.length * columnWidth;
+    const showTodayLine = todayPosition !== null && todayPosition >= 0 && todayPosition <= timelineWidth;
 
     return (
         <div className="space-y-2">
             {headerRow}
-            <div className="border border-[var(--color-border)] rounded overflow-hidden bg-[var(--color-bg-primary)]">
-                <div className="overflow-x-auto">
-                    <div style={{ minWidth: `${160 + 140 + timelineColumns.length * columnWidth}px` }}>
+            <div ref={chartRef} className="border border-[var(--color-border)] rounded overflow-hidden bg-[var(--color-bg-primary)]">
+                <div className="overflow-hidden">
+                    <div style={{ width: '100%' }}>
                         {/* Header: Month row */}
                         <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-                            <div className="w-40 flex-shrink-0 px-3 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)]">
+                            <div
+                                className="flex-shrink-0 px-3 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] truncate"
+                                style={{ width: `${activityColumnWidth}px` }}
+                            >
                                 Activity
                             </div>
-                            <div className="w-[70px] flex-shrink-0 px-2 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center">
+                            <div
+                                className="flex-shrink-0 px-2 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center truncate"
+                                style={{ width: `${dateColumnWidth}px` }}
+                            >
                                 Start
                             </div>
-                            <div className="w-[70px] flex-shrink-0 px-2 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center">
+                            <div
+                                className="flex-shrink-0 px-2 py-1.5 text-[var(--color-text-muted)] text-xs font-medium border-r border-[var(--color-border)] text-center truncate"
+                                style={{ width: `${dateColumnWidth}px` }}
+                            >
                                 End
                             </div>
                             <div className="flex">
                                 {monthGroups.map((group, i) => (
                                     <div
                                         key={i}
-                                        className="text-center text-[var(--color-text-muted)] text-xs py-1.5 border-r border-[var(--color-border)] last:border-r-0"
+                                        className="truncate whitespace-nowrap text-center text-[var(--color-text-muted)] text-xs py-1.5 px-1 border-r border-[var(--color-border)] last:border-r-0"
                                         style={{ width: `${group.count * columnWidth}px` }}
+                                        title={group.label}
                                     >
                                         {group.label}
                                     </div>
                                 ))}
                             </div>
                         </div>
-
-                        {/* Header: Day/Week numbers row - only show in week view */}
-                        {zoomLevel === 'week' && (
-                            <div className="flex border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
-                                <div className="w-40 flex-shrink-0 border-r border-[var(--color-border)]" />
-                                <div className="w-[70px] flex-shrink-0 border-r border-[var(--color-border)]" />
-                                <div className="w-[70px] flex-shrink-0 border-r border-[var(--color-border)]" />
-                                <div className="flex">
-                                    {timelineColumns.map((col, i) => (
-                                        <div
-                                            key={i}
-                                            className="text-center text-[var(--color-text-muted)] text-xs py-1 border-r border-[var(--color-border)] last:border-r-0"
-                                            style={{ width: `${columnWidth}px` }}
-                                        >
-                                            {col.label}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
 
                         {/* Activity rows */}
                         {orderedActivities.map((activity) => {
@@ -354,7 +371,8 @@ function ProgramGanttSection({
                                 >
                                     {/* Activity name cell with indentation for children */}
                                     <div
-                                        className={`w-40 flex-shrink-0 py-2 border-r border-[var(--color-border)] flex items-center gap-2 ${isChild ? 'pl-6 pr-2' : 'px-3'}`}
+                                        className={`flex-shrink-0 py-2 border-r border-[var(--color-border)] flex items-center gap-2 ${isChild ? 'pl-6 pr-2' : 'px-3'}`}
+                                        style={{ width: `${activityColumnWidth}px` }}
                                     >
                                         {/* Collapse indicator for parents - show expanded/collapsed state */}
                                         {!isChild && hasChildren && (
@@ -383,13 +401,19 @@ function ProgramGanttSection({
                                     </div>
 
                                     {/* Start date cell */}
-                                    <div className="w-[70px] flex-shrink-0 px-2 py-2 border-r border-[var(--color-border)] text-center">
+                                    <div
+                                        className="flex-shrink-0 px-2 py-2 border-r border-[var(--color-border)] text-center"
+                                        style={{ width: `${dateColumnWidth}px` }}
+                                    >
                                         <span className="text-xs text-[var(--color-text-muted)]">
                                             {formatDateDisplay(activity.startDate)}
                                         </span>
                                     </div>
                                     {/* End date cell */}
-                                    <div className="w-[70px] flex-shrink-0 px-2 py-2 border-r border-[var(--color-border)] text-center">
+                                    <div
+                                        className="flex-shrink-0 px-2 py-2 border-r border-[var(--color-border)] text-center"
+                                        style={{ width: `${dateColumnWidth}px` }}
+                                    >
                                         <span className="text-xs text-[var(--color-text-muted)]">
                                             {formatDateDisplay(activity.endDate)}
                                         </span>
@@ -398,7 +422,7 @@ function ProgramGanttSection({
                                     {/* Timeline cell */}
                                     <div
                                         className="relative py-2"
-                                        style={{ width: `${timelineColumns.length * columnWidth}px` }}
+                                        style={{ width: `${timelineWidth}px` }}
                                     >
                                         {/* Grid lines */}
                                         <div className="absolute inset-0 flex">
@@ -419,18 +443,20 @@ function ProgramGanttSection({
                                             />
                                         )}
 
-                                        {/* Activity bar with name - square edges */}
+                                        {/* Activity bar with name - square edges, inverted (border + colored text on transparent fill) */}
                                         {barPos && (
                                             <div
-                                                className="absolute top-1/2 -translate-y-1/2 h-5 flex items-center justify-center overflow-hidden"
+                                                className="absolute top-1/2 -translate-y-1/2 h-5 flex items-center justify-center overflow-hidden border"
                                                 style={{
                                                     left: `${barPos.left}px`,
                                                     width: `${barPos.width}px`,
-                                                    backgroundColor: color,
+                                                    backgroundColor: 'transparent',
+                                                    borderColor: color,
+                                                    color,
                                                 }}
                                                 title={activity.name}
                                             >
-                                                <span className="text-[10px] text-white font-medium truncate px-1">
+                                                <span className="text-[10px] font-medium truncate px-1">
                                                     {activity.name}
                                                 </span>
                                             </div>
@@ -495,26 +521,48 @@ function BriefSubSection({
     onRefresh: (f: BriefField) => void | Promise<void>;
     onToggle: (f: BriefField, m: 'short' | 'long') => void | Promise<void>;
 }) {
-    const activeContent = sub.viewMode === 'short' ? sub.short : sub.long;
     const longTextLength = sub.long.replace(/<[^>]*>/g, '').trim().length;
     const hasShortText = sub.short.replace(/<[^>]*>/g, '').trim().length > 0;
     const hasLongContent = longTextLength > 0;
+    // Until Long has been generated for the first time, clicking the Long
+    // toggle should keep the Short text visible as a preview rather than
+    // showing an empty editor. Once Long has content, the toggle swaps
+    // between Short and Long normally.
+    const isLongPreviewingShort = sub.viewMode === 'long' && !hasLongContent && hasShortText;
+    const activeContent = sub.viewMode === 'short' || isLongPreviewingShort ? sub.short : sub.long;
 
     return (
-        <div className={cn('flex flex-col', !isLast && 'border-b border-[var(--color-border)]/50')}>
-            {/* Header bar */}
+        <div className={cn('flex flex-col', !isLast && 'border-b border-[var(--sw-rule-2)]')}>
+            {/* Header bar — matches the procurement card shell: white surface,
+                thin bottom rule, mono lowercase label, sw-token controls. */}
             <div
-                className="flex items-center justify-between px-4 py-2.5 backdrop-blur-md border-b border-[var(--color-border)]/50"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)' }}
+                className="flex items-center justify-between px-3 py-2"
+                style={{
+                    background: 'var(--sw-paper)',
+                    borderBottom: '1px solid var(--sw-rule-2)',
+                }}
             >
-                <span className="text-[var(--color-text-primary)] font-bold text-sm uppercase tracking-wide">
+                <span
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 10,
+                        letterSpacing: '0.18em',
+                        textTransform: 'lowercase',
+                        color: 'var(--sw-muted)',
+                        fontWeight: 600,
+                    }}
+                >
                     {label}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                     {/* Segmented Short/Long toggle */}
                     <div
-                        className="inline-flex items-center overflow-hidden border border-[var(--sw-rule)] text-[10px]"
-                        style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.05em' }}
+                        className="inline-flex items-center overflow-hidden text-[10px]"
+                        style={{
+                            fontFamily: 'var(--sw-font-mono)',
+                            letterSpacing: '0.05em',
+                            border: '1px solid var(--sw-rule)',
+                        }}
                         role="group"
                         aria-label="View mode"
                     >
@@ -540,7 +588,7 @@ function BriefSubSection({
                                 color: sub.viewMode === 'long'
                                     ? 'var(--sw-paper)'
                                     : !hasLongContent && hasShortText
-                                        ? 'rgba(107,105,98,0.62)'
+                                        ? 'var(--color-text-muted)'
                                         : 'var(--sw-muted)',
                             }}
                         >
@@ -548,18 +596,25 @@ function BriefSubSection({
                         </button>
                     </div>
 
-                    {/* Refresh — DiamondIcon with spin animation while generating */}
+                    {/* Refresh — DiamondIcon with spin animation while generating.
+                        Sized + bordered to match the procurement icon button. */}
                     <button
                         type="button"
                         onClick={() => onRefresh(field)}
                         disabled={isAnyGenerating}
                         title={`Regenerate ${sub.viewMode} content`}
+                        aria-label={`Regenerate ${sub.viewMode} content`}
                         className={cn(
-                            'inline-flex items-center border border-[var(--sw-rule)] bg-transparent px-1.5 py-1 transition-colors',
-                            isAnyGenerating
-                                ? 'cursor-not-allowed text-[var(--sw-muted)]/40'
-                                : 'text-[var(--sw-rose-dk)] hover:bg-[var(--sw-rose-tint)]',
+                            'flex shrink-0 items-center justify-center transition-colors',
+                            isAnyGenerating && 'cursor-not-allowed opacity-40',
                         )}
+                        style={{
+                            width: 24,
+                            height: 22,
+                            border: '1px solid var(--sw-rule)',
+                            background: 'transparent',
+                            color: isAnyGenerating ? 'var(--sw-muted)' : 'var(--sw-rose-dk)',
+                        }}
                     >
                         <DiamondIcon
                             variant="empty"
@@ -575,10 +630,10 @@ function BriefSubSection({
                 count of preceding items). Mirrors the objectives editor's
                 --objectives-start-index pattern. */}
             <div
-                className="brief-section backdrop-blur-md"
+                className="brief-section"
                 data-field={field}
                 style={{
-                    backgroundColor: 'color-mix(in srgb, var(--color-bg-secondary) 60%, transparent)',
+                    background: 'var(--sw-paper)',
                     ['--brief-start-index' as string]: counterStart,
                 } as React.CSSProperties}
             >
@@ -587,12 +642,12 @@ function BriefSubSection({
                     onChange={(c) => onChange(field, c)}
                     onBlur={() => onSave(field)}
                     placeholder={`Enter ${label.toLowerCase()}...`}
-                    disabled={isAnyGenerating}
+                    disabled={isAnyGenerating || isLongPreviewingShort}
                     variant="mini"
-                    toolbarVariant="mini"
+                    toolbarVariant="none"
                     transparentBg
                     className="border-0 rounded-none"
-                    editorClassName="bg-transparent hover:bg-[var(--color-bg-primary)]/40 transition-colors [&_strong]:text-black [&_strong]:font-semibold"
+                    editorClassName="bg-transparent hover:bg-[var(--sw-shell)] transition-colors [&_strong]:text-[var(--sw-ink)] [&_strong]:font-semibold"
                 />
             </div>
         </div>
@@ -628,17 +683,6 @@ export function RFTNewShortTab({
     });
     const [isSavingBrief, setIsSavingBrief] = useState(false);
     const [costLines, setCostLines] = useState<CostLine[]>([]);
-
-    // Read zoom level from localStorage to match Program tab configuration
-    const [zoomLevel] = useState<ZoomLevel>(() => {
-        if (typeof window !== 'undefined') {
-            const stored = localStorage.getItem(ZOOM_STORAGE_KEY);
-            if (stored === 'week' || stored === 'month') {
-                return stored;
-            }
-        }
-        return 'week';
-    });
 
     // Unified Field Generation hooks for Brief fields
     const {
@@ -782,8 +826,10 @@ export function RFTNewShortTab({
     useProjectEvents(projectId, (event) => {
         if (
             event.type === 'entity_updated' &&
-            event.entity === 'stakeholder' &&
-            event.id === stakeholderId
+            (
+                (event.entity === 'stakeholder' && event.id === stakeholderId) ||
+                event.entity === 'cost_line'
+            )
         ) {
             void fetchData(false);
         }
@@ -792,10 +838,28 @@ export function RFTNewShortTab({
     /**
      * Build informative description of sources used for generation
      */
-    const buildSourceDescription = (metadata: { usedRAG: boolean; usedProjectContext: boolean; usedProfiler: boolean; usedObjectives: boolean; ragDocumentCount: number; ragChunkCount: number }, sourceCount: number): string => {
+    const buildSourceDescription = (metadata: {
+        usedRAG: boolean;
+        usedProjectContext: boolean;
+        usedProfiler: boolean;
+        usedObjectives: boolean;
+        usedFeeSchedule?: boolean;
+        usedProjectDocuments?: boolean;
+        usedDisciplineSeedKnowledge?: boolean;
+        usedSeedKnowledge?: boolean;
+        usedStakeholderContext?: boolean;
+        ragDocumentCount: number;
+        ragChunkCount: number;
+    }, sourceCount: number): string => {
         const parts: string[] = [];
-        if (metadata.usedRAG && sourceCount > 0) {
-            parts.push(`${sourceCount} Knowledge Source document(s)`);
+        if ((metadata.usedProjectDocuments || metadata.usedRAG) && sourceCount > 0) {
+            parts.push(`${sourceCount} project document source(s)`);
+        }
+        if (metadata.usedFeeSchedule) {
+            parts.push('Fee schedule');
+        }
+        if (metadata.usedStakeholderContext) {
+            parts.push('Stakeholder context');
         }
         if (metadata.usedProfiler) {
             parts.push('Project Profile');
@@ -803,11 +867,17 @@ export function RFTNewShortTab({
         if (metadata.usedObjectives) {
             parts.push('Project Objectives');
         }
+        if (metadata.usedDisciplineSeedKnowledge) {
+            parts.push('Discipline seed knowledge');
+        }
+        if (metadata.usedSeedKnowledge && !metadata.usedDisciplineSeedKnowledge) {
+            parts.push('Seed knowledge');
+        }
         if (metadata.usedProjectContext && !metadata.usedProfiler && !metadata.usedObjectives) {
             parts.push('Project Context');
         }
-        if (!metadata.usedRAG) {
-            parts.push('(no Knowledge Source)');
+        if (!metadata.usedRAG && !metadata.usedProjectDocuments && !metadata.usedSeedKnowledge) {
+            parts.push('(no project documents)');
         }
         return parts.length > 0 ? `Generated using: ${parts.join(', ')}` : 'Generated using project context';
     };
@@ -1076,7 +1146,6 @@ export function RFTNewShortTab({
             {/* 4. Program Section - Visual Gantt */}
             <ProgramGanttSection
                 activities={programActivities}
-                zoomLevel={zoomLevel}
                 visible={rftNew.programVisible}
                 onToggleVisible={onToggleProgramVisible}
             />

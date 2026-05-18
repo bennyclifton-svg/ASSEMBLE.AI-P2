@@ -179,11 +179,13 @@ export function KnowledgePanel({
     const newValue = !current;
     setVisibility(prev => ({ ...prev, [categoryId]: newValue }));
     try {
-      await fetch(`/api/projects/${projectId}/category-visibility`, {
+      const response = await fetch(`/api/projects/${projectId}/category-visibility`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ categoryId, isVisible: newValue }),
       });
+      if (!response.ok) throw new Error('Failed to update category visibility');
+      triggerRefresh();
     } catch {
       setVisibility(prev => ({ ...prev, [categoryId]: current }));
     }
@@ -322,9 +324,9 @@ export function KnowledgePanel({
 
   if (isLoading) {
     return (
-      <div className={cn('flex h-full flex-col', className)} style={{ background: 'var(--sw-paper)' }}>
+      <div className={cn('flex h-full flex-col', className)} style={{ background: 'var(--sw-canvas)' }}>
         <div className="p-4">
-          <div className="border border-[var(--sw-rule)] bg-white">
+          <div className="border border-[var(--sw-rule)] bg-[var(--sw-shell)]">
             <Skeleton className="h-10 w-full rounded-none" />
             <div className="space-y-1 p-2">
               {[1, 2, 3, 4, 5, 6].map(i => (
@@ -345,14 +347,10 @@ export function KnowledgePanel({
     : 'This will permanently delete the selected knowledge entries.';
 
   return (
-    <div className={cn('flex h-full flex-col overflow-hidden', className)} style={{ background: 'var(--sw-paper)' }}>
+    <div className={cn('flex h-full flex-col overflow-hidden', className)} style={{ background: 'var(--sw-canvas)' }}>
       <header className="shrink-0 px-4 pt-2 pb-3" style={{ borderBottom: '1px solid var(--sw-rule-2)' }}>
         <div className="mb-2 flex items-center justify-between gap-4">
           <KnowledgeBreadcrumb projectName={projectName} activeCrumb={GROUP_LABELS[activeGroup].toUpperCase()} />
-          <div className="flex gap-1.5">
-            <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
-            <StatusPill label="stage: detail design" tone="dark" />
-          </div>
         </div>
 
         <div className="flex items-end justify-between gap-4">
@@ -380,7 +378,7 @@ export function KnowledgePanel({
           onToggleVisibility={toggleVisibility}
         />
 
-        <section className="flex min-h-[260px] min-w-0 flex-col overflow-hidden border border-[var(--sw-rule)] bg-white">
+        <section className="flex min-h-[260px] min-w-0 flex-col overflow-hidden border border-[var(--sw-rule)] bg-[var(--sw-shell)]">
           <div
             className="flex h-9 shrink-0 items-center gap-2 px-3"
             style={{ background: 'var(--sw-ink)', color: 'var(--sw-paper)' }}
@@ -523,7 +521,7 @@ function CategoryRegister({
 }: CategoryRegisterProps) {
   return (
     <section
-      className="min-w-0 self-start overflow-hidden border border-[var(--sw-rule)] bg-white"
+      className="min-w-0 self-start overflow-hidden border border-[var(--sw-rule)] bg-[var(--sw-shell)]"
       aria-label="Knowledge category register"
     >
       <div
@@ -560,10 +558,10 @@ function CategoryRegister({
                 }
               }}
               className={cn(
-                'grid h-10 cursor-pointer grid-cols-[minmax(0,1fr)_76px_42px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
+                'grid h-8 cursor-pointer grid-cols-[minmax(0,1fr)_76px_42px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
                 isActive
                   ? 'border-l-4 bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-ink)]'
-                  : 'bg-transparent hover:bg-[var(--sw-paper-2)]',
+                  : 'bg-transparent hover:bg-[var(--sw-canvas)]',
                 !isVisible && !isActive && 'opacity-55'
               )}
               style={{
@@ -667,7 +665,7 @@ function KnowledgeEntriesTable({
         style={{ fontFamily: 'var(--sw-font-mono)', lineHeight: 1.1 }}
       >
         <thead>
-          <tr className="border-b border-[var(--sw-rule-2)] bg-white hover:bg-white">
+          <tr className="border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)] hover:bg-[var(--sw-shell)]">
             <th
               className="w-12 px-3 py-2 text-left text-[10px] font-semibold uppercase text-[var(--sw-muted)]"
               style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.24em' }}
@@ -801,7 +799,7 @@ function InlineEdit({ value, onSave, className }: InlineEditProps) {
       disabled={isSaving}
       className={cn(
         'h-7 w-full border bg-transparent px-1.5 text-[11px] text-[var(--sw-ink)] outline-none transition-colors',
-        'hover:bg-[var(--sw-paper-2)] focus:bg-white focus:border-[var(--sw-rose)]',
+        'hover:bg-[var(--sw-canvas)] focus:bg-white focus:border-[var(--sw-rose)]',
         isFocused ? 'border-[var(--sw-rose)]' : 'border-transparent',
         className
       )}
@@ -881,8 +879,8 @@ function KnowledgeRow({ item, group, onUpdate, onDelete, isSelected, onSelect }:
     <tr
       className={cn(
         'h-9 cursor-pointer select-none border-b border-l-2 border-[var(--sw-rule-2)] transition-colors',
-        'hover:bg-[var(--sw-paper-2)]',
-        isSelected && 'bg-[var(--sw-paper-2)] hover:bg-[var(--sw-paper-2)]'
+        'hover:bg-[var(--sw-canvas)]',
+        isSelected && 'bg-[var(--sw-canvas)] hover:bg-[var(--sw-canvas)]'
       )}
       style={{ borderLeftColor: GROUP_ACCENTS[group] }}
       onClick={e => onSelect(item.id, e)}

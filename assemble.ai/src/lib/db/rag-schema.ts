@@ -8,9 +8,9 @@
  * - document_chunks: Vector embeddings for document content
  * - document_sets: Groupings of documents for RAG context
  * - document_set_members: Links documents to sets with sync status
- * - report_templates: Report generation state and TOC
- * - report_sections: Generated section content
- * - report_memory: Cross-project TOC patterns
+ * - rag_report_templates: Report generation state and TOC
+ * - rag_report_sections: Generated section content
+ * - rag_report_memory: Cross-project TOC patterns
  */
 
 import {
@@ -168,7 +168,7 @@ export const documentSetMembersRelations = relations(documentSetMembers, ({ one 
 // ============================================
 // Stores report generation state and TOC
 export const reportTemplates = pgTable(
-    'report_templates',
+    'rag_report_templates',
     {
         id: text('id').primaryKey(),
         projectId: text('project_id').notNull(), // External FK to SQLite projects
@@ -217,11 +217,11 @@ export const reportTemplates = pgTable(
         updatedAt: timestamp('updated_at').defaultNow(),
     },
     (table) => [
-        index('idx_reports_project').on(table.projectId),
-        index('idx_reports_status').on(table.status),
-        index('idx_reports_locked').on(table.lockedBy),
-        index('idx_reports_discipline_id').on(table.disciplineId),
-        index('idx_reports_trade_id').on(table.tradeId),
+        index('idx_rag_reports_project').on(table.projectId),
+        index('idx_rag_reports_status').on(table.status),
+        index('idx_rag_reports_locked').on(table.lockedBy),
+        index('idx_rag_reports_discipline_id').on(table.disciplineId),
+        index('idx_rag_reports_trade_id').on(table.tradeId),
     ]
 );
 
@@ -234,7 +234,7 @@ export const reportTemplatesRelations = relations(reportTemplates, ({ many }) =>
 // ============================================
 // Stores generated section content with source attribution
 export const reportSections = pgTable(
-    'report_sections',
+    'rag_report_sections',
     {
         id: text('id').primaryKey(),
         reportId: text('report_id')
@@ -253,9 +253,9 @@ export const reportSections = pgTable(
         createdAt: timestamp('created_at').defaultNow(),
     },
     (table) => [
-        index('idx_sections_report').on(table.reportId),
-        index('idx_sections_status').on(table.status),
-        uniqueIndex('idx_sections_unique').on(table.reportId, table.sectionIndex),
+        index('idx_rag_sections_report').on(table.reportId),
+        index('idx_rag_sections_status').on(table.status),
+        uniqueIndex('idx_rag_sections_unique').on(table.reportId, table.sectionIndex),
     ]
 );
 
@@ -271,7 +271,7 @@ export const reportSectionsRelations = relations(reportSections, ({ one }) => ({
 // ============================================
 // Cross-project learning for TOC patterns
 export const reportMemory = pgTable(
-    'report_memory',
+    'rag_report_memory',
     {
         id: text('id').primaryKey(),
         organizationId: text('organization_id').notNull(),
@@ -285,9 +285,9 @@ export const reportMemory = pgTable(
         createdAt: timestamp('created_at').defaultNow(),
     },
     (table) => [
-        index('idx_memory_org').on(table.organizationId),
-        index('idx_memory_lookup').on(table.organizationId, table.reportType, table.discipline),
-        uniqueIndex('idx_memory_unique').on(table.organizationId, table.reportType, table.discipline),
+        index('idx_rag_memory_org').on(table.organizationId),
+        index('idx_rag_memory_lookup').on(table.organizationId, table.reportType, table.discipline),
+        uniqueIndex('idx_rag_memory_unique').on(table.organizationId, table.reportType, table.discipline),
     ]
 );
 

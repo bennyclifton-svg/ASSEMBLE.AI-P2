@@ -9,8 +9,8 @@ export { ScrollReveal } from './shared/ScrollReveal';
 // Sections
 export { NavBar } from './NavBar';
 export { HeroSection } from './HeroSection';
-export { AgentRosterSection } from './AgentRosterSection';
-export { TenderFeaturesSection } from './TenderFeaturesSection';
+export { WorkflowGallerySection } from './WorkflowGallerySection';
+export { CapabilitiesSection } from './CapabilitiesSection';
 export { TenderIntelligenceSection } from './TenderIntelligenceSection';
 export { TenderCredibilitySection } from './TenderCredibilitySection';
 export { StatsSection } from './StatsSection';

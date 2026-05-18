@@ -361,7 +361,7 @@ function CostSummaryStrip({
             style={{
                 gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                 border: '1px solid var(--sw-rule)',
-                background: 'white',
+                background: 'var(--sw-shell)',
                 width: '66%',
                 minWidth: 520,
                 maxWidth: 760,
@@ -409,14 +409,10 @@ export function CostPlanPanel({
     );
 
     return (
-        <div className="h-full flex flex-col" style={{ background: 'var(--sw-paper)' }}>
+        <div className="h-full flex flex-col" style={{ background: 'var(--sw-canvas)' }}>
             <header className="flex-shrink-0 px-2 pt-2">
                 <div className="flex items-center justify-between mb-2">
                     <Breadcrumb projectName={projectName} activeTab={activeTab} />
-                    <div className="flex gap-1.5">
-                        <StatusPill label={`profile: ${profileCompletionPct}% complete`} />
-                        <StatusPill label="stage: detail design" tone="dark" />
-                    </div>
                 </div>
 
                 <div className="flex items-end justify-between mb-2">
@@ -1210,7 +1206,7 @@ function CostPlanSpreadsheet({ projectId, renderTabsList }: CostPlanSpreadsheetP
             <div
                 className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
                 style={{
-                    background: 'var(--sw-paper)',
+                    background: 'var(--sw-canvas)',
                     borderBottom: '1px solid var(--sw-rule)',
                 }}
             >
@@ -1237,8 +1233,9 @@ function CostPlanSpreadsheet({ projectId, renderTabsList }: CostPlanSpreadsheetP
                         className="transition-opacity hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-[var(--sw-rose)] focus:ring-opacity-40"
                         style={{
                             ...chromeButtonStyle,
-                            background: 'var(--sw-rose)',
-                            borderColor: 'var(--sw-rose)',
+                            background: 'var(--sw-cta)',
+                            borderColor: 'var(--sw-cta)',
+                            color: 'var(--sw-cta-fg)',
                             fontWeight: 700,
                             ...((isLoadingTemplate || costLines.length === 0) ? chromeButtonDisabledStyle : {}),
                         }}
@@ -1281,12 +1278,12 @@ function CostPlanSpreadsheet({ projectId, renderTabsList }: CostPlanSpreadsheetP
             >
                 <div
                     className="cost-plan-container flex-1 h-0 overflow-x-auto overflow-y-auto"
-                    style={{ scrollbarGutter: 'stable', background: 'var(--sw-paper)' }}
+                    style={{ scrollbarGutter: 'stable', background: 'var(--sw-canvas)' }}
                 >
-                    <table className="border-collapse text-xs w-full select-none" style={{ fontFamily: 'var(--sw-font-mono)', background: 'white' }}>
+                    <table className="border-collapse text-xs w-full select-none" style={{ fontFamily: 'var(--sw-font-mono)', background: 'var(--sw-shell)' }}>
                         <thead
                             className="sticky top-0 z-10 shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]"
-                            style={{ background: 'white' }}
+                            style={{ background: 'var(--sw-shell)' }}
                         >
                             <tr>
                                 <th className="px-0 py-1.5 w-8 border-b border-b-[var(--color-border)]" rowSpan={2}>

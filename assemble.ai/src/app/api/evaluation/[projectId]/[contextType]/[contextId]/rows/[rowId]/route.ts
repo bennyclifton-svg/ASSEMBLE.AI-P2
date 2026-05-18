@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { evaluationRows, evaluations } from '@/lib/db';
 import { eq } from 'drizzle-orm';
+import type { VmAdoptionStatus, VmOrigin } from '@/types/evaluation';
 
 interface RouteParams {
     params: Promise<{
@@ -106,12 +107,19 @@ export async function PATCH(
     try {
         const { rowId } = await params;
         const body = await request.json();
-        const { description, orderIndex } = body;
+        const { description, orderIndex, isLocked, vmAdoptionStatus, vmEmbeddedInBase, vmOrigin } = body;
 
         // Validate at least one field is provided
-        if (description === undefined && orderIndex === undefined) {
+        if (
+            description === undefined &&
+            orderIndex === undefined &&
+            isLocked === undefined &&
+            vmAdoptionStatus === undefined &&
+            vmEmbeddedInBase === undefined &&
+            vmOrigin === undefined
+        ) {
             return NextResponse.json(
-                { error: 'Must provide description or orderIndex' },
+                { error: 'Must provide a row field to update' },
                 { status: 400 }
             );
         }
@@ -137,7 +145,14 @@ export async function PATCH(
         }
 
         // Build update object
-        const updateData: { description?: string; orderIndex?: number } = {};
+        const updateData: {
+            description?: string;
+            orderIndex?: number;
+            isLocked?: boolean;
+            vmAdoptionStatus?: VmAdoptionStatus | null;
+            vmEmbeddedInBase?: boolean | null;
+            vmOrigin?: VmOrigin | null;
+        } = {};
         if (description !== undefined) {
             if (typeof description !== 'string') {
                 return NextResponse.json(
@@ -155,6 +170,48 @@ export async function PATCH(
                 );
             }
             updateData.orderIndex = orderIndex;
+        }
+        if (isLocked !== undefined) {
+            if (typeof isLocked !== 'boolean') {
+                return NextResponse.json(
+                    { error: 'isLocked must be a boolean' },
+                    { status: 400 }
+                );
+            }
+            updateData.isLocked = isLocked;
+        }
+        if (vmAdoptionStatus !== undefined) {
+            if (
+                vmAdoptionStatus !== null &&
+                !['adopted', 'tbd', 'not_adopted'].includes(vmAdoptionStatus)
+            ) {
+                return NextResponse.json(
+                    { error: 'Invalid VM adoption status' },
+                    { status: 400 }
+                );
+            }
+            updateData.vmAdoptionStatus = vmAdoptionStatus;
+        }
+        if (vmEmbeddedInBase !== undefined) {
+            if (typeof vmEmbeddedInBase !== 'boolean' && vmEmbeddedInBase !== null) {
+                return NextResponse.json(
+                    { error: 'vmEmbeddedInBase must be a boolean' },
+                    { status: 400 }
+                );
+            }
+            updateData.vmEmbeddedInBase = vmEmbeddedInBase;
+        }
+        if (vmOrigin !== undefined) {
+            if (
+                vmOrigin !== null &&
+                !['tenderer_proposed', 'pm_client_proposed', 'ai_identified', 'tender_wide_option'].includes(vmOrigin)
+            ) {
+                return NextResponse.json(
+                    { error: 'Invalid VM origin' },
+                    { status: 400 }
+                );
+            }
+            updateData.vmOrigin = vmOrigin;
         }
 
         // Update the row

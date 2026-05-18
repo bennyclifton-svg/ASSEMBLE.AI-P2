@@ -11,6 +11,68 @@ applicableStates: [NSW, VIC, QLD, WA, SA, TAS, ACT, NT]
 
 # Civil Engineering & Earthworks Guide
 
+## Procurement Brief Service Catalogue
+
+Use this catalogue when generating Civil Engineer services for procurement briefs. Services should describe civil engineering responsibility, advice, design, coordination, review, inspection, and certification within the active civil discipline.
+
+Core services:
+- Establish civil design criteria for site levels, earthworks, stormwater, drainage, pavements, erosion and sediment control, and authority requirements.
+- Review site constraints including existing services, ground levels, access, easements, adjoining property interfaces, flooding, overland flow, and authority assets.
+- Develop civil design for bulk earthworks, finished surface levels, stormwater drainage, on-site detention, pavement areas, and site servicing interfaces where applicable.
+- Coordinate civil interfaces with structural foundations, basement excavation, ground retention, dewatering, landscape levels, external works, and utility connections.
+- Provide civil input to DA, Construction Certificate, Occupation Certificate, subdivision, water authority, roads authority, and stormwater approval processes where civil documentation is required.
+- Coordinate erosion and sediment control, construction-phase stormwater management, dewatering discharge, and environmental compliance requirements with the project team.
+- Review civil shop drawings, RFIs, contractor proposals, authority comments, and construction-stage design changes where included in the appointment.
+- Undertake civil site inspections, respond to non-conformances, review defects, and provide civil certification records.
+
+For multi-residential apartment projects, emphasise site levels, basement excavation interfaces, stormwater drainage, on-site detention, driveway and pavement design, authority stormwater requirements, external works coordination, inspections, certification, defects, and handover records.
+
+## Procurement Brief Deliverables
+
+Use this catalogue when generating Civil Engineer deliverables. Deliverables must be issued artifacts such as drawings, reports, calculations, schedules, certificates, registers, inspection records, or review records.
+
+Core deliverables:
+- Civil design criteria report
+- Site grading and finished levels drawings
+- Bulk earthworks drawings
+- Stormwater drainage drawings
+- On-site detention calculations and drawings
+- Pavement and driveway design drawings
+- Erosion and sediment control plans
+- Civil specifications
+- Authority application inputs and response records
+- Civil design calculations package
+- Civil inspection reports
+- Civil certification records
+- Civil RFI responses and design clarification records
+- Non-conformance and defects review records
+- Civil handover and as-built review records
+
+## Discipline Boundaries
+
+Civil Engineer scope must stay inside civil design, civil authority interfaces, civil coordination, and civil construction support.
+
+Boundary rules:
+- Do not make the Civil Engineer responsible for structural frame, suspended slab, column, beam, footing, or retaining wall design unless the scope specifically assigns that element to civil.
+- Do not make the Civil Engineer responsible for architectural layouts, finishes, building services design, BCA certification, BASIX compliance, acoustic performance, or planning strategy except as civil input to another consultant's process.
+- Do not state that the Civil Engineer obtains DA, CC, or OC approvals. Use wording such as "provide civil documentation, responses, and certification inputs for the approval pathway".
+- Describe structural, architectural, services, landscape, and geotechnical matters only as civil coordination interfaces unless the project context says otherwise.
+
+## Common Exclusions
+
+Avoid these items unless the project facts, fee schedule, project documents, or user input specifically include them:
+- Detailed structural retaining wall design
+- Basement structural design
+- Piling design
+- Geotechnical investigation
+- Traffic engineering
+- Flood modelling
+- Contamination remediation design
+- Sydney Water Section 73 certification management
+- Landscape design
+
+When one of these items is relevant but not confirmed, qualify it with "where applicable" or frame it as a review/coordination interface rather than assuming full design responsibility.
+
 ## Site Establishment and Enabling Works
 
 Site establishment for civil works is the sequence of activities that transforms a bare or existing site into a controlled construction environment ready for bulk earthworks and foundation construction. The scope is broader than most PMs appreciate at tender stage: it encompasses demolition interface management, temporary fencing and hoarding, site access construction (including temporary crossovers and hardstand for heavy plant), establishment of erosion and sediment controls, installation of environmental monitoring equipment, tree protection measures, and the critical first-pass service investigation. On urban infill sites, site establishment alone can consume 4-8 weeks and $150,000-$500,000 before a single cubic metre of soil is moved.

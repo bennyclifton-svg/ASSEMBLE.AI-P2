@@ -9,13 +9,14 @@
  * Run with: npx tsx scripts/ingest-seed-knowledge.ts
  */
 
-// Load env vars BEFORE any module that reads process.env at import time
-import { config } from 'dotenv';
 import { readFileSync, readdirSync } from 'fs';
 import { join, resolve } from 'path';
+import { loadAppEnv } from '../src/lib/env/load-app-env';
 
-config({ path: '.env.local' });
-config({ path: '.env' });
+// Load env vars BEFORE any module that reads process.env at import time.
+// Use the same loader as the Next app/worker so the seed importer writes to
+// the database the app actually reads from in local development.
+loadAppEnv();
 
 // ============================================
 // Types
@@ -89,6 +90,13 @@ async function main() {
     const { chunksToDocumentChunkRows, RAG_SYNC_STATUS } = await import('../src/lib/rag/ingestion');
 
     const seedDir = resolve(process.cwd(), 'src/lib/constants/knowledge-seed');
+    const databaseEnv = process.env.DATABASE_URL
+        ? 'DATABASE_URL'
+        : process.env.SUPABASE_POSTGRES_URL
+            ? 'SUPABASE_POSTGRES_URL'
+            : 'missing';
+
+    console.log(`Using RAG database from ${databaseEnv}`);
 
     let files: string[];
     try {

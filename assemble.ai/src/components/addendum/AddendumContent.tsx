@@ -162,7 +162,7 @@ export function AddendumContent({
                         onBlur={handleBlur}
                         placeholder="Enter addendum details, changes, clarifications..."
                         variant="mini"
-                        toolbarVariant="mini"
+                        toolbarVariant="none"
                         transparentBg
                         className="border-0 rounded-none"
                         editorClassName={`bg-white hover:bg-[var(--sw-paper)] transition-colors ${viewMode === 'long' ? 'min-h-[112px]' : 'min-h-[72px]'}`}
@@ -242,7 +242,7 @@ export function AddendumContent({
                         onBlur={handleBlur}
                         placeholder="Enter addendum details, changes, clarifications..."
                         variant="mini"
-                        toolbarVariant="mini"
+                        toolbarVariant="none"
                         transparentBg
                         className="border-0 rounded-none"
                         editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors"

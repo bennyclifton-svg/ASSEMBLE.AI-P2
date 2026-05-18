@@ -4,8 +4,20 @@
  */
 
 import { RegisterForm } from '@/components/auth/RegisterForm';
+import { resolveTrialPlanIntent } from '@/lib/subscription/trial';
 
-export default function RegisterPage() {
+interface RegisterPageProps {
+  searchParams?: Promise<{
+    plan?: string | string[];
+  }> | {
+    plan?: string | string[];
+  };
+}
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+  const params = await searchParams;
+  const planIntent = resolveTrialPlanIntent(params?.plan);
+
   return (
     <div className="min-h-screen bg-[var(--primitive-slate-900)] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Aurora background effects */}
@@ -28,7 +40,7 @@ export default function RegisterPage() {
 
         {/* Register Form Card - Aurora style */}
         <div className="card-aurora rounded-lg p-6">
-          <RegisterForm />
+          <RegisterForm planIntent={planIntent} />
         </div>
       </div>
     </div>

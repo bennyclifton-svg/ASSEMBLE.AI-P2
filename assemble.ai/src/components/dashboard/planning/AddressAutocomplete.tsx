@@ -397,44 +397,59 @@ export function AddressAutocomplete({ value, onSelect, onManualEdit, placeholder
 
     return (
         <div className="relative">
-            <div className="flex border-b border-[var(--color-border)]">
-                <div className="w-[120px] shrink-0 px-3 py-2 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                    <span className="text-sm font-medium text-[var(--color-text-muted)]">Address</span>
-                </div>
-                <div className="flex-1 relative px-3">
-                    <input
-                        ref={inputRef}
-                        type="text"
-                        value={inputValue}
-                        onChange={handleInputChange}
-                        onFocus={() => setIsFocused(true)}
-                        onBlur={handleBlur}
-                        onKeyDown={handleKeyDown}
-                        placeholder={placeholder || 'Search address...'}
-                        disabled={isSaving}
-                        className="w-full px-2 py-2 text-sm bg-transparent transition-all duration-150 outline-none border-0 ring-0 shadow-none focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none disabled:opacity-50 placeholder:text-[var(--color-text-muted)] text-[var(--color-text-primary)]"
-                        autoComplete="off"
-                        role="combobox"
-                        aria-expanded={isOpen}
-                        aria-haspopup="listbox"
+            <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={handleInputChange}
+                onFocus={() => setIsFocused(true)}
+                onBlur={handleBlur}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder || 'Search address…'}
+                disabled={isSaving}
+                className="w-full bg-transparent transition-all duration-150 outline-none border-0 ring-0 shadow-none focus:outline-none focus:ring-0 focus:border-0 focus:shadow-none disabled:opacity-50"
+                style={{
+                    fontFamily: 'var(--sw-font-sans)',
+                    fontSize: 13,
+                    color: 'var(--sw-ink)',
+                    padding: '1px 0',
+                    textTransform: 'none',
+                    borderBottom: isFocused
+                        ? '1px solid var(--sw-ink)'
+                        : '1px solid transparent',
+                }}
+                autoComplete="off"
+                role="combobox"
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
+            />
+            {(isLoading || isSaving) && (
+                <div
+                    className="absolute right-1 top-0.5 pointer-events-none"
+                    style={{ color: 'var(--sw-peach)' }}
+                >
+                    <DiamondIcon
+                        variant="empty"
+                        className="w-3 h-3 animate-diamond-spin"
                     />
-                    {(isLoading || isSaving) && (
-                        <div className="absolute right-4 top-2.5 pointer-events-none">
-                            <DiamondIcon variant="empty" className="w-3.5 h-3.5 text-[var(--color-accent-copper)] animate-diamond-spin" />
-                        </div>
-                    )}
-                    {!isLoading && !isSaving && isFocused && inputValue.length > 0 && (
-                        <Search className="absolute right-4 top-2.5 w-3.5 h-3.5 text-[var(--color-text-muted)] pointer-events-none" />
-                    )}
                 </div>
-            </div>
+            )}
+            {!isLoading && !isSaving && isFocused && inputValue.length > 0 && (
+                <Search
+                    className="absolute right-1 top-0.5 w-3 h-3 pointer-events-none"
+                    style={{ color: 'var(--sw-muted)' }}
+                />
+            )}
 
             {/* Dropdown */}
             {isOpen && suggestions.length > 0 && (
                 <div
                     ref={dropdownRef}
-                    className="absolute left-0 right-0 z-50 mt-0 border border-[var(--color-border)] rounded-b bg-[var(--color-bg-secondary)] shadow-lg max-h-60 overflow-y-auto"
+                    className="absolute left-0 right-0 z-50 mt-0 max-h-60 overflow-y-auto"
+                    style={{
+                        background: 'white',
+                        border: '1px solid var(--sw-rule)',
+                    }}
                     role="listbox"
                 >
                     {suggestions.map((suggestion, index) => (
@@ -443,11 +458,19 @@ export function AddressAutocomplete({ value, onSelect, onManualEdit, placeholder
                             type="button"
                             role="option"
                             aria-selected={index === selectedIndex}
-                            className={`w-full text-left px-4 py-2.5 text-sm cursor-pointer transition-colors ${
-                                index === selectedIndex
-                                    ? 'bg-[var(--color-accent-copper-tint)] text-[var(--color-text-primary)]'
-                                    : 'text-[var(--color-text-primary)] hover:bg-[var(--color-bg-tertiary)]'
-                            } ${index < suggestions.length - 1 ? 'border-b border-[var(--color-border)]' : ''}`}
+                            className="w-full text-left px-3 py-2 cursor-pointer transition-colors"
+                            style={{
+                                fontFamily: 'var(--sw-font-sans)',
+                                fontSize: 13,
+                                color: 'var(--sw-ink)',
+                                textTransform: 'none',
+                                background: index === selectedIndex
+                                    ? 'var(--sw-paper-2)'
+                                    : 'transparent',
+                                borderBottom: index < suggestions.length - 1
+                                    ? '1px solid var(--sw-rule-2)'
+                                    : undefined,
+                            }}
                             onMouseDown={(e) => {
                                 e.preventDefault(); // Prevent blur before click
                                 handleSelect(suggestion);
@@ -455,14 +478,26 @@ export function AddressAutocomplete({ value, onSelect, onManualEdit, placeholder
                             onMouseEnter={() => setSelectedIndex(index)}
                         >
                             <div className="flex items-start gap-2">
-                                <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--color-text-muted)]" />
+                                <MapPin
+                                    className="w-3 h-3 mt-0.5 shrink-0"
+                                    style={{ color: 'var(--sw-muted)' }}
+                                />
                                 <span className="line-clamp-2">{suggestion.text}</span>
                             </div>
                         </button>
                     ))}
                     {!google.isAvailable && (
-                        <div className="px-4 py-1.5 text-[10px] text-[var(--color-text-muted)] border-t border-[var(--color-border)]">
-                            Powered by OpenStreetMap Nominatim
+                        <div
+                            className="px-3 py-1.5"
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                fontSize: 10,
+                                color: 'var(--sw-muted)',
+                                borderTop: '1px solid var(--sw-rule-2)',
+                                textTransform: 'lowercase',
+                            }}
+                        >
+                            powered by openstreetmap nominatim
                         </div>
                     )}
                 </div>

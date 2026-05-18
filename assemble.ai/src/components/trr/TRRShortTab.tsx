@@ -66,7 +66,7 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
     const [executiveSummary, setExecutiveSummary] = useState(trr.executiveSummary || '');
     const [clarifications, setClarifications] = useState(trr.clarifications || '');
     const [recommendation, setRecommendation] = useState(trr.recommendation || '');
-    const [reportDate, setReportDate] = useState(trr.reportDate || new Date().toISOString().split('T')[0]);
+    const [reportDate, setReportDate] = useState(trr.reportDate || '');
 
     // Debounce timer ref
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -169,7 +169,7 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
         setExecutiveSummary(trr.executiveSummary || '');
         setClarifications(trr.clarifications || '');
         setRecommendation(trr.recommendation || '');
-        setReportDate(trr.reportDate || new Date().toISOString().split('T')[0]);
+        setReportDate(trr.reportDate || '');
     }, [trr]);
 
     // Debounced save function
@@ -231,8 +231,10 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
                 }
 
                 const data = await res.json();
-                // Auto-save generated content to backend immediately
-                debouncedSave({ [field]: data.content });
+                // Auto-save generated content to backend immediately and clear the
+                // issue date so rewritten prose cannot inherit an old date.
+                setReportDate('');
+                await onUpdateTRR({ [field]: data.content, reportDate: null });
                 return data.content;
             };
         };
@@ -242,7 +244,7 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
             clarifications: makeHandler('clarifications'),
             recommendation: makeHandler('recommendation'),
         };
-    }, [trr.id, debouncedSave]);
+    }, [trr.id, onUpdateTRR]);
 
     if (isLoading) {
         return (
@@ -300,6 +302,7 @@ export const TRRShortTab = forwardRef<TRRShortTabHandle, TRRShortTabProps>(funct
             <TRREvaluationPrice
                 projectId={projectId}
                 stakeholderId={stakeholderId}
+                evaluationPriceId={trr.evaluationPriceId}
             />
 
             {/* 6. Evaluation Non-Price */}

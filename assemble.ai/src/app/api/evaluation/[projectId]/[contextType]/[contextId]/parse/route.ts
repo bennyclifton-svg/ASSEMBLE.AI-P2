@@ -16,6 +16,7 @@ import {
     fileAssets,
     categories,
     projectStakeholders,
+    tenderSubmissionPackages,
     tenderSubmissions,
 } from '@/lib/db';
 import { eq, and, asc, desc, isNull } from 'drizzle-orm';
@@ -23,8 +24,11 @@ import { nanoid } from 'nanoid';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';
 import { versioning } from '@/lib/versioning';
+import { generateAiStableKey } from '@/lib/evaluation/tender-commercial';
+import { applyRecommendationEvent } from '@/lib/evaluation/recommendation-state';
+import { storeArtefact } from '@/lib/evaluation/artefact-store';
 import { parseTenderForEvaluation } from '@/lib/services/tender-parser';
-import type { TenderParseResult } from '@/types/evaluation';
+import type { EvaluationRow, EvaluationRowSource, EvaluationTableType, TenderParseResult } from '@/types/evaluation';
 
 interface RouteParams {
     params: Promise<{
@@ -49,9 +53,6 @@ export async function POST(
                 { status: 400 }
             );
         }
-
-        // For backwards compatibility, treat all context types as stakeholder
-        const _contextType = contextType; // Keep for reference
 
         // T045: Handle file upload
         const formData = await request.formData();
@@ -119,10 +120,15 @@ export async function POST(
         });
 
         // Convert DB rows to EvaluationRow type (handle null -> undefined conversion)
-        const rows = dbRows.map(row => ({
+        const rows: EvaluationRow[] = dbRows.map(row => ({
             ...row,
+            evaluationId: row.evaluationId || evaluation.id,
+            tableType: row.tableType as EvaluationTableType,
+            source: row.source as EvaluationRowSource | undefined,
+            vmAdoptionStatus: row.vmAdoptionStatus as EvaluationRow['vmAdoptionStatus'],
+            vmOrigin: row.vmOrigin as EvaluationRow['vmOrigin'],
             isSystemRow: row.isSystemRow ?? undefined,
-            createdAt: row.createdAt ?? undefined,
+            createdAt: row.createdAt?.toISOString(),
         }));
 
         // Convert file to buffer
@@ -152,6 +158,8 @@ export async function POST(
 
         // T046: Upload PDF to document repository (Stakeholder category)
         let uploadedFileAssetId: string | null = null;
+        let uploadedDocumentId: string | null = null;
+        let uploadedVersionId: string | null = null;
         let stakeholder: { id: string; name: string; stakeholderGroup: string | null } | undefined;
         try {
             const { path: storagePath, hash, size } = await storage.save(file, buffer);
@@ -203,9 +211,11 @@ export async function POST(
                 });
                 console.log(`[parse-route] Created new document ${documentId}`);
             }
+            uploadedDocumentId = documentId;
 
             // Create version
             const versionId = uuidv4();
+            uploadedVersionId = versionId;
             await db.insert(versions).values({
                 id: versionId,
                 documentId,
@@ -233,23 +243,100 @@ export async function POST(
         }
         const firmType = stakeholder?.stakeholderGroup === 'consultant' ? 'consultant' : 'contractor';
 
+        const existingPackage = await db.query.tenderSubmissionPackages.findFirst({
+            where: evaluationPriceId
+                ? and(
+                    eq(tenderSubmissionPackages.evaluationId, evaluation.id),
+                    eq(tenderSubmissionPackages.evaluationPriceId, evaluationPriceId),
+                    eq(tenderSubmissionPackages.firmId, firmId),
+                    eq(tenderSubmissionPackages.firmType, firmType)
+                )
+                : and(
+                    eq(tenderSubmissionPackages.evaluationId, evaluation.id),
+                    isNull(tenderSubmissionPackages.evaluationPriceId),
+                    eq(tenderSubmissionPackages.firmId, firmId),
+                    eq(tenderSubmissionPackages.firmType, firmType)
+                ),
+        });
+
+        const packageId = existingPackage?.id || nanoid();
+        if (existingPackage) {
+            await db.update(tenderSubmissionPackages)
+                .set({ updatedAt: new Date(), status: 'active' })
+                .where(eq(tenderSubmissionPackages.id, packageId));
+        } else {
+            await db.insert(tenderSubmissionPackages).values({
+                id: packageId,
+                evaluationId: evaluation.id,
+                evaluationPriceId: evaluationPriceId || undefined,
+                firmId,
+                firmType,
+                status: 'active',
+            });
+        }
+
         // T080: Create tender_submission record for audit trail
         // Store both included items and filtered items for transparency
         const submissionId = nanoid();
         await db.insert(tenderSubmissions).values({
             id: submissionId,
             evaluationId: evaluation.id,
+            packageId,
+            evaluationPriceId: evaluationPriceId || undefined,
             firmId,
             firmType,
             filename: file.name,
+            documentId: uploadedDocumentId,
+            versionId: uploadedVersionId,
             fileAssetId: uploadedFileAssetId,
             parserUsed: 'claude',
             confidence: Math.round(parseResult.overallConfidence * 100),
             rawExtractedItems: JSON.stringify({
-                included: parseResult.items,
-                filtered: parseResult.filteredItems || [],
+                includedCount: parseResult.items.length,
+                filteredCount: parseResult.filteredItems?.length || 0,
             }),
         });
+
+        try {
+            const artefact = await storeArtefact({
+                kind: 'full_extraction',
+                content: {
+                    included: parseResult.items,
+                    filtered: parseResult.filteredItems || [],
+                    filename: file.name,
+                },
+                relations: {
+                    evaluationId: evaluation.id,
+                    evaluationPriceId: evaluationPriceId || null,
+                    packageId,
+                    submissionId,
+                },
+                metadata: {
+                    parserUsed: 'claude',
+                    confidence: parseResult.overallConfidence,
+                },
+            });
+
+            await db.update(tenderSubmissions)
+                .set({
+                    rawExtractedItems: JSON.stringify({
+                        artefactId: artefact.id,
+                        includedCount: parseResult.items.length,
+                        filteredCount: parseResult.filteredItems?.length || 0,
+                    }),
+                })
+                .where(eq(tenderSubmissions.id, submissionId));
+        } catch (artefactError) {
+            console.warn('[parse-route] Failed to store full extraction artefact:', artefactError);
+            await db.update(tenderSubmissions)
+                .set({
+                    rawExtractedItems: JSON.stringify({
+                        included: parseResult.items,
+                        filtered: parseResult.filteredItems || [],
+                    }),
+                })
+                .where(eq(tenderSubmissions.id, submissionId));
+        }
 
         // Log filtered items for transparency
         if (parseResult.filteredItems && parseResult.filteredItems.length > 0) {
@@ -260,6 +347,16 @@ export async function POST(
         }
 
         console.log(`[parse-route] Created tender submission record: ${submissionId}`);
+
+        const nextRecommendationState = applyRecommendationEvent(
+            (evaluation.recommendationState ?? 'draft') as 'draft' | 'conditional' | 'final',
+            'new_tender_file_attached'
+        );
+        if (nextRecommendationState !== evaluation.recommendationState) {
+            await db.update(evaluations)
+                .set({ recommendationState: nextRecommendationState, updatedAt: new Date() })
+                .where(eq(evaluations.id, evaluation.id));
+        }
 
         // Separate mapped and unmapped items
         const mappedItems = parseResult.items.filter(i => i.matchedRowId);
@@ -300,6 +397,7 @@ export async function POST(
                 await db.update(evaluationCells)
                     .set({
                         amountCents: item.amountCents,
+                        valueType: 'amount',
                         source: 'ai',
                         confidence: confidencePercent,
                         updatedAt: new Date(),
@@ -313,6 +411,7 @@ export async function POST(
                     firmId,
                     firmType,
                     amountCents: item.amountCents,
+                    valueType: 'amount',
                     source: 'ai',
                     confidence: confidencePercent,
                 });
@@ -320,42 +419,76 @@ export async function POST(
         }
 
         // T081-T083: CREATE NEW ROWS for unmapped items (don't discard them!)
-        const newRowsCreated: Array<{ rowId: string; description: string; amountCents: number }> = [];
+        const newRowsCreated: Array<{
+            rowId: string;
+            description: string;
+            amountCents: number;
+            tableType: EvaluationTableType;
+        }> = [];
 
         if (unmappedItems.length > 0) {
             console.log(`[parse-route] Creating ${unmappedItems.length} new rows for unmapped items`);
 
-            // Get the highest order index for initial_price table (filtered by evaluationPriceId)
-            const existingMaxOrder = await db.query.evaluationRows.findMany({
-                where: evaluationPriceId
-                    ? and(
-                        eq(evaluationRows.evaluationId, evaluation.id),
-                        eq(evaluationRows.tableType, 'initial_price'),
-                        eq(evaluationRows.evaluationPriceId, evaluationPriceId)
-                    )
-                    : and(
-                        eq(evaluationRows.evaluationId, evaluation.id),
-                        eq(evaluationRows.tableType, 'initial_price'),
-                        isNull(evaluationRows.evaluationPriceId)
-                    ),
-                orderBy: [desc(evaluationRows.orderIndex)],
-                limit: 1,
-            });
+            const nextOrderByTable = new Map<EvaluationTableType, number>();
+            const getNextOrderIndex = async (tableType: EvaluationTableType) => {
+                const existingNextOrder = nextOrderByTable.get(tableType);
+                if (existingNextOrder !== undefined) {
+                    nextOrderByTable.set(tableType, existingNextOrder + 1);
+                    return existingNextOrder;
+                }
 
-            let nextOrderIndex = existingMaxOrder.length > 0 ? existingMaxOrder[0].orderIndex + 1 : 0;
+                const existingMaxOrder = await db.query.evaluationRows.findMany({
+                    where: evaluationPriceId
+                        ? and(
+                            eq(evaluationRows.evaluationId, evaluation.id),
+                            eq(evaluationRows.tableType, tableType),
+                            eq(evaluationRows.evaluationPriceId, evaluationPriceId)
+                        )
+                        : and(
+                            eq(evaluationRows.evaluationId, evaluation.id),
+                            eq(evaluationRows.tableType, tableType),
+                            isNull(evaluationRows.evaluationPriceId)
+                        ),
+                    orderBy: [desc(evaluationRows.orderIndex)],
+                    limit: 1,
+                });
+
+                const nextOrderIndex = existingMaxOrder.length > 0 ? existingMaxOrder[0].orderIndex + 1 : 0;
+                nextOrderByTable.set(tableType, nextOrderIndex + 1);
+                return nextOrderIndex;
+            };
 
             for (const item of unmappedItems) {
                 // T082: Create new row with source='ai_parsed' and sourceSubmissionId
                 const newRowId = nanoid();
+                const tableType = item.tableType || 'initial_price';
+                const isValueManagement = tableType === 'value_management';
+                const orderIndex = await getNextOrderIndex(tableType);
+                const aiStableKey = generateAiStableKey({
+                    tableType,
+                    category: item.category,
+                    commercialIssue: item.description,
+                    packageId,
+                    firmId,
+                    sourceFileAssetIds: uploadedFileAssetId ? [uploadedFileAssetId] : [],
+                });
+
                 await db.insert(evaluationRows).values({
                     id: newRowId,
                     evaluationId: evaluation.id,
                     evaluationPriceId: evaluationPriceId || undefined,
-                    tableType: 'initial_price',
+                    tableType,
                     description: item.description,
-                    orderIndex: nextOrderIndex,
+                    orderIndex,
                     source: 'ai_parsed',
                     sourceSubmissionId: submissionId,
+                    aiStableKey,
+                    category: item.category,
+                    sourceDocumentId: uploadedDocumentId || undefined,
+                    sourceFileAssetId: uploadedFileAssetId || undefined,
+                    vmAdoptionStatus: isValueManagement ? item.vmAdoptionStatus || 'tbd' : undefined,
+                    vmEmbeddedInBase: isValueManagement ? item.vmEmbeddedInBase || false : undefined,
+                    vmOrigin: isValueManagement ? item.vmOrigin || 'tenderer_proposed' : undefined,
                 });
 
                 // Create cell for this new row
@@ -367,6 +500,7 @@ export async function POST(
                     firmId,
                     firmType,
                     amountCents: item.amountCents,
+                    valueType: 'amount',
                     source: 'ai',
                     confidence: confidencePercent,
                 });
@@ -375,9 +509,8 @@ export async function POST(
                     rowId: newRowId,
                     description: item.description,
                     amountCents: item.amountCents,
+                    tableType,
                 });
-
-                nextOrderIndex++;
             }
 
             console.log(`[parse-route] Created ${newRowsCreated.length} new rows for unmapped items`);

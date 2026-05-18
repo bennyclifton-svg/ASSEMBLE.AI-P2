@@ -1,7 +1,7 @@
 import { NavBar } from '@/components/landing/NavBar';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { AgentRosterSection } from '@/components/landing/AgentRosterSection';
-import { TenderFeaturesSection } from '@/components/landing/TenderFeaturesSection';
+import { WorkflowGallerySection } from '@/components/landing/WorkflowGallerySection';
+import { CapabilitiesSection } from '@/components/landing/CapabilitiesSection';
 import { FinalCTASection } from '@/components/landing/FinalCTASection';
 import { FooterSection } from '@/components/landing/FooterSection';
 
@@ -11,8 +11,8 @@ export default function LandingPage() {
             <NavBar />
             <main>
                 <HeroSection />
-                <AgentRosterSection />
-                <TenderFeaturesSection />
+                <WorkflowGallerySection />
+                <CapabilitiesSection />
                 <FinalCTASection />
             </main>
             <FooterSection />

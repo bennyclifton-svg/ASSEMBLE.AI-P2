@@ -11,6 +11,72 @@ applicableStates: [NSW, VIC, QLD, WA, SA, TAS, ACT, NT]
 
 # Architectural Trades Guide
 
+## Procurement Brief Service Catalogue
+
+Use this catalogue when generating Architect services for procurement briefs. Services should describe architectural design, documentation, coordination, review, construction support, and handover within the active architectural discipline.
+
+Core services:
+- Develop the architectural design response for the project brief, planning constraints, apartment mix, building layout, amenity, facade expression, materials, and common areas.
+- Prepare architectural documentation for design development, authority submissions, tender, construction, and handover as required by the fee schedule or project stage.
+- Coordinate architectural layouts with structural grids, services zones, basement planning, facade systems, access requirements, fire separation, acoustic requirements, waterproofing, and vertical circulation.
+- Provide architectural input to DA, Construction Certificate, Occupation Certificate, NCC/BCA, BASIX, accessibility, and acoustic compliance processes where architectural documentation or responses are required.
+- Coordinate consultant inputs and resolve architectural interfaces with structural, services, BCA, access, fire, acoustic, landscape, and facade consultants.
+- Review architectural shop drawings, samples, finishes, materials, facade interfaces, joinery interfaces, door hardware, and contractor submissions where included in the appointment.
+- Respond to architectural RFIs, design clarifications, site queries, defects, and non-conformances during construction.
+- Support practical completion, defects review, as-built documentation review, operations information, and handover records.
+
+For multi-residential apartment projects, emphasise apartment layouts, basement planning interface, facade and glazing coordination, services coordination, NCC/BCA and BASIX inputs, acoustic coordination, access/security interfaces, finishes, handover, and defects.
+
+## Procurement Brief Deliverables
+
+Use this catalogue when generating Architect deliverables. Deliverables must be issued artifacts such as drawings, schedules, reports, matrices, submissions, registers, markups, inspection records, or handover packs.
+
+Core deliverables:
+- Architectural design report or design statement
+- Architectural drawing package
+- Apartment layout plans
+- Basement car park layout drawings
+- Elevations, sections, and facade coordination drawings
+- Door, hardware, access, and intercom schedules
+- Finishes, fixtures, and materials schedule
+- Waterproofing, wet area, roof, balcony, and facade detail drawings where applicable
+- DA architectural submission package
+- DA condition response matrix
+- Construction Certificate architectural documentation package
+- NCC/BCA architectural compliance response
+- BASIX and NatHERS coordination inputs
+- Acoustic coordination markups
+- Consultant coordination register
+- Architectural RFI responses and design clarification records
+- Architectural defects inspection reports
+- Architectural handover drawing pack and as-built review records
+
+## Discipline Boundaries
+
+Architect scope must stay inside architectural design, architectural documentation, architectural coordination, and architectural construction support.
+
+Boundary rules:
+- Do not make the Architect responsible for structural calculations, structural certification, foundations, basement retention design, or structural frame design except as architectural coordination inputs.
+- Do not make the Architect responsible for mechanical, electrical, hydraulic, fire, lift, or security systems design; describe these only as spatial coordination, builder's work, access/security interface, or services coordination markups.
+- Do not make the Architect responsible for BCA certification, town planning approval, BASIX certification, acoustic certification, or fire engineering certification except as architectural inputs to those consultants' processes.
+- Do not state that the Architect obtains DA, CC, or OC approvals. Use wording such as "prepare architectural documentation, responses, and coordination inputs for the approval pathway".
+
+## Common Exclusions
+
+Avoid these items unless the project facts, fee schedule, project documents, or user input specifically include them:
+- Structural engineering design
+- Building services design
+- Fire engineering design
+- BCA certification
+- Town planning strategy
+- BASIX or NatHERS certification
+- Acoustic testing or certification
+- Specialist facade engineering
+- Waterproofing consultant certification
+- Access consultant certification
+
+When one of these items is relevant but not confirmed, qualify it with "coordination input", "architectural response", or "where applicable" rather than assuming full design or certification responsibility.
+
 ## Facade Systems — Curtain Wall, Panel, and Brick Veneer Selection Criteria
 
 The facade is the single most expensive architectural trade package on most multi-storey projects and sits on the critical path for every internal finish that follows. Selecting the wrong facade system — or selecting the right system and procuring it too late — is one of the most consequential errors a PM can make. The choice between unitised curtain wall, stick curtain wall, cladding panel systems, and traditional brick veneer is driven by building height, program constraints, thermal performance requirements under NCC 2024 Section J, and the project's risk appetite for weather-dependent site installation.

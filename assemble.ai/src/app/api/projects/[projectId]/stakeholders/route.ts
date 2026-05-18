@@ -9,6 +9,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStakeholders, createStakeholder } from '@/lib/services/stakeholder-service';
 import type { CreateStakeholderRequest, StakeholderGroup } from '@/types/stakeholder';
+import {
+  isAccessDenied,
+  requireProjectReadAccess,
+  requireWritableProjectAccess,
+} from '@/lib/auth/project-access';
 
 interface RouteParams {
   params: Promise<{ projectId: string }>;
@@ -28,6 +33,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
+
+    const access = await requireProjectReadAccess(projectId);
+    if (isAccessDenied(access)) return access.response;
 
     // Optional filter by group
     const { searchParams } = new URL(request.url);
@@ -70,6 +78,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
+
+    const access = await requireWritableProjectAccess(projectId);
+    if (isAccessDenied(access)) return access.response;
 
     const body = await request.json();
 

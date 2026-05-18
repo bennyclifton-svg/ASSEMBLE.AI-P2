@@ -67,10 +67,16 @@ async function ensureActionsRegistered(): Promise<void> {
     await Promise.all([
         import('@/lib/actions/definitions/add-tender-firms'),
         import('@/lib/actions/definitions/create-note'),
+        import('@/lib/actions/definitions/create-cost-line'),
+        import('@/lib/actions/definitions/create-meeting'),
         import('@/lib/actions/definitions/create-outbound-correspondence'),
         import('@/lib/actions/definitions/create-report'),
+        import('@/lib/actions/definitions/create-rfi'),
         import('@/lib/actions/definitions/create-program-activity'),
         import('@/lib/actions/definitions/create-program-milestone'),
+        import('@/lib/actions/definitions/create-risk'),
+        import('@/lib/actions/definitions/replace-program'),
+        import('@/lib/actions/definitions/record-invoice'),
         import('@/lib/actions/definitions/create-transmittal'),
         import('@/lib/actions/definitions/create-variation'),
         import('@/lib/actions/definitions/attach-documents-to-note'),
@@ -79,7 +85,10 @@ async function ensureActionsRegistered(): Promise<void> {
         import('@/lib/actions/definitions/update-note'),
         import('@/lib/actions/definitions/update-program-activity'),
         import('@/lib/actions/definitions/update-program-milestone'),
+        import('@/lib/actions/definitions/update-rft-brief'),
+        import('@/lib/actions/definitions/update-risk'),
         import('@/lib/actions/definitions/update-stakeholder'),
+        import('@/lib/actions/definitions/update-variation'),
     ]);
     actionsLoaded = true;
 }
@@ -249,7 +258,7 @@ export async function applyUpdateCostLine(
  * Apply create_cost_line. Computes the next sortOrder within the section
  * and inserts. No optimistic-lock check — the row doesn't exist yet.
  */
-async function applyCreateCostLine(
+export async function applyCreateCostLine(
     rawInput: unknown,
     ctx: ApplyContext
 ): Promise<ApplyResult> {
@@ -305,7 +314,7 @@ async function applyCreateCostLine(
  * No optimistic-lock — invoices are append-only from the agent's side.
  * periodYear/periodMonth are derived at validate() time and passed through.
  */
-async function applyRecordInvoice(
+export async function applyRecordInvoice(
     rawInput: unknown,
     ctx: ApplyContext
 ): Promise<ApplyResult> {
@@ -761,7 +770,7 @@ export async function applyUpdateNote(
     return { kind: 'conflict', reason: conflictReason('note', stillThere.rowVersion, expectedRowVersion) };
 }
 
-async function applyCreateRisk(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
+export async function applyCreateRisk(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
     const input = asInput(rawInput);
     const title = inputString(input, 'title');
     if (!title) return { kind: 'gone', reason: 'Missing risk title on proposal.' };
@@ -791,7 +800,7 @@ async function applyCreateRisk(rawInput: unknown, ctx: ApplyContext): Promise<Ap
     return { kind: 'applied', output: values as unknown as Record<string, unknown> };
 }
 
-async function applyUpdateRisk(
+export async function applyUpdateRisk(
     rawInput: unknown,
     expectedRowVersion: number | null,
     ctx: ApplyContext
@@ -872,7 +881,7 @@ export async function applyCreateVariation(rawInput: unknown, ctx: ApplyContext)
     return { kind: 'applied', output: values as unknown as Record<string, unknown> };
 }
 
-async function applyUpdateVariation(
+export async function applyUpdateVariation(
     rawInput: unknown,
     expectedRowVersion: number | null,
     ctx: ApplyContext
@@ -978,7 +987,7 @@ export async function applyUpdateProgramActivity(
     };
 }
 
-async function applyCreateMeeting(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
+export async function applyCreateMeeting(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
     const input = asInput(rawInput);
     const title = inputString(input, 'title');
     if (!title) return { kind: 'gone', reason: 'Missing meeting title on proposal.' };

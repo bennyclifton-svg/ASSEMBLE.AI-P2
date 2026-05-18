@@ -25,11 +25,57 @@ export interface GenerationSource {
  */
 export interface GenerationMetadata {
   usedRAG: boolean;
+  usedDomainKnowledge?: boolean;
   usedProjectContext: boolean;
   usedProfiler: boolean;
   usedObjectives: boolean;
+  usedProjectObjectives?: boolean;
+  usedFeeSchedule?: boolean;
+  usedProjectDocuments?: boolean;
+  usedDisciplineSeedKnowledge?: boolean;
+  usedSeedKnowledge?: boolean;
+  usedStakeholderContext?: boolean;
   ragDocumentCount: number;
   ragChunkCount: number;
+  feeScheduleCount?: number;
+  domainKnowledgeCount?: number;
+  disciplineSeedSectionCount?: number;
+  seedKnowledgeCount?: number;
+  qualityGate?: {
+    passed: boolean;
+    retried: boolean;
+    issues: string[];
+    initialIssues?: string[];
+    bulletCount: number;
+    headingCount: number;
+    projectSignalMatches: number;
+    projectSignalsAvailable: number;
+  };
+  sourceTrace?: {
+    usedProjectObjectives: boolean;
+    usedFeeSchedule: boolean;
+    usedProjectDocuments: boolean;
+    usedDomainRAG: boolean;
+    usedDisciplineSeedKnowledge: boolean;
+    usedSeedKnowledge: boolean;
+    usedStakeholderContext: boolean;
+    feeScheduleCount: number;
+    projectDocumentCount: number;
+    projectDocumentChunkCount: number;
+    domainKnowledgeCount: number;
+    disciplineSeedSectionCount: number;
+    seedKnowledgeCount: number;
+    domainTags: string[];
+    disciplineSeedSections: Array<{
+      domainName: string;
+      sectionTitle: string;
+    }>;
+    seedKnowledgeSources: Array<{
+      domainName: string;
+      sectionTitle: string | null;
+      relevanceScore: number;
+    }>;
+  };
 }
 
 /**

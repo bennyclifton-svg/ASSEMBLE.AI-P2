@@ -55,23 +55,18 @@ export function MessageList({ messages, activeRun, approvals, pendingStatus }: M
         .join(',');
 
     useEffect(() => {
-        // block: 'end' aligns the bottom of endRef with the bottom of the
-        // scroll container, so the last message and approval cards stay visible.
-        // 'instant' (not 'smooth') because smooth schedules rAF frames that
-        // never fire when the main thread is blocked on a heavy render — the
-        // scroll silently stalls and the approval card stays below the fold.
+        // Keep the newest message, tool activity, or approval visible.
         endRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
     }, [
         timelineOrderKey,
         activeRun?.toolCalls.length,
         activeRun?.isThinking,
         pendingStatus,
-        // re-scroll when any approval transitions to a resolved state
         approvalResolutionKey,
     ]);
 
     return (
-        <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-3">
+        <div className="flex-1 overflow-y-auto px-1.5 py-2 flex flex-col gap-3">
             {messages.length === 0 && !activeRun && !pendingStatus && approvalList.length === 0 && (
                 <div
                     className="text-xs text-center mt-6"
@@ -127,16 +122,21 @@ export function MessageList({ messages, activeRun, approvals, pendingStatus }: M
                             color: 'var(--color-text-secondary)',
                         }}
                     >
-                        {activeRun.isThinking && (
-                            <div className="flex items-center gap-2 text-xs">
-                                <Loader2
-                                    size={14}
-                                    className="animate-spin"
-                                    style={{ color: 'var(--color-accent-primary)' }}
-                                />
-                                <span>Thinking…</span>
+                        <div className="flex items-start gap-2 text-xs">
+                            <Loader2
+                                size={14}
+                                className="animate-spin mt-0.5"
+                                style={{ color: 'var(--color-accent-primary)' }}
+                            />
+                            <div className="min-w-0">
+                                <div style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
+                                    {activeRunStatus(activeRun)}
+                                </div>
+                                <div style={{ color: 'var(--color-text-tertiary)' }}>
+                                    {activeRunDetail(activeRun)}
+                                </div>
                             </div>
-                        )}
+                        </div>
                         {activeRun.toolCalls.map((tc) => (
                             <ToolCallCard key={tc.id} toolCall={tc} />
                         ))}
@@ -157,4 +157,26 @@ function toTimestamp(value: string | Date | null | undefined): number {
     if (!value) return Number.MAX_SAFE_INTEGER;
     const timestamp = value instanceof Date ? value.getTime() : new Date(value).getTime();
     return Number.isFinite(timestamp) ? timestamp : Number.MAX_SAFE_INTEGER;
+}
+
+function activeRunStatus(activeRun: ActiveRunView): string {
+    if (activeRun.toolCalls.length === 0) {
+        return 'Reading your request and choosing the first step';
+    }
+    const running = activeRun.toolCalls.find((toolCall) => toolCall.status === 'running');
+    if (running) return 'Working through the next project command';
+    if (activeRun.isThinking) return 'Reading the results and deciding what to do next';
+    return 'Working through the request';
+}
+
+function activeRunDetail(activeRun: ActiveRunView): string {
+    const total = activeRun.toolCalls.length;
+    if (total === 0) return 'No project data has been changed yet.';
+    const completed = activeRun.toolCalls.filter((toolCall) => toolCall.status === 'complete').length;
+    const failed = activeRun.toolCalls.filter((toolCall) => toolCall.status === 'error').length;
+    const running = activeRun.toolCalls.filter((toolCall) => toolCall.status === 'running').length;
+    const parts = [`${completed}/${total} step${total === 1 ? '' : 's'} complete`];
+    if (running > 0) parts.push(`${running} running`);
+    if (failed > 0) parts.push(`${failed} needs attention`);
+    return parts.join(' - ');
 }

@@ -23,6 +23,9 @@ describe('routeAgents', () => {
         expect(
             routeAgents('update the Architecture Detail Design Budget and Contract value to 150000')
         ).toEqual(['finance']);
+        expect(routeAgents('increase the acoustic budget and contract sum by 3000')).toEqual([
+            'finance',
+        ]);
     });
 
     test('routes invoice creation to finance even when the cost line has design words', () => {
@@ -88,6 +91,19 @@ describe('routeAgents', () => {
         expect(routeAgents('Is CO monitoring required in the carpark?')).toEqual(['design']);
     });
 
+    test('routes technical services specification reviews to design even when they ask for cost drivers', () => {
+        expect(
+            routeAgents(
+                'create a new record, attach and review the hydraulic specification, highlight major cost components and long lead time items.'
+            )
+        ).toEqual(['design']);
+        expect(
+            routeAgents(
+                'summarise the attached hydraulic specification and identify major cost components and long lead items'
+            )
+        ).toEqual(['design']);
+    });
+
     test('routes meeting creation to design', () => {
         expect(routeAgents('create a new meeting called Pre-DA Meeting')).toEqual(['design']);
     });
@@ -104,6 +120,14 @@ describe('routeAgents', () => {
     test('routes activity creation to program even when the activity is a Pre-DA meeting', () => {
         expect(
             routeAgents('add activity for Council Pre DA Meeting, taking place 4 days prior to DA submission.')
+        ).toEqual(['program']);
+    });
+
+    test('routes whole-programme preparation to program even when phases mention design and DA', () => {
+        expect(
+            routeAgents(
+                'prepare a programme, about 10 activities, commence today, 3 months for schematic design, 12 moths for DA assessment, then 18 months for construction.'
+            )
         ).toEqual(['program']);
     });
 
@@ -138,6 +162,17 @@ describe('routeAgents', () => {
 
     test('routes document selection to design', () => {
         expect(routeAgents('select all mech docs')).toEqual(['design']);
+    });
+
+    test('routes RFI drafting to design', () => {
+        expect(routeAgents('draft an RFI to the acoustic consultant about rooftop plant noise')).toEqual(['design']);
+        expect(routeAgents('raise a request for information about the hydraulic riser clash')).toEqual(['design']);
+    });
+
+    test('routes existing RFI references to design', () => {
+        expect(routeAgents('please address RFI 001')).toEqual(['design']);
+        expect(routeAgents('answer RFI001')).toEqual(['design']);
+        expect(routeAgents('review RFI-001 and respond')).toEqual(['design']);
     });
 
     test('routes RFT brief creation to design', () => {
@@ -184,6 +219,10 @@ Email: tenders@harbourmechanical.com.au`)
         },
         {
             prompt: 'Create a transmittal from the selected drawings.',
+            expected: ['design'],
+        },
+        {
+            prompt: 'Prepare an RFI from the selected acoustic report.',
             expected: ['design'],
         },
         {

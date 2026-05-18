@@ -21,6 +21,7 @@ import { fetchProjectInfo } from './modules/project-info';
 import { fetchProcurementDocs } from './modules/procurement-docs';
 import { fetchAttachedDocuments } from './modules/attached-documents';
 import { retrieveFromDomains } from '../rag/retrieval';
+import { aiMemoryService, formatAiMemoryContext } from '../ai-memory/service';
 import type { DomainRetrievalResult } from '../rag/retrieval';
 import { SECTION_TO_DOMAIN_TAGS, isKnownTag } from '../constants/knowledge-domains';
 import type { DomainTag } from '../constants/knowledge-domains';
@@ -59,6 +60,15 @@ const MODULE_FETCHERS: Record<ModuleName, (projectId: string, params?: any) => P
   procurementDocs: fetchProcurementDocs,
   attachedDocuments: fetchAttachedDocuments,
 };
+
+const REQUEST_SCOPED_MODULES = new Set<ModuleName>([
+  'attachedDocuments',
+  'ragDocuments',
+]);
+
+function isCacheableModule(moduleName: ModuleName): boolean {
+  return !REQUEST_SCOPED_MODULES.has(moduleName);
+}
 
 /** Timeout utility */
 function timeout(ms: number): Promise<never> {
@@ -217,7 +227,9 @@ export async function assembleContext(
   const modulesToFetch: ModuleName[] = [];
 
   for (const [moduleName] of deduplicatedModules) {
-    const cached = moduleCache.get(request.projectId, moduleName);
+    const cached = isCacheableModule(moduleName)
+      ? moduleCache.get(request.projectId, moduleName)
+      : null;
     if (cached) {
       fetchedModules.set(moduleName, cached);
       cacheHits++;
@@ -278,7 +290,7 @@ export async function assembleContext(
 
     for (const { moduleName, result } of results) {
       fetchedModules.set(moduleName, result);
-      if (result.success) {
+      if (result.success && isCacheableModule(moduleName)) {
         moduleCache.set(request.projectId, moduleName, result);
       }
     }
@@ -315,7 +327,20 @@ export async function assembleContext(
     knowledgeContext = await assembleDomainContext(request, fetchedModules);
   }
 
-  // 10. Assemble final context
+  // 10. Assemble reviewable AI memory context
+  let aiMemoryContext = '';
+  if (request.includeAiMemory !== false) {
+    try {
+      const memoryEntries = await aiMemoryService.listActiveForContext({
+        projectId: request.projectId,
+      });
+      aiMemoryContext = formatAiMemoryContext(memoryEntries);
+    } catch (error) {
+      console.warn('[orchestrator] AI memory context assembly failed:', error);
+    }
+  }
+
+  // 11. Assemble final context
   const modulesFailed = [...fetchedModules.entries()]
     .filter(([, r]) => !r.success)
     .map(([name]) => name);
@@ -347,6 +372,7 @@ export async function assembleContext(
       ragResult?.success
         ? formatModule('ragDocuments', ragResult.data, 'standard')
         : '',
+    aiMemoryContext,
     crossModuleInsights: formatCrossModuleInsights(crossModuleInsights),
     issues: issues.length > 0 ? issues : undefined,
     rawModules: fetchedModules,

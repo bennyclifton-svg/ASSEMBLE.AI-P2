@@ -11,6 +11,11 @@ import {
     type ActionContext,
 } from '@/lib/actions';
 import { sanitizeChatViewContext } from '@/lib/chat/view-context';
+import {
+    markAiActionFailed,
+    markAiActionSucceeded,
+    requireAiActionAllowed,
+} from '@/lib/subscription/ai-usage-meter';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -76,6 +81,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
+        const input = parseActionInput(action, body?.input ?? {});
+        const viewContext = sanitizeChatViewContext(body?.viewContext, projectId);
+        const aiGate = await requireAiActionAllowed({
+            userId: authResult.user.id,
+            organizationId: orgId,
+            projectId,
+            action: `action.propose:${action.id}`,
+            metadata: { threadId },
+        });
+        if (!aiGate.allowed) return aiGate.response;
+
         const [run] = await db
             .insert(agentRuns)
             .values({
@@ -87,8 +103,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             })
             .returning({ id: agentRuns.id });
 
-        const input = parseActionInput(action, body?.input ?? {});
-        const viewContext = sanitizeChatViewContext(body?.viewContext, projectId);
         const ctx: ActionContext = {
             userId: authResult.user.id,
             organizationId: orgId,
@@ -99,7 +113,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             runId: run.id,
             viewContext,
         };
-        const result = await proposeAction({ action, ctx, input });
+
+        let result: Awaited<ReturnType<typeof proposeAction>>;
+        try {
+            result = await proposeAction({ action, ctx, input });
+            await markAiActionSucceeded(aiGate.eventId);
+        } catch (error) {
+            await markAiActionFailed(aiGate.eventId, error);
+            throw error;
+        }
 
         return NextResponse.json({
             status: 'proposed',

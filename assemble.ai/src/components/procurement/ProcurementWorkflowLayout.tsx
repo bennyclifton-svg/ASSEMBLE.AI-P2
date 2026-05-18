@@ -1,10 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check } from 'lucide-react';
 import { RFTNewSection } from '@/components/rft-new';
 import { AddendumSection } from '@/components/addendum';
 import { EvaluationPriceSection, EvaluationNonPriceSection } from '@/components/evaluation';
+import { ClarificationsSection } from '@/components/clarifications';
 import { TRRSection } from '@/components/trr';
 import { useRftNew } from '@/lib/hooks/use-rft-new';
 import { useAddenda } from '@/lib/hooks/use-addenda';
@@ -17,12 +17,12 @@ type ProcurementReportKey =
     | 'addendum'
     | 'evaluation-price'
     | 'evaluation-non-price'
+    | 'clarifications'
     | 'tender-recommendation-report';
 
 interface ProcurementReportDefinition {
     key: ProcurementReportKey;
     typeLabel: string;
-    status: string;
     accent: string;
 }
 
@@ -30,31 +30,31 @@ const PROCUREMENT_REPORTS: ProcurementReportDefinition[] = [
     {
         key: 'request-for-tender',
         typeLabel: 'request for tender',
-        status: 'versions',
         accent: 'var(--sw-cyan)',
     },
     {
         key: 'addendum',
         typeLabel: 'addendum',
-        status: 'addenda',
         accent: 'var(--sw-peach)',
     },
     {
         key: 'evaluation-price',
         typeLabel: 'evaluation price',
-        status: 'reports',
         accent: 'var(--sw-rose)',
     },
     {
         key: 'evaluation-non-price',
         typeLabel: 'evaluation non-price',
-        status: 'criteria',
         accent: 'var(--sw-lav)',
+    },
+    {
+        key: 'clarifications',
+        typeLabel: 'clarifications',
+        accent: 'var(--sw-peach)',
     },
     {
         key: 'tender-recommendation-report',
         typeLabel: 'tender recommendation report',
-        status: 'reports',
         accent: 'var(--sw-cyan)',
     },
 ];
@@ -112,6 +112,7 @@ export function ProcurementWorkflowLayout({
         'addendum': mostRecent(addenda.map((a) => a.addendumDate)),
         'evaluation-price': mostRecent(evaluationPrices.map((evaluation) => evaluation.createdAt ?? evaluation.updatedAt)),
         'evaluation-non-price': null,
+        'clarifications': null,
         'tender-recommendation-report': mostRecent(trrs.map((t) => t.reportDate ?? null)),
     }), [rfts, addenda, evaluationPrices, trrs]);
 
@@ -161,6 +162,15 @@ export function ProcurementWorkflowLayout({
                         displayMode="detail"
                     />
                 );
+            case 'clarifications':
+                return (
+                    <ClarificationsSection
+                        projectId={projectId}
+                        stakeholderId={stakeholderId}
+                        stakeholderName={stakeholderName}
+                        displayMode="detail"
+                    />
+                );
             case 'tender-recommendation-report':
                 return (
                     <TRRSection
@@ -178,7 +188,7 @@ export function ProcurementWorkflowLayout({
     })();
 
     return (
-        <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-[280px_minmax(0,1fr)]">
             <section
                 className="min-w-0 self-start overflow-hidden"
                 aria-label={`${stakeholderName} procurement reports`}
@@ -188,7 +198,7 @@ export function ProcurementWorkflowLayout({
                 }}
             >
                 <div
-                    className="grid h-8 grid-cols-[minmax(0,1fr)_88px_74px] items-center border-b border-[var(--sw-rule-2)] px-3"
+                    className="grid h-8 grid-cols-[minmax(0,1fr)_88px] items-center border-b border-[var(--sw-rule-2)] px-3"
                     style={{
                         fontFamily: 'var(--sw-font-mono)',
                         fontSize: 10,
@@ -198,7 +208,6 @@ export function ProcurementWorkflowLayout({
                 >
                     <span>type</span>
                     <span className="text-right">date</span>
-                    <span className="text-right">state</span>
                 </div>
 
                 <div>
@@ -212,10 +221,10 @@ export function ProcurementWorkflowLayout({
                                 type="button"
                                 onClick={() => setActiveReportKey(report.key)}
                                 className={cn(
-                                    'grid h-10 w-full grid-cols-[minmax(0,1fr)_88px_74px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
+                                    'grid h-8 w-full grid-cols-[minmax(0,1fr)_88px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
                                     isActive
                                         ? 'border-l-4 bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-ink)]'
-                                        : 'bg-transparent hover:bg-[var(--sw-paper-2)]'
+                                        : 'bg-transparent hover:bg-[var(--sw-canvas)]'
                                 )}
                                 style={{
                                     borderLeftColor: report.accent,
@@ -248,13 +257,6 @@ export function ProcurementWorkflowLayout({
                                     title={dateLabel}
                                 >
                                     {dateLabel}
-                                </span>
-                                <span className={cn(
-                                    'flex items-center justify-end gap-1 text-[10px]',
-                                    isActive ? 'text-[rgba(232,228,218,0.72)]' : 'text-[var(--sw-muted)]'
-                                )}>
-                                    <span className="truncate">{report.status}</span>
-                                    {isActive ? <Check className="h-3 w-3 shrink-0 text-[var(--sw-paper)]" /> : null}
                                 </span>
                             </button>
                         );

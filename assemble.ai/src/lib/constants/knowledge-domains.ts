@@ -191,6 +191,15 @@ export const PREBUILT_DOMAINS: KnowledgeDomainDefinition[] = [
         applicableStates: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
     },
     {
+        id: 'domain-planning-approvals',
+        name: 'Planning Approvals Guide',
+        domainType: 'regulatory',
+        tags: ['regulatory', 'procurement'],
+        description: 'Planning consultant scopes, approval pathways, consent conditions, authority liaison, and post-approval planning support',
+        applicableProjectTypes: ['new', 'refurb', 'extend', 'remediation', 'advisory'],
+        applicableStates: ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'],
+    },
+    {
         id: 'domain-contract-administration',
         name: 'Contract Administration Guide',
         domainType: 'best_practices',
@@ -446,6 +455,14 @@ const DISCIPLINE_MULTI_TAG_ALIASES: Record<string, DomainTag[]> = {
     'acoustics': ['regulatory', 'construction'],
     'acoustic-consultant': ['regulatory', 'construction'],
     'acoustic-engineer': ['regulatory', 'construction'],
+    'services-engineer': ['mechanical', 'electrical', 'hydraulic', 'fire', 'as-standards'],
+    'services-consultant': ['mechanical', 'electrical', 'hydraulic', 'fire', 'as-standards'],
+    'building-services': ['mechanical', 'electrical', 'hydraulic', 'fire', 'as-standards'],
+    'building-services-engineer': ['mechanical', 'electrical', 'hydraulic', 'fire', 'as-standards'],
+    'building-services-consultant': ['mechanical', 'electrical', 'hydraulic', 'fire', 'as-standards'],
+    'mep': ['mechanical', 'electrical', 'hydraulic', 'fire', 'as-standards'],
+    'mep-services': ['mechanical', 'electrical', 'hydraulic', 'fire', 'as-standards'],
+    'mep-engineer': ['mechanical', 'electrical', 'hydraulic', 'fire', 'as-standards'],
 };
 
 const DISCIPLINE_ALIAS_EXCLUSIONS: Record<string, string[]> = {
@@ -580,6 +597,12 @@ export function resolveProfileDomainTags(profile: ProfileTagInput): DomainTag[] 
 
     if (profile.subclass?.some(s => s.includes('apartments'))) {
         tags.push('apartments');
+    }
+
+    for (const subclass of profile.subclass ?? []) {
+        if (PROJECT_TYPE_TO_DISCIPLINES[subclass]) {
+            tags.push(...PROJECT_TYPE_TO_DISCIPLINES[subclass]);
+        }
     }
 
     if (profile.projectType === 'remediation') {

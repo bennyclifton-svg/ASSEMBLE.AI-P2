@@ -138,8 +138,16 @@ export async function GET(
                     eq(evaluationRows.evaluationId, evaluation!.id),
                     isNull(evaluationRows.evaluationPriceId)
                 ),
+            with: {
+                cells: true,
+            },
         });
 
+        const hasTenderPricingCells = existingRows.some(row => (row.cells?.length || 0) > 0);
+
+        // Once tender pricing exists, keep the evaluation stable. Cost plan edits after
+        // that point should not silently delete, duplicate, or re-map the live comparison.
+        if (!hasTenderPricingCells) {
         // Find which cost lines need new rows and which need updates
         const existingCostLineIds = new Set(
             existingRows.filter(r => r.costLineId).map(r => r.costLineId)
@@ -252,6 +260,7 @@ export async function GET(
                 .set({ costLineId: link.costLineId, orderIndex: link.orderIndex, source: 'cost_plan' })
                 .where(eq(evaluationRows.id, link.id));
         }
+        }
 
         // Fetch rows with cells (filtered by evaluationPriceId if provided)
         const rows = await db.query.evaluationRows.findMany({
@@ -342,7 +351,7 @@ export async function PUT(
         const body = await request.json();
 
         if (body.action === 'updateCell') {
-            const { rowId, firmId, firmType, amountCents, source, confidence } = body;
+            const { rowId, firmId, firmType, amountCents, valueType, source, confidence } = body;
 
             // Check if cell exists
             const existingCell = await db.query.evaluationCells.findFirst({
@@ -357,6 +366,7 @@ export async function PUT(
                 await db.update(evaluationCells)
                     .set({
                         amountCents,
+                        valueType: valueType || 'amount',
                         source: source || 'manual',
                         confidence,
                         updatedAt: new Date(),
@@ -370,6 +380,7 @@ export async function PUT(
                     firmId,
                     firmType,
                     amountCents,
+                    valueType: valueType || 'amount',
                     source: source || 'manual',
                     confidence,
                 });

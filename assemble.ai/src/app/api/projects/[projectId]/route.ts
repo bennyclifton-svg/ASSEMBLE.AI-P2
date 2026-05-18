@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/index';
 import { projects } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth/get-user';
+import {
+    isAccessDenied,
+    requireProjectReadAccess,
+    requireWritableProjectAccess,
+} from '@/lib/auth/project-access';
 import { eq, and } from 'drizzle-orm';
 
 export async function PATCH(
@@ -11,18 +15,8 @@ export async function PATCH(
     try {
         const { projectId } = await params;
 
-        // Get authenticated user
-        const authResult = await getCurrentUser();
-        if (!authResult.user) {
-            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
-        }
-
-        if (!authResult.user.organizationId) {
-            return NextResponse.json(
-                { error: 'User has no organization' },
-                { status: 400 }
-            );
-        }
+        const access = await requireWritableProjectAccess(projectId);
+        if (isAccessDenied(access)) return access.response;
 
         const body = await request.json();
         const { name, code, status } = body;
@@ -63,7 +57,7 @@ export async function PATCH(
             .where(
                 and(
                     eq(projects.id, projectId),
-                    eq(projects.organizationId, authResult.user.organizationId)
+                    eq(projects.organizationId, access.organizationId)
                 )
             )
             .returning();
@@ -86,24 +80,14 @@ export async function PATCH(
 }
 
 export async function GET(
-    request: NextRequest,
+    _request: NextRequest,
     { params }: { params: Promise<{ projectId: string }> }
 ) {
     try {
         const { projectId } = await params;
 
-        // Get authenticated user
-        const authResult = await getCurrentUser();
-        if (!authResult.user) {
-            return NextResponse.json({ error: authResult.error }, { status: authResult.status });
-        }
-
-        if (!authResult.user.organizationId) {
-            return NextResponse.json(
-                { error: 'User has no organization' },
-                { status: 400 }
-            );
-        }
+        const access = await requireProjectReadAccess(projectId);
+        if (isAccessDenied(access)) return access.response;
 
         // Get project (ensuring it belongs to user's organization)
         const result = await db
@@ -112,7 +96,7 @@ export async function GET(
             .where(
                 and(
                     eq(projects.id, projectId),
-                    eq(projects.organizationId, authResult.user.organizationId)
+                    eq(projects.organizationId, access.organizationId)
                 )
             );
 

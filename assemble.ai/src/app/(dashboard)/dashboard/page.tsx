@@ -51,6 +51,6 @@ export default async function DashboardPage() {
         redirect(`/projects/${userProjects[0].id}`);
     }
 
-    // No projects — go to the project dashboard empty state
+    // No projects — let /projects create the first workspace and open it
     redirect('/projects');
 }

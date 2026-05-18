@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { CategoryTile } from './CategoryTile';
 import { useActiveCategories } from '@/lib/hooks/use-active-categories';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,9 +47,22 @@ export function CategoryUploadTiles({
         });
     };
 
+    const handleHorizontalWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+        const el = event.currentTarget;
+        if (el.scrollWidth <= el.clientWidth) return;
+
+        const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX)
+            ? event.deltaY
+            : event.deltaX;
+        if (delta === 0) return;
+
+        event.preventDefault();
+        el.scrollLeft += delta;
+    }, []);
+
     if (isLoading) {
         return (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-nowrap gap-2 overflow-hidden">
                 {[1, 2, 3, 4, 5, 6].map(i => (
                     <Skeleton key={i} className="h-8 w-28 flex-shrink-0 rounded-none" />
                 ))}
@@ -66,11 +79,11 @@ export function CategoryUploadTiles({
 
     return (
         <div className="space-y-2">
-            {/* Category row - wrapped like the Brief chip rows. */}
+            {/* Category row - single row, horizontal scroll via wheel or subtle scrollbar. */}
             <div
+                onWheel={handleHorizontalWheel}
                 className={cn(
-                    'flex flex-wrap gap-2 overflow-visible',
-                    '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                    'firms-scrollbar flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap',
                 )}
             >
                 {/* All category tiles - Ingest first, Consultants/Contractors last */}
@@ -131,12 +144,12 @@ export function CategoryUploadTiles({
                 })}
             </div>
 
-            {/* Subcategory row - same wrapped chip treatment as the parent row. */}
+            {/* Subcategory row - same single-row scroll treatment as the parent row. */}
             {expandedCategoryWithSubs && (
                 <div
+                        onWheel={handleHorizontalWheel}
                         className={cn(
-                            'flex flex-wrap gap-2 overflow-visible',
-                            '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+                            'firms-scrollbar flex flex-nowrap gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap',
                         )}
                     >
                         {expandedCategoryWithSubs.subcategories!.map(subcategory => (

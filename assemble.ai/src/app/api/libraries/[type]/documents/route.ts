@@ -10,11 +10,7 @@ import { getCurrentUser } from '@/lib/auth/get-user';
 import { KNOWLEDGE_LIBRARY_TYPES, type LibraryType } from '@/lib/constants/libraries';
 import { eq, and, inArray } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import crypto from 'crypto';
-
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'libraries');
+import { storage } from '@/lib/storage';
 
 // Validate library type
 function isValidLibraryType(type: string): type is LibraryType {
@@ -168,22 +164,12 @@ export async function POST(
       };
     }
 
-    // Create upload directory
-    const libraryDir = path.join(UPLOAD_DIR, type);
-    await mkdir(libraryDir, { recursive: true });
-
-    // Read file and compute hash
+    // Save through the shared storage layer so admin storage settings apply.
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const hash = crypto.createHash('sha256').update(buffer).digest('hex');
-
-    // Generate unique filename
-    const ext = path.extname(file.name);
-    const storageName = `${randomUUID()}${ext}`;
-    const storagePath = path.join(libraryDir, storageName);
-
-    // Save file
-    await writeFile(storagePath, buffer);
+    const { path: storagePath, hash, size } = await storage.save(file, buffer, {
+      directory: ['libraries', type],
+    });
 
     // Create file asset
     const fileAssetId = randomUUID();
@@ -192,7 +178,7 @@ export async function POST(
       storagePath: storagePath,
       originalName: file.name,
       mimeType: file.type || 'application/octet-stream',
-      sizeBytes: buffer.length,
+      sizeBytes: size,
       hash,
       ocrStatus: 'PENDING',
     });
@@ -223,7 +209,7 @@ export async function POST(
         fileAssetId,
         fileName: file.name,
         mimeType: file.type,
-        sizeBytes: buffer.length,
+        sizeBytes: size,
         addedAt: now,
         syncStatus: 'pending',
       },
@@ -298,7 +284,7 @@ export async function DELETE(
     }
 
     // Delete documents that belong to this library
-    const result = await db
+    await db
       .delete(libraryDocuments)
       .where(
         and(

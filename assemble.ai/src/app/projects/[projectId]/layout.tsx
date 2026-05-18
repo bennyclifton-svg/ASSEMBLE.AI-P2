@@ -9,6 +9,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ChatDockMount } from '@/components/chat/ChatDockMount';
+import { EntitlementBanner } from '@/components/entitlements/EntitlementBanner';
 import { ChatViewContextProvider } from '@/lib/contexts/chat-view-context';
 
 export default async function ProjectLayout({
@@ -26,6 +27,7 @@ export default async function ProjectLayout({
 
     return (
         <ChatViewContextProvider>
+            <EntitlementBanner />
             {children}
             <ChatDockMount />
         </ChatViewContextProvider>

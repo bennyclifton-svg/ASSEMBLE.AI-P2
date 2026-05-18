@@ -8,7 +8,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useTRR } from '@/lib/hooks/use-trr';
-import { useTRRSectionUI } from '@/lib/contexts/procurement-ui-context';
+import { useEvaluationPriceSectionUI, useTRRSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { TRRShortTab } from './TRRShortTab';
 import type { TRRShortTabHandle } from './TRRShortTab';
 import { TRRTabs } from './TRRTabs';
@@ -57,6 +57,7 @@ export function TRRSection({
 
     // Use context for expanded state persistence across tab navigation
     const { isExpanded, activeTrrId, setExpanded: setIsExpanded, setActiveTrrId } = useTRRSectionUI(stakeholderId);
+    const { activeEvaluationPriceId } = useEvaluationPriceSectionUI(stakeholderId);
 
     // Get all TRRs for this stakeholder
     const {
@@ -69,6 +70,7 @@ export function TRRSection({
     } = useTRR({
         projectId,
         stakeholderId,
+        evaluationPriceId: activeEvaluationPriceId,
     });
 
     // Find the active TRR

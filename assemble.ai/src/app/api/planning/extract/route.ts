@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { aiComplete } from '@/lib/ai/client';
 import { extractText, calculateProjectDetailsConfidence } from '@/lib/utils/text-extraction';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
 
 const EXTRACTION_PROMPT = `You are an AI assistant that extracts project/building information from text.
 This may be from a planning document, development application, email, or other source.
@@ -37,19 +33,9 @@ Example response:
 // POST /api/planning/extract
 export async function POST(request: NextRequest) {
   try {
-    // Check for API key first
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.error('ANTHROPIC_API_KEY is not configured');
-      return NextResponse.json(
-        { error: 'AI extraction is not configured. Please set ANTHROPIC_API_KEY.' },
-        { status: 500 }
-      );
-    }
-
     const contentType = request.headers.get('content-type') || '';
     let extractedText = '';
 
-    // Handle FormData (file upload) or JSON (text input)
     if (contentType.includes('multipart/form-data')) {
       const formData = await request.formData();
       const file = formData.get('file') as File | null;
@@ -82,10 +68,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send to Anthropic for extraction
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-latest',
-      max_tokens: 1024,
+    const { text: aiResponse } = await aiComplete({
+      featureGroup: 'extraction',
+      maxTokens: 1024,
       system: EXTRACTION_PROMPT,
       messages: [
         {
@@ -95,7 +80,6 @@ export async function POST(request: NextRequest) {
       ],
     });
 
-    const aiResponse = message.content[0]?.type === 'text' ? message.content[0].text : null;
     if (!aiResponse) {
       return NextResponse.json(
         { error: 'No response from AI' },
@@ -103,16 +87,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse AI response
     let extractedData;
     try {
-      // Remove markdown code blocks if present
       let cleanedResponse = aiResponse
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
         .trim();
 
-      // Extract JSON object from response - handle cases where AI adds extra text
       const jsonStartIndex = cleanedResponse.indexOf('{');
       const jsonEndIndex = cleanedResponse.lastIndexOf('}');
 
@@ -129,7 +110,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate confidence score
     const confidence = calculateProjectDetailsConfidence(extractedData);
 
     return NextResponse.json({

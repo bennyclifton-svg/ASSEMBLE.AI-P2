@@ -112,7 +112,7 @@ export function VariationsPanel({ projectId, renderTabsList }: VariationsPanelPr
 
     if (error) {
         return (
-            <div className="h-full flex items-center justify-center" style={{ background: 'var(--sw-paper)' }}>
+            <div className="h-full flex items-center justify-center" style={{ background: 'var(--sw-canvas)' }}>
                 <div className="text-center">
                     <p className="text-[var(--color-accent-coral)] mb-2">Failed to load variations</p>
                     <button onClick={() => refetch()} className="text-sm text-[var(--color-accent-teal)] hover:opacity-80">
@@ -130,12 +130,12 @@ export function VariationsPanel({ projectId, renderTabsList }: VariationsPanelPr
 
     return (
         <VariationDropZone projectId={projectId} onUploadComplete={handleUploadComplete}>
-            <div className="h-full flex flex-col text-xs" style={{ background: 'var(--sw-paper)' }}>
+            <div className="h-full flex flex-col text-xs" style={{ background: 'var(--sw-canvas)' }}>
                 {/* Toolbar */}
                 <div
                     className="flex items-center justify-between gap-3 px-2 py-2 flex-shrink-0"
                     style={{
-                        background: 'var(--sw-paper)',
+                        background: 'var(--sw-canvas)',
                         borderBottom: '1px solid var(--sw-rule)',
                     }}
                 >
@@ -151,9 +151,9 @@ export function VariationsPanel({ projectId, renderTabsList }: VariationsPanelPr
                 </div>
 
                 {/* Table */}
-                <div className="flex-1 overflow-auto @container" style={{ background: 'var(--sw-paper)' }}>
-                    <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed', fontFamily: 'var(--sw-font-mono)', background: 'white' }}>
-                        <thead className="sticky top-0 z-10 shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ background: 'white' }}>
+                <div className="flex-1 overflow-auto @container" style={{ background: 'var(--sw-canvas)' }}>
+                    <table className="w-full border-collapse text-[11px]" style={{ tableLayout: 'fixed', fontFamily: 'var(--sw-font-mono)', background: 'var(--sw-shell)' }}>
+                        <thead className="sticky top-0 z-10 shadow-[0_2px_4px_-1px_rgba(0,0,0,0.06)]" style={{ background: 'var(--sw-shell)' }}>
                         <tr>
                             <th
                                 className="px-2 py-2 text-left text-[var(--color-text-primary)] font-bold w-[70px] cursor-pointer hover:bg-[var(--color-text-primary)]/5 select-none border-b border-b-[var(--color-border)]"
@@ -242,11 +242,11 @@ export function VariationsPanel({ projectId, renderTabsList }: VariationsPanelPr
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'white' }}>Loading variations...</td>
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'var(--sw-shell)' }}>Loading variations...</td>
                             </tr>
                         ) : sortedVariations.length === 0 && !showAddRow ? (
                             <tr>
-                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'white' }}>
+                                <td colSpan={9} className="text-center py-8 text-[var(--color-text-muted)]" style={{ background: 'var(--sw-shell)' }}>
                                     No variations yet. Click the + icon to add one.
                                 </td>
                             </tr>
@@ -388,7 +388,7 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
 
     return (
         <tr className="group bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] border-b border-[var(--color-border)] transition-colors">
-            <td className="border-x border-[var(--color-border)] px-2 py-1.5 font-mono font-medium text-[var(--color-accent-yellow)] w-[70px]">
+            <td className="border-x border-[var(--color-border)] px-2 py-1.5 font-mono font-medium text-[var(--role-id)] w-[70px]">
                 {variation.variationNumber}
             </td>
             <td
@@ -465,7 +465,7 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                         className={numberInputClass}
                     />
                 ) : (
-                    <span className="font-mono text-[var(--color-text-primary)]">
+                    <span className="font-mono text-[var(--role-money)]">
                         {formatCurrency(variation.amountForecastCents)}
                     </span>
                 )}
@@ -485,7 +485,7 @@ function VariationRow({ variation, costLines, onUpdate, onDelete }: VariationRow
                         className={numberInputClass}
                     />
                 ) : (
-                    <span className="font-mono text-[var(--color-text-primary)]">
+                    <span className="font-mono text-[var(--role-money)]">
                         {variation.amountApprovedCents > 0 ? formatCurrency(variation.amountApprovedCents) : '-'}
                     </span>
                 )}
@@ -628,7 +628,15 @@ function AddVariationRow({ costLines, onSave, onCancel, isSubmitting }: AddVaria
                 </div>
             </td>
             <td className="border-x border-[var(--color-border)] px-2 py-1.5 hidden @[700px]:table-cell">
-                <span className="px-1.5 py-0.5 rounded text-[10px] border bg-yellow-900/40 text-yellow-400 border-yellow-600">
+                <span
+                    className="px-1.5 py-0.5 rounded"
+                    style={{
+                        font: 'var(--type-mono)',
+                        letterSpacing: 'var(--type-mono-tracking)',
+                        color: 'var(--role-attention)',
+                        backgroundColor: 'color-mix(in oklab, var(--role-attention) 14%, transparent)',
+                    }}
+                >
                     Forecast
                 </span>
             </td>

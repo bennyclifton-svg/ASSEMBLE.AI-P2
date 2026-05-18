@@ -1,0 +1,2 @@
+export { RfiRegisterPanel } from './RfiRegisterPanel';
+

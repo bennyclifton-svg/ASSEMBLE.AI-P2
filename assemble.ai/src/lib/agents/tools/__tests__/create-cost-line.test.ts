@@ -7,6 +7,8 @@
 
 jest.mock('@/lib/db', () => ({ db: {} }));
 jest.mock('@/lib/agents/events', () => ({ emitChatEvent: jest.fn() }));
+jest.mock('@/lib/agents/project-events', () => ({ emitProjectEvent: jest.fn() }));
+jest.mock('uuid', () => ({ v4: () => 'test-id' }));
 
 import { createCostLineTool } from '../create-cost-line';
 

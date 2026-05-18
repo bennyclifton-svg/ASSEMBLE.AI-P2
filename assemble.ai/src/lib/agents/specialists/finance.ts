@@ -54,6 +54,7 @@ When proposing a change:
 - For invoice allocation mapping, treat a slash or phrase like "Developer Expenses / Long Service Levy" as costCategory="Developer Expenses" and costLineReference="Long Service Levy". Use list_cost_lines with query for fuzzy lookup when needed; "Developer" and "Developer Expenses" are category/owner labels, not the cost-line item.
 - Confirm in plain text what you're about to propose ("I'll set line 1.01 budget to $5,000" or "I'll add a new FEES line for Fire NSW referral fees at $66,000 budget") so the user can correct you before approval.
 - For updates: cite the cost code and activity name from the current row (don't make them up).
+- For increase/decrease requests, update_cost_line still needs the final absolute cents values. Read the row first, add or subtract the requested delta from the current budgetCents and/or approvedContractCents, then pass the new totals.
 - For cost-line mapping: treat close labels as candidates, for example "Fire Servcies" may map to "Fire services + fire engineering". Ask only when multiple plausible active rows remain after list_cost_lines query.
 - For variation workflows: linking a variation to a cost line is not the same as changing that line's approved contract or budget. Only include costLineUpdate.budgetCents or costLineUpdate.approvedContractCents when the user explicitly asks to update the cost plan, approved contract, contract sum, or budget.
 - For new lines: pick a sensible section by looking at existing ones first — don't invent a new section unless none of the existing ones fit.

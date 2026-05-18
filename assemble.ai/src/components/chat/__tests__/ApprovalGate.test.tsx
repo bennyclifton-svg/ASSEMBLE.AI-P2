@@ -54,6 +54,75 @@ describe('ApprovalGate', () => {
         expect(screen.queryByTestId('approve-approval-1')).not.toBeInTheDocument();
     });
 
+    it('shows plain-language apply progress while a document sync approval is running', async () => {
+        let resolveFetch!: (value: Response) => void;
+        global.fetch = jest.fn().mockImplementation(
+            () =>
+                new Promise<Response>((resolve) => {
+                    resolveFetch = resolve;
+                })
+        ) as jest.Mock;
+
+        render(
+            <ApprovalGate
+                approval={{
+                    ...approval(),
+                    toolName: 'sync_project_documents_to_ai',
+                    proposedDiff: {
+                        entity: 'document',
+                        entityId: null,
+                        summary: 'Sync documents to AI',
+                        changes: [],
+                    },
+                }}
+            />
+        );
+
+        fireEvent.click(screen.getByTestId('approve-approval-1'));
+
+        expect(await screen.findByText('Queueing the selected documents for AI sync and refreshing the Document repo.')).toBeInTheDocument();
+
+        resolveFetch({
+            ok: true,
+            status: 200,
+            json: async () => ({ status: 'applied', output: { projectId: 'project-1' } }),
+        } as Response);
+
+        await waitFor(() => {
+            expect(screen.getByText('Applied')).toBeInTheDocument();
+        });
+    });
+
+    it('renders rich-text approval diff values as readable text', () => {
+        render(
+            <ApprovalGate
+                approval={{
+                    ...approval(),
+                    toolName: 'update_rft_brief',
+                    proposedDiff: {
+                        entity: 'stakeholder',
+                        entityId: 'stakeholder-electrical',
+                        summary: 'Create RFT brief - Electrical',
+                        changes: [
+                            {
+                                field: 'briefServices',
+                                label: 'Brief services',
+                                before: null,
+                                after:
+                                    '<p><strong>Electrical</strong></p><ul><li><p>Develop electrical design documentation</p></li><li><p>Coordinate with architectural layouts</p></li></ul>',
+                            },
+                        ],
+                    },
+                }}
+            />
+        );
+
+        expect(screen.getAllByText(/Electrical/).length).toBeGreaterThan(0);
+        expect(screen.getByText(/Develop electrical design documentation/)).toBeInTheDocument();
+        expect(screen.queryByText(/<p>/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/<\/li>/)).not.toBeInTheDocument();
+    });
+
     it('refreshes and focuses procurement addenda after applying create_addendum', async () => {
         const onAddendumCreated = jest.fn();
         window.addEventListener(ADDENDUM_CREATED_EVENT, onAddendumCreated);
@@ -206,6 +275,51 @@ describe('ApprovalGate', () => {
             '/api/project-reports?projectId=project-1&groupId=group-1'
         );
         expect(mockGlobalMutate).toHaveBeenCalledWith('/api/project-reports/report-1');
+    });
+
+    it('refreshes RFT records after applying update_rft_brief', async () => {
+        global.fetch = jest.fn().mockResolvedValue({
+            ok: true,
+            status: 200,
+            json: async () => ({
+                status: 'applied',
+                output: {
+                    id: 'stakeholder-electrical',
+                    projectId: 'project-1',
+                    stakeholderId: 'stakeholder-electrical',
+                    rftId: 'rft-1',
+                    createdRftId: 'rft-1',
+                },
+            }),
+        }) as jest.Mock;
+
+        render(
+            <ApprovalGate
+                approval={{
+                    ...approval(),
+                    toolName: 'update_rft_brief',
+                    proposedDiff: {
+                        entity: 'stakeholder',
+                        entityId: 'stakeholder-electrical',
+                        summary: 'Create RFT brief - Electrical',
+                        changes: [],
+                    },
+                }}
+            />
+        );
+
+        fireEvent.click(screen.getByTestId('approve-approval-1'));
+
+        await waitFor(() => {
+            expect(screen.getByText('Applied')).toBeInTheDocument();
+        });
+        expect(mockGlobalMutate).toHaveBeenCalledWith(
+            '/api/projects/project-1/stakeholders/stakeholder-electrical'
+        );
+        expect(mockGlobalMutate).toHaveBeenCalledWith(
+            '/api/rft-new?projectId=project-1&stakeholderId=stakeholder-electrical'
+        );
+        expect(mockGlobalMutate).toHaveBeenCalledWith(expect.any(Function));
     });
 
     it('shows a conflict message when the approval cannot be applied', async () => {

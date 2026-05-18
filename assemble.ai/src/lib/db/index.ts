@@ -43,6 +43,10 @@ export const {
     correspondenceThreads,
     correspondence,
     correspondenceAttachments,
+    rfiRecords,
+    rfiEvidenceLinks,
+    rfiIssuedArtefacts,
+    aiMemoryEntries,
     projects,
     projectDetails,
     projectObjectives,
@@ -79,7 +83,10 @@ export const {
     rftNew,
     rftNewTransmittals,
     evaluations,
+    tenderSubmissionPackages,
     tenderSubmissions,
+    aiArtefacts,
+    clarifications,
     evaluationPrice,
     evaluationRows,
     evaluationCells,
@@ -95,6 +102,9 @@ export const {
     projectProfiles,
     profilerObjectives,
     objectivesTransmittals,
+    briefingSessions,
+    briefingMessages,
+    briefAttachments,
     profilePatterns,
     projectStakeholders,
     stakeholderTenderStatuses,
@@ -125,6 +135,7 @@ export const {
     approvals,
     // Unified action surface
     actionInvocations,
+    aiUsageEvents,
 } = pgSchema;
 
 // Re-export Better Auth schema tables

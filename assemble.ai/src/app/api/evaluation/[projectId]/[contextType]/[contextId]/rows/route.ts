@@ -29,7 +29,7 @@ export async function POST(
         const { tableType, description, evaluationPriceId } = body;
 
         // Validate
-        if (!tableType || !['initial_price', 'adds_subs'].includes(tableType)) {
+        if (!tableType || !['initial_price', 'adds_subs', 'value_management'].includes(tableType)) {
             return NextResponse.json(
                 { error: 'Invalid table type' },
                 { status: 400 }
@@ -82,6 +82,9 @@ export async function POST(
             description: description || '',
             orderIndex: nextOrderIndex,
             source: 'manual' as const, // Manual rows should always be visible
+            vmAdoptionStatus: tableType === 'value_management' ? 'adopted' : undefined,
+            vmEmbeddedInBase: tableType === 'value_management' ? false : undefined,
+            vmOrigin: tableType === 'value_management' ? 'tenderer_proposed' : undefined,
         });
 
         // Fetch and return the created row

@@ -4,6 +4,7 @@ export interface PolishFreshPromptInput {
   section: ObjectiveType;
   profileContext: string;
   domainContextSection: string;
+  attachedDocumentContext?: string;
   inferenceRulesFormatted: string;
 }
 
@@ -15,21 +16,22 @@ const SECTION_DEFINITIONS: Record<ObjectiveType, string> = {
 };
 
 export function buildPolishFreshPrompt(input: PolishFreshPromptInput): string {
-  const { section, profileContext, domainContextSection, inferenceRulesFormatted } = input;
+  const { section, profileContext, domainContextSection, attachedDocumentContext = '', inferenceRulesFormatted } = input;
   return `You are an expert construction project manager in Australia.
 
 ${profileContext}
-${domainContextSection ? `${domainContextSection}\n` : ''}TARGET SECTION: ${section.toUpperCase()}
+${attachedDocumentContext ? `## ATTACHED INDEXED DOCUMENT CONTEXT - AUTHORITATIVE\n${attachedDocumentContext}\n\n` : ''}${domainContextSection ? `${domainContextSection}\n` : ''}TARGET SECTION: ${section.toUpperCase()}
 ${SECTION_DEFINITIONS[section]}
 
 SUGGESTED ITEMS FROM PROJECT ANALYSIS:
 ${inferenceRulesFormatted || '(No specific rules matched — generate based on project profile)'}
 
 INSTRUCTIONS:
-Generate 4-8 objectives for the ${section} section. For EACH objective, produce TWO forms — both "short" and "polished":
-- "short": 2-5 words, terse bullet
-- "polished": 10-15 words, professional tender-grade language with Australian standards references (NCC 2022, BCA, AS standards) where supported by the KNOWLEDGE DOMAIN CONTEXT. Make measurable where possible.
+Generate 3-5 objectives for the ${section} section. Select the strongest five where the attached document supports that many. For EACH objective, produce TWO forms — both "short" and "polished":
+- "short": 4-8 words, terse bullet
+- "polished": 18-30 words, professional tender-grade language with Australian standards references where supported by the attached document or knowledge context. Make measurable where possible.
 
+When ATTACHED INDEXED DOCUMENT CONTEXT is present, use it first. It is authoritative for project-specific facts, quantities, approvals, authorities, standards, warranties, dates, and thresholds.
 Cite ONLY standards present in the domain context — do NOT invent standards.
 
 Respond in JSON format:

@@ -57,6 +57,9 @@ interface NoteContentProps {
     editorToolbarVariant?: RichTextToolbarVariant;
     /** Show AI generation/instruction actions in the editor toolbar */
     showAiToolbar?: boolean;
+    /** When true, the title editor opens already focused on mount so a
+        freshly-created record lets the user type the title immediately. */
+    autoFocusTitle?: boolean;
     className?: string;
 }
 
@@ -71,9 +74,10 @@ export function NoteContent({
     surface = 'colored',
     editorToolbarVariant = 'full',
     showAiToolbar = true,
+    autoFocusTitle = false,
     className,
 }: NoteContentProps) {
-    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [isEditingTitle, setIsEditingTitle] = useState(autoFocusTitle);
     const [localTitle, setLocalTitle] = useState(note.title);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);

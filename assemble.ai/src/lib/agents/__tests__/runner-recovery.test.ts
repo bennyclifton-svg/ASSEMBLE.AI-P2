@@ -10,7 +10,9 @@ import {
     approvalCardCount,
     compactApprovalGatedFinalText,
     formatMissingWorkflowApprovalText,
+    looksLikeUngroundedLightingScheduleAnswer,
     shouldRecoverEvidenceMismatchNonAnswer,
+    shouldRecoverLightingScheduleGrounding,
     shouldRecoverMissingApproval,
     shouldRecoverMissingDocumentSelection,
     shouldRecoverMissingEvidenceSearch,
@@ -214,6 +216,16 @@ describe('shouldRecoverMissingApproval', () => {
             })
         ).toBe(true);
     });
+
+    it('recovers cost-line increase requests that mention budget and contract sum', () => {
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage: 'increase the acoustic budget and contract sum by 3000',
+                finalText: 'The acoustic budget and contract sum update is awaiting your approval.',
+                usedToolNames: ['list_cost_lines'],
+            })
+        ).toBe(true);
+    });
 });
 
 describe('formatMissingWorkflowApprovalText', () => {
@@ -348,6 +360,40 @@ describe('shouldRecoverWriteRefusal', () => {
         ).toBe(false);
     });
 
+    it('recovers RFI requests that claim approval without create_rfi', () => {
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage: 'draft an RFI to the acoustic consultant about rooftop plant noise',
+                finalText: 'RFI proposed and awaiting your approval.',
+                usedToolNames: ['list_stakeholders'],
+            })
+        ).toBe(true);
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage: 'draft an RFI to the acoustic consultant about rooftop plant noise',
+                finalText: 'RFI proposed and awaiting your approval.',
+                usedToolNames: ['create_rfi'],
+            })
+        ).toBe(false);
+    });
+
+    it('recovers existing RFI response requests that claim approval without an RFI approval tool', () => {
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage: 'please address RFI 001',
+                finalText: 'I have populated the RFI response and it is awaiting approval.',
+                usedToolNames: ['list_rfis', 'search_rag'],
+            })
+        ).toBe(true);
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage: 'please address RFI 001',
+                finalText: 'RFI response awaiting your approval.',
+                usedToolNames: ['record_rfi_response'],
+            })
+        ).toBe(false);
+    });
+
     it('recovers topic document selection "found no documents" answers before a selection tool call', () => {
         expect(
             shouldRecoverWriteRefusal({
@@ -371,13 +417,13 @@ describe('shouldRecoverWriteRefusal', () => {
         ).toBe(false);
     });
 
-    it('recovers RFT brief refusals when stakeholder updates are available', () => {
+    it('recovers RFT brief refusals when structured RFT updates are available', () => {
         expect(
             shouldRecoverWriteRefusal({
                 latestUserMessage: 'Create the Architectural Services Brief within the Architectural RFT.',
                 finalText: 'I cannot update the RFT directly from here.',
                 usedToolNames: ['list_stakeholders'],
-                allowedToolNames: ['list_stakeholders', 'update_stakeholder'],
+                allowedToolNames: ['list_stakeholders', 'update_rft_brief'],
             })
         ).toBe(true);
     });
@@ -439,6 +485,14 @@ Email: tenders@harbourmechanical.com.au`,
         ).toBe(true);
         expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('Project Control Group');
     });
+
+    it('recovers whole-programme replacement drift through replace_program', () => {
+        const latestUserMessage =
+            'create a new programme that is 8 activities in total. Delete/override the current program.';
+
+        expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('replace_program');
+        expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('single approval card');
+    });
 });
 
 describe('shouldRecoverMissingEvidenceSearch', () => {
@@ -463,6 +517,183 @@ describe('shouldRecoverMissingEvidenceSearch', () => {
                 allowedToolNames: ['search_rag', 'list_notes'],
             })
         ).toBe(false);
+    });
+
+    it('recovers shallow specification reviews that stop at missing cost labels', () => {
+        expect(
+            shouldRecoverMissingEvidenceSearch({
+                latestUserMessage:
+                    'summarise the attached hydraulic specification and identify major cost components and long lead items',
+                finalText:
+                    'The ingested hydraulic specification content does not currently provide specific extractable details about major cost components or long lead time items. The hydraulic consultant should provide that detailed summary.',
+                usedToolNames: ['search_rag'],
+                allowedToolNames: ['search_rag', 'list_notes', 'list_project_documents'],
+            })
+        ).toBe(true);
+    });
+
+    it('recovers existing RFI answers that stop after listing the RFI but do not search evidence', () => {
+        expect(
+            shouldRecoverMissingEvidenceSearch({
+                latestUserMessage: 'please address RFI 001',
+                finalText:
+                    "I couldn't find any specific information related to RFI 001 in the uploaded documents.",
+                usedToolNames: ['list_rfis'],
+                allowedToolNames: ['list_rfis', 'search_rag', 'list_project_documents'],
+            })
+        ).toBe(true);
+    });
+
+    it('recovers existing RFI answers that searched RAG but skipped the document register', () => {
+        expect(
+            shouldRecoverMissingEvidenceSearch({
+                latestUserMessage: 'please address RFI 001',
+                finalText:
+                    'I could not find any specific documents or sections regarding the light fittings specified in the project within the uploaded documents.',
+                usedToolNames: ['list_rfis', 'search_rag'],
+                allowedToolNames: ['list_rfis', 'search_rag', 'list_project_documents'],
+            })
+        ).toBe(true);
+    });
+
+    it('recovers existing RFI answers that find documents but stop because they are not AI-synced', () => {
+        const finalText = `To address RFI 001 regarding the list of all light fittings specified in the project, there are several relevant documents in the repository.
+
+1. ELECTRICAL LIGHTING SCHEDULE [C1].pdf
+2. ELECTRICAL SERVICES LEVEL L1 - LIGHTING LAYOUT (Drawing E03)
+
+These documents are within the Detail-design stage under the Electrical subcategory, but they have not yet been synced to AI knowledge for review here. Please review these documents in the project's repository for complete specifications and details regarding the light fittings used.
+
+If you require additional analysis, the Electrical Consultant should confirm the lighting specifications and answer any outstanding questions.`;
+
+        expect(
+            shouldRecoverMissingEvidenceSearch({
+                latestUserMessage: 'please address RFI 001',
+                finalText,
+                usedToolNames: ['list_rfis', 'list_project_documents'],
+                allowedToolNames: [
+                    'list_rfis',
+                    'list_project_documents',
+                    'select_project_documents',
+                    'sync_project_documents_to_ai',
+                    'attach_rfi_evidence',
+                    'search_rag',
+                ],
+            })
+        ).toBe(true);
+    });
+
+    it('does not keep recovering existing RFI answers after the sync approval tool was called', () => {
+        expect(
+            shouldRecoverMissingEvidenceSearch({
+                latestUserMessage: 'please address RFI 001',
+                finalText:
+                    'The relevant lighting documents have not yet been synced to AI knowledge.',
+                usedToolNames: [
+                    'list_rfis',
+                    'list_project_documents',
+                    'select_project_documents',
+                    'sync_project_documents_to_ai',
+                ],
+                allowedToolNames: [
+                    'list_rfis',
+                    'list_project_documents',
+                    'select_project_documents',
+                    'sync_project_documents_to_ai',
+                    'attach_rfi_evidence',
+                    'search_rag',
+                ],
+            })
+        ).toBe(false);
+    });
+
+    it('stops retrying weak specification reviews after several evidence searches', () => {
+        expect(
+            shouldRecoverMissingEvidenceSearch({
+                latestUserMessage:
+                    'summarise the attached hydraulic specification and identify major cost components and long lead items',
+                finalText:
+                    'The ingested hydraulic specification content does not currently provide specific extractable details about major cost components or long lead time items.',
+                usedToolNames: ['list_notes', 'search_rag', 'search_rag'],
+                allowedToolNames: ['search_rag', 'list_notes', 'list_project_documents'],
+            })
+        ).toBe(false);
+    });
+});
+
+describe('lighting schedule grounding recovery', () => {
+    const badLightingScheduleAnswer = `Lighting Schedule Information from ELECTRICAL LIGHTING SCHEDULE [C1].pdf
+
+Common Area Lighting:
+LED Downlights, Dimmable: 20 units
+LED Strip Lights, Waterproof: 15 meters
+Emergency Exit Signs: 10 units
+
+Apartment Lighting:
+LED Ceiling Panels: 80 units
+Pendant Lights, Kitchen Area: 10 units
+Wall Sconces, Bedrooms: 20 units
+
+External Lighting:
+Bollard Lights, Pathway: 8 units
+Wall-Mounted LED Lights: 15 units
+
+Action Items:
+Verify quantities match project requirements
+Confirm LED types meet energy efficiency standards
+
+Note: Specific wattage, color temperature, and brand details are not listed in the context provided. Additional specifications may need verification.`;
+
+    it('detects the generic invented lighting schedule answer shape', () => {
+        expect(looksLikeUngroundedLightingScheduleAnswer(badLightingScheduleAnswer)).toBe(true);
+    });
+
+    it('recovers an RFI lighting answer that uses unsupported generic fittings and quantities', () => {
+        expect(
+            shouldRecoverLightingScheduleGrounding({
+                latestUserMessage: 'please address RFI 001',
+                finalText: badLightingScheduleAnswer,
+                usedToolNames: ['list_rfis', 'list_project_documents', 'search_rag'],
+                allowedToolNames: [
+                    'list_rfis',
+                    'list_project_documents',
+                    'search_rag',
+                    'record_rfi_response',
+                ],
+            })
+        ).toBe(true);
+    });
+
+    it('allows exact row-based lighting schedule answers', () => {
+        const groundedAnswer = `| Reference | Type | Location | Watts | Lumens | Supplier | Catalogue Reference | Source |
+| DL1 | Recessed LED downlight | Units living/dining/bedroom | 12W | 820lm | Atom | AT9034 TRI | ELECTRICAL LIGHTING SCHEDULE [C1].pdf |
+| SM1 | Surface mounted light with sensor and emergency light | Not stated | 22W | 2500lm | Enlighten | Chameleon Eco | ELECTRICAL LIGHTING SCHEDULE [C1].pdf |
+
+Quantity not provided in the lighting schedule.`;
+
+        expect(looksLikeUngroundedLightingScheduleAnswer(groundedAnswer)).toBe(false);
+        expect(
+            shouldRecoverLightingScheduleGrounding({
+                latestUserMessage: 'list the lights in this schedule',
+                finalText: groundedAnswer,
+                usedToolNames: ['search_rag'],
+                allowedToolNames: ['search_rag'],
+            })
+        ).toBe(false);
+    });
+
+    it('blocks generic lighting schedule text before creating an RFI response approval', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'please address RFI 001',
+                toolName: 'record_rfi_response',
+                input: {
+                    rfiReference: 'RFI 001',
+                    responseText: badLightingScheduleAnswer,
+                    evidence: [{ targetType: 'document', targetId: 'doc-1' }],
+                },
+            })
+        ).toThrow(/generic or unsupported lighting schedule content/i);
     });
 });
 
@@ -657,6 +888,45 @@ describe('guardToolAgainstLatestIntent', () => {
         ).not.toThrow();
     });
 
+    it('blocks legacy note creation for RFI drafting requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'draft an RFI to the acoustic consultant about rooftop plant noise',
+                toolName: 'create_note',
+            })
+        ).toThrow(/RFI drafting request/);
+    });
+
+    it('allows typed RFI creation for RFI drafting requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'draft an RFI to the acoustic consultant about rooftop plant noise',
+                toolName: 'create_rfi',
+            })
+        ).not.toThrow();
+    });
+
+    it('blocks duplicate RFI creation and legacy notes for existing RFI response requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'please address RFI 001',
+                toolName: 'create_rfi',
+            })
+        ).toThrow(/existing RFI/i);
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'please address RFI 001',
+                toolName: 'create_note',
+            })
+        ).toThrow(/existing RFI response request/i);
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage: 'please address RFI 001',
+                toolName: 'record_rfi_response',
+            })
+        ).not.toThrow();
+    });
+
     it('blocks stale invoice tool calls when the latest request is a variation', () => {
         expect(() =>
             guardToolAgainstLatestIntent({
@@ -739,6 +1009,26 @@ describe('guardToolAgainstLatestIntent', () => {
                 latestUserMessage:
                     'Client asked for extra acoustic treatment. Please issue a variation for about $18,750, link it to the right cost line/programme activity, and add a short project note.',
                 toolName: 'start_issue_variation_workflow',
+            })
+        ).not.toThrow();
+    });
+
+    it('blocks incremental activity creation for whole-programme replacement requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'create a new programme that is 8 activities in total. Cover key planning, design and construction activities. Delete/override the current program.',
+                toolName: 'create_program_activity',
+            })
+        ).toThrow(/whole-programme replacement request/i);
+    });
+
+    it('allows the replace_program tool for whole-programme replacement requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'create a new programme that is 8 activities in total. Cover key planning, design and construction activities. Delete/override the current program.',
+                toolName: 'replace_program',
             })
         ).not.toThrow();
     });
@@ -908,6 +1198,47 @@ describe('guardToolAgainstViewContextIntent', () => {
                 viewContext,
             })
         ).not.toThrow();
+    });
+
+    it('blocks incidental selected drawing ids when the latest note request names a specification', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage:
+                    'create a new Review record, and summarise the electrical specification. Highlight major cost components and long lead items.',
+                toolName: 'create_note',
+                input: {
+                    title: 'Electrical Specification Review',
+                    documentIds: ['drawing-1', 'drawing-2'],
+                },
+                viewContext: {
+                    projectId: 'project-1',
+                    route: '/projects/project-1/documents',
+                    pendingApprovalIds: [],
+                    recentlyViewedIds: [],
+                    selectedEntityIds: { documents: ['drawing-1', 'drawing-2'] },
+                },
+            })
+        ).toThrow(/names a document source/i);
+    });
+
+    it('blocks incidental selected drawing subsets when the latest note request names a specification', () => {
+        expect(() =>
+            guardToolAgainstViewContextIntent({
+                latestUserMessage: 'create a review record and summarise the electrical specification',
+                toolName: 'create_note',
+                input: {
+                    title: 'Electrical Specification Review',
+                    documentIds: ['drawing-2'],
+                },
+                viewContext: {
+                    projectId: 'project-1',
+                    route: '/projects/project-1/documents',
+                    pendingApprovalIds: [],
+                    recentlyViewedIds: [],
+                    selectedEntityIds: { documents: ['drawing-1', 'drawing-2'] },
+                },
+            })
+        ).toThrow(/names a document source/i);
     });
 
     it('blocks stale filters for note attachments from the current selection', () => {

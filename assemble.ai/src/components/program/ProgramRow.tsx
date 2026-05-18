@@ -304,7 +304,7 @@ export function ProgramRow({
         return (
             <div
                 ref={sortableRef}
-                className="group flex items-center border-b border-[var(--sw-rule-2)] hover:bg-[var(--sw-paper-2)]"
+                className="group flex items-center border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)] hover:bg-[var(--sw-canvas)]"
                 style={{ height: rowHeight, fontFamily: 'var(--sw-font-mono)', ...sortableStyle }}
             >
                 {/* Drag handle - always visible */}
@@ -415,7 +415,7 @@ export function ProgramRow({
         <div
             ref={timelineRef}
             data-activity-id={activity.id}
-            className={`relative flex border-b border-[var(--sw-rule-2)] hover:bg-[var(--sw-paper-2)] ${
+            className={`relative flex border-b border-[var(--sw-rule-2)] bg-[var(--sw-shell)] hover:bg-[var(--sw-canvas)] ${
                 !hasExistingDates ? 'cursor-crosshair' : ''
             }`}
             style={{ height: rowHeight }}

@@ -32,11 +32,13 @@ interface Firm {
 interface TRREvaluationPriceProps {
     projectId: string;
     stakeholderId?: string | null;
+    evaluationPriceId?: string | null;
 }
 
 export function TRREvaluationPrice({
     projectId,
     stakeholderId,
+    evaluationPriceId: linkedEvaluationPriceId,
 }: TRREvaluationPriceProps) {
     const [rows, setRows] = useState<EvaluationRow[]>([]);
     const [cells, setCells] = useState<EvaluationCell[]>([]);
@@ -55,11 +57,14 @@ export function TRREvaluationPrice({
                 // First, fetch evaluation price instances to get the correct evaluationPriceId
                 const priceParams = new URLSearchParams({ projectId, stakeholderId: contextId });
                 const priceRes = await fetch(`/api/evaluation-price?${priceParams.toString()}`);
-                let evaluationPriceId: string | null = null;
-                if (priceRes.ok) {
+                let evaluationPriceId: string | null = linkedEvaluationPriceId ?? null;
+                if (!evaluationPriceId && priceRes.ok) {
                     const priceInstances = await priceRes.json();
                     if (Array.isArray(priceInstances) && priceInstances.length > 0) {
-                        evaluationPriceId = priceInstances[0].id;
+                        const latest = [...priceInstances].sort((a, b) =>
+                            (b.evaluationPriceNumber ?? 0) - (a.evaluationPriceNumber ?? 0)
+                        )[0];
+                        evaluationPriceId = latest?.id ?? null;
                     }
                 }
 
@@ -105,7 +110,7 @@ export function TRREvaluationPrice({
         if (projectId && stakeholderId) {
             fetchEvaluationData();
         }
-    }, [projectId, stakeholderId]);
+    }, [projectId, stakeholderId, linkedEvaluationPriceId]);
 
     const formatCurrency = (cents: number): string => {
         return new Intl.NumberFormat('en-AU', {
@@ -184,7 +189,7 @@ export function TRREvaluationPrice({
                                             {firms.map((firm) => (
                                                 <td
                                                     key={firm.id}
-                                                    className="px-4 py-2.5 text-right text-[var(--color-text-primary)]"
+                                                    className="px-4 py-2.5 text-right text-[var(--role-money)] font-mono"
                                                 >
                                                     {formatCurrency(getCellAmount(row.id, firm.id))}
                                                 </td>
@@ -200,7 +205,7 @@ export function TRREvaluationPrice({
                                     {firms.map((firm) => (
                                         <td
                                             key={firm.id}
-                                            className="px-4 py-2.5 text-right text-[var(--color-text-primary)] font-semibold"
+                                            className="px-4 py-2.5 text-right font-semibold text-[var(--role-money)] font-mono"
                                         >
                                             {formatCurrency(calculateSubtotal(firm.id, 'initial_price', filteredRows))}
                                         </td>
@@ -228,7 +233,7 @@ export function TRREvaluationPrice({
                                             {firms.map((firm) => (
                                                 <td
                                                     key={firm.id}
-                                                    className="px-4 py-2.5 text-right text-[var(--color-text-primary)]"
+                                                    className="px-4 py-2.5 text-right text-[var(--role-money)] font-mono"
                                                 >
                                                     {formatCurrency(getCellAmount(row.id, firm.id))}
                                                 </td>
@@ -247,7 +252,7 @@ export function TRREvaluationPrice({
                                         return (
                                             <td
                                                 key={firm.id}
-                                                className="px-4 py-2.5 text-right text-[var(--color-text-primary)] font-bold"
+                                                className="px-4 py-2.5 text-right font-bold text-[var(--role-money)] font-mono"
                                             >
                                                 {formatCurrency(initialTotal + addSubsTotal)}
                                             </td>

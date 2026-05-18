@@ -466,17 +466,17 @@ export function SnapshotCompareDialog({
             <div className="text-right">
               <span className="text-[var(--color-text-muted)]">{formatCurrency(totals.snapshotBudgetCents)}</span>
               <span className="text-[var(--color-text-muted)] mx-2">→</span>
-              <span className="text-white font-medium">{formatCurrency(totals.currentBudgetCents)}</span>
+              <span className="font-medium text-[var(--role-money)] font-mono">{formatCurrency(totals.currentBudgetCents)}</span>
             </div>
             <div className="text-right">
               <span className="text-[var(--color-text-muted)]">{formatCurrency(totals.snapshotContractCents)}</span>
               <span className="text-[var(--color-text-muted)] mx-2">→</span>
-              <span className="text-white font-medium">{formatCurrency(totals.currentContractCents)}</span>
+              <span className="font-medium text-[var(--role-money)] font-mono">{formatCurrency(totals.currentContractCents)}</span>
             </div>
             <div className="text-right">
               <span className="text-[var(--color-text-muted)]">{formatCurrency(totals.snapshotForecastCents)}</span>
               <span className="text-[var(--color-text-muted)] mx-2">→</span>
-              <span className="text-white font-medium">{formatCurrency(totals.currentForecastCents)}</span>
+              <span className="font-medium text-[var(--role-money)] font-mono">{formatCurrency(totals.currentForecastCents)}</span>
             </div>
             <div className="flex justify-center">
               <ChangeIndicator

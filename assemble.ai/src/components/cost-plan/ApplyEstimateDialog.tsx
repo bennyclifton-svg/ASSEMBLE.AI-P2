@@ -338,7 +338,7 @@ export function ApplyEstimateDialog({
                       <td className="text-right px-2 py-1.5 font-bold text-[var(--color-text-primary)]">
                         {st.percent.toFixed(1)}%
                       </td>
-                      <td className="text-right px-2 py-1.5 font-bold text-[var(--color-text-primary)]">
+                      <td className="text-right px-2 py-1.5 font-bold text-[var(--role-money)] font-mono">
                         {formatCurrency(st.amountCents)}
                       </td>
                       <td></td>
@@ -424,7 +424,7 @@ export function ApplyEstimateDialog({
                           </td>
 
                           {/* Proposed Budget */}
-                          <td className="text-right px-2 py-1.5 font-mono text-[var(--color-text-primary)]">
+                          <td className="text-right px-2 py-1.5 font-mono text-[var(--role-money)]">
                             {formatCurrency(line.amountCents)}
                           </td>
 

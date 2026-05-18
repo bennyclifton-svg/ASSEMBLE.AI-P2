@@ -446,14 +446,14 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
 
     if (isLoading) {
         return (
-            <div className="flex h-full items-center justify-center bg-[var(--sw-paper)]">
+            <div className="flex h-full items-center justify-center bg-[#F6FAFB]">
                 <Loader2 className="h-5 w-5 animate-spin text-[var(--sw-muted)]" />
             </div>
         );
     }
 
     return (
-        <div className="procurement-workspace flex h-full min-h-0 flex-col overflow-hidden bg-[var(--sw-paper)]">
+        <div className="procurement-workspace flex h-full min-h-0 flex-col overflow-hidden bg-[#F6FAFB]">
             <header className="shrink-0 px-2 pt-2">
                 <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
                     <CorrespondenceBreadcrumb
@@ -461,9 +461,6 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
                         activeLabel={activeThreadLabel.toLowerCase()}
                     />
                     <div className="flex shrink-0 items-center gap-1.5">
-                        <CorrespondenceStatusPill label={`threads: ${threads.length}`} />
-                        <CorrespondenceStatusPill label={`emails: ${items.length}`} />
-                        <CorrespondenceStatusPill label={`active: ${activeThreadLabel}`} tone="dark" />
                         <ProcurementIconButton
                             title={copied ? 'Copied project address' : 'Copy project address'}
                             onClick={() => void copyAddress()}
@@ -558,10 +555,10 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
                                         type="button"
                                         onClick={() => selectThread(thread)}
                                         className={cn(
-                                            'grid h-10 w-full grid-cols-[124px_minmax(0,1fr)_86px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
+                                            'grid h-8 w-full grid-cols-[124px_minmax(0,1fr)_86px] items-center border-b border-l-2 border-[var(--sw-rule-2)] px-3 text-left transition-colors last:border-b-0',
                                             isActive
                                                 ? 'border-l-4 bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-ink)]'
-                                                : 'bg-transparent hover:bg-[var(--sw-paper-2)]'
+                                                : 'bg-transparent hover:bg-[var(--sw-canvas)]'
                                         )}
                                         style={{
                                             borderLeftColor: thread.accent,
@@ -616,7 +613,7 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
 
                     <section
                         className="flex min-h-0 min-w-0 flex-col overflow-hidden"
-                        style={{ background: 'white' }}
+                        style={{ background: '#F6FAFB' }}
                         data-testid="correspondence-detail-pane"
                     >
                         {selectedThread && selected ? (
@@ -710,7 +707,7 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
                                                     'shrink-0 px-2 py-0.5 text-xs',
                                                     selected.classificationStatus === 'confirmed'
                                                         ? 'bg-[var(--color-accent-teal-tint)] text-[var(--color-accent-teal)]'
-                                                        : 'bg-[var(--sw-paper)] text-[var(--sw-muted)]'
+                                                        : 'bg-[#F6FAFB] text-[var(--sw-muted)]'
                                                 )}
                                             >
                                                 {selected.classificationStatus}
@@ -742,7 +739,7 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
                                                     'inline-flex shrink-0 items-center gap-1 px-2 py-0.5 text-xs font-medium',
                                                     selectedTriage.status === 'auto_triaged'
                                                         ? 'bg-[var(--color-accent-teal-tint)] text-[var(--color-accent-teal)]'
-                                                        : 'bg-[var(--sw-paper)] text-[var(--sw-muted)]'
+                                                        : 'bg-[#F6FAFB] text-[var(--sw-muted)]'
                                                 )}>
                                                     {selectedTriage.status !== 'auto_triaged' && (
                                                         <AlertCircle className="h-3 w-3" />
@@ -778,7 +775,7 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
                                                 </div>
                                             </div>
 
-                                            <div className="mt-3 overflow-hidden border border-[var(--sw-rule)] bg-[var(--sw-paper)]">
+                                            <div className="mt-3 overflow-hidden border border-[var(--sw-rule)] bg-[#F6FAFB]">
                                                 <button
                                                     type="button"
                                                     className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
@@ -865,7 +862,7 @@ export function CorrespondencePanel({ projectId, projectName = 'project' }: Corr
                                             </div>
 
                                             {selectedTriage.missingInformation.length > 0 && (
-                                                <div className="mt-3 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-3">
+                                                <div className="mt-3 border border-[var(--sw-rule)] bg-[#F6FAFB] p-3">
                                                     <div className="mb-2 text-xs font-medium uppercase text-[var(--sw-muted)]">
                                                         Missing particulars
                                                     </div>

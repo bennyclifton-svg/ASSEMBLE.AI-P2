@@ -1,6 +1,6 @@
 'use client';
 
-import { FolderKanban } from 'lucide-react';
+import { Folder } from 'lucide-react';
 import { ProjectSwitcher } from '../ProjectSwitcher';
 
 interface Project {
@@ -24,8 +24,12 @@ export function SitewiseProjectSwitcherCard({
     if (!selectedProject) return null;
     return (
         <div
-            className="sitewise-project-switcher-card px-3 py-2 transition-colors hover:bg-white"
-            style={{ background: 'white', border: '1px solid var(--sw-rule)' }}
+            className="sitewise-project-switcher-card px-3 py-2 transition-colors"
+            style={{
+                background: '#2F363E',
+                border: '1px solid transparent',
+                borderLeft: '2px solid var(--sw-rose)',
+            }}
         >
             <ProjectSwitcher
                 selectedProject={selectedProject}
@@ -33,14 +37,10 @@ export function SitewiseProjectSwitcherCard({
                 refreshTrigger={refreshTrigger}
             >
                 <span
-                    className="sitewise-project-icon-grid flex h-7 w-7 shrink-0 items-center justify-center border"
-                    style={{
-                        color: '#0891B2',
-                        background: 'rgba(8, 145, 178, 0.12)',
-                        borderColor: '#0891B2',
-                    }}
+                    className="sitewise-project-icon-grid flex h-7 w-7 shrink-0 items-center justify-center"
+                    style={{ color: 'var(--sw-paper)' }}
                 >
-                    <FolderKanban className="h-4 w-4" strokeWidth={2.2} />
+                    <Folder className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </span>
                 <span className="sitewise-project-label flex flex-col items-start min-w-0 flex-1">
                     <span
@@ -48,7 +48,7 @@ export function SitewiseProjectSwitcherCard({
                         style={{
                             fontSize: 13,
                             fontWeight: 600,
-                            color: 'var(--sw-ink)',
+                            color: 'var(--sw-paper)',
                             textTransform: 'lowercase',
                         }}
                     >

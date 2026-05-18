@@ -80,9 +80,20 @@ interface UseReportTransmittalReturn {
 
 interface UseReportMutationsReturn {
     createReport: (data: CreateReportRequest) => Promise<ReportWithCount>;
+    createWeeklyReportDraft: (data?: CreateWeeklyReportDraftRequest) => Promise<ReportWithCount>;
     updateReport: (reportId: string, data: UpdateReportRequest) => Promise<Report>;
     deleteReport: (reportId: string) => Promise<void>;
     copyReport: (reportId: string) => Promise<ReportWithCount>;
+}
+
+interface CreateWeeklyReportDraftRequest {
+    title?: string;
+    groupId?: string;
+    reportDate?: string;
+    preparedFor?: string;
+    preparedBy?: string;
+    reportingPeriodStart?: string;
+    reportingPeriodEnd?: string;
 }
 
 interface UseReportSectionsReturn {
@@ -231,6 +242,30 @@ export function useReportMutations(projectId: string, groupId?: string): UseRepo
         return created;
     }, [listKey]);
 
+    const createWeeklyReportDraft = useCallback(async (
+        data: CreateWeeklyReportDraftRequest = {}
+    ): Promise<ReportWithCount> => {
+        const response = await fetch(`/api/projects/${projectId}/weekly-report-draft`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...data,
+                groupId: data.groupId ?? groupId,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ error: 'Failed to create weekly report draft' }));
+            throw new Error(error.error || 'Failed to create weekly report draft');
+        }
+
+        const created = await response.json();
+        globalMutate(listKey);
+        globalMutate(`/api/project-reports/${created.id}`);
+
+        return created;
+    }, [groupId, listKey, projectId]);
+
     /**
      * Update an existing report
      */
@@ -295,6 +330,7 @@ export function useReportMutations(projectId: string, groupId?: string): UseRepo
 
     return {
         createReport,
+        createWeeklyReportDraft,
         updateReport,
         deleteReport,
         copyReport,
@@ -591,7 +627,7 @@ export function useReportAttendees(reportId: string | null, projectId?: string):
             try {
                 const attendee = await addAttendee({ stakeholderId: stakeholder.id });
                 addedAttendees.push(attendee);
-            } catch (e) {
+            } catch {
                 // Skip if already added (race condition)
                 console.warn(`Stakeholder ${stakeholder.id} may already be added`);
             }

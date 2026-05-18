@@ -16,6 +16,7 @@ import { useToast } from './use-toast';
 interface UseTRROptions {
     projectId: string;
     stakeholderId?: string | null;
+    evaluationPriceId?: string | null;
 }
 
 interface TRRWithCount extends TRR {
@@ -50,6 +51,7 @@ const fetcher = async (url: string): Promise<TRRWithCount[]> => {
 export function useTRR({
     projectId,
     stakeholderId,
+    evaluationPriceId,
 }: UseTRROptions): UseTRRReturn {
     const { toast } = useToast();
 
@@ -94,6 +96,7 @@ export function useTRR({
                 body: JSON.stringify({
                     projectId,
                     stakeholderId,
+                    evaluationPriceId,
                 }),
             });
 
@@ -123,7 +126,7 @@ export function useTRR({
             });
             return null;
         }
-    }, [projectId, stakeholderId, localMutate, toast]);
+    }, [projectId, stakeholderId, evaluationPriceId, localMutate, toast]);
 
     /**
      * Update a TRR with new data

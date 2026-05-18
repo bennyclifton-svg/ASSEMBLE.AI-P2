@@ -9,7 +9,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { ClipboardList, AlertCircle, Copy, Loader2, Trash } from 'lucide-react';
+import { ClipboardList, AlertCircle, Copy, Loader2, Sparkles, Trash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SectionHeader } from '@/components/shared/SectionHeader';
@@ -54,7 +54,7 @@ export function ReportsPanel({
     className,
 }: ReportsPanelProps) {
     const { reports, isLoading, error, refetch } = useReports({ projectId, groupId });
-    const { createReport, updateReport, deleteReport, copyReport } = useReportMutations(projectId, groupId);
+    const { createReport, createWeeklyReportDraft, updateReport, deleteReport, copyReport } = useReportMutations(projectId, groupId);
 
     // Use UI context for expanded/active state persistence
     const {
@@ -72,6 +72,7 @@ export function ReportsPanel({
     // Export hook for active report
     const { exportReport } = useReportExport(activeReport?.id || null);
     const [isCopying, setIsCopying] = useState(false);
+    const [isCreatingWeeklyDraft, setIsCreatingWeeklyDraft] = useState(false);
     const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
 
     // Auto-select first report when loaded
@@ -93,6 +94,17 @@ export function ReportsPanel({
             setIsCreating(false);
         }
     }, [createReport, groupId, projectId, setActiveReportId, setExpanded]);
+
+    const handleCreateWeeklyDraft = useCallback(async () => {
+        setIsCreatingWeeklyDraft(true);
+        try {
+            const created = await createWeeklyReportDraft();
+            setActiveReportId(created.id);
+            setExpanded(true);
+        } finally {
+            setIsCreatingWeeklyDraft(false);
+        }
+    }, [createWeeklyReportDraft, setActiveReportId, setExpanded]);
 
     // Auto-create first report when expanding with none
     const handleExpandToggle = useCallback(async () => {
@@ -156,7 +168,7 @@ export function ReportsPanel({
                     isMenuExpanded={isMenuExpanded}
                     onToggleMenu={() => setMenuExpanded(!isMenuExpanded)}
                 />
-                <div className="flex flex-1 flex-col items-center justify-center bg-[var(--sw-paper)] p-8">
+                <div className="flex flex-1 flex-col items-center justify-center bg-[var(--sw-shell)] p-8">
                     <div className="mb-4 border border-[var(--sw-rule)] bg-white p-4">
                         <AlertCircle className="h-8 w-8 text-[var(--sw-rose-dk)]" />
                     </div>
@@ -201,6 +213,22 @@ export function ReportsPanel({
                 accentColor={REPORT_RECORD_ACCENT}
             />
             <div className="mx-2 h-5 w-px bg-[var(--sw-rule-2)]" />
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCreateWeeklyDraft}
+                disabled={isCreatingWeeklyDraft}
+                className="h-7 rounded-none border border-[var(--sw-rule)] bg-transparent px-2 text-[11px] font-semibold text-[var(--sw-ink)] transition-colors hover:bg-[var(--sw-shell)]"
+                title="Create weekly report draft"
+            >
+                {isCreatingWeeklyDraft ? (
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                Weekly draft
+            </Button>
+            <div className="mx-2 h-5 w-px bg-[var(--sw-rule-2)]" />
             <ExportButtonGroup
                 onExportPdf={() => handleExport('pdf')}
                 onExportDocx={() => handleExport('docx')}
@@ -212,7 +240,7 @@ export function ReportsPanel({
                     size="sm"
                     onClick={handleRibbonCopy}
                     disabled={!activeReport || isCopying}
-                    className="h-7 w-7 rounded-none border border-[var(--sw-rule)] bg-transparent p-0 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-paper)] hover:text-[var(--sw-ink)]"
+                    className="h-7 w-7 rounded-none border border-[var(--sw-rule)] bg-transparent p-0 text-[var(--sw-muted)] transition-colors hover:bg-[var(--sw-shell)] hover:text-[var(--sw-ink)]"
                     title="Copy report"
                 >
                     {isCopying ? (
@@ -302,7 +330,7 @@ export function ReportsPanel({
 
             {/* Content Area - only shown when expanded */}
             {isExpanded && (
-                <div className="mx-2 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-4">
+                <div className="mx-2 border border-[var(--sw-rule)] bg-[var(--sw-shell)] p-4">
                     {panelContent}
                 </div>
             )}
@@ -343,7 +371,7 @@ function ReportsPanelSkeleton() {
 function EmptyState() {
     return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="mb-4 border border-[var(--sw-rule)] bg-[var(--sw-paper)] p-4">
+            <div className="mb-4 border border-[var(--sw-rule)] bg-[var(--sw-shell)] p-4">
                 <ClipboardList className="h-8 w-8 text-[var(--sw-muted)]" />
             </div>
             <h3 className="mb-2 text-lg font-medium text-[var(--sw-ink)]">

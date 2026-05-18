@@ -9,6 +9,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRftNew } from '@/lib/hooks/use-rft-new';
 import { useRftNewTransmittal } from '@/lib/hooks/use-rft-new-transmittal';
+import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import { useRFTSectionUI } from '@/lib/contexts/procurement-ui-context';
 import { RFTNewShortTab } from './RFTNewShortTab';
 import { RFTTabs } from './RFTTabs';
@@ -64,6 +65,7 @@ export function RFTNewSection({
         updateObjectivesVisible,
         updateProgramVisible,
         deleteRft,
+        refetch,
     } = useRftNew({
         projectId,
         stakeholderId,
@@ -78,6 +80,12 @@ export function RFTNewSection({
             setActiveRftId(rfts[0].id);
         }
     }, [rfts, activeRftId, setActiveRftId]);
+
+    useProjectEvents(projectId, (event) => {
+        if (event.type === 'entity_updated' && event.entity === 'rft') {
+            refetch();
+        }
+    });
 
     // Get transmittal for the active RFT
     const {

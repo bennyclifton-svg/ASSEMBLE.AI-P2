@@ -38,5 +38,5 @@ This order removes foundational ambiguity first, then builds the shared command 
 - `src/lib/db/schema.ts` is no longer a separate schema source; it may only exist as a compatibility shim during migration.
 - New project workspace mutations should be registered as application actions.
 - Legacy tools, routes, and hooks should become adapters over deeper modules instead of owning duplicate behavior.
-- Future architecture reviews should use `CONTEXT.md` and this ADR as the starting point.
+- Future architecture reviews should use `docs/strategy/local-private-appliance.md` (current product strategy + domain glossary) and `CODEBASE.md` (current codebase reality) as the starting point. The earlier `CONTEXT.md` companion was archived in May 2026 with the SaaS-era planning material; its glossary content was promoted into the strategy doc.
 

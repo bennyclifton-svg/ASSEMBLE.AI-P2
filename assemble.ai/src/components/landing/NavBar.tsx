@@ -1,68 +1,73 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
-import { SitewiseWordmark } from '@/components/brand/SitewiseWordmark';
+import Image from 'next/image';
 import { BookDemoDialog } from './BookDemoDialog';
 
 export function NavBar() {
-    const [isScrolled, setIsScrolled] = useState(false);
     const [demoOpen, setDemoOpen] = useState(false);
-
-    useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 50);
-        };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
 
     return (
         <>
             <nav
-                className={cn(
-                    'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-                    isScrolled
-                        ? 'bg-[color:var(--sw-ink)]/95 backdrop-blur-[20px] border-b border-white/[0.06]'
-                        : 'bg-transparent',
-                )}
+                className="fixed top-0 left-0 right-0 z-50"
+                style={{
+                    background: 'var(--sw-paper-2)',
+                    borderBottom: '1px solid var(--sw-rule-dk)',
+                }}
             >
-                <div className="max-w-[1280px] mx-auto px-8 py-4 flex items-center justify-between">
+                <div className="max-w-[1280px] mx-auto px-8 py-3 flex items-center justify-between">
                     <Link
                         href="/"
-                        className="flex items-center hover:scale-[1.02] transition-transform duration-200"
+                        className="flex items-center hover:opacity-80 transition-opacity"
                         aria-label="Sitewise home"
                     >
-                        <SitewiseWordmark size={26} color="#E8E4DA" accent="var(--sw-rose)" />
+                        <Image
+                            src="/images/sitewise-logo-light.png"
+                            alt="Sitewise"
+                            width={1038}
+                            height={554}
+                            priority
+                            style={{ height: 44, width: 'auto', display: 'block' }}
+                        />
                     </Link>
 
                     <div className="flex items-center gap-3">
                         <Link
                             href="/login"
-                            className="hidden sm:inline-flex text-[13px] text-white/60 hover:text-white transition-colors duration-200"
-                            style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.02em' }}
+                            className="hidden sm:inline-flex text-[13px] hover:opacity-100 transition-opacity"
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                letterSpacing: '0.02em',
+                                color: 'rgba(232,228,218,0.65)',
+                            }}
                         >
-                            login
+                            Sign in
                         </Link>
                         <button
                             type="button"
                             onClick={() => setDemoOpen(true)}
-                            className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.12em] border border-white/14 text-[#E8E4DA] hover:bg-white/5 transition-colors"
-                            style={{ fontFamily: 'var(--sw-font-mono)' }}
+                            className="hidden sm:inline-flex items-center gap-2 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.12em] transition-colors hover:bg-white/5"
+                            style={{
+                                fontFamily: 'var(--sw-font-mono)',
+                                color: '#E8E4DA',
+                                border: '1px solid var(--sw-rule-dk-2)',
+                                background: 'transparent',
+                            }}
                         >
                             Book a demo
                         </button>
                         <Link
-                            href="/assessment"
-                            className="inline-flex items-center gap-2 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.12em] transition-colors"
+                            href="/pricing"
+                            className="inline-flex items-center gap-2 px-4 py-2 text-[12px] font-bold uppercase tracking-[0.12em] transition-colors hover:opacity-90"
                             style={{
                                 fontFamily: 'var(--sw-font-mono)',
-                                background: 'var(--sw-rose)',
-                                color: 'var(--sw-ink)',
+                                background: 'var(--sw-cta)',
+                                color: 'var(--sw-cta-fg)',
                             }}
                         >
-                            Project Health Check
+                            Start free trial
                         </Link>
                     </div>
                 </div>

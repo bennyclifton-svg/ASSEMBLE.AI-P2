@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { mutate as globalMutate } from 'swr';
 import { CategoryUploadTiles } from './CategoryUploadTiles';
 import { CategorizedList } from './CategorizedList';
 import type { UploadFileStatus } from './UploadProgress';
 import { useToast } from '@/components/ui/use-toast';
 import { getCategoryById } from '@/lib/constants/categories';
 import { useDocumentSets, useDocumentSetMutations } from '@/lib/hooks/use-document-sets';
+import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import { RAG_DISABLED } from '@/lib/hooks/use-rag-repos';
 
 interface DocumentRepositoryProps {
@@ -23,8 +25,36 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
     const [filterSubcategoryId, setFilterSubcategoryId] = useState<string | null>(null);
     const [filterBySyncedOnly, setFilterBySyncedOnly] = useState(false);
+    const [bgStatus, setBgStatus] = useState<{ ingestingCount: number; hasProcessingDrawings: boolean }>({ ingestingCount: 0, hasProcessingDrawings: false });
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
+
+    const handleProcessingStatusChange = useCallback(
+        (status: { ingestingCount: number; hasProcessingDrawings: boolean }) => {
+            setBgStatus(prev =>
+                prev.ingestingCount === status.ingestingCount && prev.hasProcessingDrawings === status.hasProcessingDrawings
+                    ? prev
+                    : status
+            );
+        },
+        []
+    );
+
+    const statusMessage = useMemo(() => {
+        const parts: string[] = [];
+        if (uploading && uploadFiles.length > 0) {
+            parts.push(`Uploading ${uploadFiles.length} file${uploadFiles.length !== 1 ? 's' : ''}`);
+        }
+        if (bgStatus.hasProcessingDrawings) {
+            parts.push('Extracting drawing data');
+        }
+        if (bgStatus.ingestingCount > 0) {
+            parts.push(`Ingesting ${bgStatus.ingestingCount} document${bgStatus.ingestingCount !== 1 ? 's' : ''} to AI knowledge base`);
+        }
+        return parts.join('  •  ');
+    }, [uploading, uploadFiles.length, bgStatus]);
+
+    const isAnyProcessing = statusMessage.length > 0;
 
     // RAG document set hooks
     const { documentSets, isLoading: setsLoading } = useDocumentSets(projectId);
@@ -36,6 +66,12 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
         window.addEventListener('documents-changed', handleDocumentsChanged);
         return () => window.removeEventListener('documents-changed', handleDocumentsChanged);
     }, []);
+
+    useProjectEvents(projectId, (event) => {
+        if (event.type !== 'document_sync_status_changed') return;
+        setRefreshTrigger(prev => prev + 1);
+        void globalMutate((key) => typeof key === 'string' && key.startsWith('/api/document-sets'));
+    });
 
     // Find or create the project's Knowledge document set
     useEffect(() => {
@@ -463,9 +499,9 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
     };
 
     return (
-        <div className="h-full flex flex-col" style={{ background: 'var(--sw-paper-2)' }}>
+        <div className="h-full flex flex-col" style={{ background: '#F6FBFB' }}>
             {/* Category Upload Tiles */}
-            <div className="px-4 pt-4 pb-4 flex-shrink-0">
+            <div className="px-4 pt-3 pb-1.5 flex-shrink-0" style={{ background: '#1E2126' }}>
                 <CategoryUploadTiles
                     projectId={projectId}
                     onFilesDropped={handleFilesSelected}
@@ -478,6 +514,36 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     onFilterChange={handleFilterChange}
                 />
             </div>
+
+            {/* Sticky processing status banner — visible while any of upload,
+                drawing extraction, or RAG ingestion is active. Sits above the
+                scrollable list so it stays visible when the list is scrolled. */}
+            {isAnyProcessing && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-[var(--sw-rule-2)] flex-shrink-0">
+                    <svg
+                        width={16}
+                        height={16}
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="animate-diamond-spin text-[var(--sw-rose)] flex-shrink-0"
+                    >
+                        <path
+                            d="M8 1L15 8L8 15L1 8L8 1Z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            fill="none"
+                        />
+                        <path
+                            d="M8 4.5L11.5 8L8 11.5L4.5 8L8 4.5Z"
+                            fill="currentColor"
+                        />
+                    </svg>
+                    <span className="text-xs text-[var(--sw-ink)] truncate" style={{ fontFamily: 'var(--sw-font-mono)' }}>
+                        {statusMessage}
+                    </span>
+                </div>
+            )}
 
             {/* Document List - Takes remaining space */}
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
@@ -493,6 +559,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     isProcessing={uploading}
                     processingCount={uploadFiles.length}
                     onFilesDropped={(files) => handleFilesSelected(files)}
+                    onProcessingStatusChange={handleProcessingStatusChange}
                 />
             </div>
         </div>

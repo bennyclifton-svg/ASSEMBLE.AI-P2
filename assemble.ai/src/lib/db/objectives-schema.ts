@@ -8,7 +8,18 @@ import { projects } from './pg-schema';
 
 // Objective Types
 export type ObjectiveType = 'planning' | 'functional' | 'quality' | 'compliance';
-export type ObjectiveSource = 'explicit' | 'inferred' | 'ai_added' | 'user_added';
+export type ObjectiveSource =
+  | 'explicit'
+  | 'inferred'
+  | 'ai_added'
+  | 'profile_fact'
+  | 'inference_rule'
+  | 'seed_knowledge'
+  | 'llm_common'
+  | 'user_added'
+  | 'manual'
+  | 'inference'
+  | 'briefing';
 export type ObjectiveStatus = 'draft' | 'polished' | 'approved';
 
 export const VALID_OBJECTIVE_TYPES: ObjectiveType[] = ['planning', 'functional', 'quality', 'compliance'];
@@ -21,7 +32,7 @@ export const projectObjectives = pgTable('project_objectives', {
 
   // Classification
   objectiveType: text('objective_type').notNull().$type<ObjectiveType>(),
-  source: text('source').notNull().$type<ObjectiveSource>(),
+  source: text('source').notNull().$type<ObjectiveSource>().default('manual'),
 
   // Content
   text: text('text').notNull(),
@@ -67,10 +78,22 @@ export interface GeneratedItemsJson {
   explicit: string[];
   inferred: string[];
   ai_added?: string[];
+  profile_fact?: string[];
+  inference_rule?: string[];
+  seed_knowledge?: string[];
+  llm_common?: string[];
+  source_details?: { text: string; source: ObjectiveSource; sourceDetail?: string }[];
   user_added?: string[];
 }
 
 export interface MatchedRulesJson {
   ruleIds: string[];
   resolvedItems: { ruleId: string; text: string; source: string }[];
+  knowledgeSources?: {
+    source: 'domain_rag' | 'local_seed';
+    domainName: string;
+    sectionTitle: string | null;
+    relevanceScore: number;
+    sourceVersion?: string;
+  }[];
 }

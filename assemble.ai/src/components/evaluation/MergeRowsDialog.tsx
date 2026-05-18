@@ -131,7 +131,7 @@ export function MergeRowsDialog({
                                     className="flex justify-between text-xs bg-[var(--color-bg-secondary)] px-2 py-1 rounded"
                                 >
                                     <span className="text-[var(--color-text-muted)] truncate">{firm.companyName}</span>
-                                    <span className="text-[var(--color-success)] font-medium">
+                                    <span className="font-medium text-[var(--role-money)] font-mono">
                                         {formatCurrency(firmTotals.get(firm.id) || 0)}
                                     </span>
                                 </div>

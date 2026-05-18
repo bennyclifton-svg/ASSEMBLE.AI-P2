@@ -11,9 +11,11 @@ const ADDENDUM_REQUEST_RE = new RegExp(
 const TRANSMITTAL_REQUEST_RE =
     /\b(create|add|issue|prepare|draft|save|generate)\b[\s\S]{0,180}\b(transmittals?)\b|\b(transmittals?)\b[\s\S]{0,180}\b(create|add|issue|prepare|draft|save|generate|documents?|drawings?|files?)\b/i;
 const NOTE_REQUEST_RE =
-    /\b(create|add|record|update|change|edit|attach)\b[\s\S]{0,180}\b(notes?|decision record)\b|\b(notes?|decision record)\b[\s\S]{0,180}\b(attach|documents?|drawings?|files?|update|change|edit)\b/i;
+    /\b(create|add|record|update|change|edit|attach)\b[\s\S]{0,180}\b(notes?|decision record|review record)\b|\b(notes?|decision record|review record)\b[\s\S]{0,180}\b(attach|documents?|drawings?|files?|update|change|edit|summari[sz]e|review)\b/i;
 const CURRENT_DOCUMENT_SELECTION_RE =
     /\b(?:with|from|using|use|for|of|to)\s+(?:the\s+)?(?:current\s+)?(?:selection|selected set)\b|\b(?:current|selected|the selected|these selected|those selected)\s+(?:documents?|docs?|drawings?|files?|set)\b/i;
+const NAMED_DOCUMENT_SOURCE_RE =
+    /\b(architectural|architecture|structural|electrical|hydraulic|mechanical|civil|fire|bca|town planning|town planner|survey|surveyor|landscape|acoustic|geotechnical)\b[\s\S]{0,80}\b(specifications?|specs?|reports?|drawings?|documents?|docs?|files?)\b|\b(specifications?|specs?|reports?|drawings?|documents?|docs?|files?)\b[\s\S]{0,80}\b(architectural|architecture|structural|electrical|hydraulic|mechanical|civil|fire|bca|town planning|town planner|survey|surveyor|landscape|acoustic|geotechnical)\b|\b(?:the|this|attached|uploaded|ingested|current)\s+(?:technical\s+|services\s+)?(?:specification|spec)\b/i;
 
 const DOCUMENT_FILTER_FIELDS = [
     'categoryId',
@@ -129,6 +131,12 @@ function sameStringSet(left: string[], right: string[]): boolean {
     return left.every((value) => rightSet.has(value));
 }
 
+function isSubsetOfStringSet(subset: string[], superset: string[]): boolean {
+    if (subset.length === 0) return false;
+    const supersetSet = new Set(superset);
+    return subset.every((value) => supersetSet.has(value));
+}
+
 function disciplineTermsIn(value: string): string[] {
     const lower = value.toLowerCase();
     return DOCUMENT_DISCIPLINE_TERMS.filter((term) => lower.includes(term));
@@ -146,25 +154,60 @@ function selectionToolError(
     );
 }
 
+function namedSourceSelectionError(config: SelectionToolConfig): Error {
+    return new Error(
+        'The latest request names a document source, but it does not ask to use the current document selection. ' +
+            'Do not attach current selected documentIds merely because they are selected in the app view. ' +
+            'Resolve the named source with list_project_documents using the requested discipline/title, then use the matching documentIds. ' +
+            'For a request like "electrical specification", use a document title filter such as documentName="specification" with disciplineOrTrade="Electrical"; then call the note/transmittal tool with the resolved documentIds. ' +
+            'If the selected documents appear to conflict with the named source, mention that briefly in the final answer; do not deselect anything unless the user asks for a UI selection change. ' +
+            config.retryInstruction
+    );
+}
+
+function guardAgainstIncidentalCurrentSelection(args: {
+    latestUserMessage: string;
+    input: Record<string, unknown>;
+    selectedDocumentIds: string[];
+    config: SelectionToolConfig;
+}): void {
+    if (CURRENT_DOCUMENT_SELECTION_RE.test(args.latestUserMessage)) return;
+    if (!NAMED_DOCUMENT_SOURCE_RE.test(args.latestUserMessage)) return;
+    if (args.selectedDocumentIds.length === 0) return;
+
+    const inputDocumentIds = inputStringArray(args.input, args.config.documentIdField);
+    if (inputDocumentIds.length === 0) return;
+    if (!isSubsetOfStringSet(inputDocumentIds, args.selectedDocumentIds)) return;
+
+    throw namedSourceSelectionError(args.config);
+}
+
 export function guardToolAgainstCurrentDocumentSelection(args: {
     latestUserMessage: string;
     toolName: string;
     input: unknown;
     viewContext?: ChatViewContext | null;
 }): void {
-    if (!CURRENT_DOCUMENT_SELECTION_RE.test(args.latestUserMessage)) return;
-
     const config = TOOL_CONFIGS[args.toolName];
     if (!config || !config.requestPattern.test(args.latestUserMessage)) return;
 
+    const input = asInputRecord(args.input);
     const selectedDocumentIds = selectedDocumentIdsFromViewContext(args.viewContext);
+    guardAgainstIncidentalCurrentSelection({
+        latestUserMessage: args.latestUserMessage,
+        input,
+        selectedDocumentIds,
+        config,
+    });
+
+    if (!CURRENT_DOCUMENT_SELECTION_RE.test(args.latestUserMessage)) return;
+
     if (selectedDocumentIds.length === 0) {
         throw new Error(
             'The latest request refers to the current document selection, but no selected document ids are available in the current app view. Ask the user to select the documents again, and do not create an approval card yet.'
         );
     }
 
-    const input = asInputRecord(args.input);
     const inputDocumentIds = inputStringArray(input, config.documentIdField);
     const hasStaleFilter = (config.forbiddenFilterFields ?? []).some((field) =>
         inputHasMeaningfulField(input, field)

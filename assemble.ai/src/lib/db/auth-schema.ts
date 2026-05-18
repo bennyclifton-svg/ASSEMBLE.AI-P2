@@ -42,8 +42,18 @@ export const user = pgTable('user', {
     displayName: text('display_name'),
     isSuperAdmin: boolean('is_super_admin').notNull().default(false),
     suspendedAt: timestamp('suspended_at'),
+    trialStartedAt: timestamp('trial_started_at'),
+    trialEndsAt: timestamp('trial_ends_at'),
+    trialPlanId: text('trial_plan_id'),
+    trialStatus: text('trial_status'),
+    trialReminderSentAt: timestamp('trial_reminder_sent_at'),
+    termsAcceptedAt: timestamp('terms_accepted_at'),
+    privacyAcceptedAt: timestamp('privacy_accepted_at'),
 }, (table) => [
     index('user_email_idx').on(table.email),
+    index('user_trial_status_idx').on(table.trialStatus),
+    index('user_trial_ends_at_idx').on(table.trialEndsAt),
+    index('user_trial_reminder_sent_at_idx').on(table.trialReminderSentAt),
 ]);
 
 /**
@@ -170,6 +180,21 @@ export const modelSettings = pgTable('model_settings', {
     featureGroup: text('feature_group').primaryKey(),
     provider: text('provider').notNull(),
     modelId: text('model_id').notNull(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+    updatedBy: text('updated_by').references(() => user.id, { onDelete: 'set null' }),
+});
+
+/**
+ * Runtime file storage settings.
+ *
+ * A single global row controls where local uploads are written and whether
+ * the physical filename should preserve the uploaded filename.
+ */
+export const storageSettings = pgTable('storage_settings', {
+    id: text('id').primaryKey(),
+    backend: text('backend').notNull().default('local'),
+    localBasePath: text('local_base_path').notNull().default('uploads'),
+    filenameStrategy: text('filename_strategy').notNull().default('preserve_original'),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
     updatedBy: text('updated_by').references(() => user.id, { onDelete: 'set null' }),
 });

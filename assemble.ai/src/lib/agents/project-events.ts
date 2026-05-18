@@ -23,14 +23,17 @@ const connections: Map<string, Set<ReadableStreamDefaultController>> =
 const encoder = new TextEncoder();
 
 export type ProjectEntity =
+    | 'ai_memory'
     | 'addendum'
     | 'cost_line'
     | 'invoice'
     | 'note'
+    | 'rfi'
     | 'risk'
     | 'variation'
     | 'meeting'
     | 'report'
+    | 'rft'
     | 'objective'
     | 'program_activity'
     | 'program_milestone'
@@ -51,7 +54,16 @@ export type DocumentSelectionChangedEvent = {
     documentIds: string[];
 };
 
-export type ProjectEvent = EntityUpdatedEvent | DocumentSelectionChangedEvent;
+export type DocumentSyncStatusChangedEvent = {
+    type: 'document_sync_status_changed';
+    documentIds: string[];
+    documentSetId?: string | null;
+};
+
+export type ProjectEvent =
+    | EntityUpdatedEvent
+    | DocumentSelectionChangedEvent
+    | DocumentSyncStatusChangedEvent;
 
 export function registerProjectConnection(
     projectId: string,

@@ -23,6 +23,15 @@ let anthropicClient: Anthropic | null = null;
 let openrouterClient: OpenAI | null = null;
 let openaiClient: OpenAI | null = null;
 
+function missingRuntimeKeyMessage(envVar: string): string {
+    return (
+        `${envVar} is not set in this server runtime. ` +
+        'For production, add it to the deployed service environment. ' +
+        'For local dev, add it to .env.local. ' +
+        'Or switch the feature group back to Anthropic in /admin/models.'
+    );
+}
+
 function getAnthropic(): Anthropic {
     if (!anthropicClient) {
         if (!process.env.ANTHROPIC_API_KEY) {
@@ -36,9 +45,7 @@ function getAnthropic(): Anthropic {
 export function getOpenRouter(): OpenAI {
     if (!openrouterClient) {
         if (!process.env.OPENROUTER_API_KEY) {
-            throw new Error(
-                'OPENROUTER_API_KEY is not set. Switch the feature group back to Anthropic in /admin/models, or add the key to .env.'
-            );
+            throw new Error(missingRuntimeKeyMessage('OPENROUTER_API_KEY'));
         }
         openrouterClient = new OpenAI({
             apiKey: process.env.OPENROUTER_API_KEY,
@@ -55,9 +62,7 @@ export function getOpenRouter(): OpenAI {
 export function getOpenAI(): OpenAI {
     if (!openaiClient) {
         if (!process.env.OPENAI_API_KEY) {
-            throw new Error(
-                'OPENAI_API_KEY is not set. Switch the feature group back to Anthropic in /admin/models, or add the key to .env.'
-            );
+            throw new Error(missingRuntimeKeyMessage('OPENAI_API_KEY'));
         }
         openaiClient = new OpenAI({
             apiKey: process.env.OPENAI_API_KEY,
@@ -75,6 +80,14 @@ function getOpenAICompatibleClient(provider: Provider): OpenAI {
     if (provider === 'openrouter') return getOpenRouter();
     if (provider === 'openai') return getOpenAI();
     throw new Error(`Provider "${provider}" is not OpenAI-compatible`);
+}
+
+// OpenAI reasoning models burn `max_completion_tokens` on internal reasoning before emitting
+// any visible text — without a low reasoning_effort, JSON-extraction prompts can exhaust the
+// budget and return empty content. Non-reasoning models (gpt-4o etc.) reject the param.
+const OPENAI_REASONING_MODEL_PATTERN = /^(o\d|gpt-5)/i;
+function isOpenAIReasoningModel(modelId: string): boolean {
+    return OPENAI_REASONING_MODEL_PATTERN.test(modelId);
 }
 
 // ----------------------------------------------------------------------------
@@ -143,10 +156,19 @@ export async function aiComplete(req: AiCompleteRequest): Promise<AiCompleteResu
     if (req.system) messages.push({ role: 'system', content: req.system });
     for (const m of req.messages) messages.push({ role: m.role, content: m.content });
 
+    // OpenAI's reasoning models (o-series, gpt-5) reject `max_tokens`; OpenRouter still accepts it.
+    const tokenParam = provider === 'openai'
+        ? { max_completion_tokens: req.maxTokens }
+        : { max_tokens: req.maxTokens };
+    const reasoningParam = provider === 'openai' && isOpenAIReasoningModel(modelId)
+        ? { reasoning_effort: 'low' as const }
+        : {};
+
     const response = await openai.chat.completions.create({
         model: modelId,
         messages,
-        max_tokens: req.maxTokens,
+        ...tokenParam,
+        ...reasoningParam,
         ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
     });
 
@@ -229,10 +251,18 @@ export async function* aiCompleteStream(
     if (req.system) messages.push({ role: 'system', content: req.system });
     for (const m of req.messages) messages.push({ role: m.role, content: m.content });
 
+    const tokenParam = provider === 'openai'
+        ? { max_completion_tokens: req.maxTokens }
+        : { max_tokens: req.maxTokens };
+    const reasoningParam = provider === 'openai' && isOpenAIReasoningModel(modelId)
+        ? { reasoning_effort: 'low' as const }
+        : {};
+
     const stream = await openai.chat.completions.create({
         model: modelId,
         messages,
-        max_tokens: req.maxTokens,
+        ...tokenParam,
+        ...reasoningParam,
         ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
         stream: true,
         stream_options: { include_usage: true },

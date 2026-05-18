@@ -1,19 +1,18 @@
 'use client';
 
 /**
- * BuildingTabView — pure controlled component rendering the seven Building-tab
+ * BuildingTabView — pure controlled component rendering the Building-tab
  * cards from the wireframe. Consumes live state + handlers via props; no
  * internal state for selections. The wireframe at /dev/brief-wireframe is the
  * visual ground truth for spacing, borders, colours, and font weights.
  *
- * The seven cards (top-to-bottom):
+ * Cards (top-to-bottom):
  *   1. Class · Type
  *   2. Scale
  *   3. Complexity
  *   4. Scope of Work
- *   5. NCC + Est. Cost strip
- *   6. Risk flags
- *   7. Disciplines
+ *   5. Disciplines
+ *   6. Risk flags (collapsed by default)
  */
 
 import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -103,30 +102,13 @@ export interface BuildingTabViewProps {
     // Optional derived values — defaults provided
     complexityScore?: number | null;
     complexityBand?: string | null;
-    nccClass?: { classCode: string; typeAndVolume?: string } | null;
-    estCostBand?: { lowAUD: number; highAUD: number } | null;
     riskFlags?: Array<{ label: string; description: string; tag: string }>;
-    disciplines?: { required: string[]; suggested: string[] };
+    disciplines?: string[];
 }
 
 /* ============================================================
    Helpers
    ============================================================ */
-
-/** Format an AUD figure compactly (e.g. 22000000 → "$22M"). */
-function formatAUDCompact(value: number): string {
-    if (!Number.isFinite(value)) return '—';
-    if (Math.abs(value) >= 1_000_000_000) {
-        return `$${(value / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
-    }
-    if (Math.abs(value) >= 1_000_000) {
-        return `$${Math.round(value / 1_000_000)}M`;
-    }
-    if (Math.abs(value) >= 1_000) {
-        return `$${Math.round(value / 1_000)}k`;
-    }
-    return `$${Math.round(value)}`;
-}
 
 function MetaLabel({ children }: { children: React.ReactNode }) {
     return (
@@ -486,37 +468,15 @@ export function BuildingTabView({
     templates,
     complexityScore = null,
     complexityBand = null,
-    nccClass = null,
-    estCostBand = null,
     riskFlags = [],
-    disciplines = { required: [], suggested: [] },
+    disciplines = [],
 }: BuildingTabViewProps) {
-    // ---- Derived counts ------------------------------------------------
-    const totalScopeItems = templates.scopeGroups.reduce(
-        (acc, g) => acc + g.items.length,
-        0,
-    );
-    const scopeSelectedCount = workScope.length;
-    const scopeRemaining = Math.max(0, totalScopeItems - scopeSelectedCount);
-
-    const complexityMeta = `composite · ${complexityScore ?? '—'}/10${
-        complexityBand ? ` · ${complexityBand}` : ''
-    }`;
-
-    const classTypeMetaCount =
-        templates.buildingClasses.length +
-        templates.projectTypes.length +
-        templates.subclassOptions.length;
-
     return (
         <div className="flex flex-col gap-4">
             {/* ============================================================
                 1. CLASS · TYPE
                 ============================================================ */}
-            <CardShell
-                label="Class · Type"
-                meta={`auto-resolved domain tags · ${classTypeMetaCount}`}
-            >
+            <CardShell label="Class · Type">
                 <div className="grid gap-5" style={{ gridTemplateColumns: '1fr 1fr' }}>
                     <div>
                         <MetaLabel>building class</MetaLabel>
@@ -541,6 +501,8 @@ export function BuildingTabView({
                                     key={t.value}
                                     label={t.label}
                                     selected={projectType === t.value}
+                                    accent="#236A8B"
+                                    onAccent="white"
                                     onClick={() => onTypeChange(t.value)}
                                 />
                             ))}
@@ -570,7 +532,7 @@ export function BuildingTabView({
             {/* ============================================================
                 2. SCALE
                 ============================================================ */}
-            <CardShell label="Scale" meta="per AIQS / Rawlinsons 2025">
+            <CardShell label="Scale">
                 {templates.scaleFields.length === 0 ? (
                     <div
                         style={{
@@ -601,7 +563,7 @@ export function BuildingTabView({
             {/* ============================================================
                 3. COMPLEXITY
                 ============================================================ */}
-            <CardShell label="Complexity" meta={complexityMeta}>
+            <CardShell label="Complexity">
                 {/* Slider row — left edge aligns with chip column below */}
                 <div
                     className="grid items-center gap-3 mb-2"
@@ -676,10 +638,7 @@ export function BuildingTabView({
             {/* ============================================================
                 4. SCOPE OF WORK
                 ============================================================ */}
-            <CardShell
-                label="Scope"
-                meta={`${scopeSelectedCount} selected · ${scopeRemaining} awaiting`}
-            >
+            <CardShell label="Scope">
                 {/* Slider row — left edge aligns with chip column below */}
                 <div
                     className="grid items-center gap-3 mb-2"
@@ -731,8 +690,8 @@ export function BuildingTabView({
                                             key={item.value}
                                             label={item.label}
                                             selected={workScope.includes(item.value)}
-                                            accent="var(--sw-cyan)"
-                                            onAccent="var(--sw-ink)"
+                                            accent="#1f6486"
+                                            onAccent="var(--sw-paper)"
                                             onClick={() => onScopeToggle(item.value)}
                                         />
                                     ))}
@@ -744,107 +703,45 @@ export function BuildingTabView({
             </CardShell>
 
             {/* ============================================================
-                5. NCC + EST. COST STRIP
+                5. DISCIPLINES
                 ============================================================ */}
-            <section
-                className="grid"
-                style={{
-                    gridTemplateColumns: '1fr 1fr',
-                    background: 'white',
-                    border: '1px solid var(--sw-rule)',
-                }}
-            >
-                <div className="p-4" style={{ borderRight: '1px solid var(--sw-rule)' }}>
-                    <div
-                        style={{
-                            fontFamily: 'var(--sw-font-mono)',
-                            fontSize: 10,
-                            letterSpacing: '0.18em',
-                            textTransform: 'uppercase',
-                            color: muted,
-                        }}
+            <CardShell label="Disciplines">
+                {disciplines.length === 0 ? (
+                    <div style={{ fontSize: 13, color: muted }}>—</div>
+                ) : (
+                    <ul
+                        className="m-0 p-0 grid gap-1"
+                        style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}
                     >
-                        NCC class
-                    </div>
-                    <div
-                        className="mt-1"
-                        style={{
-                            fontFamily: 'var(--sw-font-sans)',
-                            fontSize: 22,
-                            fontWeight: 700,
-                            letterSpacing: '-0.025em',
-                        }}
-                    >
-                        {nccClass == null ? (
-                            '—'
-                        ) : (
-                            <>
-                                {nccClass.classCode}
-                                {nccClass.typeAndVolume ? (
-                                    <>
-                                        {' '}
-                                        <span
-                                            style={{
-                                                fontFamily: 'var(--sw-font-mono)',
-                                                fontSize: 11,
-                                                color: 'var(--sw-cyan)',
-                                                fontWeight: 500,
-                                                letterSpacing: '0.05em',
-                                            }}
-                                        >
-                                            {nccClass.typeAndVolume}
-                                        </span>
-                                    </>
-                                ) : null}
-                            </>
-                        )}
-                    </div>
-                </div>
-                <div className="p-4">
-                    <div
-                        style={{
-                            fontFamily: 'var(--sw-font-mono)',
-                            fontSize: 10,
-                            letterSpacing: '0.18em',
-                            textTransform: 'uppercase',
-                            color: muted,
-                        }}
-                    >
-                        Est. cost band
-                    </div>
-                    <div
-                        className="mt-1"
-                        style={{
-                            fontFamily: 'var(--sw-font-sans)',
-                            fontSize: 22,
-                            fontWeight: 700,
-                            letterSpacing: '-0.025em',
-                            fontVariantNumeric: 'tabular-nums',
-                        }}
-                    >
-                        {estCostBand ? (
-                            <>
-                                <span style={{ color: 'var(--sw-peach)' }}>
-                                    {formatAUDCompact(estCostBand.lowAUD)}
-                                </span>{' '}
-                                <span style={{ color: muted, fontWeight: 400 }}>—</span>{' '}
-                                <span style={{ color: 'var(--sw-peach)' }}>
-                                    {formatAUDCompact(estCostBand.highAUD)}
-                                </span>
-                            </>
-                        ) : (
-                            <span style={{ color: muted }}>—</span>
-                        )}
-                    </div>
-                </div>
-            </section>
+                        {disciplines.map((d) => (
+                            <li
+                                key={d}
+                                className="flex items-center gap-2"
+                                style={{ fontSize: 13, color: 'var(--sw-ink)' }}
+                            >
+                                <span
+                                    style={{
+                                        width: 6,
+                                        height: 6,
+                                        background: 'var(--sw-cyan)',
+                                        flexShrink: 0,
+                                    }}
+                                />
+                                <span>{d}</span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </CardShell>
 
             {/* ============================================================
-                6. RISK FLAGS
+                6. RISK FLAGS — collapsed by default; user opts in
                 ============================================================ */}
             <CardShell
-                label="Risk flags"
-                meta={`${riskFlags.length} raised · 0 acknowledged`}
+                label="risk flags"
+                meta={riskFlags.length > 0 ? `${riskFlags.length} raised` : 'none raised'}
+                collapsible
+                defaultCollapsed
             >
                 {riskFlags.length === 0 ? (
                     <div style={{ fontSize: 13, color: muted }}>No risks raised</div>
@@ -908,94 +805,6 @@ export function BuildingTabView({
                         ))}
                     </div>
                 )}
-            </CardShell>
-
-            {/* ============================================================
-                7. DISCIPLINES
-                ============================================================ */}
-            <CardShell
-                label="Disciplines"
-                meta={`${disciplines.required.length} required · ${disciplines.suggested.length} suggested`}
-            >
-                <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                    <div>
-                        <div
-                            style={{
-                                fontFamily: 'var(--sw-font-mono)',
-                                fontSize: 10,
-                                letterSpacing: '0.18em',
-                                textTransform: 'uppercase',
-                                color: muted,
-                                marginBottom: 8,
-                            }}
-                        >
-                            required
-                        </div>
-                        {disciplines.required.length === 0 ? (
-                            <div style={{ fontSize: 13, color: muted }}>—</div>
-                        ) : (
-                            <ul
-                                className="m-0 p-0 grid gap-1"
-                                style={{ gridTemplateColumns: '1fr 1fr' }}
-                            >
-                                {disciplines.required.map((d) => (
-                                    <li
-                                        key={d}
-                                        className="flex items-center gap-2"
-                                        style={{ fontSize: 13, color: 'var(--sw-ink)' }}
-                                    >
-                                        <span
-                                            style={{
-                                                width: 6,
-                                                height: 6,
-                                                background: 'var(--sw-cyan)',
-                                                flexShrink: 0,
-                                            }}
-                                        />
-                                        <span>{d}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                    <div>
-                        <div
-                            style={{
-                                fontFamily: 'var(--sw-font-mono)',
-                                fontSize: 10,
-                                letterSpacing: '0.18em',
-                                textTransform: 'uppercase',
-                                color: muted,
-                                marginBottom: 8,
-                            }}
-                        >
-                            suggested
-                        </div>
-                        {disciplines.suggested.length === 0 ? (
-                            <div style={{ fontSize: 13, color: muted }}>—</div>
-                        ) : (
-                            <ul className="m-0 p-0 flex flex-col gap-1">
-                                {disciplines.suggested.map((d) => (
-                                    <li
-                                        key={d}
-                                        className="flex items-center gap-2"
-                                        style={{ fontSize: 13, color: 'var(--sw-ink)' }}
-                                    >
-                                        <span
-                                            style={{
-                                                width: 6,
-                                                height: 6,
-                                                background: 'var(--sw-lav)',
-                                                flexShrink: 0,
-                                            }}
-                                        />
-                                        <span>{d}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                </div>
             </CardShell>
         </div>
     );

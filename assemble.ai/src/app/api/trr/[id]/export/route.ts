@@ -22,6 +22,7 @@ import {
     consultants,
     contractors,
     evaluations,
+    evaluationPrice,
     evaluationRows,
     evaluationNonPriceCriteria,
     evaluationNonPriceCells,
@@ -30,6 +31,7 @@ import {
 import { eq, and, asc, isNull } from 'drizzle-orm';
 import { exportToPDF } from '@/lib/export/pdf-enhanced';
 import { exportToDOCX } from '@/lib/export/docx-enhanced';
+import { selectActiveTrrEvaluationPrice } from '@/lib/evaluation/trr-linkage';
 
 interface RouteContext {
     params: Promise<{ id: string }>;
@@ -185,11 +187,27 @@ export async function POST(
             });
 
             if (evaluation) {
+                const priceInstances = await db
+                    .select()
+                    .from(evaluationPrice)
+                    .where(and(
+                        eq(evaluationPrice.projectId, existing.projectId),
+                        eq(evaluationPrice.stakeholderId, stakeholder.id)
+                    ));
+                const activePrice = selectActiveTrrEvaluationPrice({
+                    trrEvaluationPriceId: existing.evaluationPriceId,
+                    priceInstances,
+                });
                 const rows = await db.query.evaluationRows.findMany({
-                    where: and(
-                        eq(evaluationRows.evaluationId, evaluation.id),
-                        isNull(evaluationRows.evaluationPriceId)
-                    ),
+                    where: activePrice
+                        ? and(
+                            eq(evaluationRows.evaluationId, evaluation.id),
+                            eq(evaluationRows.evaluationPriceId, activePrice.id)
+                        )
+                        : and(
+                            eq(evaluationRows.evaluationId, evaluation.id),
+                            isNull(evaluationRows.evaluationPriceId)
+                        ),
                     orderBy: [asc(evaluationRows.orderIndex)],
                     with: { cells: true },
                 });

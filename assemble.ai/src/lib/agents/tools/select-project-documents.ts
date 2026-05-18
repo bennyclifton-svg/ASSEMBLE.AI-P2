@@ -27,7 +27,7 @@ import {
     optionalString,
     optionalStringArray,
 } from './_write-helpers';
-import { documentTitleSearchCondition } from './document-search';
+import { documentScopeSearchCondition, documentTitleSearchCondition } from './document-search';
 
 const TOOL = 'select_project_documents';
 const MODES = ['replace', 'add', 'remove', 'clear'] as const;
@@ -92,7 +92,7 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
                 disciplineOrTrade: {
                     type: 'string',
                     description:
-                        'Alias for subcategoryName. Use for requests like "select all mechanical documents" or "select all mech documents".',
+                        'Alias for subcategoryName. Use for requests like "select all mechanical documents" or "select all mech documents". Matches discipline, trade, subcategory, category, drawing title, drawing number, and original filename.',
                 },
                 drawingNumber: {
                     type: 'string',
@@ -184,9 +184,7 @@ const definition: AgentToolDefinition<SelectProjectDocumentsInput, SelectProject
 
             const subcategoryName = input.subcategoryName ?? input.disciplineOrTrade;
             if (subcategoryName) {
-                conditions.push(
-                    sql`COALESCE(${subcategories.name}, ${consultantDisciplines.disciplineName}, ${contractorTrades.tradeName}) ILIKE ${`%${subcategoryName}%`}`
-                );
+                conditions.push(documentScopeSearchCondition(subcategoryName));
             }
             if (input.drawingNumber) {
                 conditions.push(

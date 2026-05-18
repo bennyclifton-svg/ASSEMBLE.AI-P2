@@ -37,6 +37,25 @@ describe('buildPolishPrompt', () => {
     expect(prompt).toMatch(/strip.*\/\/.*marker/i);
   });
 
+  it('uses attached indexed document context as authoritative Long grounding', () => {
+    const prompt = buildPolishPrompt({
+      ...baseCtx,
+      attachedDocumentContext:
+        'Development Consent DA201500704 requires Sydney Water CCN before works.',
+      bullets: [{
+        text: 'Submit Sydney Water notices',
+        sourceDetail: 'Construction Commencement Notice to Sydney Water prior to works commencing.',
+      }],
+    });
+
+    expect(prompt).toContain('ATTACHED INDEXED DOCUMENT CONTEXT - AUTHORITATIVE');
+    expect(prompt).toContain('Development Consent DA201500704');
+    expect(prompt).toContain('Source evidence');
+    expect(prompt).toContain('Construction Commencement Notice');
+    expect(prompt).toMatch(/18-30 words/);
+    expect(prompt).toContain('Long mode expands; it does not re-select');
+  });
+
   it('silently filters out instruction-only bullets so the AI never sees them', () => {
     const prompt = buildPolishPrompt({
       ...baseCtx,

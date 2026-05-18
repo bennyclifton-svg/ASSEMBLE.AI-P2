@@ -106,7 +106,6 @@ export function TRREditableSection({
         }
     }, [canGenerateAI, hasCustomGenerate, onGenerate, generate, value, onChange, toast, title]);
 
-    // Generate button rendered inside the toolbar via toolbarExtra
     const generateButton = canGenerateAI ? (
         <button
             onClick={handleGenerate}
@@ -123,10 +122,11 @@ export function TRREditableSection({
 
     return (
         <div className="space-y-2">
-            <div className="px-4">
+            <div className="px-4 flex items-center justify-between gap-3">
                 <TRRSectionHeading>
                     {title}
                 </TRRSectionHeading>
+                {generateButton}
             </div>
             <div className="overflow-hidden rounded-lg">
                 <RichTextEditor
@@ -135,12 +135,11 @@ export function TRREditableSection({
                     onBlur={onBlur}
                     placeholder={placeholder}
                     variant="mini"
-                    toolbarVariant="mini"
+                    toolbarVariant="none"
                     transparentBg
                     disabled={isGenerating}
                     className="border-0 rounded-none"
                     editorClassName="bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-primary)] transition-colors"
-                    toolbarExtra={generateButton}
                 />
             </div>
         </div>

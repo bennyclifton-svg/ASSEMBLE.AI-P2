@@ -10,9 +10,8 @@
 // =============================================================================
 export const EVALUATION_TABLE_COLUMNS = {
     dragHandle: 32,      // Drag handle / add row button column
-    description: 200,    // Description/line item column
+    description: 308,    // Description/line item column
     firmColumn: 120,     // Each firm amount column
-    aiIndicator: 28,     // AI sparkle indicator column
     deleteButton: 28,    // Delete button column
 } as const;
 
@@ -23,7 +22,6 @@ export function getEvaluationTableWidth(firmCount: number): number {
         EVALUATION_TABLE_COLUMNS.dragHandle +
         EVALUATION_TABLE_COLUMNS.description +
         (firmCount * EVALUATION_TABLE_COLUMNS.firmColumn) +
-        EVALUATION_TABLE_COLUMNS.aiIndicator +
         EVALUATION_TABLE_COLUMNS.deleteButton
     );
 }
@@ -34,18 +32,49 @@ export interface Evaluation {
     projectId: string;
     disciplineId?: string | null;
     tradeId?: string | null;
+    stakeholderId?: string | null;
+    recommendationState?: RecommendationState;
     createdAt?: string;
     updatedAt?: string;
 }
 
-// Row source type (Feature 011 US7)
-export type EvaluationRowSource = 'cost_plan' | 'ai_parsed' | 'manual';
+export const EVALUATION_TABLE_TYPES = ['initial_price', 'adds_subs', 'value_management'] as const;
+export type EvaluationTableType = typeof EVALUATION_TABLE_TYPES[number];
+
+export const EVALUATION_CELL_VALUE_TYPES = [
+    'amount',
+    'included',
+    'assumed_included',
+    'excluded',
+    'tbc',
+    'na',
+    'blank',
+] as const;
+export type EvaluationCellValueType = typeof EVALUATION_CELL_VALUE_TYPES[number];
+
+export type VmAdoptionStatus = 'adopted' | 'tbd' | 'not_adopted';
+export type VmOrigin = 'tenderer_proposed' | 'pm_client_proposed' | 'ai_identified' | 'tender_wide_option';
+export type RecommendationState = 'draft' | 'conditional' | 'final';
+export type RecommendationEvent =
+    | 'high_materiality_clarification_raised'
+    | 'high_materiality_clarification_resolved'
+    | 'refresh_applied'
+    | 'new_tender_file_attached'
+    | 'active_price_instance_changed'
+    | 'user_confirms_final';
+export type ClarificationStatus = 'draft' | 'issued' | 'responded' | 'closed';
+export type ClarificationMateriality = 'low' | 'medium' | 'high';
+
+// Row source type (Feature 011 US7 + tender AI foundations)
+export type EvaluationRowSource = 'cost_plan' | 'ai_parsed' | 'manual' | 'ai' | 'system';
+export type EvaluationCellSource = 'manual' | 'ai' | 'system';
 
 // Evaluation row entity
 export interface EvaluationRow {
     id: string;
     evaluationId: string;
-    tableType: 'initial_price' | 'adds_subs';
+    evaluationPriceId?: string | null;
+    tableType: EvaluationTableType;
     description: string;
     orderIndex: number;
     isSystemRow?: boolean;
@@ -53,6 +82,14 @@ export interface EvaluationRow {
     // Feature 011 US7: Track row origin
     source?: EvaluationRowSource;
     sourceSubmissionId?: string | null;
+    aiStableKey?: string | null;
+    isLocked?: boolean | null;
+    category?: string | null;
+    sourceDocumentId?: string | null;
+    sourceFileAssetId?: string | null;
+    vmAdoptionStatus?: VmAdoptionStatus | null;
+    vmEmbeddedInBase?: boolean | null;
+    vmOrigin?: VmOrigin | null;
     createdAt?: string;
     cells?: EvaluationCell[];
 }
@@ -64,7 +101,8 @@ export interface EvaluationCell {
     firmId: string;
     firmType: 'consultant' | 'contractor';
     amountCents: number;
-    source: 'manual' | 'ai';
+    valueType?: EvaluationCellValueType | null;
+    source: EvaluationCellSource;
     confidence?: number | null;
     createdAt?: string;
     updatedAt?: string;
@@ -76,6 +114,7 @@ export interface EvaluationFirm {
     companyName: string;
     shortlisted: boolean;
     awarded?: boolean;
+    firmType?: 'consultant' | 'contractor';
 }
 
 // Full evaluation data with rows and cells
@@ -91,12 +130,13 @@ export interface UpdateCellRequest {
     firmId: string;
     firmType: 'consultant' | 'contractor';
     amountCents: number;
-    source?: 'manual' | 'ai';
+    valueType?: EvaluationCellValueType;
+    source?: EvaluationCellSource;
     confidence?: number;
 }
 
 export interface AddRowRequest {
-    tableType: 'initial_price' | 'adds_subs';
+    tableType: EvaluationTableType;
     description: string;
 }
 
@@ -119,6 +159,10 @@ export interface TableSubtotals {
 export interface EvaluationTotals {
     initialPriceSubtotals: TableSubtotals;
     addSubsSubtotals: TableSubtotals;
+    valueManagementSubtotals: TableSubtotals;
+    comparableTotals: TableSubtotals;
+    awardBasisTotals: TableSubtotals;
+    // Legacy alias retained for current UI/export code paths.
     grandTotals: TableSubtotals;
 }
 
@@ -126,11 +170,17 @@ export interface EvaluationTotals {
 export interface EvaluationSheetData {
     rows: EvaluationRow[];
     firms: EvaluationFirm[];
-    tableType: 'initial_price' | 'adds_subs';
+    tableType: EvaluationTableType;
 }
 
 // Item type classification for tender parsing
-export type TenderItemType = 'deliverable' | 'total' | 'unit_rate' | 'allowance';
+export type TenderItemType =
+    | 'deliverable'
+    | 'total'
+    | 'unit_rate'
+    | 'allowance'
+    | 'commercial_adjustment'
+    | 'value_management';
 
 // Parse result types (for AI extraction)
 export interface ParsedLineItem {
@@ -140,6 +190,12 @@ export interface ParsedLineItem {
     matchedRowId?: string;
     // Classification fields for filtering
     itemType?: TenderItemType;
+    tableType?: EvaluationTableType;
+    category?: string;
+    sourceSection?: string;
+    vmAdoptionStatus?: VmAdoptionStatus;
+    vmEmbeddedInBase?: boolean;
+    vmOrigin?: VmOrigin;
     isFiltered?: boolean;
     filterReason?: string;
 }
@@ -166,15 +222,74 @@ export interface BulkParseResult {
 export interface TenderSubmission {
     id: string;
     evaluationId: string;
+    packageId?: string | null;
+    evaluationPriceId?: string | null;
     firmId: string;
     firmType: 'consultant' | 'contractor';
     filename: string;
+    documentId?: string | null;
+    versionId?: string | null;
     fileAssetId?: string | null;
     parsedAt?: string;
     parserUsed?: string;
     confidence?: number | null;
     rawExtractedItems?: string | null; // JSON string
     createdAt?: string;
+}
+
+export interface TenderSubmissionPackage {
+    id: string;
+    evaluationId: string;
+    evaluationPriceId?: string | null;
+    firmId: string;
+    firmType: 'consultant' | 'contractor';
+    status?: 'active' | 'superseded' | 'archived' | string | null;
+    createdAt?: string;
+    updatedAt?: string;
+    submissions?: TenderSubmission[];
+}
+
+export type AiArtefactKind =
+    | 'full_extraction'
+    | 'file_interpretation'
+    | 'package_interpretation'
+    | 'prompt_trace'
+    | 'issue_snapshot';
+
+export interface AiArtefact {
+    id: string;
+    kind: AiArtefactKind;
+    hash: string;
+    status: 'ready' | 'failed' | 'pending' | string;
+    payloadFileAssetId?: string | null;
+    evaluationId?: string | null;
+    evaluationPriceId?: string | null;
+    packageId?: string | null;
+    submissionId?: string | null;
+    actionInvocationId?: string | null;
+    trrId?: string | null;
+    metadata?: Record<string, unknown> | null;
+    createdAt?: string;
+}
+
+export interface Clarification {
+    id: string;
+    evaluationId: string;
+    evaluationPriceId?: string | null;
+    firmId: string;
+    firmType: 'consultant' | 'contractor';
+    questionText: string;
+    category?: string | null;
+    materiality: ClarificationMateriality;
+    status: ClarificationStatus;
+    responseText?: string | null;
+    responseDocumentId?: string | null;
+    responseFileAssetId?: string | null;
+    linkedRowIds: string[];
+    linkedAddendumId?: string | null;
+    sourceAiArtefactId?: string | null;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 // Feature 011 US7: Merge rows request
@@ -195,6 +310,13 @@ export interface MergeRowsResult {
 export interface UpdateRowDescriptionRequest {
     rowId: string;
     description: string;
+}
+
+export interface UpdateRowMetaRequest {
+    vmAdoptionStatus?: VmAdoptionStatus | null;
+    vmEmbeddedInBase?: boolean | null;
+    vmOrigin?: VmOrigin | null;
+    isLocked?: boolean;
 }
 
 // =============================================================================

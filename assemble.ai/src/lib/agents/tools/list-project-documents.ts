@@ -21,7 +21,7 @@ import {
     optionalNonNegativeInteger,
     optionalString,
 } from './_write-helpers';
-import { documentTitleSearchCondition } from './document-search';
+import { documentScopeSearchCondition, documentTitleSearchCondition } from './document-search';
 
 interface ListProjectDocumentsInput {
     categoryId?: string;
@@ -117,7 +117,7 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
                 disciplineOrTrade: {
                     type: 'string',
                     description:
-                        'Alias for subcategoryName. Use for requests like "all mechanical documents".',
+                        'Alias for subcategoryName. Use for requests like "all mechanical documents". Matches discipline, trade, subcategory, category, drawing title, drawing number, and original filename.',
                 },
                 drawingNumber: {
                     type: 'string',
@@ -201,9 +201,7 @@ const definition: AgentToolDefinition<ListProjectDocumentsInput, ListProjectDocu
 
         const subcategoryName = input.subcategoryName ?? input.disciplineOrTrade;
         if (subcategoryName) {
-            conditions.push(
-                sql`COALESCE(${subcategories.name}, ${consultantDisciplines.disciplineName}, ${contractorTrades.tradeName}) ILIKE ${`%${subcategoryName}%`}`
-            );
+            conditions.push(documentScopeSearchCondition(subcategoryName));
         }
         if (input.drawingNumber) {
             conditions.push(

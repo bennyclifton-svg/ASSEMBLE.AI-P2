@@ -1,0 +1,1 @@
+export { ClarificationsSection } from './ClarificationsSection';

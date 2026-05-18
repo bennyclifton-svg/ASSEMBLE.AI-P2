@@ -4,6 +4,7 @@ import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { UploadCloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getFilesFromDropEvent } from '@/lib/utils/folder-drop';
 
 interface UploadZoneProps {
     onFilesSelected: (files: File[]) => void;
@@ -22,6 +23,7 @@ export function UploadZone({ onFilesSelected, className, disabled }: UploadZoneP
         onDrop,
         disabled,
         maxSize: 50 * 1024 * 1024, // 50MB
+        getFilesFromEvent: getFilesFromDropEvent,
     });
 
     return (

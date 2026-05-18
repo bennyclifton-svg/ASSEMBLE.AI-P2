@@ -12,7 +12,13 @@
  * changing workScope items must change the prompt.
  */
 
-import { buildInferencePrompt, buildExtractionPrompt } from '../prompt-builders';
+import {
+  buildInferencePrompt,
+  buildExtractionPrompt,
+  buildFullDocumentObjectivesPrompt,
+  buildObjectiveSelectionPrompt,
+  prepareObjectiveSelectionCandidates,
+} from '../prompt-builders';
 
 describe('buildInferencePrompt — advisory snapshot matrix', () => {
   const baseInput = () => ({
@@ -38,10 +44,54 @@ describe('buildInferencePrompt — advisory snapshot matrix', () => {
     expect(prompt).toContain('Project Type: new');
     expect(prompt).toContain('FUNCTIONAL');
     expect(prompt).toContain('QUALITY');
+    expect(prompt).toContain('SOURCE DISCIPLINE - NO DOCUMENTS ATTACHED');
+    expect(prompt).toContain('Do NOT turn conditional seed-guide examples into project facts');
+    expect(prompt).toContain('Start each objective with a useful obligation verb');
 
     // Advisory labels absent
     expect(prompt).not.toContain('Scope of Advice');
     expect(prompt).not.toContain('Engagement Conditions');
+  });
+
+  it('adds concrete profile-derived anchors for no-document apartment brief generation', () => {
+    const prompt = buildInferencePrompt({
+      buildingClass: 'residential',
+      projectType: 'new',
+      subclass: ['apartments'],
+      scaleData: {
+        storeys: 8,
+        units: 33,
+        avg_unit_sqm: 88,
+        parking_bays: 70,
+      },
+      complexity: {},
+      workScopeLabels: [
+        'Demolition',
+        'Site Clearance',
+        'Decontamination',
+        'Bulk Earthworks',
+        'Site Drainage',
+        'Stormwater Management',
+        'Internal Roads',
+        'Partitions Walls Ceilings Flooring',
+      ],
+      classDescriptors: ['Class 2: Apartment building'],
+      functionalRulesFormatted: '',
+      planningRulesFormatted: '',
+      domainContextSection: '',
+    });
+
+    expect(prompt).toContain('PROFILE-DERIVED BRIEF ANCHORS');
+    expect(prompt).toContain('storeys: 8');
+    expect(prompt).toContain('units: 33');
+    expect(prompt).toContain('average unit size sqm: 88');
+    expect(prompt).toContain('parking spaces: 70');
+    expect(prompt).toContain('Deliver 8-storey apartment building');
+    expect(prompt).toContain('Integrate 70 parking spaces');
+    expect(prompt).toContain('Coordinate civil, stormwater and site-work approvals');
+    expect(prompt).toContain('Set apartment facade, acoustic and waterproofing standards');
+    expect(prompt).toContain('Comply with Class 2 NCC, BASIX and NatHERS');
+    expect(prompt).toContain('Avoid vague replacements such as "standard DA approval"');
   });
 
   it('case 2: advisory + no scope — uses advisory labels and shows draft note', () => {
@@ -118,6 +168,23 @@ describe('buildInferencePrompt — advisory snapshot matrix', () => {
 });
 
 describe('buildExtractionPrompt — advisory document path', () => {
+  it('full-document path asks the model to select final objectives from the whole attachment', () => {
+    const prompt = buildFullDocumentObjectivesPrompt({
+      projectType: 'new',
+      buildingClass: 'residential',
+      profileSummary: '- Storeys: 8\n- Units: 33',
+      attachedDocumentContext:
+        '## Full Indexed Attached Document Text\nPrincipal approval required. Development Consent DA201500704. Address: 568-572 Parramatta Rd. GFA 781 sqm.',
+    });
+
+    expect(prompt).toContain('Attached Document Text - Authoritative');
+    expect(prompt).toContain('Read the attached document text as a whole');
+    expect(prompt).toContain('Development Consent DA201500704');
+    expect(prompt).toContain('sourceDetail');
+    expect(prompt).not.toContain('Retrieved Content');
+    expect(prompt).not.toContain('candidate extraction pass');
+  });
+
   it('case 5: advisory + retrieved content — uses advisory section labels and source-hierarchy note', () => {
     const prompt = buildExtractionPrompt({
       projectType: 'advisory',
@@ -159,5 +226,76 @@ describe('buildExtractionPrompt — advisory document path', () => {
     expect(prompt).toContain('Functional');
     expect(prompt).not.toContain('Scope of Advice');
     expect(prompt).not.toMatch(/Source hierarchy.*advisory/i);
+  });
+
+  it('puts full indexed attached-document context ahead of retrieved excerpts', () => {
+    const prompt = buildExtractionPrompt({
+      projectType: 'new',
+      buildingClass: 'residential',
+      domainContextSection: '',
+      attachedDocumentContext:
+        'Principal approval required. Development Consent DA201500704. Address: 568-572 Parramatta Rd. GFA 781 sqm.',
+      retrievedFunctional: '[Source 1: Generic] Allocate crane time for material deliveries.',
+      retrievedPlanning: '[Source 2: Generic] Program authority inspections.',
+    });
+
+    expect(prompt).toContain('Attached Indexed Document Context - AUTHORITATIVE');
+    expect(prompt).toContain('Development Consent DA201500704');
+    expect(prompt).toContain('First use the Attached Indexed Document Context');
+    expect(prompt).toContain('Avoid generic construction-management advice');
+    expect(prompt).toContain('candidate extraction pass');
+    expect(prompt).toContain('8-15 source-backed candidate objectives');
+    expect(prompt).toContain('"sourceDetail"');
+    expect(prompt.indexOf('Development Consent DA201500704')).toBeLessThan(
+      prompt.indexOf('Allocate crane time for material deliveries')
+    );
+  });
+
+  it('selection pass rolls low-level clause details into sharper brief objectives', () => {
+    const prompt = buildObjectiveSelectionPrompt({
+      projectType: 'new',
+      buildingClass: 'residential',
+      section: 'quality',
+      candidates: {
+        quality: [
+          {
+            text: 'Premium sealed pavers, slip rating',
+            sourceDetail: 'All pavers are to be sealed using premium penetrating sealer and maintain slip rating.',
+          },
+          {
+            text: '15-year waterproofing warranties required',
+            sourceDetail: 'A 15 Year warranty is to be provided for waterproofing.',
+          },
+        ],
+      },
+    });
+
+    expect(prompt).toContain('senior construction brief editor');
+    expect(prompt).toContain('Prefer broad, brief-worthy parent obligations');
+    expect(prompt).toContain('ALWAYS select the broad roll-up');
+    expect(prompt).toContain('Final Text Must Avoid');
+    expect(prompt).toContain('BAD: "Premium sealed pavers, slip rating"');
+    expect(prompt).toContain('GOOD: "Deliver durable public-domain finishes"');
+    expect(prompt).toContain('15-year waterproofing warranties required');
+  });
+
+  it('prepares deterministic roll-up candidates for common PPR clause details', () => {
+    const prepared = prepareObjectiveSelectionCandidates({
+      planning: [
+        { text: 'Follow council signage design', sourceDetail: 'Council signage design requirements apply.' },
+      ],
+      quality: [
+        { text: 'Three-coat painted surfaces', sourceDetail: 'Paintwork requires a three-coat system.' },
+      ],
+      compliance: [
+        { text: 'BASIX requirements for tapware', sourceDetail: 'All tapware must comply with BASIX requirements.' },
+        { text: 'Fire rated walls compliance', sourceDetail: 'Fire-rated walls must meet NCC requirements.' },
+      ],
+    });
+
+    expect(prepared.planning?.map((item) => item.text)).toContain('Coordinate Council public domain works');
+    expect(prepared.quality?.map((item) => item.text)).toContain('Deliver durable finish standards');
+    expect(prepared.compliance?.map((item) => item.text)).toContain('Comply with BASIX sustainability requirements');
+    expect(prepared.compliance?.map((item) => item.text)).toContain('Maintain fire safety compliance');
   });
 });

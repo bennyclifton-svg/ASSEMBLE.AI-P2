@@ -19,8 +19,10 @@ interface AttachmentSectionProps {
     isLoading?: boolean;
     onSave?: () => void;
     canSave?: boolean;
+    saveLabel?: string;
     onLoad?: () => void;
     canLoad?: boolean;
+    loadLabel?: string;
     onDownload?: () => void;
     canDownload?: boolean;
     isDownloading?: boolean;
@@ -29,6 +31,9 @@ interface AttachmentSectionProps {
     headingStyle?: React.CSSProperties;
     accentColor?: string;
     showToggle?: boolean;
+    onRemove?: (documentId: string) => void;
+    showRemove?: boolean;
+    emptyMessage?: string;
     /** Compact mode for notes - smaller text, reduced padding, fewer columns */
     compact?: boolean;
     className?: string;
@@ -39,8 +44,10 @@ export function AttachmentSection({
     isLoading = false,
     onSave,
     canSave = true,
+    saveLabel = 'Save',
     onLoad,
     canLoad,
+    loadLabel = 'Load',
     onDownload,
     canDownload,
     isDownloading = false,
@@ -49,6 +56,9 @@ export function AttachmentSection({
     headingStyle,
     accentColor = 'var(--sw-cyan)',
     showToggle = true,
+    onRemove,
+    showRemove = false,
+    emptyMessage = "No documents attached. Click 'Save' to select documents from the repository.",
     compact = false,
     className,
 }: AttachmentSectionProps) {
@@ -85,7 +95,7 @@ export function AttachmentSection({
                             title="Save transmittal - select documents from repository"
                         >
                             <Save className="w-3 h-3 mr-1" />
-                            Save
+                            {saveLabel}
                         </Button>
                     )}
 
@@ -100,7 +110,7 @@ export function AttachmentSection({
                             title="Load transmittal - view and modify attached documents"
                         >
                             <RotateCcw className="w-3 h-3 mr-1" />
-                            Load {documentCount > 0 && `(${documentCount})`}
+                            {loadLabel} {documentCount > 0 && `(${documentCount})`}
                         </Button>
                     )}
 
@@ -148,7 +158,9 @@ export function AttachmentSection({
                         <AttachmentTable
                             documents={documents}
                             compact={compact}
-                            emptyMessage="No documents attached. Click 'Save' to select documents from the repository."
+                            onRemove={onRemove}
+                            showRemove={showRemove}
+                            emptyMessage={emptyMessage}
                         />
                     )}
                 </>

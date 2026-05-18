@@ -31,6 +31,21 @@ describe('buildPolishFreshPrompt', () => {
       inferenceRulesFormatted: '- NCC 2022 compliance',
     });
     expect(prompt).toMatch(/NCC|AS standards/);
-    expect(prompt).toMatch(/10-15 words/);
+    expect(prompt).toMatch(/18-30 words/);
+  });
+
+  it('puts attached indexed document context before inference items', () => {
+    const prompt = buildPolishFreshPrompt({
+      section: 'planning',
+      profileContext: '',
+      domainContextSection: '',
+      attachedDocumentContext: 'Principal approval required before construction start.',
+      inferenceRulesFormatted: '- Generic authority approvals',
+    });
+
+    expect(prompt).toContain('ATTACHED INDEXED DOCUMENT CONTEXT - AUTHORITATIVE');
+    expect(prompt.indexOf('Principal approval required')).toBeLessThan(
+      prompt.indexOf('Generic authority approvals')
+    );
   });
 });

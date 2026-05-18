@@ -225,7 +225,7 @@ export function FirmCardExpanded({
         bg-transparent border border-[var(--sw-rule)] transition-colors duration-150
         ${isDragOver ? 'ring-2 ring-[var(--sw-cyan)] ring-inset' : ''}
         ${isHovered && !isDragOver ? 'bg-[var(--sw-paper)]' : ''}
-        ${firm.awarded ? 'border-l-[3px] border-l-[var(--color-accent-green)]' : ''}
+        ${firm.awarded ? 'border-l-[3px] border-l-[var(--sw-rose)]' : ''}
         w-[220px] flex-shrink-0
       `}
       onMouseEnter={() => setIsHovered(true)}

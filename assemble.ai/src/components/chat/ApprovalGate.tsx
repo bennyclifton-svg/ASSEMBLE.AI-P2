@@ -6,6 +6,7 @@ import { mutate as globalMutate } from 'swr';
 import type { PendingApprovalView } from '@/lib/hooks/use-chat-stream';
 import { dispatchAddendumCreated } from '@/lib/chat/addendum-events';
 import { dispatchTenderFirmsAdded } from '@/lib/chat/tender-firms-events';
+import { useChatViewContextPatch, type ChatViewContextPatch } from '@/lib/contexts/chat-view-context';
 
 interface ApprovalGateProps {
     approval: PendingApprovalView;
@@ -45,8 +46,64 @@ function displayAfter(field: string, after: unknown): string {
     return String(after ?? '');
 }
 
-function isEditableField(field: string): boolean {
-    return field !== 'documentIds' && field !== 'attachDocumentIds' && field !== 'firms';
+function decodeHtmlEntities(value: string): string {
+    return value
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+}
+
+function htmlToReadableText(value: string): string {
+    return decodeHtmlEntities(
+        value
+            .replace(/<\s*br\s*\/?>/gi, '\n')
+            .replace(/<\s*li[^>]*>/gi, '\n- ')
+            .replace(/<\s*\/\s*(p|div|h[1-6]|li|ul|ol)\s*>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/[ \t]+\n/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim()
+    );
+}
+
+function formatDiffValue(value: unknown): string {
+    if (value === null || value === undefined || value === '') return '-';
+    if (typeof value !== 'string') return String(value);
+    if (!/<[a-z][\s\S]*>/i.test(value)) return value;
+    return htmlToReadableText(value) || value;
+}
+
+function selectedDocumentIdsFromPatch(patch: ChatViewContextPatch): string[] {
+    const selected = patch.selectedEntityIds;
+    if (!selected) return [];
+
+    const ids: string[] = [];
+    for (const [kind, values] of Object.entries(selected)) {
+        const normalised = kind.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!['document', 'documents', 'doc', 'docs', 'projectdocument', 'projectdocuments'].includes(normalised)) {
+            continue;
+        }
+        for (const id of values) {
+            if (typeof id === 'string' && id.trim() && !ids.includes(id)) ids.push(id);
+        }
+    }
+    return ids;
+}
+
+function isEditableField(field: string, toolName: string): boolean {
+    if (toolName === 'sync_project_documents_to_ai') return false;
+    return (
+        field !== 'documentIds' &&
+        field !== 'attachDocumentIds' &&
+        field !== 'firms' &&
+        field !== 'rftRecord' &&
+        field !== 'feeRows' &&
+        field !== 'feeRowsMode' &&
+        field !== 'feeStageCount'
+    );
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -82,6 +139,11 @@ function revalidateAppliedEntity(toolName: string, appliedOutput: unknown): void
     const output = asRecord(appliedOutput);
     const projectId = typeof output.projectId === 'string' ? output.projectId : null;
     const id = typeof output.id === 'string' ? output.id : null;
+
+    if (toolName === 'sync_project_documents_to_ai') {
+        void globalMutate((key) => typeof key === 'string' && key.startsWith('/api/document-sets'));
+        return;
+    }
 
     if (toolName === 'create_transmittal') {
         void globalMutate('/api/transmittals');
@@ -136,6 +198,20 @@ function revalidateAppliedEntity(toolName: string, appliedOutput: unknown): void
         return;
     }
 
+    if (toolName === 'update_rft_brief') {
+        const stakeholderId = typeof output.stakeholderId === 'string' ? output.stakeholderId : id;
+        if (projectId && stakeholderId) {
+            void globalMutate(`/api/projects/${projectId}/stakeholders/${stakeholderId}`);
+            void globalMutate(
+                `/api/rft-new?projectId=${encodeURIComponent(projectId)}&stakeholderId=${encodeURIComponent(stakeholderId)}`
+            );
+            void globalMutate(
+                (key) => typeof key === 'string' && key.startsWith(`/api/projects/${projectId}/cost-lines`)
+            );
+        }
+        return;
+    }
+
     if (toolName === 'create_report') {
         if (!projectId) return;
         const groupId = typeof output.groupId === 'string' ? output.groupId : null;
@@ -167,6 +243,30 @@ function revalidateAppliedEntity(toolName: string, appliedOutput: unknown): void
     }
 }
 
+function approvalProgressText(
+    toolName: string,
+    decision: 'approve' | 'reject',
+    selectedDocumentCount: number
+): string {
+    if (decision === 'reject') return 'Rejecting the proposed change.';
+    if (toolName === 'sync_project_documents_to_ai') {
+        const scope = selectedDocumentCount > 0
+            ? `${selectedDocumentCount} selected document${selectedDocumentCount === 1 ? '' : 's'}`
+            : 'the selected documents';
+        return `Queueing ${scope} for AI sync and refreshing the Document repo.`;
+    }
+    if (toolName === 'record_rfi_response') {
+        return 'Writing the response back to the RFI record.';
+    }
+    if (toolName === 'attach_rfi_evidence') {
+        return 'Attaching the selected source documents to the RFI.';
+    }
+    if (toolName === 'update_rft_brief') {
+        return 'Creating or updating the RFT brief and fee-stage rows.';
+    }
+    return 'Applying the approved change to the project record.';
+}
+
 export function ApprovalGate({ approval }: ApprovalGateProps) {
     const [submitting, setSubmitting] = useState<'approve' | 'reject' | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -174,10 +274,21 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
     const [editedValues, setEditedValues] = useState<Record<string, string>>({});
     const [localResolution, setLocalResolution] = useState<PendingApprovalView['resolution']>(null);
     const submittingRef = useRef(false);
+    const { patch: viewContextPatch } = useChatViewContextPatch();
 
     const diff = isDiff(approval.proposedDiff) ? approval.proposedDiff : null;
     const resolved = approval.resolution ?? localResolution;
-    const editableChanges = diff?.changes.filter((change) => isEditableField(change.field)) ?? [];
+    const editableChanges =
+        diff?.changes.filter((change) => isEditableField(change.field, approval.toolName)) ?? [];
+    const selectedDocumentIds = selectedDocumentIdsFromPatch(viewContextPatch);
+    const useCurrentDocumentSelection =
+        approval.toolName === 'sync_project_documents_to_ai' && selectedDocumentIds.length > 0;
+    const approveOverrideInput = useCurrentDocumentSelection
+        ? { documentIds: selectedDocumentIds }
+        : undefined;
+    const submitProgressText = submitting
+        ? approvalProgressText(approval.toolName, submitting, selectedDocumentIds.length)
+        : null;
 
     const respond = async (
         decision: 'approve' | 'reject',
@@ -346,12 +457,12 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
                                     >
                                         {c.label}
                                     </span>
-                                    <span style={{ color: 'var(--color-text-secondary)' }}>
-                                        {String(c.before ?? '—')}
+                                    <span style={{ color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap' }}>
+                                        {formatDiffValue(c.before)}
                                     </span>
                                     <span style={{ color: 'var(--color-text-tertiary)' }}>→</span>
-                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600 }}>
-                                        {String(c.after ?? '—')}
+                                    <span style={{ color: 'var(--color-text-primary)', fontWeight: 600, whiteSpace: 'pre-wrap' }}>
+                                        {formatDiffValue(c.after)}
                                     </span>
                                 </div>
                             ))}
@@ -387,7 +498,7 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
                     <button
                         type="button"
                         disabled={submitting !== null}
-                        onClick={() => respond('approve')}
+                        onClick={() => respond('approve', approveOverrideInput)}
                         style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -417,7 +528,9 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
                         ) : (
                             <CheckCircle2 size={12} />
                         )}
-                        Approve & apply
+                        {useCurrentDocumentSelection
+                            ? `Approve selected (${selectedDocumentIds.length})`
+                            : 'Approve & apply'}
                     </button>
                     <button
                         type="button"
@@ -459,6 +572,14 @@ export function ApprovalGate({ approval }: ApprovalGateProps) {
                         )}
                         Reject
                     </button>
+                    {submitProgressText && (
+                        <span
+                            data-testid={`approval-progress-${approval.id}`}
+                            style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}
+                        >
+                            {submitProgressText}
+                        </span>
+                    )}
                     {error && (
                         <span style={{ fontSize: 11, marginLeft: 8, color: 'var(--color-error)' }}>
                             {error}

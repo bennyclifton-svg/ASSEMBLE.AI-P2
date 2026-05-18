@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { storage } from '@/lib/storage';
 import { extractVariationFromPdf } from '@/lib/variation/extract';
 import { matchVariationToCostLine } from '@/lib/variation/cost-line-matcher';
+import { getCurrentUser } from '@/lib/auth/get-user';
+import { requireDocumentUploadAllowedForProject } from '@/lib/subscription/document-gates';
 
 /**
  * POST /api/projects/[projectId]/variations/upload
@@ -19,6 +21,22 @@ export async function POST(
 ) {
   try {
     const { projectId } = await params;
+    const authResult = await getCurrentUser();
+    if (!authResult.user) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+    if (!authResult.user.organizationId) {
+      return NextResponse.json({ error: 'User has no organization' }, { status: 400 });
+    }
+
+    const uploadGate = await requireDocumentUploadAllowedForProject({
+      userId: authResult.user.id,
+      organizationId: authResult.user.organizationId,
+      projectId,
+      incomingDocumentCount: 1,
+    });
+    if (!uploadGate.allowed) return uploadGate.response;
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 

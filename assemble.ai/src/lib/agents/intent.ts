@@ -15,7 +15,7 @@ const VARIATION_CLAIM_ASSESSMENT_RE =
     /\b(variation claim|claim assessment|delivery assessment|assessment response|latent condition claim)\b[\s\S]{0,220}\b(assess|assessment|evaluate|evaluation|revise|revision|update|redraft|iterate|interrogate|geotech|geotechnical|entitlement|quantum|programme|program|evidence)\b|\b(assess|assessment|evaluate|evaluation|revise|revision|update|redraft|iterate|interrogate|geotech|geotechnical|entitlement|quantum|programme|program|evidence)\b[\s\S]{0,220}\b(variation claim|claim assessment|delivery assessment|assessment response|latent condition claim)\b/i;
 
 const WRITE_INTENT_RE =
-    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set|move|populate|generate|redraft|replace|append|attach|save)\b/i;
+    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set|move|populate|generate|redraft|replace|append|attach|save|increase|decrease|adjust|revise)\b/i;
 const BRIEFING_RE =
     /\b(status|briefing|where are we|how are we tracking|overall|summary|health check)\b/i;
 const READINESS_RE = /\b(ready|readiness|soft gate|gate|go to tender|tender-ready)\b/i;
@@ -29,6 +29,10 @@ const DOCUMENT_SELECTION_RE =
     /\b(select|tick|check|choose|highlight)\b[\s\S]{0,140}\b(documents?|docs?|drawings?|files?)\b|\b(documents?|docs?|drawings?|files?)\b[\s\S]{0,140}\b(select|tick|checked|highlighted|chosen)\b/i;
 const TRANSMITTAL_WRITE_RE =
     /\b(create|add|issue|prepare|draft|save|generate)\b[\s\S]{0,140}\b(transmittals?)\b|\b(transmittals?)\b[\s\S]{0,140}\b(create|add|issue|prepare|draft|save|generate|documents?|drawings?|files?)\b/i;
+const RFI_WRITE_RE =
+    /\b(create|add|issue|raise|prepare|draft|submit|generate)\b[\s\S]{0,160}\b(rfi|rfis|request for information|requests for information)\b|\b(rfi|rfis|request for information|requests for information)\b[\s\S]{0,160}\b(create|add|issue|raise|prepare|draft|submit|generate)\b/i;
+const RFI_REFERENCE_RE =
+    /\b(rfi|rfis|request for information|requests for information)\s*[-#]?\s*0*\d+\b|\b(address|answer|respond(?:\s+to)?|resolve|review|handle|deal with|close out|action|process)\b[\s\S]{0,120}\b(rfi|rfis|request for information|requests for information)\b/i;
 const RFT_WRITE_RE =
     /\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach)\b[\s\S]{0,140}\b(rft|request for tender|tender package|tender document|tender documents|brief|services brief|deliverables)\b[\s\S]{0,140}\b(rft|request for tender|tender package|tender document|tender documents)?\b|\b(rft|request for tender|tender package|tender document|tender documents)\b[\s\S]{0,140}\b(add|record|create|enter|post|log|update|change|set|populate|generate|redraft|replace|append|attach|brief|services brief|deliverables)\b/i;
 const TENDER_FIRM_WRITE_RE =
@@ -48,11 +52,11 @@ const FINANCE_NOTE_CONTEXT_RE =
 const PROGRAM_NOTE_CONTEXT_RE =
     /\b(programme|program|schedule|milestone|activity|eot|completion)\b/i;
 const COST_VALUE_WRITE_RE =
-    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set)\b[\s\S]{0,140}\b(budgets?|contract value|contract values|approved contracts?|contract sums?|cost plan|cost plans?|cost lines?)\b/i;
+    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set|increase|decrease|adjust|revise)\b[\s\S]{0,140}\b(budgets?|contract value|contract values|approved contracts?|contract sums?|cost plan|cost plans?|cost lines?)\b/i;
 const FINANCE_WRITE_RE =
-    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set)\b[\s\S]{0,140}\b(invoices?|progress claims?|claims?|fees?|cost lines?|variations?|commercial risks?|finance notes?)\b/i;
+    /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|update|change|set|increase|decrease|adjust|revise)\b[\s\S]{0,140}\b(invoices?|progress claims?|claims?|fees?|cost lines?|variations?|commercial risks?|finance notes?)\b/i;
 const PROGRAM_WRITE_RE =
-    /\b(add|record|create|enter|post|log|update|change|set|move)\b[\s\S]{0,140}\b(programme|program|schedule|activit(?:y|ies)|milestones?|programme risks?|schedule risks?)\b/i;
+    /\b(add|record|create|enter|post|log|update|change|set|move|prepare|draft|generate|populate|replace|redraft|reset|regenerate|build|make)\b[\s\S]{0,160}\b(programme|program|schedule|activit(?:y|ies)|milestones?|programme risks?|schedule risks?)\b/i;
 const PROGRAMME_DATE_WRITE_RE =
     /\b(update|change|set|move|shift|delay)\b[\s\S]{0,180}\b(start date|end date|finish date|completion date|submission date|lodgement date|due date)\b/i;
 const PROGRAMME_DATE_CONTEXT_RE =
@@ -75,6 +79,8 @@ const TECHNICAL_SERVICES_CONTEXT_RE =
     /\b(mechanical|electrical|hydraulic|fire services?|fire engineering|hvac|air[-\s]?conditioning|airconditioning|ventilation|exhaust|smoke control|co monitoring|carbon monoxide|car\s*park|carpark|ductwork|fan|fans|split units?|plant room)\b/i;
 const TECHNICAL_SERVICES_QUESTION_RE =
     /\b(what|which|is|are|does|do|required|requirement|requirements|specified|specifies|specification|spec|systems?|services?|equipment|ventilation|cooling|heating)\b/i;
+const TECHNICAL_SERVICES_REVIEW_RE =
+    /\b(specification|spec|technical specification|services specification|review|summari[sz]e|summary|attached|uploaded|ingested|selected|documents?|reports?|drawings?|major cost components?|cost drivers?|long[-\s]?lead|lead[-\s]?time items?)\b/i;
 
 export function hasWriteIntent(text: string): boolean {
     return WRITE_INTENT_RE.test(text);
@@ -94,6 +100,14 @@ export function isDocumentSelectionRequest(text: string): boolean {
 
 export function isTransmittalWriteRequest(text: string): boolean {
     return TRANSMITTAL_WRITE_RE.test(text);
+}
+
+export function isRfiWriteRequest(text: string): boolean {
+    return RFI_WRITE_RE.test(text);
+}
+
+export function isRfiReferenceRequest(text: string): boolean {
+    return RFI_REFERENCE_RE.test(text) || isRfiWriteRequest(text);
 }
 
 export function isRftWriteRequest(text: string): boolean {
@@ -139,7 +153,7 @@ export function isProgrammeDateWriteRequest(text: string): boolean {
 }
 
 export function isDesignWriteRequest(text: string): boolean {
-    return DESIGN_WRITE_RE.test(text);
+    return DESIGN_WRITE_RE.test(text) || isRfiWriteRequest(text);
 }
 
 export function isInvoiceWriteRequest(text: string): boolean {
@@ -155,11 +169,15 @@ export function hasProgramContext(text: string): boolean {
 }
 
 export function hasDesignContext(text: string): boolean {
-    return DESIGN_CONTEXT_RE.test(text) || isTechnicalServicesQuestion(text);
+    return DESIGN_CONTEXT_RE.test(text) || isTechnicalServicesQuestion(text) || isRfiReferenceRequest(text);
 }
 
 export function isTechnicalServicesQuestion(text: string): boolean {
     return TECHNICAL_SERVICES_CONTEXT_RE.test(text) && TECHNICAL_SERVICES_QUESTION_RE.test(text);
+}
+
+export function isTechnicalServicesDocumentReviewRequest(text: string): boolean {
+    return TECHNICAL_SERVICES_CONTEXT_RE.test(text) && TECHNICAL_SERVICES_REVIEW_RE.test(text);
 }
 
 export function isVariationWriteRequest(text: string): boolean {

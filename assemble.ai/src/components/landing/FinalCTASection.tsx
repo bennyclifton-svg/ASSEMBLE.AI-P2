@@ -7,7 +7,7 @@ export function FinalCTASection() {
         <section
             className="relative overflow-hidden py-24"
             style={{
-                background: 'var(--sw-rose-tint)',
+                background: 'var(--sw-cta)',
                 fontFamily: 'var(--sw-font-sans)',
             }}
         >
@@ -18,13 +18,13 @@ export function FinalCTASection() {
                         style={{
                             fontFamily: 'var(--sw-font-mono)',
                             fontSize: 11,
-                            color: 'var(--sw-rose-dk)',
+                            color: 'var(--sw-rose)',
                             letterSpacing: '0.18em',
                             textTransform: 'uppercase',
                             fontWeight: 700,
                         }}
                     >
-                        {'// Free project diagnostic'}
+                        {'// Free 14-day trial'}
                     </p>
                     <h2
                         className="m-0 text-balance"
@@ -34,10 +34,10 @@ export function FinalCTASection() {
                             fontWeight: 800,
                             lineHeight: 1.04,
                             letterSpacing: '-0.035em',
-                            color: 'var(--sw-ink)',
+                            color: 'var(--sw-cta-fg)',
                         }}
                     >
-                        Find the weak point in your project before the next package goes out.
+                        Stop doing the grunt work.
                     </h2>
                     <p
                         className="mt-5 mb-8 mx-auto max-w-[680px]"
@@ -45,23 +45,22 @@ export function FinalCTASection() {
                             fontFamily: 'var(--sw-font-body)',
                             fontSize: 17,
                             lineHeight: 1.6,
-                            color: 'var(--sw-muted)',
+                            color: 'rgba(255,255,255,0.82)',
                         }}
                     >
-                        Answer 9 questions across design, procurement and delivery. Get an instant score
-                        and meet the agents that close your weakest gap.
+                        Start a free 14-day trial. No card. Full features inside trial caps. Export anytime.
                     </p>
                     <Link
-                        href="/assessment"
+                        href="/pricing"
                         className="inline-flex items-center justify-center gap-2 px-[20px] py-3 font-bold uppercase tracking-[0.12em] transition-opacity hover:opacity-90"
                         style={{
                             fontFamily: 'var(--sw-font-mono)',
                             fontSize: 12,
-                            background: 'var(--sw-rose)',
-                            color: 'var(--sw-ink)',
+                            background: 'var(--sw-paper)',
+                            color: 'var(--sw-cta)',
                         }}
                     >
-                        Take the 2-min Health Check
+                        Start free trial
                         <ArrowRight size={15} strokeWidth={2} aria-hidden="true" />
                     </Link>
                 </ScrollReveal>
