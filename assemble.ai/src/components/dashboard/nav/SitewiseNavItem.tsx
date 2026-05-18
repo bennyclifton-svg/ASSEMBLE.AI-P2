@@ -37,7 +37,7 @@ export function SitewiseNavItem({
                 fontSize: 13,
                 fontWeight: active ? 600 : 500,
                 color: highlighted ? 'var(--sw-paper)' : 'var(--sw-muted)',
-                background: highlighted ? '#2F363E' : 'transparent',
+                background: highlighted ? 'var(--sw-paper-3)' : 'transparent',
                 border: '1px solid transparent',
                 borderLeft: active ? '2px solid var(--sw-rose)' : '2px solid transparent',
                 cursor: 'pointer',

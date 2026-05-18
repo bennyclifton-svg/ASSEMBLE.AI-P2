@@ -16,7 +16,7 @@ interface ProgramToolbarProps {
 }
 
 const toolbarButtonBase =
-    'inline-flex h-9 items-center gap-1.5 border px-3 text-[11px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex h-8 items-center gap-1.5 border px-3 text-[11px] font-semibold uppercase transition-colors disabled:cursor-not-allowed disabled:opacity-50';
 
 const toolbarButtonStyle: React.CSSProperties = {
     fontFamily: 'var(--sw-font-mono)',
@@ -49,7 +49,7 @@ function ProgramControlButton({
             disabled={disabled}
             aria-pressed={selected === undefined ? undefined : selected}
             title={title}
-            className={`inline-flex h-7 items-center gap-1.5 border px-2.5 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            className={`inline-flex h-8 items-center gap-1.5 border px-2.5 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 isSelected
                     ? 'border-[var(--sw-ink)] bg-white text-[var(--sw-ink)]'
                     : 'border-[var(--sw-rule)] bg-white text-[var(--sw-muted)] hover:border-[var(--sw-ink)] hover:text-[var(--sw-ink)]'
@@ -150,7 +150,7 @@ export function ProgramToolbar({ projectId, zoomLevel, onZoomChange }: ProgramTo
     };
 
     return (
-        <div className="relative z-10 flex w-full flex-wrap items-center gap-1.5">
+        <div className="relative z-10 mt-[13px] flex w-full flex-wrap items-center gap-1.5">
             <div role="group" aria-label="Programme view and actions" className="flex flex-wrap items-center gap-1.5">
                 <ProgramControlButton
                     label="Week"

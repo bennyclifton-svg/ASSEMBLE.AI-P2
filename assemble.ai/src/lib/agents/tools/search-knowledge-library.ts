@@ -8,7 +8,9 @@
  * pre-ingested seed knowledge and any org-uploaded domain libraries.
  */
 
-import { retrieveFromDomains } from '@/lib/rag/retrieval';
+import { retrieveFromDomains, type DomainRetrievalResult } from '@/lib/rag/retrieval';
+import { retrieveSeedKnowledgeFallback } from '@/lib/rag/seed-knowledge-retrieval';
+import { isKnownTag, normalizeTag, type DomainTag } from '@/lib/constants/knowledge-domains';
 import { registerTool, type AgentToolDefinition } from './catalog';
 import { assertProjectOrg, type ToolContext } from './_context';
 
@@ -43,6 +45,44 @@ const VALID_DOMAIN_TYPES = [
     'project_history',
     'custom',
 ];
+
+function normalizeDomainTags(tags: string[] | undefined): DomainTag[] {
+    return (tags ?? [])
+        .map((tag) => normalizeTag(tag))
+        .filter(isKnownTag) as DomainTag[];
+}
+
+function fallbackSeedResults(input: SearchKnowledgeLibraryInput, maxResults: number): SearchKnowledgeLibraryOutput {
+    try {
+        const results = retrieveSeedKnowledgeFallback(input.query, {
+            domainTags: normalizeDomainTags(input.tags),
+            topK: maxResults,
+        });
+
+        return {
+            query: input.query,
+            resultCount: results.length,
+            results: results.map((r) => ({
+                domainName: r.domainName,
+                domainType: 'best_practices',
+                sectionTitle: r.sectionTitle,
+                clauseNumber: null,
+                relevanceScore: Number(r.relevanceScore.toFixed(3)),
+                excerpt:
+                    r.content.length > EXCERPT_CHARS
+                        ? r.content.slice(0, EXCERPT_CHARS) + '...'
+                        : r.content,
+            })),
+        };
+    } catch (error) {
+        console.warn('[search_knowledge_library] Local seed fallback failed:', error);
+        return {
+            query: input.query,
+            resultCount: 0,
+            results: [],
+        };
+    }
+}
 
 const definition: AgentToolDefinition<SearchKnowledgeLibraryInput, SearchKnowledgeLibraryOutput> = {
     spec: {
@@ -125,16 +165,26 @@ const definition: AgentToolDefinition<SearchKnowledgeLibraryInput, SearchKnowled
         await assertProjectOrg(ctx);
 
         const topK = input.maxResults ?? DEFAULT_MAX;
-        const results = await retrieveFromDomains(input.query, {
-            organizationId: ctx.organizationId,
-            domainTags: input.tags,
-            domainTypes: input.domainTypes,
-            topK: topK * 3,
-            rerankTopK: topK,
-            minRelevanceScore: 0.2,
-            includePrebuilt: true,
-            includeOrganization: true,
-        });
+        let results: DomainRetrievalResult[];
+        try {
+            results = await retrieveFromDomains(input.query, {
+                organizationId: ctx.organizationId,
+                domainTags: input.tags,
+                domainTypes: input.domainTypes,
+                topK: topK * 3,
+                rerankTopK: topK,
+                minRelevanceScore: 0.2,
+                includePrebuilt: true,
+                includeOrganization: true,
+            });
+        } catch (error) {
+            console.warn('[search_knowledge_library] Domain retrieval failed, using local seed fallback:', error);
+            return fallbackSeedResults(input, topK);
+        }
+
+        if (results.length === 0) {
+            return fallbackSeedResults(input, topK);
+        }
 
         return {
             query: input.query,

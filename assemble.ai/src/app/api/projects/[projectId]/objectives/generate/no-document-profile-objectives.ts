@@ -1,7 +1,15 @@
 import type { ObjectiveSource, ObjectiveType } from '@/lib/db/objectives-schema';
 import type { ProjectType } from '@/types/profiler';
+import {
+  assetLabelFromProfile,
+  deliverableAssetLabel,
+  hasReplacementIntent,
+  inferProjectNameAssetLabel,
+  intentAssetLabel,
+} from '@/lib/objectives/project-name-intent';
 
 export interface NoDocumentProfileContext {
+  projectName?: string;
   buildingClass: string;
   projectType: ProjectType;
   subclass: string[];
@@ -48,8 +56,26 @@ function hasSubclass(profile: NoDocumentProfileContext, term: string): boolean {
 }
 
 function hasScope(profile: NoDocumentProfileContext, terms: string[]): boolean {
-  const haystack = profile.workScopeLabels.join(' ').toLowerCase();
-  return terms.some((term) => haystack.includes(term));
+  const haystack = profile.workScopeLabels.join(' ').toLowerCase().replace(/[-_/]+/g, ' ');
+  return terms.some((term) => haystack.includes(term.toLowerCase().replace(/[-_/]+/g, ' ')));
+}
+
+function joinObjectiveParts(parts: string[]): string {
+  const unique = [...new Set(parts.filter(Boolean))];
+  if (unique.length <= 1) return unique[0] ?? '';
+  if (unique.length === 2) return `${unique[0]} and ${unique[1]}`;
+  return `${unique.slice(0, -1).join(', ')} and ${unique[unique.length - 1]}`;
+}
+
+function selectedStructuralScopeParts(profile: NoDocumentProfileContext): string[] {
+  const parts: string[] = [];
+  if (hasScope(profile, ['substructure', 'foundation'])) parts.push('substructure');
+  if (hasScope(profile, ['superstructure'])) parts.push('superstructure');
+  if (hasScope(profile, ['post tensioning'])) parts.push('post-tensioning');
+  if (hasScope(profile, ['precast'])) parts.push('precast elements');
+  if (hasScope(profile, ['structural steel'])) parts.push('structural steel');
+  if (hasScope(profile, ['mass timber'])) parts.push('mass timber');
+  return parts;
 }
 
 function add(
@@ -69,6 +95,13 @@ function sourceDetail(label: string, value: string): string {
 
 function classSignal(profile: NoDocumentProfileContext): string {
   return profile.classDescriptors[0] || `${profile.buildingClass} ${profile.subclass.join(', ')}`.trim();
+}
+
+function complianceClassLabel(profile: NoDocumentProfileContext): string {
+  const descriptor = profile.classDescriptors[0]?.split(':')[0]?.trim();
+  if (descriptor) return descriptor;
+  const buildingClass = valueAsString(profile.buildingClass);
+  return buildingClass ? `${buildingClass} building` : '';
 }
 
 function normalizeText(text: string): string {
@@ -109,32 +142,72 @@ export function buildNoDocumentProfileObjectiveCandidates(
   const parking = scale(profile, ['parking_bays', 'car_spaces']);
   const basementLevels = scale(profile, ['parking_basement_levels', 'basement_levels']);
   const classText = classSignal(profile);
-  const apartmentAsset = hasSubclass(profile, 'apartment') ? 'Class 2 apartment building' : `${profile.buildingClass} building`;
+  const asset = assetLabelFromProfile(profile);
+  const planningAsset = intentAssetLabel(profile);
+  const deliverableAsset = deliverableAssetLabel(profile);
+  const projectNameAsset = inferProjectNameAssetLabel(profile.projectName);
+  const hasApartment = hasSubclass(profile, 'apartment');
+  const apartmentAsset = hasApartment ? 'Class 2 apartment building' : `${profile.buildingClass} building`;
+  const complianceLabel = complianceClassLabel(profile);
 
   const heritage = complexity(profile, ['heritage']);
   const approvalPathway = complexity(profile, ['approval_pathway', 'approvalPathway']);
   const contamination = complexity(profile, ['contamination_level', 'contaminationLevel']);
   const access = complexity(profile, ['access_constraints', 'accessConstraints']);
   const operation = complexity(profile, ['operational_constraints', 'operationalConstraints']);
-  const procurement = complexity(profile, ['procurement_route', 'procurementRoute']);
   const environmental = complexity(profile, ['environmental_sensitivity', 'environmentalSensitivity']);
   const siteConditions = complexity(profile, ['site_conditions', 'siteConditions']);
   const stakeholder = complexity(profile, ['stakeholder_complexity', 'stakeholderComplexity']);
   const qualityTier = complexity(profile, ['quality_tier', 'qualityTier']);
+  const hasDemolitionScope = hasScope(profile, ['demolition']);
+  const hasClearanceScope = hasScope(profile, ['site clearance', 'site-clearance']);
+  const hasDecontaminationScope = hasScope(profile, ['decontamination']);
+  const hasReplacementNameSignal = hasReplacementIntent(profile.projectName) && Boolean(projectNameAsset);
+  const hasInfillSignal = valueAsString(siteConditions).toLowerCase().includes('infill');
+  const structuralScopeParts = selectedStructuralScopeParts(profile);
+  const hasVerticalTransportScope = hasScope(profile, ['vertical transport', 'lift', 'elevator']);
+  const structureAndTransportParts = [
+    ...structuralScopeParts,
+    ...(hasVerticalTransportScope ? ['vertical transport'] : []),
+  ];
+  const structureAndTransportText = joinObjectiveParts(structureAndTransportParts);
+  const facadeScopeParts = [
+    ...structuralScopeParts,
+    ...(hasScope(profile, ['facade', 'curtain wall', 'glazing']) ? ['facade'] : []),
+  ];
 
   const planning: NoDocumentObjectiveItem[] = [];
   add(
     planning,
-    storeys ? `Verify approval pathway for ${storeys}-storey scheme` : undefined,
-    [sourceDetail('storeys', storeys), sourceDetail('approval_pathway', approvalPathway)].filter(Boolean).join('; '),
+    storeys
+      ? `Confirm approval pathway for ${storeys}-storey ${planningAsset}`
+      : `Confirm approval pathway for ${planningAsset}`,
+    [
+      sourceDetail('project_name', profile.projectName ?? ''),
+      sourceDetail('storeys', storeys),
+      sourceDetail('approval_pathway', approvalPathway),
+    ].filter(Boolean).join('; '),
   );
   add(planning, heritage ? 'Resolve heritage overlay constraints' : undefined, sourceDetail('heritage', heritage));
   add(
     planning,
-    contamination || hasScope(profile, ['decontamination'])
-      ? 'Secure decontamination and site-clearance approvals'
+    contamination || hasDecontaminationScope
+      ? (hasDemolitionScope || hasReplacementNameSignal
+        ? 'Secure demolition, decontamination and site-clearance approvals'
+        : 'Secure decontamination and site-clearance approvals')
       : undefined,
-    [sourceDetail('contamination_level', contamination), 'work scope: decontamination, site clearance'].filter(Boolean).join('; '),
+    [sourceDetail('contamination_level', contamination), 'work scope: demolition, decontamination, site clearance'].filter(Boolean).join('; '),
+  );
+  add(
+    planning,
+    !contamination && !hasDecontaminationScope && (hasDemolitionScope || hasClearanceScope || hasReplacementNameSignal)
+      ? `Confirm demolition and site-clearance requirements for ${planningAsset}`
+      : undefined,
+    [
+      sourceDetail('project_name', profile.projectName ?? ''),
+      hasDemolitionScope ? 'work scope: demolition' : '',
+      hasClearanceScope ? 'work scope: site clearance' : '',
+    ].filter(Boolean).join('; '),
   );
   add(
     planning,
@@ -146,7 +219,7 @@ export function buildNoDocumentProfileObjectiveCandidates(
   add(
     planning,
     access || operation || siteConditions
-      ? 'Plan constrained infill access and staging'
+      ? `Plan constrained ${hasInfillSignal ? 'infill ' : ''}access and staging for ${planningAsset}`
       : undefined,
     [sourceDetail('access_constraints', access), sourceDetail('operational_constraints', operation), sourceDetail('site_conditions', siteConditions)]
       .filter(Boolean)
@@ -156,7 +229,13 @@ export function buildNoDocumentProfileObjectiveCandidates(
   const functional: NoDocumentObjectiveItem[] = [];
   add(
     functional,
-    storeys && units ? `Deliver ${storeys}-storey, ${units}-apartment building` : undefined,
+    hasApartment && storeys && units
+      ? `Deliver ${storeys}-storey, ${units}-apartment building`
+      : storeys
+        ? `Deliver ${storeys}-storey ${deliverableAsset}`
+        : projectNameAsset
+          ? `Deliver ${deliverableAsset}`
+          : undefined,
     [sourceDetail('storeys', storeys), sourceDetail('units', units), classText].filter(Boolean).join('; '),
   );
   add(
@@ -171,10 +250,10 @@ export function buildNoDocumentProfileObjectiveCandidates(
   );
   add(
     functional,
-    hasScope(profile, ['post tensioning', 'precast', 'substructure', 'superstructure', 'vertical transport'])
-      ? 'Integrate structure, precast and vertical transport'
+    structureAndTransportText
+      ? `Integrate ${structureAndTransportText}`
       : undefined,
-    'work scope: substructure, superstructure, post-tensioning, precast elements, vertical transport',
+    `work scope: ${structureAndTransportText}`,
   );
   add(
     functional,
@@ -199,10 +278,10 @@ export function buildNoDocumentProfileObjectiveCandidates(
   );
   add(
     quality,
-    hasScope(profile, ['post tensioning', 'precast', 'facade'])
+    structuralScopeParts.length > 0 && hasScope(profile, ['facade', 'curtain wall', 'glazing'])
       ? 'Manage structural tolerances at facade interfaces'
       : undefined,
-    'work scope: post-tensioning, precast elements, facade system',
+    `work scope: ${joinObjectiveParts(facadeScopeParts)}`,
   );
   add(
     quality,
@@ -213,7 +292,14 @@ export function buildNoDocumentProfileObjectiveCandidates(
   );
   add(
     quality,
-    hasSubclass(profile, 'apartment') ? 'Set apartment acoustic and waterproofing standards' : undefined,
+    projectNameAsset.includes('amenities') || asset.includes('toilet') || asset.includes('ablution')
+      ? 'Set durable, maintainable wet-area finishes'
+      : undefined,
+    [sourceDetail('project_name', profile.projectName ?? ''), `asset: ${asset}`].filter(Boolean).join('; '),
+  );
+  add(
+    quality,
+    hasApartment ? 'Set apartment acoustic and waterproofing standards' : undefined,
     `${apartmentAsset}; domain guidance: Class 2 apartment performance`,
     'seed_knowledge',
   );
@@ -221,12 +307,19 @@ export function buildNoDocumentProfileObjectiveCandidates(
   const compliance: NoDocumentObjectiveItem[] = [];
   add(
     compliance,
-    classText ? 'Confirm Class 2 NCC/BCA compliance' : undefined,
-    classText,
+    complianceLabel ? `Confirm ${complianceLabel} NCC/BCA compliance` : undefined,
+    complianceLabel,
   );
   add(
     compliance,
-    hasSubclass(profile, 'apartment') ? 'Comply with BASIX and NatHERS requirements' : undefined,
+    projectNameAsset.includes('amenities') || asset.includes('toilet') || asset.includes('ablution')
+      ? 'Confirm accessibility and sanitary facility compliance'
+      : undefined,
+    [sourceDetail('project_name', profile.projectName ?? ''), `asset: ${asset}`].filter(Boolean).join('; '),
+  );
+  add(
+    compliance,
+    hasApartment ? 'Comply with BASIX and NatHERS requirements' : undefined,
     'residential apartment sustainability compliance',
     'seed_knowledge',
   );
@@ -247,7 +340,11 @@ export function buildNoDocumentProfileObjectiveCandidates(
   add(
     compliance,
     heritage || contamination || stakeholder
-      ? 'Address heritage, contamination and stakeholder obligations'
+      ? `Address ${joinObjectiveParts([
+        heritage ? 'heritage' : '',
+        contamination ? 'contamination' : '',
+        stakeholder ? 'stakeholder' : '',
+      ])} obligations`
       : undefined,
     [sourceDetail('heritage', heritage), sourceDetail('contamination_level', contamination), sourceDetail('stakeholder_complexity', stakeholder)]
       .filter(Boolean)

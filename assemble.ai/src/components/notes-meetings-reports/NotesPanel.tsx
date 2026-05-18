@@ -110,24 +110,6 @@ function slugifyProjectName(projectName: string): string {
     return projectName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'project';
 }
 
-function deriveProfileCompletion(args: {
-    buildingClass?: string | null;
-    projectType?: string | null;
-    profile?: NotesPanelProps['profileData'];
-}): number {
-    const { buildingClass, projectType, profile } = args;
-    let filled = 0;
-    if (buildingClass) filled++;
-    if (projectType) filled++;
-    if ((profile?.subclass?.length ?? 0) > 0) filled++;
-    if (profile?.scaleData?.gfa_sqm != null) filled++;
-    if (profile?.scaleData?.storeys != null) filled++;
-    if (profile?.scaleData?.units != null) filled++;
-    if (profile?.complexity && Object.keys(profile.complexity).length >= 5) filled++;
-    if ((profile?.workScope?.length ?? 0) > 0) filled++;
-    return Math.round((filled / 8) * 100);
-}
-
 function RecordsBreadcrumb({ projectName, recordCrumb }: { projectName: string; recordCrumb: string }) {
     return (
         <nav
@@ -145,25 +127,6 @@ function RecordsBreadcrumb({ projectName, recordCrumb }: { projectName: string; 
             <span style={{ opacity: 0.5 }}>/</span>
             <span style={{ color: 'var(--sw-ink)' }}>{recordCrumb}</span>
         </nav>
-    );
-}
-
-function StatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
-    const isDark = tone === 'dark';
-    return (
-        <span
-            style={{
-                fontFamily: 'var(--sw-font-mono)',
-                fontSize: 11,
-                padding: '4px 10px',
-                background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
-                border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
-                color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
-                letterSpacing: '0.02em',
-            }}
-        >
-            {label}
-        </span>
     );
 }
 
@@ -199,9 +162,6 @@ function isTextEditingTarget(): boolean {
 export function NotesPanel({
     projectId,
     projectName = 'project',
-    buildingClass,
-    projectType,
-    profileData,
     onSaveTransmittal,
     onLoadTransmittal,
     onExpandedChange,
@@ -291,11 +251,6 @@ export function NotesPanel({
     const activeNote = useMemo(
         () => visibleNotes.find((note) => note.id === activeNoteId) ?? null,
         [activeNoteId, visibleNotes]
-    );
-
-    const profileCompletionPct = useMemo(
-        () => deriveProfileCompletion({ buildingClass, projectType, profile: profileData }),
-        [buildingClass, projectType, profileData]
     );
 
     const recordCrumb = useMemo(() => {
@@ -569,11 +524,6 @@ export function NotesPanel({
                         >
                             Records
                         </h2>
-                        {!TypedRegisterPanel && (
-                            <div className="mt-1 min-h-[18px] text-xs text-[var(--sw-muted)]" style={{ fontFamily: 'var(--sw-font-mono)' }}>
-                                {visibleNotes.length} visible / {notes.length} total
-                            </div>
-                        )}
                     </div>
                 </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProfilerMiddlePanel, type ProfilerControls } from '@/components/profiler/ProfilerMiddlePanel';
 import { ProjectDetailsPanel } from '@/components/dashboard/planning/ProjectDetailsPanel';
 import { BriefPreviewPane, SourcesShell, type BriefPreviewProfile, type SourcesData } from './BriefPreviewPane';
@@ -138,85 +138,6 @@ function Breadcrumb({ projectName }: { projectName: string }) {
     );
 }
 
-/**
- * Chrome status pill. Two tones:
- * - default — paper bg + ink text + thin rule border (e.g. "profile: 92% complete")
- * - 'dark' — ink bg + paper text (e.g. "stage: detail design")
- *
- * The legacy `tone='rose'` API rendered paper-bg + rose-dk-text + rose-border;
- * superseded by `tone='dark'` to match the wireframe's solid-fill stage chip.
- */
-function StatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
-    const isDark = tone === 'dark';
-    return (
-        <span
-            style={{
-                fontFamily: 'var(--sw-font-mono)',
-                fontSize: 11,
-                padding: '4px 10px',
-                background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
-                border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
-                color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
-                letterSpacing: '0.02em',
-            }}
-        >
-            {label}
-        </span>
-    );
-}
-
-/**
- * Rough profile completion percentage out of 8 weighted fields. Returns an
- * integer 0–100. Used to feed the `profile: NN% complete` chrome pill until a
- * dedicated profile completion endpoint exists.
- *
- * TODO: prefer `profileStatus.profileCompletionPct` from the profile API
- * envelope when that field is added.
- */
-function deriveProfileCompletion(args: {
-    buildingClass: BuildingClass | null;
-    projectType: ProjectType | null;
-    profile?: BriefPanelProps['profileData'];
-}): number {
-    const { buildingClass, projectType, profile } = args;
-    let filled = 0;
-    if (buildingClass) filled++;
-    if (projectType) filled++;
-    if ((profile?.subclass?.length ?? 0) > 0) filled++;
-    if (profile?.scaleData?.gfa_sqm != null) filled++;
-    if (profile?.scaleData?.storeys != null) filled++;
-    if (profile?.scaleData?.units != null) filled++;
-    if (profile?.complexity && Object.keys(profile.complexity).length >= 5) filled++;
-    if ((profile?.workScope?.length ?? 0) > 0) filled++;
-    return Math.round((filled / 8) * 100);
-}
-
-/**
- * Build the mono subtitle under the H1: e.g.
- *   "residential · apartments · class 2 · 9 storeys · 87 units · regenerated 14:18:42"
- * Skips parts when data is missing rather than rendering placeholders, since
- * the chrome already shows a profile completion percentage above.
- */
-function deriveSubtitle(args: {
-    buildingClass: BuildingClass | null;
-    projectType: ProjectType | null;
-    profile?: BriefPanelProps['profileData'];
-    regeneratedAt: string | null;
-}): string {
-    const { buildingClass, projectType, profile, regeneratedAt } = args;
-    const parts: string[] = [];
-    if (buildingClass) parts.push(String(buildingClass));
-    if (projectType) parts.push(String(projectType));
-    const subclass = profile?.subclass?.[0];
-    if (subclass) parts.push(subclass.replace(/_/g, ' '));
-    const storeys = profile?.scaleData?.storeys;
-    if (storeys != null) parts.push(`${storeys} storeys`);
-    const units = profile?.scaleData?.units;
-    if (units != null) parts.push(`${units} units`);
-    if (regeneratedAt) parts.push(`regenerated ${regeneratedAt}`);
-    // TODO: append "N fields incomplete" once a clean source is wired.
-    return parts.join(' · ');
-}
 
 export function BriefPanel({
     projectId,
@@ -243,7 +164,6 @@ export function BriefPanel({
     // pane's GET-then-POST effect so the inferred objectives reflect the new
     // batch without remounting (which would reset the timestamp / lose state).
     const [briefRefreshKey, setBriefRefreshKey] = useState(0);
-    const [regeneratedAt, setRegeneratedAt] = useState<string | null>(null);
     const [isRegenerating, setIsRegenerating] = useState(false);
     const [isBriefingOpen, setIsBriefingOpen] = useState(false);
     const [briefingAutoStartKey, setBriefingAutoStartKey] = useState(0);
@@ -336,9 +256,7 @@ export function BriefPanel({
                 });
                 return;
             }
-            // Stamp the regenerate timestamp into the subtitle and force the
-            // preview pane to re-fetch via GET (which now returns the fresh batch).
-            setRegeneratedAt(new Date().toLocaleTimeString('en-AU', { hour12: false }));
+            // Force the preview pane to re-fetch via GET (which now returns the fresh batch).
             setBriefRefreshKey((n) => n + 1);
         } catch (err) {
             console.error('Regenerate brief threw:', err);
@@ -351,25 +269,6 @@ export function BriefPanel({
             setIsRegenerating(false);
         }
     };
-
-    const profileCompletionPct = useMemo(
-        () => deriveProfileCompletion({ buildingClass, projectType, profile: profileData }),
-        [buildingClass, projectType, profileData]
-    );
-    const profileCompletionLabel = `profile: ${profileCompletionPct}% complete`;
-    // TODO: derive from project.stage once the schema exposes it.
-    const stageLabel = 'detail design';
-
-    const subtitle = useMemo(
-        () =>
-            deriveSubtitle({
-                buildingClass,
-                projectType,
-                profile: profileData,
-                regeneratedAt,
-            }),
-        [buildingClass, projectType, profileData, regeneratedAt]
-    );
 
     const handleOpenBriefing = useCallback(() => {
         setIsBriefingOpen(true);
@@ -408,17 +307,6 @@ export function BriefPanel({
                         >
                             Brief
                         </h1>
-                        <div
-                            style={{
-                                fontFamily: 'var(--sw-font-mono)',
-                                fontSize: 12,
-                                color: muted,
-                                marginTop: 4,
-                                minHeight: 18,
-                            }}
-                        >
-                            {subtitle}
-                        </div>
                     </div>
                 </div>
             </header>
@@ -592,48 +480,76 @@ export function BriefPanel({
                         />
                     )}
                     <aside className="self-start sticky top-0 min-w-0">
-                        {/* Unified brief shell — outer border + continuous left
-                            accent rail wrap the preview, attachments and
-                            sources as one visual unit. Each child renders
-                            without its own outer border; thin internal
-                            dividers separate the sections. */}
+                        {/* Unified brief shell — outer border wraps the dark
+                            "Brief" header strip + the content body. The left
+                            accent rail is applied only to the content body so
+                            it terminates at the bottom of the header rather
+                            than running through it. */}
                         <div
                             className="min-w-0"
                             style={{
                                 background: 'var(--sw-shell)',
                                 border: '1px solid var(--sw-rule)',
-                                borderLeft: '3px solid var(--sw-cta)',
                             }}
                         >
-                            <BriefPreviewPane
-                                projectId={projectId}
-                                projectName={projectName}
-                                profile={buildProfileForPreview({
-                                    profileData,
-                                    buildingClass,
-                                    projectType,
-                                    region,
-                                })}
-                                refreshKey={briefRefreshKey}
-                                briefingRefreshKey={briefingRefreshKey}
-                                onOpenBriefing={handleOpenBriefing}
-                                onRestartBriefing={handleRestartBriefing}
-                                onSourcesUpdate={setSourcesData}
-                            />
-                            <div style={{ borderTop: '1px solid var(--sw-rule-2)' }}>
-                                <BriefAttachmentsSection
-                                    projectId={projectId}
-                                    selectedDocumentIds={selectedDocumentIds}
-                                    onSetSelectedDocumentIds={onSetSelectedDocumentIds}
-                                    onAttachmentsChanged={handleBriefingChanged}
+                            <div
+                                className="flex items-center gap-3 px-3 py-2"
+                                role="status"
+                                style={{ background: 'var(--sw-ink)', color: 'var(--sw-paper)' }}
+                            >
+                                <span
+                                    aria-hidden="true"
+                                    className="inline-block"
+                                    style={{
+                                        width: 8,
+                                        height: 8,
+                                        background: 'var(--sw-rose)',
+                                        borderRadius: 999,
+                                    }}
                                 />
+                                <span
+                                    style={{
+                                        fontFamily: 'var(--sw-font-mono)',
+                                        fontSize: 10,
+                                        letterSpacing: '0.18em',
+                                        textTransform: 'uppercase',
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    Brief
+                                </span>
                             </div>
-                            <div style={{ borderTop: '1px solid var(--sw-rule-2)' }}>
-                                <SourcesShell
-                                    attachedDocumentCount={sourcesData.attachedDocumentCount}
-                                    profileFieldsCount={sourcesData.profileFieldsCount}
-                                    generationTrace={sourcesData.generationTrace}
+                            <div style={{ borderLeft: '3px solid var(--sw-cta)' }}>
+                                <BriefPreviewPane
+                                    projectId={projectId}
+                                    projectName={projectName}
+                                    profile={buildProfileForPreview({
+                                        profileData,
+                                        buildingClass,
+                                        projectType,
+                                        region,
+                                    })}
+                                    refreshKey={briefRefreshKey}
+                                    briefingRefreshKey={briefingRefreshKey}
+                                    onOpenBriefing={handleOpenBriefing}
+                                    onRestartBriefing={handleRestartBriefing}
+                                    onSourcesUpdate={setSourcesData}
                                 />
+                                <div style={{ borderTop: '1px solid var(--sw-rule-2)' }}>
+                                    <BriefAttachmentsSection
+                                        projectId={projectId}
+                                        selectedDocumentIds={selectedDocumentIds}
+                                        onSetSelectedDocumentIds={onSetSelectedDocumentIds}
+                                        onAttachmentsChanged={handleBriefingChanged}
+                                    />
+                                </div>
+                                <div style={{ borderTop: '1px solid var(--sw-rule-2)' }}>
+                                    <SourcesShell
+                                        attachedDocumentCount={sourcesData.attachedDocumentCount}
+                                        profileFieldsCount={sourcesData.profileFieldsCount}
+                                        generationTrace={sourcesData.generationTrace}
+                                    />
+                                </div>
                             </div>
                         </div>
                     </aside>

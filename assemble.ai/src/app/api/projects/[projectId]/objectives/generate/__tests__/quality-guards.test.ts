@@ -55,4 +55,44 @@ describe('filterUnsupportedNoDocumentObjectives', () => {
     expect(result.rejected).toHaveLength(0);
     expect(result.kept).toHaveLength(3);
   });
+
+  it('removes unselected structural system assumptions from no-document objectives', () => {
+    const result = filterUnsupportedNoDocumentObjectives(
+      [
+        { text: 'Integrate structure, precast and vertical transport' },
+        { text: 'Coordinate post-tensioned slab design' },
+        { text: 'Integrate substructure, superstructure and vertical transport' },
+      ],
+      {
+        projectType: 'new',
+        scaleData: { storeys: 1 },
+        workScopeLabels: ['Substructure/Foundation', 'Superstructure', 'Vertical Transport'],
+      },
+    );
+
+    expect(result.kept.map((item) => item.text)).toEqual([
+      'Integrate substructure, superstructure and vertical transport',
+    ]);
+    expect(result.rejected.map((entry) => entry.item.text)).toEqual([
+      'Integrate structure, precast and vertical transport',
+      'Coordinate post-tensioned slab design',
+    ]);
+  });
+
+  it('keeps structural systems when they are selected in work scope', () => {
+    const result = filterUnsupportedNoDocumentObjectives(
+      [
+        { text: 'Integrate precast elements and vertical transport' },
+        { text: 'Coordinate post-tensioned slab design' },
+      ],
+      {
+        projectType: 'new',
+        scaleData: { storeys: 8 },
+        workScopeLabels: ['Precast Elements', 'Post-Tensioning', 'Vertical Transport'],
+      },
+    );
+
+    expect(result.rejected).toHaveLength(0);
+    expect(result.kept).toHaveLength(2);
+  });
 });

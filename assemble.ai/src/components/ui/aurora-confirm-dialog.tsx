@@ -84,7 +84,7 @@ export function AuroraConfirmDialog({
                         This action cannot be undone.
                     </p>
                     <AlertDialogFooter className="flex justify-end gap-2 p-0">
-                        <AlertDialogCancel className="px-4 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors border-0 bg-transparent hover:bg-transparent">
+                        <AlertDialogCancel className="mt-0 inline-flex items-center justify-center rounded px-4 py-2 text-xs font-medium border-0 bg-[var(--sw-ink)] text-[var(--color-text-inverse)] hover:bg-[var(--sw-ink)]/90 hover:text-[var(--color-text-inverse)] focus-visible:ring-0 focus-visible:ring-offset-0 transition-colors">
                             {cancelLabel}
                         </AlertDialogCancel>
                         <AlertDialogAction

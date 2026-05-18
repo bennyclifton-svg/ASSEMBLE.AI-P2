@@ -124,25 +124,6 @@ function ProcurementBreadcrumb({
     );
 }
 
-function ProcurementStatusPill({ label, tone }: { label: string; tone?: 'dark' }) {
-    const isDark = tone === 'dark';
-    return (
-        <span
-            style={{
-                fontFamily: 'var(--sw-font-mono)',
-                fontSize: 11,
-                padding: '4px 10px',
-                background: isDark ? 'var(--sw-ink)' : 'var(--sw-paper)',
-                border: isDark ? '1px solid var(--sw-ink)' : '1px solid var(--sw-rule)',
-                color: isDark ? 'var(--sw-paper)' : 'var(--sw-ink)',
-                letterSpacing: '0.02em',
-            }}
-        >
-            {label}
-        </span>
-    );
-}
-
 function ProcurementTabLabel({ children }: { children: React.ReactNode }) {
     return (
         <span
@@ -357,18 +338,12 @@ export function ProcurementCard({
     const activeProcurementTab = activeTabIsAvailable ? activeTab! : firstProcurementTab;
     const activeConsultant = consultantStakeholders.find((s) => `consultant-${s.id}` === activeProcurementTab);
     const activeContractor = contractorStakeholders.find((s) => `contractor-${s.id}` === activeProcurementTab);
-    const activeProcurementKind = activeConsultant ? 'consultant' : activeContractor ? 'contractor' : 'none';
     const activeProcurementName =
         activeConsultant?.disciplineOrTrade ||
         activeConsultant?.name ||
         activeContractor?.disciplineOrTrade ||
         activeContractor?.name ||
         'register';
-    const procurementSubtitle = [
-        `${consultantStakeholders.length} consultants`,
-        `${contractorStakeholders.length} contractors`,
-        activeProcurementKind !== 'none' ? `active · ${activeProcurementName}` : null,
-    ].filter(Boolean).join(' · ');
 
     const handleProcurementTabsWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
         const el = event.currentTarget;
@@ -453,17 +428,6 @@ export function ProcurementCard({
                                     >
                                         Procurement
                                     </h1>
-                                    <div
-                                        style={{
-                                            fontFamily: 'var(--sw-font-mono)',
-                                            fontSize: 12,
-                                            color: muted,
-                                            marginTop: 4,
-                                            minHeight: 18,
-                                        }}
-                                    >
-                                        {procurementSubtitle || 'consultants · contractors · tender workflow'}
-                                    </div>
                                 </div>
                             </div>
                         </header>

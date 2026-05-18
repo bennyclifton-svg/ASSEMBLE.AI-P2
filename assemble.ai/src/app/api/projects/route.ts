@@ -36,7 +36,16 @@ export async function GET() {
         // Filter projects by user's organization
         const projectsList = authResult.user.organizationId
             ? await db
-                .select()
+                .select({
+                    id: projects.id,
+                    name: projects.name,
+                    code: projects.code,
+                    status: projects.status,
+                    organizationId: projects.organizationId,
+                    projectType: projects.projectType,
+                    createdAt: projects.createdAt,
+                    updatedAt: projects.updatedAt,
+                })
                 .from(projects)
                 .where(eq(projects.organizationId, authResult.user.organizationId))
                 .orderBy(desc(projects.updatedAt))

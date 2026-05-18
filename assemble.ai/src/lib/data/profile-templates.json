@@ -2842,10 +2842,10 @@
         "label": "Envelope",
         "items": [
           { "value": "facade_system", "label": "Facade System", "consultants": ["Facade", "Architect"] },
-          { "value": "curtain_wall", "label": "Curtain Wall", "consultants": ["Facade"] },
           { "value": "roofing", "label": "Roofing System", "consultants": ["Architect"] },
           { "value": "glazing", "label": "Glazing/Windows", "consultants": ["Facade"] },
-          { "value": "waterproofing", "label": "Waterproofing", "consultants": ["Waterproofing"] }
+          { "value": "waterproofing", "label": "Waterproofing", "consultants": ["Waterproofing"] },
+          { "value": "curtain_wall", "label": "Curtain Wall", "consultants": ["Facade"] }
         ]
       },
       "services": {

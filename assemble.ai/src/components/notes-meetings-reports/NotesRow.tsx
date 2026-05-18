@@ -131,7 +131,7 @@ export function NotesRow({
                 'relative h-8 cursor-pointer select-none border-[var(--sw-rule-2)] border-l-2 transition-colors',
                 isActive
                     ? 'border-l-4 bg-[var(--sw-ink)] text-[var(--sw-paper)] hover:bg-[var(--sw-ink)]'
-                    : 'hover:bg-[var(--sw-paper-2)]',
+                    : 'hover:bg-[var(--sw-rose-tint)]',
                 isSelected && !isActive && 'border-l-4 bg-[var(--sw-paper)] hover:bg-[var(--sw-paper)]',
                 isDragOver && 'outline outline-1 outline-dashed outline-[var(--sw-ink)]'
             )}

@@ -226,6 +226,29 @@ describe('shouldRecoverMissingApproval', () => {
             })
         ).toBe(true);
     });
+
+    it('recovers whole-programme prose that asks the user to approve without creating a card', () => {
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage:
+                    'create a program of about 8 activities, spanning 7 months, cover design finalisation, construction certificate, construction',
+                finalText:
+                    'This programme ensures we cover all major phases of the project. If you approve, I will submit this for documentation.',
+                usedToolNames: ['list_program'],
+            })
+        ).toBe(true);
+    });
+
+    it('does not recover whole-programme approval prose once replace_program was called', () => {
+        expect(
+            shouldRecoverMissingApproval({
+                latestUserMessage:
+                    'create a program of about 8 activities, spanning 7 months, cover design finalisation, construction certificate, construction',
+                finalText: 'The programme proposal is awaiting your approval.',
+                usedToolNames: ['list_program', 'replace_program'],
+            })
+        ).toBe(false);
+    });
 });
 
 describe('formatMissingWorkflowApprovalText', () => {
@@ -489,6 +512,14 @@ Email: tenders@harbourmechanical.com.au`,
     it('recovers whole-programme replacement drift through replace_program', () => {
         const latestUserMessage =
             'create a new programme that is 8 activities in total. Delete/override the current program.';
+
+        expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('replace_program');
+        expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('single approval card');
+    });
+
+    it('recovers whole-programme creation drift through replace_program', () => {
+        const latestUserMessage =
+            'create a program of about 8 activities, spanning 7 months, cover design finalisation, construction certificate, construction';
 
         expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('replace_program');
         expect(writeRefusalRecoveryPrompt(latestUserMessage)).toContain('single approval card');
@@ -1020,7 +1051,7 @@ describe('guardToolAgainstLatestIntent', () => {
                     'create a new programme that is 8 activities in total. Cover key planning, design and construction activities. Delete/override the current program.',
                 toolName: 'create_program_activity',
             })
-        ).toThrow(/whole-programme replacement request/i);
+        ).toThrow(/whole-programme request/i);
     });
 
     it('allows the replace_program tool for whole-programme replacement requests', () => {
@@ -1028,6 +1059,26 @@ describe('guardToolAgainstLatestIntent', () => {
             guardToolAgainstLatestIntent({
                 latestUserMessage:
                     'create a new programme that is 8 activities in total. Cover key planning, design and construction activities. Delete/override the current program.',
+                toolName: 'replace_program',
+            })
+        ).not.toThrow();
+    });
+
+    it('blocks incremental activity creation for whole-programme creation requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'create a program of about 8 activities, spanning 7 months, cover design finalisation, construction certificate, construction',
+                toolName: 'create_program_activity',
+            })
+        ).toThrow(/whole-programme request/i);
+    });
+
+    it('allows the replace_program tool for whole-programme creation requests', () => {
+        expect(() =>
+            guardToolAgainstLatestIntent({
+                latestUserMessage:
+                    'create a program of about 8 activities, spanning 7 months, cover design finalisation, construction certificate, construction',
                 toolName: 'replace_program',
             })
         ).not.toThrow();

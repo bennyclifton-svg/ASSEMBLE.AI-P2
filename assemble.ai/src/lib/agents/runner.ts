@@ -30,6 +30,7 @@ import { CrossTenantAccessError } from './tools/_context';
 import { emitChatEvent } from './events';
 import './tools'; // side-effect: registers tools with the catalog
 import type { ModuleName } from '@/lib/context/types';
+import type { DomainTag } from '@/lib/constants/knowledge-domains';
 import {
     assembleAgentContext,
     DEFAULT_AGENT_CONTEXT_MODULES,
@@ -81,7 +82,7 @@ export interface RunAgentResult {
 
 const MAX_TURNS = 8;
 const APPROVAL_CLAIM_RE =
-    /\b(awaiting (?:your )?approval|approval card|action the approval|submitted for approval|proposed (?:and )?(?:is )?(?:now )?awaiting approval|invoice proposed)\b/i;
+    /\b(awaiting (?:your )?approval|approval card|action the approval|submitted for approval|proposed (?:and )?(?:is )?(?:now )?awaiting approval|invoice proposed|if you approve|once you approve|when you approve|approve\b[\s\S]{0,80}\b(?:i(?:'ll| will)|we(?:'ll| will))\b[\s\S]{0,80}\b(?:submit|apply|create|record|update|save|add|prepare))\b/i;
 const WRITE_REFUSAL_RE =
     /\b(cannot|can't|unable to|not able to|outside my domain|outside this domain|outside my [\w\s-]{0,60}scope|falls outside my domain|requires another|dependency|document controller|admin agent|coordinate with)\b/i;
 const DOCUMENT_SELECTION_REFUSAL_RE =
@@ -115,6 +116,8 @@ const WRITE_REQUEST_RE =
     /\b(add|record|create|enter|post|allocate|log|issue|raise|submit|prepare|draft|new|update|change|set|move|populate|generate|redraft|replace|append|attach|increase|decrease|adjust|revise)\b[\s\S]{0,160}\b(invoice|progress claim|claim|budgets?|contract value|contract values|approved contracts?|contract sums?|cost plan|cost plans?|cost line|cost lines|variation|variations|risk|risks|rfi|rfis|request for information|requests for information|note|notes|meeting|meetings|report|reports|programme|program|schedule|activity|activities|milestone|milestones|stakeholder|stakeholders|contact|contacts|objective|objectives|project objective|project objectives|brief|project brief|rft|request for tender|tender package|tender document|tender documents|addendum|addenda|transmittal|transmittals|document|documents|firms?|companies|tenderers?|builders?|contractors?|consultants?|tender panel|tender list)\b/i;
 const PROGRAMME_REPLACEMENT_REQUEST_RE =
     /\b(delete|clear|override|replace|reset|regenerate|start over|wipe)\b[\s\S]{0,220}\b(programme|program|schedule|activities?)\b|\b(programme|program|schedule|activities?)\b[\s\S]{0,220}\b(delete|clear|override|replace|reset|regenerate|start over|wipe)\b/i;
+const PROGRAMME_WHOLE_CREATION_REQUEST_RE =
+    /\b(create|generate|prepare|draft)\b[\s\S]{0,80}\b(?:new\s+)?(programme|program|schedule)\b(?!\s+activit(?:y|ies)|\s+milestone)[\s\S]{0,180}\b(?:(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)\s*(?:activities?|months?)|activities?|spanning|over|across|cover(?:ing)?|complete|whole|entire|full|master)\b/i;
 const MUTATING_TOOL_NAMES = new Set([
     'update_cost_line',
     'create_cost_line',
@@ -294,6 +297,13 @@ function originalUserRequest(text: string): string {
     const index = text.lastIndexOf(marker);
     if (index === -1) return text;
     return text.slice(index + marker.length).trim();
+}
+
+function isWholeProgrammeRequest(text: string): boolean {
+    return (
+        PROGRAMME_REPLACEMENT_REQUEST_RE.test(text) ||
+        PROGRAMME_WHOLE_CREATION_REQUEST_RE.test(text)
+    );
 }
 
 function countLightingPlaceholderTerms(text: string): number {
@@ -567,7 +577,8 @@ function missingApprovalRecoveryPrompt(): string {
         'set_project_objectives for project brief/objective rows, using only the latest explicit objective wording when the user supplies a specific list; ' +
         'add_tender_firms for adding consultant, contractor, builder, or tenderer firms to tender panels/lists; ' +
         'list_stakeholders then update_rft_brief for RFT brief content because the RFT Brief section, first RFT record when missing, and Fee table need one structured proposal; ' +
-        'create_cost_line or update_cost_line for cost lines; replace_program for whole-programme replacement requests; create_program_activity, update_program_activity, create_program_milestone, or update_program_milestone for incremental programme changes; ' +
+        'create_cost_line or update_cost_line for cost lines; replace_program for whole-programme creation or replacement requests; create_program_activity, update_program_activity, create_program_milestone, or update_program_milestone for incremental programme changes; ' +
+        'If the user asked for a complete programme, a programme spanning a duration, or a programme with multiple activities, call list_program first and then replace_program once with the complete activity list so a single approval card is created; ' +
         'update_stakeholder for stakeholder/contact changes. ' +
         'If you cannot call the right mutating tool because a required field is missing, ask one concise clarifying question and explicitly say no approval card has been created yet.'
     );
@@ -592,12 +603,12 @@ export function writeRefusalRecoveryPrompt(latestUserMessage: string): string {
         );
     }
 
-    if (PROGRAMME_REPLACEMENT_REQUEST_RE.test(latestUserMessage)) {
+    if (isWholeProgrammeRequest(latestUserMessage)) {
         return (
-            'You refused or drifted from a whole-programme replacement request, but this agent can propose the replacement through replace_program. ' +
+            'You refused or drifted from a whole-programme creation or replacement request, but this agent can propose it through replace_program. ' +
             'Do not answer in prose and do not create individual programme activities. ' +
             'Call list_program first to read the current programme, then call replace_program once with the complete replacement activity list. ' +
-            'The single approval card should clear the old programme and create the replacement programme.'
+            'The single approval card should create the complete programme and clear any old programme rows in the same proposal.'
         );
     }
 
@@ -777,11 +788,11 @@ export function guardToolAgainstLatestIntent(args: {
     }
 
     if (
-        PROGRAMME_REPLACEMENT_REQUEST_RE.test(args.latestUserMessage) &&
+        isWholeProgrammeRequest(args.latestUserMessage) &&
         PROGRAMME_INCREMENTAL_TOOL_NAMES.has(args.toolName)
     ) {
         throw new Error(
-            'This is a whole-programme replacement request, not an incremental programme edit. ' +
+            'This is a whole-programme request, not an incremental programme edit. ' +
                 'Call list_program first, then call replace_program once with the complete replacement activity list. ' +
                 'Do not create individual programme activities or milestones for this request because the old programme must be cleared in the same approval.'
         );
@@ -915,6 +926,7 @@ export async function runAgent(args: RunAgentArgs): Promise<RunAgentResult> {
         projectId: args.projectId,
         task: triggeringUserText || 'Agent conversation',
         modules: agent.contextModules ?? DEFAULT_AGENT_CONTEXT_MODULES,
+        domainTags: agent.contextDomainTags,
     });
     const viewContextPrompt = formatChatViewContextForPrompt(args.viewContext);
     const system = [agent.buildSystemPrompt({ assembledContext }), buildCurrentDatePrompt(), viewContextPrompt]
@@ -1327,6 +1339,7 @@ async function buildAgentContext(args: {
     projectId: string;
     task: string;
     modules: readonly ModuleName[];
+    domainTags?: readonly DomainTag[];
 }): Promise<string> {
     return assembleAgentContext(args);
 }

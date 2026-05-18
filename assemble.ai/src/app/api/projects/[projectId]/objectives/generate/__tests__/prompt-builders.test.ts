@@ -94,6 +94,28 @@ describe('buildInferencePrompt — advisory snapshot matrix', () => {
     expect(prompt).toContain('Avoid vague replacements such as "standard DA approval"');
   });
 
+  it('uses project name as a soft intent hint when subclass is commercial other', () => {
+    const prompt = buildInferencePrompt({
+      projectName: 'Amenities Block 2 Replacement',
+      buildingClass: 'commercial',
+      projectType: 'new',
+      subclass: ['other'],
+      scaleData: { storeys: 1, gfa_sqm: 120 },
+      complexity: {},
+      workScopeLabels: ['Demolition', 'Site Clearance', 'Hydraulic Plumbing'],
+      classDescriptors: [],
+      functionalRulesFormatted: '',
+      planningRulesFormatted: '',
+      domainContextSection: '',
+    });
+
+    expect(prompt).toContain('Project Name: Amenities Block 2 Replacement');
+    expect(prompt).toContain('Project name signal: Amenities Block 2 Replacement -> use "amenities block"');
+    expect(prompt).toContain('Deliver 1-storey replacement amenities block');
+    expect(prompt).toContain('Confirm approval pathway for 1-storey amenities block replacement');
+    expect(prompt).not.toContain('1-storey other');
+  });
+
   it('case 2: advisory + no scope — uses advisory labels and shows draft note', () => {
     const prompt = buildInferencePrompt({
       ...baseInput(),

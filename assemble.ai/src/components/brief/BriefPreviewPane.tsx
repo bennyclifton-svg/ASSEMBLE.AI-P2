@@ -3,23 +3,32 @@
 /**
  * BriefPreviewPane — right column of the Brief Building sub-tab.
  *
- * Renders four stacked sub-pieces (mirroring the wireframe at
- * `src/app/dev/brief-wireframe/page.tsx`):
- *   1. Status strip   — dark bar with regen timestamp / model / token count
- *   2. Narrative card — paragraph derived client-side from the project profile
- *   3. Inferred Objectives card — fetched from
- *      `/api/projects/[projectId]/objectives/generate` (POST, AI-backed)
- *   4. Sources footer — counts of sources contributing to the brief
+ * Renders the body of the unified brief shell (the surrounding container,
+ * dark "Brief" header strip, and left accent rail live in BriefPanel):
+ *   1. Narrative card — click-to-edit paragraph. Defaults to a client-side
+ *      derivation from the project profile; persisted user edits override the
+ *      derived text via `projects.brief_narrative_override`.
+ *   2. Inferred Objectives card — fetched from
+ *      `/api/projects/[projectId]/objectives/generate` (POST, AI-backed).
+ *      Individual bullets are click-to-edit and saved per-row via
+ *      `PATCH /api/projects/[projectId]/objectives/[id]`.
  *
  * Standalone for now (Task 2). Wiring into BriefPanel happens in Task 5.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, MessageSquareText, RotateCw } from 'lucide-react';
 import type { ProfileInput } from '@/types/profiler';
 import type { ObjectiveSource, ObjectiveType } from '@/lib/db/objectives-schema';
 import type { ObjectiveRow } from '@/components/profiler/objectives/ObjectivesWorkspace';
 import { Modal } from '@/components/ui/modal';
+import {
+    compactProfileLabel,
+    inferProjectNameAssetLabel,
+    intentAssetLabel,
+    isGenericSubclassValue,
+    shouldUseProjectNameAsset,
+} from '@/lib/objectives/project-name-intent';
 import { CardShell } from './primitives/CardShell';
 
 const muted = 'var(--sw-muted)';
@@ -142,41 +151,28 @@ interface ObjectivesResponse {
 // ---------------------------------------------------------------------------
 
 /**
- * Build the narrative paragraph from a profile. Returns React nodes with
- * inline highlight spans. Missing fields render as `[—]` placeholders so the
- * narrative degrades gracefully.
+ * Build a plain 1-2 sentence narrative from the project profile. Only the
+ * facts actually known about the project are included — missing fields are
+ * omitted rather than rendered as placeholders.
  */
-function buildNarrative(profile: BriefPreviewProfile, projectName: string): React.ReactNode {
+function buildNarrative(profile: BriefPreviewProfile, projectName: string): string {
     const storeys = profile?.scaleData?.storeys;
     const units = profile?.scaleData?.units;
     const subclassRaw = profile?.subclass?.[0];
-    const subclassLabel = subclassRaw ? subclassRaw.replace(/_/g, ' ') : null;
-    // TODO(task-3): replace buildingClass with derived NCC class once deriveNCCClass
-    // (Task 3 of 2026-05-07-brief-building-tab-port plan) lands. Thread output as an
-    // optional nccClass prop in Task 5.
+    const subclassLabel = subclassRaw && !isGenericSubclassValue(subclassRaw)
+        ? compactProfileLabel(subclassRaw)
+        : null;
     const buildingClass = profile?.buildingClass ?? null;
+    const subclass = profile?.subclass ?? [];
+    const projectNameAsset = inferProjectNameAssetLabel(projectName);
+    const nameAssetLabel = projectNameAsset && shouldUseProjectNameAsset(subclass)
+        ? intentAssetLabel({
+            projectName,
+            buildingClass: buildingClass ?? '',
+            subclass,
+        })
+        : null;
 
-    // Lede: "{N}-storey, {U}-unit Class {NCC} {subclass}"
-    // We do not have the NCC class number in ProfileInput directly; use the
-    // building class label (e.g. "residential") since NCC mapping happens
-    // elsewhere. If individual fields are missing, render placeholders.
-    const ledeParts: React.ReactNode[] = [];
-    ledeParts.push(storeys != null ? `${storeys}-storey` : <Placeholder key="ph-storeys" />);
-    ledeParts.push(', ');
-    ledeParts.push(units != null ? `${units}-unit` : <Placeholder key="ph-units" />);
-    ledeParts.push(' ');
-    ledeParts.push(buildingClass ?? <Placeholder key="ph-class" />);
-    if (subclassLabel) {
-        ledeParts.push(' ');
-        ledeParts.push(subclassLabel);
-    }
-
-    // TODO(task-5): confirm these complexity keys against profile-templates.json when
-    // wiring BriefPanel; if real keys differ (e.g. snake_case), update accordingly.
-    // Today these silently render nothing on key miss, which is a UX gap.
-    // Procurement route — pull from complexity.procurement_route (canonical key
-    // in profile-templates.json), with camelCase / shorter-name fallbacks for
-    // legacy profile data.
     const procurementValue =
         (profile?.complexity?.procurement_route as string | string[] | undefined) ??
         (profile?.complexity?.procurementRoute as string | string[] | undefined) ??
@@ -186,8 +182,6 @@ function buildNarrative(profile: BriefPreviewProfile, projectName: string): Reac
         ? procurement.replace(/_/g, ' ').replace(/lump\s*sum/i, 'lump-sum')
         : null;
 
-    // Performance targets — look for sustainability/quality fields. Try both
-    // snake_case (canonical in profile-templates.json) and camelCase variants.
     const targetsRaw =
         (profile?.complexity?.performance_targets as string | string[] | undefined) ??
         (profile?.complexity?.sustainability_targets as string | string[] | undefined) ??
@@ -196,67 +190,31 @@ function buildNarrative(profile: BriefPreviewProfile, projectName: string): Reac
         (profile?.complexity?.targets as string | string[] | undefined);
     const targets = Array.isArray(targetsRaw) ? targetsRaw.join(', ') : targetsRaw ?? null;
 
-    return (
-        <>
-            {projectName} is a{' '}
-            <span
-                style={{
-                    background: '#BEE0E9',
-                    padding: '0 4px',
-                    color: 'var(--sw-rose-dk)',
-                }}
-            >
-                {ledeParts}
-            </span>{' '}
-            development
-            {procurementText ? (
-                <>
-                    , delivered as a{' '}
-                    <span
-                        style={{
-                            background: '#BEE0E9',
-                            padding: '0 4px',
-                            color: 'var(--sw-lav)',
-                            fontFamily: 'var(--sw-font-mono)',
-                        }}
-                    >
-                        {procurementText}
-                    </span>
-                </>
-            ) : null}
-            {targets ? (
-                <>
-                    {'. The build targets '}
-                    <span
-                        style={{
-                            background: '#BEE0E9',
-                            padding: '0 4px',
-                            color: 'var(--sw-cyan)',
-                            fontFamily: 'var(--sw-font-mono)',
-                        }}
-                    >
-                        {targets}
-                    </span>
-                </>
-            ) : null}
-            .
-        </>
-    );
-}
+    const scaleParts: string[] = [];
+    if (storeys != null) scaleParts.push(`${storeys}-storey`);
+    if (units != null) scaleParts.push(`${units}-unit`);
 
-function Placeholder() {
-    return (
-        <span
-            style={{
-                background: '#BEE0E9',
-                padding: '0 4px',
-                color: 'var(--sw-rose-dk)',
-                fontFamily: 'var(--sw-font-mono)',
-            }}
-        >
-            [—]
-        </span>
-    );
+    const typeParts: string[] = [];
+    if (buildingClass) typeParts.push(compactProfileLabel(buildingClass));
+    if (subclassLabel) typeParts.push(subclassLabel);
+    else if (nameAssetLabel) typeParts.push(nameAssetLabel);
+
+    const descriptor = [scaleParts.join(', '), typeParts.join(' ')]
+        .filter(Boolean)
+        .join(' ');
+
+    let first: string;
+    if (descriptor) {
+        first = `${projectName} is a ${descriptor} development`;
+        if (procurementText) first += `, delivered as ${procurementText}`;
+        first += '.';
+    } else if (procurementText) {
+        first = `${projectName} will be delivered as ${procurementText}.`;
+    } else {
+        first = `${projectName} is in the early briefing stage.`;
+    }
+
+    return targets ? `${first} The build targets ${targets}.` : first;
 }
 
 /**
@@ -345,6 +303,86 @@ function nonZeroSourceCounts(trace: GenerationTrace | null): Array<[ObjectiveSou
 }
 
 // ---------------------------------------------------------------------------
+// InlineEditable — click to place cursor, blur to commit. No focus highlight,
+// no border swap, no toolbar. Mirrors the RFT services flow.
+//
+// `value` seeds the editable element once on mount and is re-synced via the
+// `[data-revision]` key whenever the parent supplies a new external value
+// (e.g. AI regenerate). Edits in-flight are NOT clobbered because the parent
+// updates `value` after the commit completes.
+// ---------------------------------------------------------------------------
+
+interface InlineEditableProps {
+    value: string;
+    onCommit: (next: string) => void;
+    as?: 'span' | 'p';
+    className?: string;
+    style?: React.CSSProperties;
+    multiline?: boolean;
+    ariaLabel?: string;
+}
+
+function InlineEditable({
+    value,
+    onCommit,
+    as = 'span',
+    className,
+    style,
+    multiline = false,
+    ariaLabel,
+}: InlineEditableProps) {
+    const ref = useRef<HTMLElement | null>(null);
+    const isFocusedRef = useRef(false);
+
+    // Seed the DOM once on mount, then re-sync whenever the external value
+    // changes while the editor is not focused. Avoids React clobbering the
+    // caret during typing.
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        if (isFocusedRef.current) return;
+        if (el.textContent === value) return;
+        el.textContent = value;
+    }, [value]);
+
+    const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+        if (!multiline && event.key === 'Enter') {
+            event.preventDefault();
+            (event.currentTarget as HTMLElement).blur();
+        }
+    };
+
+    const setRef = useCallback((node: HTMLElement | null) => {
+        ref.current = node;
+    }, []);
+
+    const sharedProps = {
+        ref: setRef,
+        contentEditable: true,
+        suppressContentEditableWarning: true,
+        spellCheck: true,
+        role: 'textbox' as const,
+        'aria-label': ariaLabel,
+        tabIndex: 0,
+        onFocus: () => { isFocusedRef.current = true; },
+        onBlur: (e: React.FocusEvent<HTMLElement>) => {
+            isFocusedRef.current = false;
+            const next = (e.currentTarget.textContent ?? '').replace(/\s+/g, ' ').trim();
+            if (next !== value) onCommit(next);
+        },
+        onKeyDown: handleKeyDown,
+        className,
+        style: {
+            outline: 'none',
+            cursor: 'text',
+            ...style,
+        },
+    };
+
+    return as === 'p' ? <p {...sharedProps} /> : <span {...sharedProps} />;
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -362,6 +400,9 @@ export function BriefPreviewPane({
     const [grouped, setGrouped] = useState<GroupedObjectives>(emptyGrouped);
     const [attachedDocumentCount, setAttachedDocumentCount] = useState(0);
     const [generationTrace, setGenerationTrace] = useState<GenerationTrace | null>(null);
+    // null = no override saved → show auto-derived narrative. Anything else
+    // (including empty string after edit) means the user has taken control.
+    const [narrativeOverride, setNarrativeOverride] = useState<string | null>(null);
     const [viewModes, setViewModes] = useState<Record<ObjectiveType, ViewMode>>({
         planning: 'short',
         functional: 'short',
@@ -512,11 +553,33 @@ export function BriefPreviewPane({
         };
     }, [briefingRefreshKey, projectId]);
 
+    // Load the persisted narrative override. When the user regenerates the
+    // brief we re-read it as well — the regenerate path could have cleared it
+    // on the server in a future iteration.
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch(`/api/projects/${projectId}`);
+                if (!res.ok) return;
+                const json = await res.json();
+                if (cancelled) return;
+                const override = typeof json.briefNarrativeOverride === 'string'
+                    ? json.briefNarrativeOverride
+                    : null;
+                setNarrativeOverride(override);
+            } catch {
+                /* swallow — narrative falls back to auto-derived */
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [projectId, refreshKey]);
+
     // Per-row regenerate. Mirrors ObjectivesWorkspace.runRegenerate:
     //   short → /objectives/generate (destructive replace)
     //   long  → /objectives/polish   (polishes existing short bullets)
-    // No dirty-edit confirmation here — the brief is read-only; edits live in
-    // the Objectives tab.
+    // Inline edits to individual rows are persisted via handleObjectiveCommit
+    // below — regenerate is the destructive "replace the lot" path.
     const handleRegenerate = useCallback(async (type: ObjectiveType) => {
         if (generatingSection) return;
         const mode = viewModes[type];
@@ -555,6 +618,50 @@ export function BriefPreviewPane({
         setViewModes((prev) => ({ ...prev, [type]: mode }));
     }, []);
 
+    // Build the auto-derived narrative once so we can compare against user edits.
+    // If a user edits the override to exactly match the auto narrative, clear
+    // the override so the field flows again from profile changes.
+    const autoNarrative = useMemo(
+        () => buildNarrative(profile, projectName),
+        [profile, projectName],
+    );
+    const narrativeText = narrativeOverride ?? autoNarrative;
+
+    const handleNarrativeCommit = useCallback((next: string) => {
+        const trimmed = next.trim();
+        // Treat empty / auto-match as "clear the override".
+        const clear = trimmed === '' || trimmed === autoNarrative.trim();
+        const payload = clear ? null : trimmed;
+        setNarrativeOverride(payload);
+        void fetch(`/api/projects/${projectId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ briefNarrativeOverride: payload }),
+        });
+    }, [projectId, autoNarrative]);
+
+    // Per-objective inline edit. Routes to `text` in short mode and
+    // `textPolished` in long mode so the toggle does not clobber the off-screen
+    // variant. Optimistic update + PATCH; failures revert to the server value
+    // on the next refresh.
+    const handleObjectiveCommit = useCallback((row: ObjectiveRow, mode: ViewMode, next: string) => {
+        const trimmed = next.trim();
+        if (mode === 'short' && trimmed.length === 0) return; // PATCH rejects empty `text`
+        const field = mode === 'short' ? 'text' : 'textPolished';
+        setGrouped((prev) => {
+            const list = prev[row.objectiveType];
+            const replaced = list.map((r) => r.id === row.id
+                ? { ...r, ...(mode === 'short' ? { text: trimmed } : { textPolished: trimmed }) }
+                : r);
+            return { ...prev, [row.objectiveType]: replaced };
+        });
+        void fetch(`/api/projects/${projectId}/objectives/${row.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [field]: trimmed }),
+        });
+    }, [projectId]);
+
     useEffect(() => {
         onSourcesUpdate?.({
             attachedDocumentCount,
@@ -565,38 +672,10 @@ export function BriefPreviewPane({
 
     return (
         <div className="flex flex-col">
-            {/* 1. Status strip ---------------------------------------------------- */}
-            <div
-                className="flex items-center gap-3 px-3 py-2"
-                role="status"
-                style={{ background: 'var(--sw-ink)', color: 'var(--sw-paper)' }}
-            >
-                <span
-                    aria-hidden="true"
-                    className="inline-block"
-                    style={{
-                        width: 8,
-                        height: 8,
-                        background: 'var(--sw-rose)',
-                        borderRadius: 999,
-                    }}
-                />
-                <span
-                    style={{
-                        fontFamily: 'var(--sw-font-mono)',
-                        fontSize: 10,
-                        letterSpacing: '0.18em',
-                        textTransform: 'uppercase',
-                        fontWeight: 600,
-                    }}
-                >
-                    Brief
-                </span>
-            </div>
-
             {/* Brief content — wrapped externally by the unified shell in
-                BriefPanel (which owns the outer border + accent rail and
-                stitches in Attachments + Sources below). */}
+                BriefPanel, which owns the outer border, the dark Brief
+                header strip above this pane, and the left accent rail that
+                runs alongside the content (terminating at the header). */}
             <section aria-busy={status === 'loading'}>
                 {/* Narrative header */}
                 <div
@@ -618,7 +697,12 @@ export function BriefPreviewPane({
                         Narrative
                     </span>
                 </div>
-                <p
+                <InlineEditable
+                    as="p"
+                    multiline
+                    ariaLabel="Edit brief narrative"
+                    value={narrativeText}
+                    onCommit={handleNarrativeCommit}
                     className="px-4 py-3 m-0"
                     style={{
                         fontFamily: 'var(--sw-font-body)',
@@ -627,9 +711,7 @@ export function BriefPreviewPane({
                         color: 'var(--sw-ink)',
                         borderBottom: '1px solid var(--sw-rule-2)',
                     }}
-                >
-                    {buildNarrative(profile, projectName)}
-                </p>
+                />
 
                 {/* Inferred objectives by section */}
                 {status === 'loading' ? <ObjectivesSkeleton /> : null}
@@ -645,6 +727,7 @@ export function BriefPreviewPane({
                         generatingSection={generatingSection}
                         onViewModeChange={handleViewModeChange}
                         onRegenerate={handleRegenerate}
+                        onObjectiveCommit={handleObjectiveCommit}
                     />
                 ) : null}
             </section>
@@ -1085,6 +1168,7 @@ interface CategoryRowsProps {
     generatingSection: ObjectiveType | null;
     onViewModeChange: (type: ObjectiveType, mode: ViewMode) => void;
     onRegenerate: (type: ObjectiveType) => void;
+    onObjectiveCommit: (row: ObjectiveRow, mode: ViewMode, next: string) => void;
 }
 
 function CategoryRows({
@@ -1093,6 +1177,7 @@ function CategoryRows({
     generatingSection,
     onViewModeChange,
     onRegenerate,
+    onObjectiveCommit,
 }: CategoryRowsProps) {
     const isAnyGenerating = generatingSection !== null;
     // Continuous numbering across sections — matches the Objectives tab's
@@ -1199,6 +1284,9 @@ function CategoryRows({
                                 </span>
                             ) : (
                                 rows.map((row, j) => {
+                                    // In long mode without polished content, fall back to the
+                                    // short `text` for display, but commits in long mode still
+                                    // target `textPolished` so the user is editing the long copy.
                                     const text = mode === 'long' && row.textPolished
                                         ? row.textPolished
                                         : row.text;
@@ -1223,7 +1311,14 @@ function CategoryRows({
                                             >
                                                 {sectionStart + j}.
                                             </span>
-                                            <span>{text}</span>
+                                            <InlineEditable
+                                                as="span"
+                                                multiline
+                                                ariaLabel={`Edit ${type} objective ${sectionStart + j}`}
+                                                value={text}
+                                                onCommit={(next) => onObjectiveCommit(row, mode, next)}
+                                                style={{ flex: 1 }}
+                                            />
                                         </p>
                                     );
                                 })

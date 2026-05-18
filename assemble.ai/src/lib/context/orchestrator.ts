@@ -23,7 +23,8 @@ import { fetchAttachedDocuments } from './modules/attached-documents';
 import { retrieveFromDomains } from '../rag/retrieval';
 import { aiMemoryService, formatAiMemoryContext } from '../ai-memory/service';
 import type { DomainRetrievalResult } from '../rag/retrieval';
-import { SECTION_TO_DOMAIN_TAGS, isKnownTag } from '../constants/knowledge-domains';
+import { retrieveSeedKnowledgeFallback } from '../rag/seed-knowledge-retrieval';
+import { SECTION_TO_DOMAIN_TAGS, isKnownTag, normalizeTag } from '../constants/knowledge-domains';
 import type { DomainTag } from '../constants/knowledge-domains';
 import type { ProfileData } from './modules/profile';
 import type {
@@ -88,6 +89,76 @@ function emptyResult(moduleName: ModuleName): ModuleResult {
   };
 }
 
+function normalizeDomainTags(tags: string[]): DomainTag[] {
+  return tags
+    .map((tag) => normalizeTag(tag))
+    .filter(isKnownTag) as DomainTag[];
+}
+
+function formatKnowledgeDomainContext(results: DomainRetrievalResult[]): string {
+  if (results.length === 0) return '';
+
+  const lines: string[] = ['## Knowledge Domain Context'];
+  const byDomain = new Map<string, DomainRetrievalResult[]>();
+
+  for (const r of results) {
+    const key = r.domainName || 'Unknown Domain';
+    const group = byDomain.get(key) || [];
+    group.push(r);
+    byDomain.set(key, group);
+  }
+
+  for (const [domainName, domainResults] of byDomain) {
+    const firstResult = domainResults[0];
+    const typeLabel = firstResult.domainType || 'reference';
+    lines.push(`\n### ${domainName} (${typeLabel})`);
+
+    for (const r of domainResults) {
+      const sectionLabel = r.sectionTitle ? ` - ${r.sectionTitle}` : '';
+      lines.push(`\n**[${r.relevanceScore.toFixed(2)}]${sectionLabel}**`);
+      lines.push(r.content);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function formatSeedKnowledgeFallback(args: {
+  query: string;
+  domainTags: string[];
+  projectType?: string;
+  state?: string;
+}): string {
+  try {
+    const results = retrieveSeedKnowledgeFallback(args.query, {
+      domainTags: normalizeDomainTags(args.domainTags),
+      projectType: args.projectType,
+      state: args.state,
+      topK: 5,
+    });
+
+    return formatKnowledgeDomainContext(
+      results.map((result) => ({
+        chunkId: result.id,
+        documentId: result.domainSlug,
+        content: result.content,
+        relevanceScore: result.relevanceScore,
+        hierarchyLevel: 0,
+        hierarchyPath: null,
+        sectionTitle: result.sectionTitle,
+        clauseNumber: null,
+        domainName: result.domainName,
+        domainType: 'best_practices',
+        domainTags: result.domainTags,
+        sourceVersion: result.sourceVersion,
+      }))
+    );
+  } catch (error) {
+    console.warn('[orchestrator] Local seed knowledge fallback failed:', error);
+    return '';
+  }
+}
+
 /**
  * Assemble knowledge domain context from the domain-aware retrieval pipeline.
  * Determines relevant domain tags from the request's sectionKey or explicit domainTags,
@@ -140,7 +211,12 @@ async function assembleDomainContext(
     });
 
     if (results.length === 0) {
-      return '';
+      return formatSeedKnowledgeFallback({
+        query: request.task,
+        domainTags,
+        projectType,
+        state,
+      });
     }
 
     // 4. Format as a prompt section with source attribution
@@ -170,7 +246,12 @@ async function assembleDomainContext(
     return lines.join('\n');
   } catch (error) {
     console.warn('[orchestrator] Domain context assembly failed:', error);
-    return '';
+    return formatSeedKnowledgeFallback({
+      query: request.task,
+      domainTags,
+      projectType,
+      state,
+    });
   }
 }
 
@@ -336,7 +417,8 @@ export async function assembleContext(
       });
       aiMemoryContext = formatAiMemoryContext(memoryEntries);
     } catch (error) {
-      console.warn('[orchestrator] AI memory context assembly failed:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn('[orchestrator] AI memory context assembly failed:', message);
     }
   }
 
