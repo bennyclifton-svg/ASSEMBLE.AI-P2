@@ -55,7 +55,25 @@ function authSecretRequirement(): RuntimeRequirement {
     };
 }
 
-export function getSaasRuntimeRequirements(service: SaasServiceKind): RuntimeRequirement[] {
+function isFalseyFlag(value: string | undefined): boolean {
+    if (!value) return false;
+    return ['0', 'false', 'no', 'off'].includes(value.trim().toLowerCase());
+}
+
+export function isPolarEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+    if (env.POLAR_ENABLED === 'true') return true;
+    return env.NODE_ENV === 'production' && !isFalseyFlag(env.POLAR_ENABLED);
+}
+
+export function isTransactionalEmailEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+    if (env.TRANSACTIONAL_EMAILS_ENABLED === 'true') return true;
+    return env.NODE_ENV === 'production' && !isFalseyFlag(env.TRANSACTIONAL_EMAILS_ENABLED);
+}
+
+export function getSaasRuntimeRequirements(
+    service: SaasServiceKind,
+    env: NodeJS.ProcessEnv = process.env
+): RuntimeRequirement[] {
     const shared: RuntimeRequirement[] = [
         databaseRequirement(),
         { key: 'REDIS_URL', label: 'Redis queue connection' },
@@ -71,8 +89,8 @@ export function getSaasRuntimeRequirements(service: SaasServiceKind): RuntimeReq
         { key: 'NEXT_PUBLIC_APP_URL', label: 'Public application URL' },
         authSecretRequirement(),
         ...shared,
-        ...BILLING_REQUIREMENTS,
-        ...EMAIL_REQUIREMENTS,
+        ...(isPolarEnabled(env) ? BILLING_REQUIREMENTS : []),
+        ...(isTransactionalEmailEnabled(env) ? EMAIL_REQUIREMENTS : []),
     ];
 }
 
@@ -80,7 +98,7 @@ export function validateSaasRuntimeConfig(
     service: SaasServiceKind,
     env: NodeJS.ProcessEnv = process.env
 ): RuntimeConfigValidation {
-    const required = getSaasRuntimeRequirements(service);
+    const required = getSaasRuntimeRequirements(service, env);
     const missing = required
         .filter((requirement) => {
             const keys = [requirement.key, ...(requirement.alternatives ?? [])];

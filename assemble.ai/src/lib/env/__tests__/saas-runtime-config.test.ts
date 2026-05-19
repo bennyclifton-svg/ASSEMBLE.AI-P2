@@ -1,6 +1,7 @@
 import { validateSaasRuntimeConfig } from '../saas-runtime-config';
 
 const completeEnv = {
+    NODE_ENV: 'production',
     NEXT_PUBLIC_APP_URL: 'https://app.example.com',
     BETTER_AUTH_SECRET: 'secret',
     DATABASE_URL: 'postgres://user:pass@db:5432/app',
@@ -18,8 +19,8 @@ const completeEnv = {
 } as NodeJS.ProcessEnv;
 
 describe('SaaS runtime config validation', () => {
-    it('requires web auth, billing, email, storage, database, Redis, and model env', () => {
-        const result = validateSaasRuntimeConfig('web', {} as NodeJS.ProcessEnv);
+    it('requires web auth, billing, email, storage, database, Redis, and model env in production by default', () => {
+        const result = validateSaasRuntimeConfig('web', { NODE_ENV: 'production' } as NodeJS.ProcessEnv);
 
         expect(result.ok).toBe(false);
         expect(result.missing).toEqual(expect.arrayContaining([
@@ -37,6 +38,27 @@ describe('SaaS runtime config validation', () => {
     it('allows complete web configuration', () => {
         expect(validateSaasRuntimeConfig('web', completeEnv)).toMatchObject({
             service: 'web',
+            ok: true,
+            missing: [],
+        });
+    });
+
+    it('skips billing and email requirements when explicitly disabled', () => {
+        const env = {
+            NODE_ENV: 'production',
+            NEXT_PUBLIC_APP_URL: 'https://app.example.com',
+            BETTER_AUTH_SECRET: 'secret',
+            DATABASE_URL: 'postgres://user:pass@db:5432/app',
+            REDIS_URL: 'redis://redis:6379',
+            SUPABASE_URL: 'https://supabase.example.com',
+            SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+            VOYAGE_API_KEY: 'voyage-key',
+            ANTHROPIC_API_KEY: 'anthropic-key',
+            POLAR_ENABLED: 'false',
+            TRANSACTIONAL_EMAILS_ENABLED: 'false',
+        } as NodeJS.ProcessEnv;
+
+        expect(validateSaasRuntimeConfig('web', env)).toMatchObject({
             ok: true,
             missing: [],
         });

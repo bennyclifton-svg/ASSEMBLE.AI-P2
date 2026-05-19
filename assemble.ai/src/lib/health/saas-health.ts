@@ -4,7 +4,7 @@ import {
     type ApplianceHealthResponse,
     type ApplianceStatus,
 } from './appliance-health';
-import { validateSaasRuntimeConfig, type RuntimeConfigValidation } from '@/lib/env/saas-runtime-config';
+import { isPolarEnabled, validateSaasRuntimeConfig, type RuntimeConfigValidation } from '@/lib/env/saas-runtime-config';
 import { validateTransactionalEmailConfig } from '@/lib/email/transactional';
 
 export type SaasHealthComponentId =
@@ -63,6 +63,16 @@ function fromAppliance(
 }
 
 function billingHealth(env: NodeJS.ProcessEnv): SaasComponentHealth {
+    if (!isPolarEnabled(env)) {
+        return {
+            id: 'billing',
+            label: 'Billing',
+            status: 'healthy',
+            message: 'Polar billing is disabled (POLAR_ENABLED=false).',
+            details: { enabled: false },
+        };
+    }
+
     const missing = [
         env.POLAR_ACCESS_TOKEN?.trim() ? null : 'POLAR_ACCESS_TOKEN',
         env.POLAR_WEBHOOK_SECRET?.trim() ? null : 'POLAR_WEBHOOK_SECRET',

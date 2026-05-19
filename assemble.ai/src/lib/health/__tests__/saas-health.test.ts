@@ -58,11 +58,36 @@ describe('SaaS health', () => {
     });
 
     it('reports missing billing, email, and runtime config as unhealthy', () => {
-        const health = buildSaasHealth({ appliance: appliance(), env: {} as NodeJS.ProcessEnv });
+        const health = buildSaasHealth({
+            appliance: appliance(),
+            env: { NODE_ENV: 'production' } as NodeJS.ProcessEnv,
+        });
 
         expect(health.status).toBe('unhealthy');
         expect(health.components.billing.message).toContain('POLAR_ACCESS_TOKEN');
         expect(health.components.email.message).toContain('RESEND_API_KEY');
         expect(health.components.runtimeConfig.message).toContain('NEXT_PUBLIC_APP_URL');
+    });
+
+    it('reports billing and email as healthy when explicitly disabled', () => {
+        const env = {
+            NODE_ENV: 'production',
+            NEXT_PUBLIC_APP_URL: 'https://app.example.com',
+            BETTER_AUTH_SECRET: 'secret',
+            DATABASE_URL: 'postgres://user:pass@db:5432/app',
+            REDIS_URL: 'redis://redis:6379',
+            SUPABASE_URL: 'https://supabase.example.com',
+            SUPABASE_SERVICE_ROLE_KEY: 'service-key',
+            VOYAGE_API_KEY: 'voyage-key',
+            ANTHROPIC_API_KEY: 'anthropic-key',
+            POLAR_ENABLED: 'false',
+            TRANSACTIONAL_EMAILS_ENABLED: 'false',
+        } as NodeJS.ProcessEnv;
+
+        const health = buildSaasHealth({ appliance: appliance(), env });
+
+        expect(health.components.billing.status).toBe('healthy');
+        expect(health.components.email.status).toBe('healthy');
+        expect(health.components.runtimeConfig.status).toBe('healthy');
     });
 });
