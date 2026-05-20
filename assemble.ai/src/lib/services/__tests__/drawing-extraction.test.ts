@@ -7,6 +7,11 @@ import {
 
 const mockMessagesCreate = jest.fn();
 const mockPdfParse = jest.fn(async () => ({ text: '' }));
+const mockAiComplete = jest.fn();
+const mockGetProviderAndModelFor = jest.fn(async () => ({
+    provider: 'anthropic' as const,
+    modelId: 'claude-haiku-4-5-20251001',
+}));
 
 jest.mock('@anthropic-ai/sdk', () => ({
     __esModule: true,
@@ -15,6 +20,14 @@ jest.mock('@anthropic-ai/sdk', () => ({
             create: mockMessagesCreate,
         },
     })),
+}));
+
+jest.mock('../../ai/client', () => ({
+    aiComplete: (...args: unknown[]) => mockAiComplete(...args),
+}));
+
+jest.mock('../../ai/registry', () => ({
+    getProviderAndModelFor: (...args: unknown[]) => mockGetProviderAndModelFor(...args),
 }));
 
 jest.mock('../../rag/parsing', () => ({
@@ -31,6 +44,12 @@ describe('drawing extraction', () => {
         mockMessagesCreate.mockReset();
         mockPdfParse.mockReset();
         mockPdfParse.mockResolvedValue({ text: '' });
+        mockAiComplete.mockReset();
+        mockGetProviderAndModelFor.mockReset();
+        mockGetProviderAndModelFor.mockResolvedValue({
+            provider: 'anthropic',
+            modelId: 'claude-haiku-4-5-20251001',
+        });
     });
 
     it('extracts filename drawing number and revision without inventing a title', () => {
@@ -125,6 +144,44 @@ describe('drawing extraction', () => {
             });
         } finally {
             consoleLogSpy.mockRestore();
+        }
+    });
+
+    it('skips Anthropic vision for non-anthropic providers and uses aiComplete text-mode', async () => {
+        mockGetProviderAndModelFor.mockResolvedValue({ provider: 'openai', modelId: 'gpt-4.1-mini' });
+        const { parseDocument } = jest.requireMock('../../rag/parsing') as { parseDocument: jest.Mock };
+        parseDocument.mockResolvedValueOnce({
+            content: 'TITLE BLOCK: Drawing CC-A-201 Rev D Floor Plan Level 2. '.repeat(5),
+        });
+        mockAiComplete.mockResolvedValueOnce({
+            text: JSON.stringify({
+                isDrawing: true,
+                drawingNumber: 'CC-A-201',
+                drawingName: 'Floor Plan Level 2',
+                drawingRevision: 'D',
+                confidence: 88,
+            }),
+            provider: 'openai',
+            modelId: 'gpt-4.1-mini',
+        });
+        const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+
+        try {
+            const result = await extractDrawingInfo({
+                fileBuffer: Buffer.from('%PDF-1.4'),
+                filename: 'CC-A-201 FLOOR PLAN LEVEL 2.pdf',
+                mimeType: 'application/pdf',
+            });
+
+            expect(mockMessagesCreate).not.toHaveBeenCalled();
+            expect(mockAiComplete).toHaveBeenCalledWith(expect.objectContaining({
+                featureGroup: 'extraction',
+            }));
+            expect(result.drawingNumber).toBe('CC-A-201');
+        } finally {
+            consoleLogSpy.mockRestore();
+            consoleErrorSpy.mockRestore();
         }
     });
 

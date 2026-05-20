@@ -3,15 +3,23 @@
  * Feature: AI-powered extraction of drawing numbers, names, and revisions
  * from construction documents.
  *
- * Uses hybrid extraction strategy with Claude Haiku for cost efficiency:
+ * Provider routing follows the 'extraction' feature group in /admin/models.
+ * The text-mode call works on any provider via aiComplete(). The vision-mode
+ * call uses Anthropic's native PDF `document` content block and is therefore
+ * skipped automatically when the active provider isn't Anthropic — the caller
+ * falls through to text-mode.
+ *
+ * Hybrid flow:
  * 1. Filename pattern matching (always runs - free, fast)
- * 2. AI text extraction from document content
- * 3. Merge results (AI primary, filename supplements missing fields)
- * 4. Vision fallback for low confidence (analyzes PDF as document)
+ * 2. Vision fallback for PDFs (Anthropic only; skipped otherwise)
+ * 3. AI text extraction from parsed document content
+ * 4. Merge results (AI primary, filename supplements missing fields)
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 import { parseDocument } from '../rag/parsing';
+import { aiComplete } from '../ai/client';
+import { getProviderAndModelFor } from '../ai/registry';
 
 // ============================================================================
 // TYPES
@@ -897,22 +905,17 @@ export async function extractDrawingInfo(
         // Only call AI if we have meaningful text content
         if (documentText && documentText.trim().length >= 50) {
             console.log(`[drawing-extraction] Calling AI for: ${filename}`);
-            const anthropic = new Anthropic();
             const prompt = buildExtractionPrompt(documentText, filename);
 
-            const message = await anthropic.messages.create({
-                model: 'claude-haiku-4-5-20251001',  // Haiku for cost efficiency
-                max_tokens: 500,
-                messages: [{
-                    role: 'user',
-                    content: prompt,
-                }],
+            const result = await aiComplete({
+                featureGroup: 'extraction',
+                maxTokens: 500,
+                messages: [{ role: 'user', content: prompt }],
             });
 
-            const textContent = message.content.find(c => c.type === 'text');
-            if (textContent && textContent.type === 'text') {
-                aiResult = parseAIResponse(textContent.text);
-                console.log(`[drawing-extraction] AI result: ${aiResult.drawingNumber || 'none'} (confidence: ${aiResult.confidence})`);
+            if (result.text) {
+                aiResult = parseAIResponse(result.text);
+                console.log(`[drawing-extraction] AI result (${result.provider}/${result.modelId}): ${aiResult.drawingNumber || 'none'} (confidence: ${aiResult.confidence})`);
             }
         } else {
             console.log('[drawing-extraction] No/minimal text extracted, using filename only');
@@ -1248,14 +1251,23 @@ async function extractWithVision(
     filename: string,
     mimeType: string
 ): Promise<DrawingExtractionResult> {
-    console.log(`[drawing-extraction] Vision fallback for: ${filename}`);
+    const { provider, modelId } = await getProviderAndModelFor('extraction');
+
+    // Vision-mode uses Anthropic's native PDF `document` content block. Non-Anthropic
+    // providers don't have an equivalent surface, so we skip vision and let the caller
+    // fall through to text-mode (parseDocument → aiComplete).
+    if (provider !== 'anthropic') {
+        throw new Error(`Vision extraction unavailable for provider "${provider}" — falling through to text-mode`);
+    }
+
+    console.log(`[drawing-extraction] Vision fallback for: ${filename} (${modelId})`);
     const anthropic = new Anthropic();
 
     // Determine media type for the document
     const mediaType = mimeType === 'application/pdf' ? 'application/pdf' : 'application/pdf';
 
     const message = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',  // Haiku for cost efficiency
+        model: modelId,
         max_tokens: 500,
         messages: [{
             role: 'user',
