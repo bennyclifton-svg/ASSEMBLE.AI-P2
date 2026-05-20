@@ -162,7 +162,7 @@ export async function handleLongFresh(args: { projectId: string; section: Object
   });
 
   const { text: aiText } = await aiComplete({
-    featureGroup: 'objectives_generation',
+    featureGroup: 'generation',
     maxTokens: 2000,
     messages: [{ role: 'user', content: prompt }],
   });

@@ -313,7 +313,7 @@ describe('/api/projects/[projectId]/objectives/generate', () => {
     expect(mockRetrieve).not.toHaveBeenCalled();
     expect(mockRetrieveFromDomains).not.toHaveBeenCalled();
     expect(mockAiComplete).toHaveBeenCalledTimes(1);
-    expect(mockAiComplete.mock.calls[0][0].featureGroup).toBe('objectives_generation');
+    expect(mockAiComplete.mock.calls[0][0].featureGroup).toBe('generation');
 
     const prompt = mockAiComplete.mock.calls[0][0].messages[0].content;
     expect(prompt).toContain('Attached Document Text - Authoritative');

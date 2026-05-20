@@ -7,7 +7,7 @@ import {
     projectStakeholders,
     versions,
 } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { applyCreateAddendum } from '@/lib/agents/applicators';
 import { defineAction } from '../define';
 import type { ActionContext } from '../types';

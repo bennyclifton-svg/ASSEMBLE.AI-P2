@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { randomUUID } from 'crypto';
 import { db } from '@/lib/db';
 import { consultants, contractors } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { defineAction } from '../define';
 import type { ActionContext } from '../types';
 

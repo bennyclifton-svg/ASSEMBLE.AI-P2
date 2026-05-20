@@ -9,7 +9,7 @@
 jest.mock('@/lib/db', () => ({ db: {} }));
 jest.mock('@/lib/rag/retrieval', () => ({ retrieve: jest.fn(), retrieveFromDomains: jest.fn() }));
 jest.mock('../../events', () => ({ emitChatEvent: jest.fn() }));
-jest.mock('../../approvals', () => ({ proposeApproval: jest.fn() }));
+jest.mock('@/lib/actions/proposals', () => ({ proposeApproval: jest.fn() }));
 jest.mock('../../project-events', () => ({ emitProjectEvent: jest.fn() }));
 jest.mock('uuid', () => ({ v4: () => 'test-id' }));
 

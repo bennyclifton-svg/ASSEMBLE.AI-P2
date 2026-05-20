@@ -1,7 +1,6 @@
 import { emitProjectEvent } from '@/lib/agents/project-events';
-import { proposeApproval, type ProposedDiff } from '@/lib/agents/approvals';
-import type { ToolContext } from '@/lib/agents/tools/_context';
-import type { ActionContext, ActionDefinition } from './types';
+import { proposeApproval } from './proposals';
+import type { ActionContext, ActionDefinition, ProposedDiff } from './types';
 import { finishActionInvocation, openActionInvocation } from './invocations';
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -21,14 +20,14 @@ export function parseActionInput<TInput>(
     return parsed.data;
 }
 
-export function emitActionProjectEvents<TInput, TOutput>(
+export async function emitActionProjectEvents<TInput, TOutput>(
     action: ActionDefinition<TInput, TOutput>,
     ctx: ActionContext,
     output: TOutput
-): void {
-    if (!action.emits?.length) return;
+): Promise<boolean> {
+    let emitted = false;
     const record = asRecord(output);
-    for (const event of action.emits) {
+    for (const event of action.emits ?? []) {
         const outputKey = event.idFromOutput ?? 'id';
         const id = record[outputKey];
         if (typeof id !== 'string') continue;
@@ -38,7 +37,13 @@ export function emitActionProjectEvents<TInput, TOutput>(
             op: event.op,
             id,
         });
+        emitted = true;
     }
+    if (action.emitEvents) {
+        await action.emitEvents(ctx, output);
+        emitted = true;
+    }
+    return emitted;
 }
 
 type FinishActionInvocationArgs = Parameters<typeof finishActionInvocation>[1];
@@ -105,7 +110,7 @@ export async function runAction<TInput, TOutput>(args: {
             output = result.output;
         }
         await tryFinishActionInvocation(invocationId, { status: 'applied', output });
-        emitActionProjectEvents(args.action, args.ctx, output);
+        await emitActionProjectEvents(args.action, args.ctx, output);
         return { invocationId, output };
     } catch (err) {
         await tryFinishActionInvocation(invocationId, {
@@ -146,7 +151,13 @@ export async function proposeAction<TInput>(args: {
               };
         const proposalInput = prepared.input ?? args.input;
         const proposal = await proposeApproval({
-            ctx: args.ctx as ToolContext,
+            ctx: {
+                userId: args.ctx.userId,
+                organizationId: args.ctx.organizationId,
+                projectId: args.ctx.projectId,
+                threadId: args.ctx.threadId,
+                runId: args.ctx.runId,
+            },
             toolName: args.action.toolName,
             toolUseId: args.toolUseId ?? `action:${args.action.id}`,
             input: proposalInput,

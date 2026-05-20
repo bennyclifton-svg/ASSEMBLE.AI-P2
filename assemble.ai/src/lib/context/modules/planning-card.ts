@@ -1,7 +1,7 @@
 // src/lib/context/modules/planning-card.ts
-// Planning card module fetcher - wraps fetchPlanningContext() from planning-context.ts
+// Planning card module fetcher - wraps the raw planning context snapshot.
 
-import { fetchPlanningContext } from '@/lib/services/planning-context';
+import { fetchPlanningContextSnapshot } from '@/lib/services/planning-context';
 import type { ModuleResult } from '../types';
 
 export interface PlanningCardData {
@@ -20,7 +20,7 @@ export async function fetchPlanningCard(
   projectId: string
 ): Promise<ModuleResult<PlanningCardData | null>> {
   try {
-    const context = await fetchPlanningContext(projectId);
+    const context = await fetchPlanningContextSnapshot(projectId);
 
     if (!context) {
       return {

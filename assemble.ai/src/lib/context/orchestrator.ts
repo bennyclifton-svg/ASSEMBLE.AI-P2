@@ -20,6 +20,7 @@ import { fetchRagDocuments } from './modules/documents';
 import { fetchProjectInfo } from './modules/project-info';
 import { fetchProcurementDocs } from './modules/procurement-docs';
 import { fetchAttachedDocuments } from './modules/attached-documents';
+import { fetchBriefingProject } from './modules/briefing-project';
 import { retrieveFromDomains } from '../rag/retrieval';
 import { aiMemoryService, formatAiMemoryContext } from '../ai-memory/service';
 import type { DomainRetrievalResult } from '../rag/retrieval';
@@ -60,11 +61,13 @@ const MODULE_FETCHERS: Record<ModuleName, (projectId: string, params?: any) => P
   projectInfo: fetchProjectInfo,
   procurementDocs: fetchProcurementDocs,
   attachedDocuments: fetchAttachedDocuments,
+  briefingProject: fetchBriefingProject,
 };
 
 const REQUEST_SCOPED_MODULES = new Set<ModuleName>([
   'attachedDocuments',
   'ragDocuments',
+  'briefingProject',
 ]);
 
 function isCacheableModule(moduleName: ModuleName): boolean {
@@ -278,7 +281,7 @@ export async function assembleContext(
       }
     }
   } else {
-    moduleRequirements = requirements.modules;
+    moduleRequirements = [...requirements.modules];
   }
 
   // Honor forceModules override
@@ -288,6 +291,16 @@ export async function assembleContext(
       level: 'required' as const,
       priority: 7,
     }));
+  } else if (request.additionalModules) {
+    for (const moduleName of request.additionalModules) {
+      if (!moduleRequirements.find((m) => m.module === moduleName)) {
+        moduleRequirements.push({
+          module: moduleName,
+          level: 'relevant',
+          priority: 6,
+        });
+      }
+    }
   }
 
   // 3. Deduplicate module names (variations/invoices share costPlan, milestones shares program)
@@ -471,4 +484,31 @@ export async function assembleContext(
   };
 
   return assembledContext;
+}
+
+export function formatAssembledContextForPrompt(
+  context: AssembledContext
+): string {
+  const sections: string[] = [];
+
+  if (context.projectSummary) {
+    sections.push(`## Project Summary\n${context.projectSummary}`);
+  }
+  if (context.moduleContext) {
+    sections.push(context.moduleContext);
+  }
+  if (context.knowledgeContext) {
+    sections.push(context.knowledgeContext);
+  }
+  if (context.ragContext) {
+    sections.push(context.ragContext);
+  }
+  if (context.aiMemoryContext) {
+    sections.push(context.aiMemoryContext);
+  }
+  if (context.crossModuleInsights) {
+    sections.push(context.crossModuleInsights);
+  }
+
+  return sections.join('\n\n').trim();
 }

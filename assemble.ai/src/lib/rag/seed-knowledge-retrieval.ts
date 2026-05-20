@@ -2,17 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { ObjectiveType } from '@/lib/db/objectives-schema';
 import type { DomainTag } from '@/lib/constants/knowledge-domains';
-
-interface SeedFrontmatter {
-    domainSlug: string;
-    name: string;
-    domainType: string;
-    tags: string[];
-    version: string;
-    repoType: string;
-    applicableProjectTypes: string[];
-    applicableStates: string[];
-}
+import { parseSeedKnowledgeMarkdown, splitSeedKnowledgeBody } from './ingestion';
 
 interface SeedChunk {
     id: string;
@@ -58,58 +48,6 @@ export interface SeedKnowledgeRetrievalOptions {
 
 let cachedChunks: SeedChunk[] | null = null;
 
-function parseList(value: string): string[] {
-    if (!value.startsWith('[') || !value.endsWith(']')) return [];
-    return value
-        .slice(1, -1)
-        .split(',')
-        .map((item) => item.trim().replace(/^["']|["']$/g, ''))
-        .filter(Boolean);
-}
-
-function parseFrontmatter(raw: string): { frontmatter: SeedFrontmatter; body: string } {
-    const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-    if (!match) {
-        throw new Error('Missing or malformed seed knowledge frontmatter');
-    }
-
-    const fm: Record<string, string | string[]> = {};
-    for (const line of match[1].split('\n')) {
-        const kv = line.replace(/\r$/, '').match(/^(\w+):\s*(.*)$/);
-        if (!kv) continue;
-
-        const [, key, rawValue] = kv;
-        const value = rawValue.trim();
-        fm[key] = value.startsWith('[')
-            ? parseList(value)
-            : value.replace(/^["']|["']$/g, '');
-    }
-
-    return { frontmatter: fm as unknown as SeedFrontmatter, body: match[2] };
-}
-
-function splitSeedBody(body: string): Array<{ title: string | null; content: string }> {
-    const sections = body.split(/(?=^## )/m).filter((section) => section.trim());
-    const chunks: Array<{ title: string | null; content: string }> = [];
-
-    for (const section of sections) {
-        const sectionTitle = section.match(/^## (.+)$/m)?.[1]?.trim() ?? null;
-        const subsections = section.split(/(?=^### )/m).filter((sub) => sub.trim());
-
-        if (subsections.length <= 1) {
-            chunks.push({ title: sectionTitle, content: section.trim() });
-            continue;
-        }
-
-        for (const subsection of subsections) {
-            const subsectionTitle = subsection.match(/^### (.+)$/m)?.[1]?.trim() ?? sectionTitle;
-            chunks.push({ title: subsectionTitle, content: subsection.trim() });
-        }
-    }
-
-    return chunks;
-}
-
 function loadSeedChunks(): SeedChunk[] {
     if (cachedChunks) return cachedChunks;
 
@@ -119,8 +57,8 @@ function loadSeedChunks(): SeedChunk[] {
 
     for (const file of files) {
         const raw = readFileSync(join(seedDir, file), 'utf8');
-        const { frontmatter, body } = parseFrontmatter(raw);
-        const bodyChunks = splitSeedBody(body);
+        const { frontmatter, body } = parseSeedKnowledgeMarkdown(raw);
+        const bodyChunks = splitSeedKnowledgeBody(body);
 
         for (let idx = 0; idx < bodyChunks.length; idx++) {
             const chunk = bodyChunks[idx];

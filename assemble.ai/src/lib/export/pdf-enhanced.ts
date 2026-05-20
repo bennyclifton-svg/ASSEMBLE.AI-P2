@@ -8,9 +8,19 @@
  */
 
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import autoTable, { type CellHookData } from 'jspdf-autotable';
 import { JSDOM } from 'jsdom';
 import { EXPORT_COLORS } from './theme-config';
+
+type JsPdfWithLastAutoTable = jsPDF & {
+  lastAutoTable?: {
+    finalY?: number;
+  };
+};
+
+function lastAutoTableY(doc: jsPDF): number | undefined {
+  return (doc as JsPdfWithLastAutoTable).lastAutoTable?.finalY;
+}
 
 // Heading colors (from shared theme config)
 const HEADING_COLORS = {
@@ -316,7 +326,7 @@ export async function exportToPDF(
         });
 
         // Get final Y position after table
-        const finalY = (doc as any).lastAutoTable?.finalY ?? yPosition + 50;
+        const finalY = lastAutoTableY(doc) ?? yPosition + 50;
         yPosition = finalY + 10;
       }
 
@@ -543,7 +553,7 @@ export async function exportMeetingToPDF(
       margin: { left: margin, right: margin },
       tableWidth: contentWidth,
     });
-    yPosition = (doc as any).lastAutoTable?.finalY + 10 ?? yPosition + 30;
+    yPosition = (lastAutoTableY(doc) ?? yPosition + 20) + 10;
   }
 
   // Attendees Section
@@ -585,7 +595,7 @@ export async function exportMeetingToPDF(
       margin: { left: margin, right: margin },
       tableWidth: contentWidth,
     });
-    yPosition = (doc as any).lastAutoTable?.finalY + 10 ?? yPosition + 30;
+    yPosition = (lastAutoTableY(doc) ?? yPosition + 20) + 10;
   }
 
   // Agenda Sections
@@ -769,7 +779,7 @@ export async function exportProjectReportToPDF(
       margin: { left: margin, right: margin },
       tableWidth: contentWidth,
     });
-    yPosition = (doc as any).lastAutoTable?.finalY + 10 ?? yPosition + 30;
+    yPosition = (lastAutoTableY(doc) ?? yPosition + 20) + 10;
   }
 
   // Report Contents
@@ -918,13 +928,13 @@ function renderTwoColPDF(
     columnStyles: { 0: { cellWidth: colW }, 1: { cellWidth: colW } },
     margin: { left: mg, right: mg },
     tableWidth: cw,
-    didParseCell: (data: any) => {
+    didParseCell: (data: CellHookData) => {
       if (data.section === 'body' && boldCells.has(`${data.row.index}-${data.column.index}`)) {
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.textColor = RFT_COLORS.dark;
       }
     },
-    didDrawCell: (data: any) => {
+    didDrawCell: (data: CellHookData) => {
       d.setDrawColor(...RFT_COLORS.border);
       d.setLineWidth(0.15);
       // Vertical separator between columns
@@ -940,7 +950,63 @@ function renderTwoColPDF(
     },
   });
 
-  return ((d as any).lastAutoTable?.finalY ?? startY + 20) + 6;
+  return (lastAutoTableY(d) ?? startY + 20) + 6;
+}
+
+function renderSingleColPDF(
+  d: jsPDF, startY: number, mg: number, cw: number,
+  head: string, blocks: ContentBlock[],
+): number {
+  type RowLine = { text: string; bold: boolean };
+  const lines: RowLine[] = [];
+  let first = true;
+  for (const block of blocks) {
+    if (block.type === 'heading') {
+      if (!first) lines.push({ text: '', bold: false });
+      lines.push({ text: block.text, bold: true });
+    } else if (block.type === 'bullet') {
+      lines.push({ text: `\u2022  ${block.text}`, bold: false });
+    } else {
+      lines.push({ text: block.text, bold: false });
+    }
+    first = false;
+  }
+
+  const body = lines.length > 0 ? lines.map((line) => [line.text]) : [['-']];
+  const boldRows = new Set(lines.map((line, index) => line.bold ? index : -1).filter((index) => index >= 0));
+  const hS = { fontStyle: 'bold' as const, textColor: RFT_COLORS.blue, fillColor: RFT_COLORS.white, fontSize: 9 };
+
+  autoTable(d, {
+    startY,
+    head: [[{ content: head, styles: hS }]],
+    body,
+    theme: 'plain',
+    styles: {
+      fontSize: 8,
+      cellPadding: { top: 0.5, bottom: 0.5, left: 3, right: 3 },
+      textColor: RFT_COLORS.body,
+      overflow: 'linebreak',
+    },
+    columnStyles: { 0: { cellWidth: cw } },
+    margin: { left: mg, right: mg },
+    tableWidth: cw,
+    didParseCell: (cellData: CellHookData) => {
+      if (cellData.section === 'body' && boldRows.has(cellData.row.index)) {
+        cellData.cell.styles.fontStyle = 'bold';
+        cellData.cell.styles.textColor = RFT_COLORS.dark;
+      }
+    },
+    didDrawCell: (cellData: CellHookData) => {
+      if (cellData.section === 'head') {
+        d.setDrawColor(...RFT_COLORS.border);
+        d.setLineWidth(0.15);
+        const y = cellData.cell.y + cellData.cell.height;
+        d.line(cellData.cell.x, y, cellData.cell.x + cellData.cell.width, y);
+      }
+    },
+  });
+
+  return (lastAutoTableY(d) ?? startY + 20) + 6;
 }
 
 export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffer> {
@@ -963,7 +1029,7 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
     columnStyles: { 0: { cellWidth: 28 } },
     margin: { left: mg, right: mg }, tableWidth: cw,
   });
-  y = ((d as any).lastAutoTable?.finalY ?? y + 17) + 8;
+  y = (lastAutoTableY(d) ?? y + 17) + 8;
 
   // 2. OBJECTIVES (skipped when objectivesVisible is false)
   if (data.objectivesVisible) {
@@ -1007,10 +1073,22 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
     }
   }
 
-  // 3. BRIEF
+  // 3. BRIEF / SCOPE
+  const isContractorRft = data.stakeholderGroup === 'contractor';
+  const scopeBlocks = parseHtmlContent(data.scope?.works ?? '');
   const sv = parseHtmlContent(data.brief.service);
   const dl = parseHtmlContent(data.brief.deliverables);
-  if (sv.length > 0 || dl.length > 0) {
+
+  if (isContractorRft) {
+    cpb(25);
+    d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
+    d.text('SCOPE', mg, y); y += 5;
+    if (scopeBlocks.length > 0) {
+      y = renderSingleColPDF(d, y, mg, cw, 'Scope of Works', scopeBlocks);
+    } else {
+      d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No scope content.', mg, y); y += 8;
+    }
+  } else if (sv.length > 0 || dl.length > 0) {
     cpb(25);
     d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
     d.text('BRIEF', mg, y); y += 5;
@@ -1034,20 +1112,20 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
       const mG = groupByMonth(wC);
       const ord = buildOrderedActivities(data.activities);
 
-      const mRow: any[] = [
+      const mRow: Array<Record<string, unknown>> = [
         { content: 'Activity', rowSpan: 2, styles: { halign: 'left' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 8 } },
         { content: 'Start', rowSpan: 2, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 7 } },
         { content: 'End', rowSpan: 2, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.blue, fontStyle: 'bold' as const, fontSize: 7 } },
       ];
       mG.forEach(g => mRow.push({ content: g.label, colSpan: g.count, styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 7 } }));
 
-      const dRow: any[] = wC.map(c => ({ content: String(c.dayLabel), styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 6.5 } }));
+      const dRow: Array<Record<string, unknown>> = wC.map(c => ({ content: String(c.dayLabel), styles: { halign: 'center' as const, fillColor: RFT_COLORS.headerBg, textColor: RFT_COLORS.muted, fontSize: 6.5 } }));
 
       const bRows = ord.map(a => {
         const ch = !!a.parentId;
         const aS = a.startDate ? new Date(a.startDate) : null;
         const aE = a.endDate ? new Date(a.endDate) : null;
-        const r: any[] = [
+        const r: Array<Record<string, unknown>> = [
           { content: `${ch ? '    ' : '\u25B8 '}${a.name}`, styles: ch ? { fontStyle: 'normal' as const, textColor: RFT_COLORS.muted, fontSize: 7.5 } : { fontStyle: 'bold' as const, textColor: RFT_COLORS.dark, fontSize: 7.5 } },
           { content: formatDateShort(a.startDate), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted, fontSize: 7 } },
           { content: formatDateShort(a.endDate), styles: { halign: 'center' as const, textColor: RFT_COLORS.muted, fontSize: 7 } },
@@ -1057,7 +1135,7 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
       });
 
       const tlW = Math.min(7, (cw - 35 - 14 - 14) / wC.length);
-      const cs: Record<number, any> = { 0: { cellWidth: 35 }, 1: { cellWidth: 14 }, 2: { cellWidth: 14 } };
+      const cs: Record<number, { cellWidth: number }> = { 0: { cellWidth: 35 }, 1: { cellWidth: 14 }, 2: { cellWidth: 14 } };
       wC.forEach((_, i) => { cs[i + 3] = { cellWidth: tlW }; });
 
       autoTable(d, {
@@ -1066,13 +1144,13 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
         headStyles: { fillColor: RFT_COLORS.headerBg }, columnStyles: cs,
         margin: { left: mg, right: mg }, tableWidth: cw,
       });
-      y = ((d as any).lastAutoTable?.finalY ?? y + 32) + 8;
+      y = (lastAutoTableY(d) ?? y + 32) + 8;
     } else { d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No program activities with dates.', mg, y); y += 8; }
   }
 
-  // 5. FEE
+  // 5. FEE / PRICE
   cpb(20); d.setFontSize(10); d.setFont('helvetica', 'bold'); d.setTextColor(...RFT_COLORS.dark);
-  d.text('FEE', mg, y); y += 5;
+  d.text(isContractorRft ? 'PRICE' : 'FEE', mg, y); y += 5;
   if (data.feeItems.length > 0) {
     autoTable(d, {
       startY: y,
@@ -1083,7 +1161,7 @@ export async function exportRFTNewToPDF(data: RFTExportData): Promise<ArrayBuffe
       columnStyles: { 1: { cellWidth: 40 } },
       margin: { left: mg, right: mg }, tableWidth: cw,
     });
-    y = ((d as any).lastAutoTable?.finalY ?? y + 12) + 8;
+    y = (lastAutoTableY(d) ?? y + 12) + 8;
   } else { d.setFontSize(8); d.setFont('helvetica', 'normal'); d.setTextColor(...RFT_COLORS.muted); d.text('No cost plan items.', mg, y); y += 8; }
 
   // 6. TRANSMITTAL

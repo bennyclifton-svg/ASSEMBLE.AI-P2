@@ -24,7 +24,15 @@ interface KnowledgePanelProps {
 
 const GROUP_ORDER = ['planning', 'procurement', 'delivery', 'authorities'] as const;
 const DESIGN_GROUP_ORDER = ['scheme-design', 'detail-design', 'ifc-design'] as const;
-const ALL_GROUPS = [...GROUP_ORDER, ...DESIGN_GROUP_ORDER] as const;
+const ALL_GROUPS = [
+  'planning',
+  'scheme-design',
+  'detail-design',
+  'ifc-design',
+  'procurement',
+  'delivery',
+  'authorities',
+] as const;
 type KnowledgeGroup = typeof ALL_GROUPS[number];
 
 const GROUP_LABELS: Record<KnowledgeGroup, string> = {

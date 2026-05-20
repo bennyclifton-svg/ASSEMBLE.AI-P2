@@ -21,11 +21,8 @@ const mockTx = {
 };
 const mockTransaction = jest.fn(async (callback: (tx: typeof mockTx) => unknown) => callback(mockTx));
 
-let mockUuidIndex = 0;
-const mockUuids = ['note-id', 'item-1', 'item-2', 'transmittal-id', 'project-item-1', 'project-item-2'];
-
 jest.mock('uuid', () => ({
-    v4: () => mockUuids[mockUuidIndex++] ?? `uuid-${mockUuidIndex}`,
+    v4: () => 'legacy-uuid',
 }));
 
 jest.mock('@/lib/db', () => ({
@@ -40,7 +37,6 @@ import { applyApproval } from '../applicators';
 describe('applyApproval - create_transmittal', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockUuidIndex = 0;
     });
 
     it('creates a transmittal note with attached documents by default', async () => {
@@ -62,9 +58,10 @@ describe('applyApproval - create_transmittal', () => {
         expect(result.kind).toBe('applied');
         expect(mockTransaction).toHaveBeenCalledTimes(1);
         expect(mockInsertValues).toHaveBeenCalledTimes(2);
+        const insertedNote = mockInsertValues.mock.calls[0][0] as { id: string };
         expect(mockInsertValues.mock.calls[0][0]).toEqual(
             expect.objectContaining({
-                id: 'note-id',
+                id: expect.any(String),
                 projectId: 'project-1',
                 organizationId: 'org-1',
                 title: 'Basement Drawings Transmittal',
@@ -73,14 +70,14 @@ describe('applyApproval - create_transmittal', () => {
         );
         expect(mockInsertValues.mock.calls[1][0]).toEqual([
             {
-                id: 'item-1',
-                noteId: 'note-id',
+                id: expect.any(String),
+                noteId: insertedNote.id,
                 documentId: 'doc-1',
                 addedAt: expect.any(String),
             },
             {
-                id: 'item-2',
-                noteId: 'note-id',
+                id: expect.any(String),
+                noteId: insertedNote.id,
                 documentId: 'doc-2',
                 addedAt: expect.any(String),
             },
@@ -88,7 +85,7 @@ describe('applyApproval - create_transmittal', () => {
         expect(result).toEqual(
             expect.objectContaining({
                 output: expect.objectContaining({
-                    id: 'note-id',
+                    id: insertedNote.id,
                     transmittalTarget: 'note',
                     attachedDocumentIds: ['doc-1', 'doc-2'],
                     documentCount: 2,
@@ -98,7 +95,6 @@ describe('applyApproval - create_transmittal', () => {
     });
 
     it('creates a targeted project transmittal with latest document versions', async () => {
-        mockUuidIndex = 3;
         mockSelectWhere
             .mockReturnValueOnce(queryResult([{ id: 'sub-1' }]))
             .mockReturnValueOnce(queryResult([
@@ -121,9 +117,10 @@ describe('applyApproval - create_transmittal', () => {
         expect(result.kind).toBe('applied');
         expect(mockTransaction).toHaveBeenCalledTimes(1);
         expect(mockInsertValues).toHaveBeenCalledTimes(2);
+        const insertedTransmittal = mockInsertValues.mock.calls[0][0] as { id: string };
         expect(mockInsertValues.mock.calls[0][0]).toEqual(
             expect.objectContaining({
-                id: 'transmittal-id',
+                id: expect.any(String),
                 projectId: 'project-1',
                 stakeholderId: null,
                 subcategoryId: 'sub-1',
@@ -133,20 +130,20 @@ describe('applyApproval - create_transmittal', () => {
         );
         expect(mockInsertValues.mock.calls[1][0]).toEqual([
             {
-                id: 'project-item-1',
-                transmittalId: 'transmittal-id',
+                id: expect.any(String),
+                transmittalId: insertedTransmittal.id,
                 versionId: 'version-1',
             },
             {
-                id: 'project-item-2',
-                transmittalId: 'transmittal-id',
+                id: expect.any(String),
+                transmittalId: insertedTransmittal.id,
                 versionId: 'version-2',
             },
         ]);
         expect(result).toEqual(
             expect.objectContaining({
                 output: expect.objectContaining({
-                    id: 'transmittal-id',
+                    id: insertedTransmittal.id,
                     transmittalTarget: 'project',
                     documentIds: ['doc-1', 'doc-2'],
                     documentCount: 2,

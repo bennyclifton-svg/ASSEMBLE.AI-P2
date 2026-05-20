@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { db } from '@/lib/db';
 import {
     categories,

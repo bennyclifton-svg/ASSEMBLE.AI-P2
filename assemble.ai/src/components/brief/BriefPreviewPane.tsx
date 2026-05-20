@@ -22,6 +22,8 @@ import type { ProfileInput } from '@/types/profiler';
 import type { ObjectiveSource, ObjectiveType } from '@/lib/db/objectives-schema';
 import type { ObjectiveRow } from '@/components/profiler/objectives/ObjectivesWorkspace';
 import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
+import { hasManualEdits } from '@/lib/services/objectives-edit-detection';
 import {
     compactProfileLabel,
     inferProjectNameAssetLabel,
@@ -30,6 +32,8 @@ import {
     shouldUseProjectNameAsset,
 } from '@/lib/objectives/project-name-intent';
 import { CardShell } from './primitives/CardShell';
+import { RichTextEditor } from '@/components/ui/RichTextEditor';
+import { ObjectiveListEditor } from './ObjectiveListEditor';
 
 const muted = 'var(--sw-muted)';
 
@@ -142,6 +146,7 @@ type GenerationTrace = {
 interface ObjectivesResponse {
     success?: boolean;
     data?: Partial<Record<ObjectiveType, ObjectiveRow[]>>;
+    snapshots?: Record<ObjectiveType, string[] | null>;
     attachedDocumentCount?: number;
     generationTrace?: GenerationTrace;
 }
@@ -302,84 +307,23 @@ function nonZeroSourceCounts(trace: GenerationTrace | null): Array<[ObjectiveSou
         .sort((a, b) => b[1] - a[1]);
 }
 
-// ---------------------------------------------------------------------------
-// InlineEditable — click to place cursor, blur to commit. No focus highlight,
-// no border swap, no toolbar. Mirrors the RFT services flow.
-//
-// `value` seeds the editable element once on mount and is re-synced via the
-// `[data-revision]` key whenever the parent supplies a new external value
-// (e.g. AI regenerate). Edits in-flight are NOT clobbered because the parent
-// updates `value` after the commit completes.
-// ---------------------------------------------------------------------------
+// Reconcile shape emitted by ObjectiveListEditor on blur. One entry per <li>:
+// `id` is the server row id (null for fresh inserts), `text` is the trimmed
+// content. Consumed by the parent's handleListReconcile.
+export type ReconcileItem = { id: string | null; text: string };
 
-interface InlineEditableProps {
-    value: string;
-    onCommit: (next: string) => void;
-    as?: 'span' | 'p';
-    className?: string;
-    style?: React.CSSProperties;
-    multiline?: boolean;
-    ariaLabel?: string;
-}
-
-function InlineEditable({
-    value,
-    onCommit,
-    as = 'span',
-    className,
-    style,
-    multiline = false,
-    ariaLabel,
-}: InlineEditableProps) {
-    const ref = useRef<HTMLElement | null>(null);
-    const isFocusedRef = useRef(false);
-
-    // Seed the DOM once on mount, then re-sync whenever the external value
-    // changes while the editor is not focused. Avoids React clobbering the
-    // caret during typing.
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-        if (isFocusedRef.current) return;
-        if (el.textContent === value) return;
-        el.textContent = value;
-    }, [value]);
-
-    const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
-        if (!multiline && event.key === 'Enter') {
-            event.preventDefault();
-            (event.currentTarget as HTMLElement).blur();
-        }
-    };
-
-    const setRef = useCallback((node: HTMLElement | null) => {
-        ref.current = node;
-    }, []);
-
-    const sharedProps = {
-        ref: setRef,
-        contentEditable: true,
-        suppressContentEditableWarning: true,
-        spellCheck: true,
-        role: 'textbox' as const,
-        'aria-label': ariaLabel,
-        tabIndex: 0,
-        onFocus: () => { isFocusedRef.current = true; },
-        onBlur: (e: React.FocusEvent<HTMLElement>) => {
-            isFocusedRef.current = false;
-            const next = (e.currentTarget.textContent ?? '').replace(/\s+/g, ' ').trim();
-            if (next !== value) onCommit(next);
-        },
-        onKeyDown: handleKeyDown,
-        className,
-        style: {
-            outline: 'none',
-            cursor: 'text',
-            ...style,
-        },
-    };
-
-    return as === 'p' ? <p {...sharedProps} /> : <span {...sharedProps} />;
+// Strip HTML tags and collapse whitespace. Used to compare a TipTap HTML
+// payload against the auto-derived plain-text narrative so an edit that
+// matches the auto narrative clears the override.
+function htmlToPlainText(html: string): string {
+    return html
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 // ---------------------------------------------------------------------------
@@ -398,6 +342,12 @@ export function BriefPreviewPane({
 }: BriefPreviewPaneProps) {
     // Objectives fetch state machine.
     const [grouped, setGrouped] = useState<GroupedObjectives>(emptyGrouped);
+    const [snapshots, setSnapshots] = useState<Record<ObjectiveType, string[] | null>>({
+        planning: null,
+        functional: null,
+        quality: null,
+        compliance: null,
+    });
     const [attachedDocumentCount, setAttachedDocumentCount] = useState(0);
     const [generationTrace, setGenerationTrace] = useState<GenerationTrace | null>(null);
     // null = no override saved → show auto-derived narrative. Anything else
@@ -410,13 +360,16 @@ export function BriefPreviewPane({
         compliance: 'short',
     });
     const [generatingSection, setGeneratingSection] = useState<ObjectiveType | null>(null);
+    const [pendingRegenerate, setPendingRegenerate] = useState<ObjectiveType | null>(null);
     const [status, setStatus] = useState<ObjectivesStatus>('loading');
-    const [retryNonce, setRetryNonce] = useState(0);
     const [briefingState, setBriefingState] = useState<BriefingState>({
         enabled: false,
         status: 'none',
         answeredCount: 0,
     });
+    // Bumped after each successful list reconcile so the editable OL re-seeds
+    // even when its `rows` prop is identity-equal to the previous render.
+    const [listRevision, setListRevision] = useState(0);
 
     // Sources footer — count populated profile fields client-side. Mirrors
     // what the inference engine will actually feed into objective generation.
@@ -488,6 +441,7 @@ export function BriefPreviewPane({
                 const existing = extractGrouped(getJson);
                 if (totalCount(existing) > 0) {
                     applyGrouped(existing);
+                    if (getJson.snapshots) setSnapshots(getJson.snapshots);
                     setAttachedDocumentCount(getJson.attachedDocumentCount ?? 0);
                     setGenerationTrace(getJson.generationTrace ?? null);
                     setStatus('ready');
@@ -513,6 +467,7 @@ export function BriefPreviewPane({
                 if (cancelled) return;
 
                 applyGrouped(extractGrouped(refreshedJson));
+                if (refreshedJson.snapshots) setSnapshots(refreshedJson.snapshots);
                 setAttachedDocumentCount(refreshedJson.attachedDocumentCount ?? 0);
                 setGenerationTrace(refreshedJson.generationTrace ?? null);
                 setStatus('ready');
@@ -524,7 +479,7 @@ export function BriefPreviewPane({
         return () => {
             cancelled = true;
         };
-    }, [projectId, retryNonce, refreshKey, applyGrouped]);
+    }, [projectId, refreshKey, applyGrouped]);
 
     useEffect(() => {
         let cancelled = false;
@@ -580,9 +535,8 @@ export function BriefPreviewPane({
     //   long  → /objectives/polish   (polishes existing short bullets)
     // Inline edits to individual rows are persisted via handleObjectiveCommit
     // below — regenerate is the destructive "replace the lot" path.
-    const handleRegenerate = useCallback(async (type: ObjectiveType) => {
+    const runRegenerate = useCallback(async (type: ObjectiveType, mode: ViewMode) => {
         if (generatingSection) return;
-        const mode = viewModes[type];
         setGeneratingSection(type);
         try {
             const url = mode === 'short'
@@ -602,6 +556,7 @@ export function BriefPreviewPane({
             const getJson: ObjectivesResponse = await getRes.json();
             const next = extractGrouped(getJson);
             setGrouped(next);
+            if (getJson.snapshots) setSnapshots(getJson.snapshots);
             setAttachedDocumentCount(getJson.attachedDocumentCount ?? 0);
             setGenerationTrace(getJson.generationTrace ?? null);
             // Long-mode regenerate produces polished content — flip the view
@@ -612,7 +567,26 @@ export function BriefPreviewPane({
         } finally {
             setGeneratingSection(null);
         }
-    }, [generatingSection, projectId, viewModes]);
+    }, [generatingSection, projectId]);
+
+    const handleRegenerate = useCallback((type: ObjectiveType) => {
+        if (generatingSection) return;
+
+        const mode = viewModes[type];
+        if (mode === 'short' && grouped[type].length > 0) {
+            const dirty = hasManualEdits({
+                rows: grouped[type].map((row) => ({ id: row.id, text: row.text })),
+                snapshot: snapshots[type],
+            });
+
+            if (dirty) {
+                setPendingRegenerate(type);
+                return;
+            }
+        }
+
+        void runRegenerate(type, mode);
+    }, [generatingSection, grouped, runRegenerate, snapshots, viewModes]);
 
     const handleViewModeChange = useCallback((type: ObjectiveType, mode: ViewMode) => {
         setViewModes((prev) => ({ ...prev, [type]: mode }));
@@ -627,12 +601,20 @@ export function BriefPreviewPane({
     );
     const narrativeText = narrativeOverride ?? autoNarrative;
 
-    const handleNarrativeCommit = useCallback((next: string) => {
-        const trimmed = next.trim();
+    // RichTextEditor's onBlur fires without args, so we track the latest HTML
+    // in a ref updated by onChange. The ref is also re-seeded whenever
+    // narrativeText changes from outside (override loads, profile updates).
+    const narrativeDraftRef = useRef<string>(narrativeText);
+    useEffect(() => {
+        narrativeDraftRef.current = narrativeText;
+    }, [narrativeText]);
+
+    const handleNarrativeCommit = useCallback((nextHtml: string) => {
+        const textOnly = htmlToPlainText(nextHtml);
         // Treat empty / auto-match as "clear the override".
-        const clear = trimmed === '' || trimmed === autoNarrative.trim();
-        const payload = clear ? null : trimmed;
-        setNarrativeOverride(payload);
+        const clear = textOnly === '' || textOnly === autoNarrative.trim();
+        const payload = clear ? null : nextHtml;
+        setNarrativeOverride((prev) => (prev === payload ? prev : payload));
         void fetch(`/api/projects/${projectId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -640,27 +622,153 @@ export function BriefPreviewPane({
         });
     }, [projectId, autoNarrative]);
 
-    // Per-objective inline edit. Routes to `text` in short mode and
-    // `textPolished` in long mode so the toggle does not clobber the off-screen
-    // variant. Optimistic update + PATCH; failures revert to the server value
-    // on the next refresh.
-    const handleObjectiveCommit = useCallback((row: ObjectiveRow, mode: ViewMode, next: string) => {
-        const trimmed = next.trim();
-        if (mode === 'short' && trimmed.length === 0) return; // PATCH rejects empty `text`
-        const field = mode === 'short' ? 'text' : 'textPolished';
+    // Reconcile a section's editable list against state after the user blurs
+    // it. The DOM is source of truth at blur time: each <li> contributes a
+    // {id, text} item. We diff against grouped[type] and fire POST (new),
+    // PATCH (changed), DELETE (missing or emptied) in parallel, then refetch
+    // the objectives list to pick up real ids and sort orders.
+    const handleListReconcile = useCallback(async (
+        type: ObjectiveType,
+        mode: ViewMode,
+        items: ReconcileItem[],
+    ) => {
+        const currentRows = grouped[type];
+        const currentById = new Map(currentRows.map((r) => [r.id, r] as const));
+
+        const removeIds: string[] = [];
+        const edits: { row: ObjectiveRow; next: string }[] = [];
+        const inserts: { text: string }[] = [];
+
+        // Build set of ids that are still present (and non-empty) in DOM.
+        const presentNonEmptyIds = new Set<string>();
+        for (const item of items) {
+            if (item.id && item.text.length > 0) presentNonEmptyIds.add(item.id);
+        }
+        // Anything in current state that's no longer in DOM → delete.
+        for (const r of currentRows) {
+            if (!presentNonEmptyIds.has(r.id)) removeIds.push(r.id);
+        }
+
+        for (const item of items) {
+            if (item.text.length === 0) continue; // empty rows: either no-op or deleted above
+            if (item.id) {
+                const existing = currentById.get(item.id);
+                if (!existing) {
+                    // DOM has an id we don't know about — refetch will sort it
+                    // out, treat as no-op here.
+                    continue;
+                }
+                const currentText = mode === 'long' && existing.textPolished
+                    ? existing.textPolished
+                    : existing.text;
+                if (currentText !== item.text) edits.push({ row: existing, next: item.text });
+            } else {
+                inserts.push({ text: item.text });
+            }
+        }
+
+        if (removeIds.length === 0 && edits.length === 0 && inserts.length === 0) return;
+
+        // Optimistic update — rebuild grouped[type] in the order items appear,
+        // dropping empties.
         setGrouped((prev) => {
-            const list = prev[row.objectiveType];
-            const replaced = list.map((r) => r.id === row.id
-                ? { ...r, ...(mode === 'short' ? { text: trimmed } : { textPolished: trimmed }) }
-                : r);
-            return { ...prev, [row.objectiveType]: replaced };
+            const list = prev[type];
+            const byId = new Map(list.map((r) => [r.id, r] as const));
+            const next: ObjectiveRow[] = [];
+            let tempCounter = 0;
+            for (const item of items) {
+                if (item.text.length === 0) continue;
+                if (item.id && byId.has(item.id)) {
+                    const existing = byId.get(item.id)!;
+                    next.push({
+                        ...existing,
+                        ...(mode === 'long'
+                            ? { textPolished: item.text }
+                            : { text: item.text }),
+                    });
+                } else {
+                    tempCounter += 1;
+                    next.push({
+                        id: `temp-${Date.now()}-${tempCounter}`,
+                        projectId: '',
+                        objectiveType: type,
+                        source: 'user_added',
+                        text: mode === 'long' ? '' : item.text,
+                        textPolished: mode === 'long' ? item.text : null,
+                        status: 'draft',
+                        sortOrder: next.length,
+                        isDeleted: false,
+                        createdAt: new Date(),
+                        updatedAt: new Date(),
+                    } as ObjectiveRow);
+                }
+            }
+            return { ...prev, [type]: next };
         });
-        void fetch(`/api/projects/${projectId}/objectives/${row.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ [field]: trimmed }),
-        });
-    }, [projectId]);
+
+        const tasks: Promise<unknown>[] = [];
+        for (const id of removeIds) {
+            tasks.push(fetch(`/api/projects/${projectId}/objectives/${id}`, {
+                method: 'DELETE',
+            }));
+        }
+        for (const e of edits) {
+            const field = mode === 'long' ? 'textPolished' : 'text';
+            tasks.push(fetch(`/api/projects/${projectId}/objectives/${e.row.id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ [field]: e.next }),
+            }));
+        }
+        for (const n of inserts) {
+            if (mode === 'short') {
+                tasks.push(fetch(`/api/projects/${projectId}/objectives`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, text: n.text }),
+                }));
+            } else {
+                // Long mode: POST seeds `text` (required), then PATCH copies the
+                // same text into `textPolished` so the view stays consistent
+                // until the user refines either column.
+                tasks.push((async () => {
+                    const res = await fetch(`/api/projects/${projectId}/objectives`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ type, text: n.text }),
+                    });
+                    if (!res.ok) return;
+                    const json = await res.json().catch(() => null) as
+                        | { data?: { id?: string } }
+                        | null;
+                    const newId = json?.data?.id;
+                    if (!newId) return;
+                    await fetch(`/api/projects/${projectId}/objectives/${newId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ textPolished: n.text }),
+                    });
+                })());
+            }
+        }
+
+        await Promise.all(tasks);
+
+        // Refetch to reconcile temp ids and sort orders with the server.
+        try {
+            const res = await fetch(`/api/projects/${projectId}/objectives`);
+            if (!res.ok) return;
+            const json: ObjectivesResponse = await res.json();
+            applyGrouped(extractGrouped(json));
+            if (json.snapshots) setSnapshots(json.snapshots);
+            setAttachedDocumentCount(json.attachedDocumentCount ?? 0);
+            setGenerationTrace(json.generationTrace ?? null);
+            setListRevision((v) => v + 1);
+        } catch {
+            // Swallow — the optimistic update keeps the UI usable until the
+            // next manual refresh.
+        }
+    }, [grouped, projectId, applyGrouped]);
 
     useEffect(() => {
         onSourcesUpdate?.({
@@ -671,6 +779,7 @@ export function BriefPreviewPane({
     }, [attachedDocumentCount, profileFieldsCount, generationTrace, onSourcesUpdate]);
 
     return (
+        <>
         <div className="flex flex-col">
             {/* Brief content — wrapped externally by the unified shell in
                 BriefPanel, which owns the outer border, the dark Brief
@@ -697,28 +806,28 @@ export function BriefPreviewPane({
                         Narrative
                     </span>
                 </div>
-                <InlineEditable
-                    as="p"
-                    multiline
-                    ariaLabel="Edit brief narrative"
-                    value={narrativeText}
-                    onCommit={handleNarrativeCommit}
-                    className="px-4 py-3 m-0"
+                <div
+                    aria-label="Brief narrative"
                     style={{
-                        fontFamily: 'var(--sw-font-body)',
-                        fontSize: 14,
-                        lineHeight: 1.65,
-                        color: 'var(--sw-ink)',
                         borderBottom: '1px solid var(--sw-rule-2)',
+                        fontFamily: 'var(--sw-font-body)',
                     }}
-                />
+                >
+                    <RichTextEditor
+                        content={narrativeText}
+                        onChange={(c) => { narrativeDraftRef.current = c; }}
+                        onBlur={() => handleNarrativeCommit(narrativeDraftRef.current)}
+                        placeholder="Edit brief narrative..."
+                        variant="mini"
+                        toolbarVariant="none"
+                        transparentBg
+                        className="border-0 rounded-none"
+                        editorClassName="px-4 py-3 min-h-0 bg-transparent hover:bg-[var(--sw-shell)] transition-colors text-[14px] leading-[1.65] [&_p]:text-[14px] [&_p]:leading-[1.65] [&_p]:m-0"
+                    />
+                </div>
 
                 {/* Inferred objectives by section */}
                 {status === 'loading' ? <ObjectivesSkeleton /> : null}
-
-                {status === 'error' ? (
-                    <ObjectivesError onRetry={() => setRetryNonce((n) => n + 1)} />
-                ) : null}
 
                 {status === 'ready' ? (
                     <CategoryRows
@@ -727,12 +836,44 @@ export function BriefPreviewPane({
                         generatingSection={generatingSection}
                         onViewModeChange={handleViewModeChange}
                         onRegenerate={handleRegenerate}
-                        onObjectiveCommit={handleObjectiveCommit}
+                        onListReconcile={handleListReconcile}
+                        listRevision={listRevision}
                     />
                 ) : null}
             </section>
 
         </div>
+        <Modal
+            isOpen={pendingRegenerate !== null}
+            onClose={() => setPendingRegenerate(null)}
+            title={`Replace ${pendingRegenerate ?? ''} objectives?`}
+        >
+            <div className="space-y-4">
+                <p className="text-[var(--color-text-primary)]">
+                    This section has manual edits or formatting that will be lost.
+                    Regenerating will replace all bullets with fresh AI content.
+                </p>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                    Switch to Long and refresh if you want to improve the wording while preserving the short bullets.
+                </p>
+                <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setPendingRegenerate(null)}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={() => {
+                            const type = pendingRegenerate;
+                            setPendingRegenerate(null);
+                            if (type) void runRegenerate(type, 'short');
+                        }}
+                    >
+                        Replace
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+        </>
     );
 }
 
@@ -853,44 +994,6 @@ function ObjectivesSkeleton() {
                     </div>
                 );
             })}
-        </div>
-    );
-}
-
-function ObjectivesError({ onRetry }: { onRetry: () => void }) {
-    return (
-        <div
-            className="flex items-center justify-between gap-3 px-4 py-3"
-            style={{
-                background: 'var(--sw-rose-tint)',
-                borderLeft: '3px solid var(--sw-rose)',
-            }}
-        >
-            <span
-                style={{
-                    fontFamily: 'var(--sw-font-body)',
-                    fontSize: 13,
-                    color: 'var(--sw-ink)',
-                }}
-            >
-                Failed to load objectives — retry
-            </span>
-            <button
-                type="button"
-                onClick={onRetry}
-                style={{
-                    background: 'transparent',
-                    border: '1px solid var(--sw-rule)',
-                    padding: '4px 10px',
-                    fontFamily: 'var(--sw-font-mono)',
-                    fontSize: 11,
-                    letterSpacing: '0.05em',
-                    color: 'var(--sw-ink)',
-                    cursor: 'pointer',
-                }}
-            >
-                Retry
-            </button>
         </div>
     );
 }
@@ -1168,7 +1271,8 @@ interface CategoryRowsProps {
     generatingSection: ObjectiveType | null;
     onViewModeChange: (type: ObjectiveType, mode: ViewMode) => void;
     onRegenerate: (type: ObjectiveType) => void;
-    onObjectiveCommit: (row: ObjectiveRow, mode: ViewMode, next: string) => void;
+    onListReconcile: (type: ObjectiveType, mode: ViewMode, items: ReconcileItem[]) => void;
+    listRevision: number;
 }
 
 function CategoryRows({
@@ -1177,7 +1281,8 @@ function CategoryRows({
     generatingSection,
     onViewModeChange,
     onRegenerate,
-    onObjectiveCommit,
+    onListReconcile,
+    listRevision,
 }: CategoryRowsProps) {
     const isAnyGenerating = generatingSection !== null;
     // Continuous numbering across sections — matches the Objectives tab's
@@ -1269,60 +1374,19 @@ function CategoryRows({
                             </div>
                         </div>
 
-                        {/* Section body: rendered objectives, full width. */}
-                        <div className="flex flex-col gap-1.5 px-4 py-2.5">
-                            {rows.length === 0 ? (
-                                <span
-                                    style={{
-                                        fontFamily: 'var(--sw-font-mono)',
-                                        fontSize: 11,
-                                        color: muted,
-                                        letterSpacing: '0.02em',
-                                    }}
-                                >
-                                    No objectives
-                                </span>
-                            ) : (
-                                rows.map((row, j) => {
-                                    // In long mode without polished content, fall back to the
-                                    // short `text` for display, but commits in long mode still
-                                    // target `textPolished` so the user is editing the long copy.
-                                    const text = mode === 'long' && row.textPolished
-                                        ? row.textPolished
-                                        : row.text;
-                                    return (
-                                        <p
-                                            key={row.id}
-                                            className="m-0 flex gap-2"
-                                            style={{
-                                                fontSize: 13,
-                                                color: 'var(--sw-ink)',
-                                                lineHeight: 1.4,
-                                            }}
-                                        >
-                                            <span
-                                                style={{
-                                                    fontFamily: 'var(--sw-font-mono)',
-                                                    fontSize: 11,
-                                                    color: muted,
-                                                    flexShrink: 0,
-                                                    minWidth: 18,
-                                                }}
-                                            >
-                                                {sectionStart + j}.
-                                            </span>
-                                            <InlineEditable
-                                                as="span"
-                                                multiline
-                                                ariaLabel={`Edit ${type} objective ${sectionStart + j}`}
-                                                value={text}
-                                                onCommit={(next) => onObjectiveCommit(row, mode, next)}
-                                                style={{ flex: 1 }}
-                                            />
-                                        </p>
-                                    );
-                                })
-                            )}
+                        {/* Section body: single editable list — fluid text
+                            selection across rows, multi-line paste appends new
+                            numbered rows, and Backspace on an empty row
+                            removes it. */}
+                        <div className="px-4 py-2.5">
+                            <ObjectiveListEditor
+                                rows={rows}
+                                type={type}
+                                mode={mode}
+                                sectionStart={sectionStart}
+                                onReconcile={onListReconcile}
+                                revisionKey={listRevision}
+                            />
                         </div>
                     </div>
                 );

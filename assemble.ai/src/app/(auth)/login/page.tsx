@@ -3,6 +3,7 @@
  * Unauthenticated route for user login.
  */
 
+import Image from 'next/image';
 import { LoginForm } from '@/components/auth/LoginForm';
 
 export default async function LoginPage({
@@ -13,27 +14,52 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <div className="min-h-screen bg-[var(--primitive-slate-900)] flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Aurora background effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--primitive-aurora-blue)] opacity-10 blur-[120px] rounded-full" />
-        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-[var(--primitive-aurora-cyan)] opacity-8 blur-[100px] rounded-full" />
-        <div className="absolute bottom-1/4 left-1/3 w-72 h-72 bg-[var(--primitive-aurora-violet)] opacity-6 blur-[100px] rounded-full" />
-      </div>
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'var(--sw-paper-2)' }}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(900px 540px at 80% -10%, rgba(79,182,190,0.10), transparent 60%),' +
+            'radial-gradient(720px 420px at -10% 110%, rgba(32,105,138,0.10), transparent 62%)',
+        }}
+      />
 
       <div className="w-full max-w-md relative z-10">
-        {/* Logo/Header */}
-        <div className="text-center mb-8 flex flex-col items-center">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-2xl font-[family-name:var(--font-exo-2)] font-bold italic text-white">
-              SiteWise
-            </span>
-          </div>
-          <p className="text-[var(--color-text-muted)] mt-2">Sign in to your account</p>
+        <div className="flex flex-col items-center mb-8">
+          <Image
+            src="/images/sitewise-logo-light.png"
+            alt="Sitewise"
+            width={1038}
+            height={554}
+            priority
+            style={{ height: 56, width: 'auto', display: 'block' }}
+          />
+          <p
+            className="mt-5"
+            style={{
+              fontFamily: 'var(--sw-font-mono)',
+              fontSize: 11,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'rgba(232,228,218,0.55)',
+            }}
+          >
+            Sign in to your account
+          </p>
         </div>
 
-        {/* Login Form Card - Aurora style */}
-        <div className="card-aurora rounded-lg p-6">
+        <div
+          className="p-7"
+          style={{
+            background: 'var(--sw-paper)',
+            border: '1px solid var(--sw-rule-dk-2)',
+            boxShadow: '0 30px 80px -20px rgba(14,16,20,0.45)',
+          }}
+        >
           <LoginForm redirectTo={params.redirect || '/dashboard'} />
         </div>
       </div>

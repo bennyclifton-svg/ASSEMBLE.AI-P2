@@ -44,12 +44,16 @@ export function SitewiseProjectSwitcherCard({
                 </span>
                 <span className="sitewise-project-label flex flex-col items-start min-w-0 flex-1">
                     <span
-                        className="truncate"
                         style={{
                             fontSize: 13,
                             fontWeight: 600,
                             color: 'var(--sw-paper)',
-                            textTransform: 'lowercase',
+                            // Preserve the user-entered case of the project
+                            // name and let it wrap across lines rather than
+                            // truncating into the chevron column.
+                            overflowWrap: 'anywhere',
+                            wordBreak: 'break-word',
+                            lineHeight: 1.25,
                         }}
                     >
                         {selectedProject.name}

@@ -43,6 +43,8 @@ interface CategoryTileProps {
     hasActiveSubcategoryFilter?: boolean;
     /** Whether this is a stakeholder category (Consultants/Contractors) - uses grey styling. */
     isStakeholderCategory?: boolean;
+    /** Whether the Ingest (knowledge) source is currently processing documents. */
+    isIngesting?: boolean;
 }
 
 /**
@@ -66,6 +68,7 @@ export function CategoryTile({
     isFiltered = false,
     hasActiveSubcategoryFilter = false,
     isStakeholderCategory = false,
+    isIngesting = false,
 }: CategoryTileProps) {
     // Check if this is the Knowledge category (triggers auto-RAG)
     const isKnowledgeCategory = category.isKnowledgeSource === true;
@@ -149,7 +152,7 @@ export function CategoryTile({
 
     const isActive = isSelected || isExpanded || isFiltered || hasActiveSubcategoryFilter || isKnowledgeCategory;
     const accent = isKnowledgeCategory
-        ? 'var(--color-accent-gold)'
+        ? (isIngesting ? 'var(--sw-peach)' : 'var(--sw-rose)')
         : isStakeholderCategory
             ? 'var(--sw-muted)'
             : 'var(--sw-rose)';

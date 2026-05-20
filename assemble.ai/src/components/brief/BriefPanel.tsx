@@ -10,6 +10,11 @@ import { CardShell } from './primitives';
 import { DiamondIcon } from '@/components/ui/diamond-icon';
 import { useToast } from '@/components/ui/use-toast';
 import type { BuildingClass, ProjectType, Region } from '@/types/profiler';
+import type { ObjectiveType } from '@/lib/db/objectives-schema';
+import {
+    planBriefRegeneration,
+    type GroupedObjectiveLike,
+} from '@/lib/objectives/brief-regeneration-plan';
 
 const GENERATE_STATUS_MESSAGES = [
     'Reading project profile…',
@@ -46,6 +51,65 @@ function generateBriefErrorTitle(code: string | null): string {
         default:
             return 'Failed to regenerate brief';
     }
+}
+
+class BriefGenerationRequestError extends Error {
+    constructor(
+        message: string,
+        readonly title: string,
+        readonly code: string | null,
+        readonly status: number,
+        readonly loggedBody: unknown,
+    ) {
+        super(message);
+        this.name = 'BriefGenerationRequestError';
+    }
+}
+
+async function buildBriefGenerationRequestError(res: Response): Promise<BriefGenerationRequestError> {
+    let serverMessage = `Server returned ${res.status}.`;
+    let serverCode: string | null = null;
+    let loggedBody: unknown = null;
+    try {
+        const rawBody = await res.text();
+        loggedBody = rawBody;
+        const body = rawBody ? JSON.parse(rawBody) as GenerateBriefErrorBody : null;
+        loggedBody = body ?? rawBody;
+        serverCode = typeof body?.error?.code === 'string' ? body.error.code : null;
+        const msg = body?.error?.message ?? body?.message;
+        if (typeof msg === 'string' && msg.trim()) {
+            serverMessage = `${res.status}: ${msg}`;
+        } else if (!rawBody || rawBody === '{}') {
+            serverMessage = `${res.status}: The server returned an empty error response. Check the server console for the underlying failure.`;
+        }
+    } catch {
+        serverMessage = `${res.status}: The server returned an unreadable error response. Check the server console for the underlying failure.`;
+    }
+
+    return new BriefGenerationRequestError(
+        serverMessage,
+        generateBriefErrorTitle(serverCode),
+        serverCode,
+        res.status,
+        loggedBody,
+    );
+}
+
+async function expectBriefGenerationOk(res: Response): Promise<Response> {
+    if (!res.ok) {
+        throw await buildBriefGenerationRequestError(res);
+    }
+    return res;
+}
+
+function objectiveActionInit(section?: ObjectiveType): RequestInit {
+    if (!section) return { method: 'POST' };
+
+    return {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section }),
+    };
 }
 
 interface BriefPanelProps {
@@ -220,45 +284,67 @@ export function BriefPanel({
         if (isRegenerating) return;
         setIsRegenerating(true);
         try {
-            const res = await fetch(`/api/projects/${projectId}/objectives/generate`, {
-                method: 'POST',
-            });
-            if (!res.ok) {
-                // Surface the server's structured error envelope so 500s don't
-                // collapse to a bare status code. The route returns
-                // { success: false, error: { code, message } } on failure.
-                let serverMessage = `Server returned ${res.status}.`;
-                let serverCode: string | null = null;
-                let loggedBody: unknown = null;
-                try {
-                    const rawBody = await res.text();
-                    loggedBody = rawBody;
-                    const body = rawBody ? JSON.parse(rawBody) as GenerateBriefErrorBody : null;
-                    loggedBody = body ?? rawBody;
-                    serverCode = typeof body?.error?.code === 'string' ? body.error.code : null;
-                    const msg = body?.error?.message ?? body?.message;
-                    if (typeof msg === 'string' && msg.trim()) {
-                        serverMessage = `${res.status}: ${msg}`;
-                    } else if (!rawBody || rawBody === '{}') {
-                        serverMessage = `${res.status}: The server returned an empty error response. Check the server console for the underlying failure.`;
-                    }
-                } catch {
-                    serverMessage = `${res.status}: The server returned an unreadable error response. Check the server console for the underlying failure.`;
+            const existingRes = await expectBriefGenerationOk(
+                await fetch(`/api/projects/${projectId}/objectives`, { method: 'GET' })
+            );
+            const existingJson = await existingRes.json() as { data?: GroupedObjectiveLike };
+            const plan = planBriefRegeneration(existingJson.data ?? {});
+
+            if (!plan.hasExistingObjectives) {
+                await expectBriefGenerationOk(
+                    await fetch(`/api/projects/${projectId}/objectives/generate`, { method: 'POST' })
+                );
+                toast({
+                    title: 'Brief generated',
+                    description: 'Project objectives are ready to review.',
+                    variant: 'success',
+                });
+            } else {
+                const sectionsToPolish = new Set<ObjectiveType>(plan.sectionsToPolish);
+
+                for (const section of plan.sectionsToGenerate) {
+                    await expectBriefGenerationOk(
+                        await fetch(
+                            `/api/projects/${projectId}/objectives/generate`,
+                            objectiveActionInit(section),
+                        )
+                    );
+                    sectionsToPolish.add(section);
                 }
-                const log = serverCode && EXPECTED_GENERATE_ERROR_CODES.has(serverCode)
+
+                for (const section of sectionsToPolish) {
+                    await expectBriefGenerationOk(
+                        await fetch(
+                            `/api/projects/${projectId}/objectives/polish`,
+                            objectiveActionInit(section),
+                        )
+                    );
+                }
+
+                toast({
+                    title: 'Brief improved',
+                    description: 'Existing objectives were preserved and expanded.',
+                    variant: 'success',
+                });
+            }
+
+            // Force the preview pane to re-fetch via GET so the user sees the
+            // preserved or improved objective rows immediately.
+            setBriefRefreshKey((n) => n + 1);
+        } catch (err) {
+            if (err instanceof BriefGenerationRequestError) {
+                const log = err.code && EXPECTED_GENERATE_ERROR_CODES.has(err.code)
                     ? console.warn
                     : console.error;
-                log('Regenerate brief failed:', res.status, loggedBody);
+                log('Regenerate brief failed:', err.status, err.loggedBody);
                 toast({
-                    title: generateBriefErrorTitle(serverCode),
-                    description: serverMessage,
-                    variant: serverCode === 'ATTACHED_DOCUMENT_CONTEXT_UNAVAILABLE' ? 'default' : 'destructive',
+                    title: err.title,
+                    description: err.message,
+                    variant: err.code === 'ATTACHED_DOCUMENT_CONTEXT_UNAVAILABLE' ? 'default' : 'destructive',
                 });
                 return;
             }
-            // Force the preview pane to re-fetch via GET (which now returns the fresh batch).
-            setBriefRefreshKey((n) => n + 1);
-        } catch (err) {
+
             console.error('Regenerate brief threw:', err);
             toast({
                 title: 'Failed to regenerate brief',
@@ -317,7 +403,7 @@ export function BriefPanel({
                     in the middle column, and Generate brief end-aligns with the right
                     column (Brief preview). */}
                 <div
-                    className="grid items-center border-b border-[var(--color-border)]/50 px-2 gap-4"
+                    className="grid items-center px-2 gap-4"
                     style={{
                         gridTemplateColumns: isBriefingOpen
                             ? 'minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 0.9fr)'
@@ -438,16 +524,32 @@ export function BriefPanel({
                     }}
                 >
                     <div className="min-h-0 min-w-0 flex flex-col gap-4">
+                        {/* Project shell — owns just the project name at the
+                            very top of the column. Split out of the Lot shell
+                            so the name reads as the column header rather than
+                            another field in the lot details list. */}
+                        <CardShell label="Project">
+                            <ProjectDetailsPanel
+                                projectId={projectId}
+                                data={detailsData}
+                                onUpdate={onDetailsUpdate}
+                                onProjectNameChange={onProjectNameChange}
+                                section="name"
+                            />
+                        </CardShell>
+
                         {/* Lot shell — sits above Class · Type. Renders the
-                            former Lot-tab fields (project name, address,
-                            lot/legal address, jurisdiction, LEP data) as a
-                            single flat field list inside this shell. */}
+                            former Lot-tab fields (address, lot/legal address,
+                            jurisdiction, LEP data) as a single flat field
+                            list. The project name lives in the Project shell
+                            above. */}
                         <CardShell label="Lot">
                             <ProjectDetailsPanel
                                 projectId={projectId}
                                 data={detailsData}
                                 onUpdate={onDetailsUpdate}
                                 onProjectNameChange={onProjectNameChange}
+                                section="lot"
                             />
                         </CardShell>
 

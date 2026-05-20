@@ -201,9 +201,18 @@ interface ProjectDetailsPanelProps {
     data: any;
     onUpdate: () => void;
     onProjectNameChange?: () => void;
+    /**
+     * Which slice of fields to render. The brief view splits the panel into
+     * two stacked shells — `'name'` renders just the project name, `'lot'`
+     * renders address + lot area + legal address + jurisdiction + LEP. The
+     * drag/drop + paste extraction wrapper only mounts on the `'lot'` slice
+     * since it owns the bulk of the form; extracted values still flow back
+     * into the name row via the shared `data` prop on the parent.
+     */
+    section?: 'name' | 'lot';
 }
 
-export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameChange }: ProjectDetailsPanelProps) {
+export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameChange, section = 'lot' }: ProjectDetailsPanelProps) {
     const { toast } = useToast();
     const [isDragging, setIsDragging] = useState(false);
     const [isExtracting, setIsExtracting] = useState(false);
@@ -466,6 +475,18 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
         await handleExtraction(content);
     };
 
+    if (section === 'name') {
+        return (
+            <DetailRow
+                label="Name"
+                value={data?.projectName || ''}
+                onSave={(v) => updateField('projectName', v)}
+                placeholder="Untitled project"
+                isLast
+            />
+        );
+    }
+
     return (
         <div
             className="relative"
@@ -556,16 +577,11 @@ export function ProjectDetailsPanel({ projectId, data, onUpdate, onProjectNameCh
             )}
 
             {/* Flat field list — rendered inside the parent's "Lot" CardShell.
-                Name + Address span the full shell width; everything below is
-                split into two columns so the LEP rows on the right balance
-                the lot/jurisdiction rows on the left. */}
+                Address spans the full shell width; everything below is split
+                into two columns so the LEP rows on the right balance the
+                lot/jurisdiction rows on the left. The project name lives in
+                a separate "Project" shell above this one (see BriefPanel). */}
             <div className="flex flex-col">
-                <DetailRow
-                    label="Name"
-                    value={data?.projectName || ''}
-                    onSave={(v) => updateField('projectName', v)}
-                    placeholder="Untitled project"
-                />
                 <div
                     className="grid items-center"
                     style={{

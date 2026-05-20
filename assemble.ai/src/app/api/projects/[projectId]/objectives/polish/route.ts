@@ -271,7 +271,7 @@ export async function POST(
     });
 
     const { text: aiText } = await aiComplete({
-      featureGroup: 'objectives_generation',
+      featureGroup: 'generation',
       maxTokens: 2000,
       messages: [{ role: 'user', content: prompt }],
     });

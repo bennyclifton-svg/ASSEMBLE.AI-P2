@@ -15,8 +15,10 @@ import type {
     SmartContextSource,
 } from '../state';
 import { retrieve, type RetrievalResult } from '../../rag/retrieval';
-import { formatPlanningContextForPrompt } from '../../services/planning-context';
-import { assembleContext } from '../../context/orchestrator';
+import {
+    assembleContext,
+    formatAssembledContextForPrompt,
+} from '../../context/orchestrator';
 
 export interface RetrieveContextResult {
     currentRetrievedChunks: RetrievedChunk[];
@@ -167,27 +169,14 @@ export async function formatHybridContext(state: ReportStateType): Promise<strin
             contextType: 'report-section',
             sectionKey: currentSection?.id,
             task: currentSection?.title ?? 'Generate report section',
+            additionalModules: ['planningCard'],
             // reportingPeriod is not tracked in LangGraph state; omitted (optional)
         });
 
-        if (assembled.projectSummary) {
-            sections.push(assembled.projectSummary);
-        }
-        if (assembled.moduleContext) {
-            sections.push('## Lifecycle Context (from Project Data)\n');
-            sections.push(assembled.moduleContext);
-        }
-        if (assembled.crossModuleInsights) {
-            sections.push(assembled.crossModuleInsights);
-        }
+        const formatted = formatAssembledContextForPrompt(assembled);
+        if (formatted) sections.push(formatted);
     } catch (error) {
         console.error('[retrieve-context] Orchestrator context assembly failed:', error);
-    }
-
-    // Planning Context (Exact - from Planning Card)
-    if (state.planningContext) {
-        sections.push('## Project Context (Exact - from Planning Card)\n');
-        sections.push(formatPlanningContextForPrompt(state.planningContext));
     }
 
     // RAG Context (Retrieved)

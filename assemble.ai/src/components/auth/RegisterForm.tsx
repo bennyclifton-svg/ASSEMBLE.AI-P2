@@ -100,127 +100,146 @@ export function RegisterForm({ planIntent }: RegisterFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="rounded border border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-3">
-        <p className="text-sm font-medium text-[var(--color-text-primary)]">
+      <div
+        className="p-3"
+        style={{
+          background: 'var(--sw-rose-tint)',
+          border: '1px solid rgba(79,182,190,0.30)',
+          borderLeft: '3px solid var(--sw-rose)',
+        }}
+      >
+        <p
+          style={{
+            fontFamily: 'var(--sw-font-mono)',
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            textTransform: 'uppercase',
+            fontWeight: 700,
+            color: 'var(--sw-rose-dk)',
+          }}
+        >
           {selectedPlan?.name ?? 'Starter'} trial
         </p>
-        <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+        <p
+          className="mt-1"
+          style={{
+            fontFamily: 'var(--sw-font-body)',
+            fontSize: 12.5,
+            color: 'var(--sw-ink)',
+          }}
+        >
           {PUBLIC_SAAS_TRIAL.days}-day free trial. No credit card required.
         </p>
         {planIntent.wasInvalid && (
-          <p className="mt-2 text-xs text-amber-300">
+          <p
+            className="mt-2"
+            style={{
+              fontFamily: 'var(--sw-font-body)',
+              fontSize: 12,
+              color: 'var(--sw-rose-dk)',
+            }}
+          >
             Unknown plan selected. Starter trial will be used.
           </p>
         )}
       </div>
 
       {error && (
-        <div className="p-3 text-sm bg-red-500/10 border border-red-500/20 rounded text-red-400">
+        <div
+          className="p-3"
+          style={{
+            background: 'rgba(220, 38, 38, 0.08)',
+            border: '1px solid rgba(220, 38, 38, 0.30)',
+            borderLeft: '3px solid #dc2626',
+            color: '#b91c1c',
+            fontFamily: 'var(--sw-font-body)',
+            fontSize: 13,
+          }}
+        >
           {error}
         </div>
       )}
 
-      <div>
-        <label htmlFor="displayName" className="block text-sm text-[var(--color-text-primary)] mb-1">
-          Display Name
-        </label>
-        <input
-          id="displayName"
-          type="text"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          className={`w-full px-3 py-2 bg-[var(--color-bg-secondary)] border rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] ${
-            fieldErrors.displayName ? 'border-red-500' : 'border-[var(--color-border)]'
-          }`}
-          placeholder="Your name"
-          required
-          disabled={isLoading}
-          maxLength={100}
-        />
-        {fieldErrors.displayName && (
-          <p className="mt-1 text-xs text-red-400">{fieldErrors.displayName}</p>
-        )}
-      </div>
+      <FieldBlock
+        id="displayName"
+        label="Display Name"
+        type="text"
+        value={displayName}
+        onChange={setDisplayName}
+        placeholder="Your name"
+        disabled={isLoading}
+        error={fieldErrors.displayName}
+        maxLength={100}
+      />
 
-      <div>
-        <label htmlFor="email" className="block text-sm text-[var(--color-text-primary)] mb-1">
-          Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className={`w-full px-3 py-2 bg-[var(--color-bg-secondary)] border rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] ${
-            fieldErrors.email ? 'border-red-500' : 'border-[var(--color-border)]'
-          }`}
-          placeholder="you@example.com"
-          required
-          disabled={isLoading}
-        />
-        {fieldErrors.email && (
-          <p className="mt-1 text-xs text-red-400">{fieldErrors.email}</p>
-        )}
-      </div>
+      <FieldBlock
+        id="email"
+        label="Email"
+        type="email"
+        value={email}
+        onChange={setEmail}
+        placeholder="you@example.com"
+        disabled={isLoading}
+        error={fieldErrors.email}
+      />
 
-      <div>
-        <label htmlFor="password" className="block text-sm text-[var(--color-text-primary)] mb-1">
-          Password
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className={`w-full px-3 py-2 bg-[var(--color-bg-secondary)] border rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] ${
-            fieldErrors.password ? 'border-red-500' : 'border-[var(--color-border)]'
-          }`}
-          placeholder="Minimum 8 characters"
-          required
-          disabled={isLoading}
-          minLength={8}
-        />
-        {fieldErrors.password && (
-          <p className="mt-1 text-xs text-red-400">{fieldErrors.password}</p>
-        )}
-      </div>
+      <FieldBlock
+        id="password"
+        label="Password"
+        type="password"
+        value={password}
+        onChange={setPassword}
+        placeholder="Minimum 8 characters"
+        disabled={isLoading}
+        error={fieldErrors.password}
+        minLength={8}
+      />
 
-      <div>
-        <label htmlFor="confirmPassword" className="block text-sm text-[var(--color-text-primary)] mb-1">
-          Confirm Password
-        </label>
-        <input
-          id="confirmPassword"
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className={`w-full px-3 py-2 bg-[var(--color-bg-secondary)] border rounded text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent-primary)] ${
-            fieldErrors.confirmPassword ? 'border-red-500' : 'border-[var(--color-border)]'
-          }`}
-          placeholder="Confirm your password"
-          required
-          disabled={isLoading}
-        />
-        {fieldErrors.confirmPassword && (
-          <p className="mt-1 text-xs text-red-400">{fieldErrors.confirmPassword}</p>
-        )}
-      </div>
+      <FieldBlock
+        id="confirmPassword"
+        label="Confirm Password"
+        type="password"
+        value={confirmPassword}
+        onChange={setConfirmPassword}
+        placeholder="Confirm your password"
+        disabled={isLoading}
+        error={fieldErrors.confirmPassword}
+      />
 
-      <label className="flex items-start gap-3 text-sm text-[var(--color-text-muted)]">
+      <label
+        className="flex items-start gap-3"
+        style={{
+          fontFamily: 'var(--sw-font-body)',
+          fontSize: 13,
+          color: 'var(--sw-muted)',
+        }}
+      >
         <input
           type="checkbox"
           checked={acceptedTerms}
           onChange={(e) => setAcceptedTerms(e.target.checked)}
-          className="mt-1 h-4 w-4 rounded border-[var(--color-border)] bg-[var(--color-bg-secondary)]"
+          className="mt-1 h-4 w-4"
+          style={{
+            accentColor: 'var(--sw-cta)',
+            borderColor: 'var(--sw-rule)',
+          }}
           disabled={isLoading}
         />
         <span>
           I agree to the{' '}
-          <Link href="/terms" className="text-[var(--sw-cyan)] hover:underline">
+          <Link
+            href="/terms"
+            className="hover:underline"
+            style={{ color: 'var(--sw-rose-dk)', fontWeight: 600 }}
+          >
             Terms
           </Link>{' '}
           and{' '}
-          <Link href="/privacy" className="text-[var(--sw-cyan)] hover:underline">
+          <Link
+            href="/privacy"
+            className="hover:underline"
+            style={{ color: 'var(--sw-rose-dk)', fontWeight: 600 }}
+          >
             Privacy Policy
           </Link>
           .
@@ -230,17 +249,111 @@ export function RegisterForm({ planIntent }: RegisterFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full py-2 px-4 bg-[var(--color-accent-primary)] hover:bg-[var(--color-accent-primary-hover)] disabled:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed rounded text-white font-medium transition-colors"
+        className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 font-bold uppercase transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{
+          fontFamily: 'var(--sw-font-mono)',
+          fontSize: 12,
+          letterSpacing: '0.12em',
+          background: 'var(--sw-cta)',
+          color: 'var(--sw-cta-fg)',
+        }}
       >
-        {isLoading ? 'Creating account...' : 'Create Account'}
+        {isLoading ? 'Creating account…' : 'Create Account'}
       </button>
 
-      <p className="text-sm text-center text-[var(--color-text-muted)]">
+      <p
+        className="text-center"
+        style={{
+          fontFamily: 'var(--sw-font-body)',
+          fontSize: 13,
+          color: 'var(--sw-muted)',
+        }}
+      >
         Already have an account?{' '}
-        <Link href="/login" className="text-[var(--sw-cyan)] hover:underline">
+        <Link
+          href="/login"
+          className="hover:underline"
+          style={{ color: 'var(--sw-rose-dk)', fontWeight: 600 }}
+        >
           Sign in
         </Link>
       </p>
     </form>
+  );
+}
+
+interface FieldBlockProps {
+  id: string;
+  label: string;
+  type: 'text' | 'email' | 'password';
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  error?: string;
+  maxLength?: number;
+  minLength?: number;
+}
+
+function FieldBlock({
+  id,
+  label,
+  type,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  error,
+  maxLength,
+  minLength,
+}: FieldBlockProps) {
+  return (
+    <div>
+      <label
+        htmlFor={id}
+        className="block mb-1.5"
+        style={{
+          fontFamily: 'var(--sw-font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          color: 'var(--sw-ink)',
+        }}
+      >
+        {label}
+      </label>
+      <input
+        id={id}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2.5 focus:outline-none"
+        style={{
+          background: 'var(--sw-shell)',
+          border: error ? '1px solid #dc2626' : '1px solid var(--sw-rule)',
+          color: 'var(--sw-ink)',
+          fontFamily: 'var(--sw-font-body)',
+          fontSize: 14,
+        }}
+        placeholder={placeholder}
+        required
+        disabled={disabled}
+        maxLength={maxLength}
+        minLength={minLength}
+      />
+      {error && (
+        <p
+          className="mt-1"
+          style={{
+            fontFamily: 'var(--sw-font-body)',
+            fontSize: 12,
+            color: '#b91c1c',
+          }}
+        >
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

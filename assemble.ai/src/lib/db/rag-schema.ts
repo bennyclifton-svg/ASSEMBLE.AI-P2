@@ -25,7 +25,7 @@ import {
     uniqueIndex,
     customType,
 } from 'drizzle-orm/pg-core';
-import { relations, sql } from 'drizzle-orm';
+import { relations } from 'drizzle-orm';
 import { knowledgeDomainSources } from './knowledge-domain-sources-schema';
 
 // Custom vector type for pgvector
@@ -54,7 +54,7 @@ export const documentChunks = pgTable(
     'document_chunks',
     {
         id: text('id').primaryKey(),
-        documentId: text('document_id').notNull(), // External FK to SQLite documents
+        documentId: text('document_id').notNull(), // App-level reference to primary PostgreSQL documents
         parentChunkId: text('parent_chunk_id'), // Self-referential for hierarchy
         hierarchyLevel: integer('hierarchy_level').notNull().default(0), // 0=doc, 1=section, 2=subsection, 3=clause
         hierarchyPath: text('hierarchy_path'), // e.g., "1.2.3" for section/clause
@@ -92,7 +92,7 @@ export const documentSets = pgTable(
     'document_sets',
     {
         id: text('id').primaryKey(),
-        projectId: text('project_id'), // External FK to SQLite projects (NULL for global repos)
+        projectId: text('project_id'), // App-level reference to primary PostgreSQL projects (NULL for global repos)
         name: text('name').notNull(),
         description: text('description'),
         discipline: text('discipline'), // Links to consultant discipline
@@ -140,7 +140,7 @@ export const documentSetMembers = pgTable(
         documentSetId: text('document_set_id')
             .notNull()
             .references(() => documentSets.id, { onDelete: 'cascade' }),
-        documentId: text('document_id').notNull(), // External FK to SQLite documents
+        documentId: text('document_id').notNull(), // App-level reference to primary PostgreSQL documents
         syncStatus: text('sync_status', {
             enum: ['pending', 'processing', 'synced', 'failed'],
         }).default('pending'),
@@ -171,7 +171,7 @@ export const reportTemplates = pgTable(
     'rag_report_templates',
     {
         id: text('id').primaryKey(),
-        projectId: text('project_id').notNull(), // External FK to SQLite projects
+        projectId: text('project_id').notNull(), // App-level reference to primary PostgreSQL projects
         documentSetIds: text('document_set_ids').array().notNull(), // Which sets to use for context
         reportType: text('report_type', {
             enum: ['tender_request'],

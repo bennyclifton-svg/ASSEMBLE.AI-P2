@@ -3,7 +3,7 @@ import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { randomUUID } from 'crypto';
 import { db } from '@/lib/db';
 import { costLines, projectStakeholders, rftNew } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { defineAction } from '../define';
 import type { ActionApplyResult, ActionContext } from '../types';
 

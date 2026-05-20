@@ -91,7 +91,7 @@ export function MeetingStakeholderTable({
                             <tr
                                 key={attendee.id}
                                 className={cn(
-                                    'border-b border-[var(--sw-rule-2)] hover:bg-[var(--sw-paper-2)]',
+                                    'border-b border-[var(--sw-rule-2)] hover:bg-[var(--sw-canvas)]',
                                     isAdhoc && 'bg-[var(--sw-paper)]'
                                 )}
                                 onMouseEnter={() => setHoveredRowId(attendee.id)}

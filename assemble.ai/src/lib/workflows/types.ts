@@ -1,5 +1,5 @@
 import type { ActionPolicy } from '@/lib/actions/types';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 
 export type WorkflowRunStatus =
     | 'draft'

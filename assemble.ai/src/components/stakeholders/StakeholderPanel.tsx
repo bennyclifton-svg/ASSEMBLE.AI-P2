@@ -574,22 +574,36 @@ function GroupCard({
           )}
         </div>
 
-        <div className="flex w-28 items-center px-3">
+        <div className="flex w-44 items-center justify-end pl-3 pr-4">
           <button
             type="button"
             onClick={onGenerate}
             disabled={isGenerating}
-            className={cn(
-              'inline-flex h-7 items-center gap-1.5 border border-[var(--sw-rule)] bg-white px-2 text-[11px] font-semibold text-[var(--sw-ink)] transition-colors hover:border-[var(--sw-ink)] hover:bg-[var(--sw-rose-tint)] disabled:cursor-wait disabled:opacity-55'
-            )}
-            style={{ fontFamily: 'var(--sw-font-mono)', letterSpacing: '0.02em' }}
-            title={isGenerating ? 'Generating...' : `Generate ${GROUP_LABELS[group]}`}
+            style={{
+              background: 'var(--sw-cta)',
+              color: 'var(--sw-cta-fg)',
+              border: 'none',
+              padding: '4px 12px',
+              fontFamily: 'var(--sw-font-mono)',
+              fontSize: 11,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+              cursor: isGenerating ? 'wait' : 'pointer',
+              opacity: isGenerating ? 0.6 : 1,
+              height: 32,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              whiteSpace: 'nowrap',
+            }}
+            title={isGenerating ? 'Generating…' : `Generate ${GROUP_LABELS[group]}`}
           >
             <DiamondIcon
-              className={cn('h-3.5 w-3.5 text-[var(--sw-rose-dk)]', isGenerating && 'animate-diamond-spin')}
+              className={`w-3 h-3 ${isGenerating ? 'animate-spin' : ''}`}
               variant="empty"
             />
-            {isGenerating ? 'Generating...' : 'Generate'}
+            {isGenerating ? 'Generating…' : 'Generate'}
           </button>
         </div>
 

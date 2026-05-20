@@ -51,7 +51,8 @@
       "Skill(superpowers:brainstorming:*)",
       "Skill(superpowers:using-git-worktrees)",
       "Skill(superpowers:using-git-worktrees:*)",
-      "PowerShell(npx eslint \"src/app/\\(dashboard\\)/settings/seed-knowledge/page.tsx\" \"src/components/seed-knowledge/SeedKnowledgeMarkdown.tsx\" \"src/app/api/seed-knowledge/route.ts\" \"src/app/api/seed-knowledge/[slug]/route.ts\" \"src/lib/seed-knowledge/read-seed-files.ts\" \"src/components/layout/SettingsLayout.tsx\")"
+      "PowerShell(npx eslint \"src/app/\\(dashboard\\)/settings/seed-knowledge/page.tsx\" \"src/components/seed-knowledge/SeedKnowledgeMarkdown.tsx\" \"src/app/api/seed-knowledge/route.ts\" \"src/app/api/seed-knowledge/[slug]/route.ts\" \"src/lib/seed-knowledge/read-seed-files.ts\" \"src/components/layout/SettingsLayout.tsx\")",
+      "PowerShell($env:PGPASSWORD='postgres'; & 'psql' -U postgres -h localhost -d assembleai -c \"SELECT id, email, is_super_admin FROM `\"user`\" WHERE email = 'bennyclifton@gmail.com';\")"
     ],
     "defaultMode": "bypassPermissions"
   }

@@ -153,7 +153,7 @@ async function summarizeObjectiveDocumentBatches(chunks: DocumentChunkContent[])
   for (let i = 0; i < batches.length; i++) {
     const batchContent = formatObjectiveDocumentChunks(batches[i]);
     const { text } = await aiComplete({
-      featureGroup: 'objectives_generation',
+      featureGroup: 'generation',
       maxTokens: OBJECTIVE_DOCUMENT_BATCH_SUMMARY_MAX_TOKENS,
       system: 'You extract project-specific requirements from Australian construction project documents. Use only the supplied text.',
       messages: [{

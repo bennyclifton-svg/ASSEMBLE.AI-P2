@@ -4,7 +4,8 @@
 
 import { registerTool, type AgentToolDefinition } from './catalog';
 import { assertProjectOrg, type ToolContext } from './_context';
-import { proposeApproval, type ProposedDiff } from '../approvals';
+import { proposeApproval } from '@/lib/actions/proposals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import {
     asObject,
     copyToolUseId,

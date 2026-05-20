@@ -912,7 +912,7 @@ function NoteDetailShell({
     }, [onCreateRecord]);
 
     const handleCreateBlankDraft = useCallback((initial?: { title?: string; content?: string }) => {
-        return handleCreateDraft({ title: 'New Note', ...initial });
+        return handleCreateDraft({ title: 'New Record', ...initial });
     }, [handleCreateDraft]);
 
     const handleBlankSaveTransmittal = useCallback(async () => {
@@ -1014,11 +1014,17 @@ function NoteDetailShell({
                             className="block max-w-full text-left"
                         >
                             <h2
-                                className="truncate text-lg font-semibold text-[var(--sw-muted)] transition-colors hover:text-[var(--sw-ink)]"
-                                title="Click to create note"
+                                className="truncate text-2xl font-semibold text-[var(--sw-muted)] transition-colors hover:text-[var(--sw-ink)]"
+                                title="Click to name this record"
                             >
-                                New Note
+                                New Record
                             </h2>
+                            <p
+                                className="mt-1 text-[11px] uppercase tracking-[0.14em] text-[var(--sw-muted)]"
+                                style={{ fontFamily: 'var(--sw-font-mono)' }}
+                            >
+                                Click to name this record
+                            </p>
                         </button>
 
                         <div

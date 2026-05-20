@@ -18,6 +18,7 @@ import { useProjectEvents } from '@/lib/hooks/use-project-events';
 import { RichTextEditor } from '@/components/ui/RichTextEditor';
 import { ObjectivesReadOnlyList } from '@/components/profiler/objectives/ObjectivesReadOnlyList';
 import type { ObjectiveRow } from '@/components/profiler/objectives/ObjectivesWorkspace';
+import type { StakeholderGroup } from '@/types/stakeholder';
 
 const RFT_HIGHLIGHT_COLOR = 'var(--sw-cyan)';
 
@@ -484,6 +485,22 @@ interface BriefSub {
     viewMode: 'short' | 'long';
 }
 
+interface ScopeFieldState {
+    works: string;
+}
+
+interface RftStakeholderSnapshot {
+    stakeholderGroup?: StakeholderGroup | null;
+    briefServices?: string | null;
+    briefDeliverables?: string | null;
+    briefServicesPolished?: string | null;
+    briefDeliverablesPolished?: string | null;
+    briefServicesViewMode?: 'short' | 'long' | null;
+    briefDeliverablesViewMode?: 'short' | 'long' | null;
+    scopeWorks?: string | null;
+    scopeDeliverables?: string | null;
+}
+
 function RFTSectionHeading({
     children,
     muted = false,
@@ -653,6 +670,86 @@ function BriefSubSection({
     );
 }
 
+function ScopeWorksSection({
+    value,
+    isGenerating,
+    isSaving,
+    onChange,
+    onSave,
+    onRefresh,
+}: {
+    value: string;
+    isGenerating: boolean;
+    isSaving: boolean;
+    onChange: (value: string) => void;
+    onSave: () => void | Promise<void>;
+    onRefresh: () => void | Promise<void>;
+}) {
+    const hasContent = value.replace(/<[^>]*>/g, '').trim().length > 0;
+
+    return (
+        <div className="rounded border border-[var(--color-border)]/50 overflow-hidden">
+            <div
+                className="flex items-center justify-between px-3 py-2"
+                style={{
+                    background: 'var(--sw-paper)',
+                    borderBottom: '1px solid var(--sw-rule-2)',
+                }}
+            >
+                <span
+                    style={{
+                        fontFamily: 'var(--sw-font-mono)',
+                        fontSize: 10,
+                        letterSpacing: '0.18em',
+                        textTransform: 'lowercase',
+                        color: 'var(--sw-muted)',
+                        fontWeight: 600,
+                    }}
+                >
+                    scope of works
+                </span>
+                <button
+                    type="button"
+                    onClick={onRefresh}
+                    disabled={isGenerating || isSaving}
+                    title={hasContent ? 'Improve scope' : 'Generate scope'}
+                    aria-label={hasContent ? 'Improve scope' : 'Generate scope'}
+                    className={cn(
+                        'flex shrink-0 items-center justify-center transition-colors',
+                        (isGenerating || isSaving) && 'cursor-not-allowed opacity-40',
+                    )}
+                    style={{
+                        width: 24,
+                        height: 22,
+                        border: '1px solid var(--sw-rule)',
+                        background: 'transparent',
+                        color: isGenerating || isSaving ? 'var(--sw-muted)' : 'var(--sw-rose-dk)',
+                    }}
+                >
+                    <DiamondIcon
+                        variant="empty"
+                        className={cn('w-4 h-4', isGenerating && 'animate-diamond-spin')}
+                    />
+                </button>
+            </div>
+            <div style={{ background: 'var(--sw-paper)' }}>
+                <RichTextEditor
+                    content={value}
+                    onChange={onChange}
+                    onBlur={onSave}
+                    placeholder="Enter contractor scope..."
+                    disabled={isGenerating || isSaving}
+                    variant="mini"
+                    toolbarVariant="none"
+                    transparentBg
+                    className="border-0 rounded-none"
+                    editorClassName="min-h-[180px] bg-transparent hover:bg-[var(--sw-shell)] transition-colors [&_strong]:text-[var(--sw-ink)] [&_strong]:font-semibold"
+                />
+            </div>
+        </div>
+    );
+}
+
 export function RFTNewShortTab({
     projectId,
     rftNew,
@@ -680,7 +777,10 @@ export function RFTNewShortTab({
         services:     { short: '', long: '', viewMode: 'short' },
         deliverables: { short: '', long: '', viewMode: 'short' },
     });
+    const [scopeData, setScopeData] = useState<ScopeFieldState>({ works: '' });
+    const [stakeholderGroup, setStakeholderGroup] = useState<StakeholderGroup | null>(null);
     const [isSavingBrief, setIsSavingBrief] = useState(false);
+    const [isSavingScope, setIsSavingScope] = useState(false);
     const [costLines, setCostLines] = useState<CostLine[]>([]);
 
     // Unified Field Generation hooks for Brief fields
@@ -698,6 +798,15 @@ export function RFTNewShortTab({
         isGenerating: isGeneratingDeliverables,
     } = useFieldGeneration({
         fieldType: 'brief.deliverables',
+        projectId,
+        stakeholderId: stakeholderId || undefined,
+    });
+
+    const {
+        generate: generateScopeApi,
+        isGenerating: isGeneratingScope,
+    } = useFieldGeneration({
+        fieldType: 'scope.works',
         projectId,
         stakeholderId: stakeholderId || undefined,
     });
@@ -787,7 +896,11 @@ export function RFTNewShortTab({
                 // Fetch Stakeholder Brief info
                 const stakeholderRes = await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`);
                 if (stakeholderRes.ok) {
-                    const stakeholderData = await stakeholderRes.json();
+                    const stakeholderData = await stakeholderRes.json() as RftStakeholderSnapshot;
+                    setStakeholderGroup(stakeholderData.stakeholderGroup ?? null);
+                    setScopeData({
+                        works: stakeholderData.scopeWorks ?? stakeholderData.briefServices ?? '',
+                    });
                     setBriefData({
                         services: {
                             short:    stakeholderData.briefServices ?? stakeholderData.scopeWorks ?? '',
@@ -801,6 +914,9 @@ export function RFTNewShortTab({
                         },
                     });
                 }
+            } else {
+                setStakeholderGroup(null);
+                setScopeData({ works: '' });
             }
 
             const costRes = await fetch(costUrl);
@@ -837,7 +953,7 @@ export function RFTNewShortTab({
     /**
      * Build informative description of sources used for generation
      */
-    const buildSourceDescription = (metadata: {
+    const buildSourceDescription = useCallback((metadata: {
         usedRAG: boolean;
         usedProjectContext: boolean;
         usedProfiler: boolean;
@@ -879,7 +995,7 @@ export function RFTNewShortTab({
             parts.push('(no project documents)');
         }
         return parts.length > 0 ? `Generated using: ${parts.join(', ')}` : 'Generated using project context';
-    };
+    }, []);
 
     // Single refresh handler — replaces the previous Generate/Polish quartet.
     // Short mode: empty input regenerates short bullets and saves to brief_services /
@@ -935,7 +1051,39 @@ export function RFTNewShortTab({
                 variant: 'destructive',
             });
         }
-    }, [briefData, generateServiceApi, generateDeliverablesApi, stakeholderId, projectId, toast]);
+    }, [briefData, buildSourceDescription, generateServiceApi, generateDeliverablesApi, stakeholderId, projectId, toast]);
+
+    const handleScopeRefresh = useCallback(async () => {
+        if (isGeneratingScope || isSavingScope) return;
+
+        try {
+            const current = scopeData.works;
+            const input = current.replace(/<[^>]*>/g, '').trim().length > 0 ? current : '';
+            const result = await generateScopeApi(input);
+
+            setScopeData({ works: result.content });
+
+            if (stakeholderId) {
+                await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scopeWorks: result.content }),
+                });
+            }
+
+            toast({
+                title: input ? 'Scope improved' : 'Scope generated',
+                description: buildSourceDescription(result.metadata, result.sources.length),
+                variant: 'success',
+            });
+        } catch (error) {
+            toast({
+                title: 'Scope generation failed',
+                description: error instanceof Error ? error.message : 'Unknown error',
+                variant: 'destructive',
+            });
+        }
+    }, [buildSourceDescription, generateScopeApi, isGeneratingScope, isSavingScope, projectId, scopeData.works, stakeholderId, toast]);
 
     // Persist the per-sub-section view mode so the toggle is sticky across reloads
     // and the export honours what the user is looking at.
@@ -1009,6 +1157,29 @@ export function RFTNewShortTab({
             setIsSavingBrief(false);
         }
     };
+
+    const handleScopeChange = (value: string) => {
+        setScopeData({ works: value });
+    };
+
+    const handleSaveScope = async () => {
+        if (!stakeholderId) return;
+        setIsSavingScope(true);
+        try {
+            await fetch(`/api/projects/${projectId}/stakeholders/${stakeholderId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scopeWorks: scopeData.works }),
+            });
+        } catch (error) {
+            console.error('Failed to save contractor scope', error);
+        } finally {
+            setIsSavingScope(false);
+        }
+    };
+
+    const isContractorRft = stakeholderGroup === 'contractor';
+    const priceLabel = isContractorRft ? 'Price' : 'Fee';
 
     return (
         <div
@@ -1100,11 +1271,32 @@ export function RFTNewShortTab({
                 )}
             </div>
 
+            {isContractorRft ? (
+                <div className="space-y-2">
+                    <div className="px-4">
+                        <RFTSectionHeading>
+                            Scope
+                        </RFTSectionHeading>
+                    </div>
+                    <ScopeWorksSection
+                        value={scopeData.works}
+                        isGenerating={isGeneratingScope}
+                        isSaving={isSavingScope}
+                        onChange={handleScopeChange}
+                        onSave={handleSaveScope}
+                        onRefresh={handleScopeRefresh}
+                    />
+                    {isSavingScope && (
+                        <span className="text-xs text-[var(--color-accent-copper)]">Saving...</span>
+                    )}
+                </div>
+            ) : null}
+
             {/* 3. Brief Section — services stacked above deliverables, single
                 outer card with continuous numbering across both. Mirrors the
                 Objectives SectionGroup pattern: segmented Short/Long toggle +
                 single DiamondIcon refresh in each sub-section header. */}
-            <div className="space-y-2">
+            <div className={cn('space-y-2', isContractorRft && 'hidden')}>
                 <div className="px-4">
                     <RFTSectionHeading>
                         Brief
@@ -1149,11 +1341,11 @@ export function RFTNewShortTab({
                 onToggleVisible={onToggleProgramVisible}
             />
 
-            {/* 5. Fee Section */}
+            {/* 5. Fee / Price Section */}
             <div className="space-y-2">
                 <div className="px-4">
                     <RFTSectionHeading>
-                        Fee
+                        {priceLabel}
                     </RFTSectionHeading>
                 </div>
                 <div className="overflow-hidden rounded-lg">
@@ -1176,7 +1368,7 @@ export function RFTNewShortTab({
                         </table>
                     ) : (
                         <div className="px-4 py-3 text-[var(--color-text-muted)] text-sm">
-                            No cost plan items for this {contextName}
+                            No {isContractorRft ? 'price' : 'fee'} items for this {contextName}
                         </div>
                     )}
                 </div>

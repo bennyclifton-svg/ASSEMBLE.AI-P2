@@ -14,7 +14,7 @@ jest.mock('../invocations', () => ({
     finishActionInvocation: (...args: unknown[]) => mockFinishActionInvocation(...args),
 }));
 
-jest.mock('@/lib/agents/approvals', () => ({
+jest.mock('../proposals', () => ({
     proposeApproval: (...args: unknown[]) => mockProposeApproval(...args),
 }));
 

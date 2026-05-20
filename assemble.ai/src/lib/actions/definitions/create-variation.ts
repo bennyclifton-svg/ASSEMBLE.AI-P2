@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { costLines, projectStakeholders } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { applyCreateVariation } from '@/lib/agents/applicators';
 import {
     COST_LINE_AMBIGUITY_GAP,
@@ -14,19 +14,23 @@ import { defineAction } from '../define';
 const VARIATION_CATEGORIES = ['Principal', 'Contractor', 'Lessor Works'] as const;
 const VARIATION_STATUSES = ['Forecast', 'Approved', 'Rejected', 'Withdrawn'] as const;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-const inputSchema = z.object({
-    category: z.enum(VARIATION_CATEGORIES),
-    description: z.string().trim().min(1),
-    status: z.enum(VARIATION_STATUSES).optional(),
-    costLineId: z
+const optionalCostLineId = z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z
         .string()
         .trim()
         .min(
             1,
             'costLineId must be a non-empty id. If the user supplied a label, pass it as costLineReference.'
         )
-        .optional(),
+        .optional()
+);
+
+const inputSchema = z.object({
+    category: z.enum(VARIATION_CATEGORIES),
+    description: z.string().trim().min(1),
+    status: z.enum(VARIATION_STATUSES).optional(),
+    costLineId: optionalCostLineId,
     costLineReference: z.string().trim().min(1).optional(),
     disciplineOrTrade: z.string().trim().min(1).optional(),
     amountForecastCents: z.number().int().nonnegative().optional(),

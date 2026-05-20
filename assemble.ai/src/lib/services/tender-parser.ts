@@ -57,9 +57,28 @@ export interface MappedTenderResult {
     error?: string;
 }
 
+export interface TenderExtractionPayload {
+    firmName: string | null;
+    items: Array<{
+        description: string;
+        amountCents: number;
+        confidence: number;
+        itemType?: TenderItemType;
+        tableType?: EvaluationTableType;
+        category?: string;
+        sourceSection?: string;
+        vmAdoptionStatus?: VmAdoptionStatus;
+        vmEmbeddedInBase?: boolean;
+        vmOrigin?: VmOrigin;
+    }>;
+    overallConfidence: number;
+}
+
 // ============================================================================
 // EXTRACTION PROMPT (T042)
 // ============================================================================
+
+const TENDER_EXTRACTION_MAX_TOKENS = 8000;
 
 const TENDER_EXTRACTION_PROMPT = `You are an expert at extracting pricing data from tender submission documents.
 Analyze the provided tender document and extract priced rows for a tender evaluation sheet.
@@ -90,8 +109,10 @@ IMPORTANT:
 - Keep the tenderer's wording where possible, but remove numbering/table noise.
 - If a row appears under a Value Management or VM heading, tableType must be "value_management".
 - If a row appears under Adds & Subs, Commercial Adjustments, Normalisation, Exclusions, Qualifications, or Clarifications with a fixed price, tableType must be "adds_subs".
+- Return compact JSON. Do not use markdown fences, comments, or explanatory text.
+- To keep long price schedules within the response limit, include vmAdoptionStatus, vmEmbeddedInBase, and vmOrigin only for rows where tableType is "value_management".
 
-Return ONLY a valid JSON object with this exact structure (no markdown, no explanation):
+Return ONLY a valid JSON object with this exact structure:
 
 {
   "firmName": "string or null (company/tenderer name if found)",
@@ -104,9 +125,9 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
       "tableType": "initial_price" | "adds_subs" | "value_management",
       "category": "short category such as base price, scope gap, exclusion, qualification, value management, allowance",
       "sourceSection": "heading or section where the row was found",
-      "vmAdoptionStatus": "tbd",
+      "vmAdoptionStatus": "tbd (value_management rows only)",
       "vmEmbeddedInBase": false,
-      "vmOrigin": "tenderer_proposed"
+      "vmOrigin": "tenderer_proposed (value_management rows only)"
     }
   ],
   "overallConfidence": number (0-1, overall confidence in the extraction)
@@ -225,6 +246,79 @@ export function filterLineItems(items: ParsedLineItem[]): FilterResult {
 }
 
 // ============================================================================
+// EXTRACTION RESPONSE PARSING
+// ============================================================================
+
+const INCOMPLETE_EXTRACTION_RESPONSE_MESSAGE =
+    'AI extraction response was incomplete. The pricing schedule likely exceeded the model output limit. ' +
+    'Retry the extraction; if it still fails, split the tender submission into a smaller file.';
+
+function extractTenderExtractionJson(responseText: string): string {
+    const start = responseText.indexOf('{');
+    if (start === -1) {
+        throw new Error('Invalid JSON response from extraction');
+    }
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < responseText.length; i++) {
+        const char = responseText[i];
+
+        if (inString) {
+            if (escaped) {
+                escaped = false;
+            } else if (char === '\\') {
+                escaped = true;
+            } else if (char === '"') {
+                inString = false;
+            }
+            continue;
+        }
+
+        if (char === '"') {
+            inString = true;
+            continue;
+        }
+
+        if (char === '{') {
+            depth++;
+        } else if (char === '}') {
+            depth--;
+            if (depth === 0) {
+                return responseText.slice(start, i + 1);
+            }
+        }
+    }
+
+    throw new Error(INCOMPLETE_EXTRACTION_RESPONSE_MESSAGE);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseTenderExtractionJson(jsonText: string): TenderExtractionPayload {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(jsonText);
+    } catch {
+        throw new Error('Invalid JSON response from extraction');
+    }
+
+    if (!isRecord(parsed) || !Array.isArray(parsed.items)) {
+        throw new Error('Invalid JSON response from extraction');
+    }
+
+    return parsed as unknown as TenderExtractionPayload;
+}
+
+export function parseTenderExtractionResponse(responseText: string): TenderExtractionPayload {
+    return parseTenderExtractionJson(extractTenderExtractionJson(responseText));
+}
+
+// ============================================================================
 // ERROR NORMALISATION
 // ============================================================================
 
@@ -320,7 +414,7 @@ export async function extractPricingFromTender(
 
         const response = await aiComplete({
             featureGroup: 'extraction',
-            maxTokens: 3000,
+            maxTokens: TENDER_EXTRACTION_MAX_TOKENS,
             temperature: 0,
             messages: [
                 {
@@ -331,46 +425,20 @@ export async function extractPricingFromTender(
         });
 
         // Parse JSON response
-        let extractedData: {
-            firmName: string | null;
-            items: Array<{
-                description: string;
-                amountCents: number;
-                confidence: number;
-                itemType?: TenderItemType;
-                tableType?: EvaluationTableType;
-                category?: string;
-                sourceSection?: string;
-                vmAdoptionStatus?: VmAdoptionStatus;
-                vmEmbeddedInBase?: boolean;
-                vmOrigin?: VmOrigin;
-            }>;
-            overallConfidence: number;
-        };
+        let extractedData: TenderExtractionPayload;
 
         try {
-            // Clean up response - extract JSON from markdown code blocks or raw JSON
-            let jsonText = response.text.trim();
-
-            // Try to extract JSON from markdown code block first
-            const codeBlockMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)```/);
-            if (codeBlockMatch) {
-                jsonText = codeBlockMatch[1].trim();
-            }
-
-            // If still not valid JSON, try to find JSON object in the text
-            if (!jsonText.startsWith('{')) {
-                const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    jsonText = jsonMatch[0];
-                }
-            }
-
+            const jsonText = extractTenderExtractionJson(response.text);
             console.log('[tender-parser] Cleaned JSON to parse:', jsonText.substring(0, 200));
-            extractedData = JSON.parse(jsonText);
-        } catch {
-            console.error('[tender-parser] Failed to parse JSON response:', response.text);
-            throw new Error('Invalid JSON response from extraction');
+            extractedData = parseTenderExtractionJson(jsonText);
+        } catch (jsonError) {
+            const message = jsonError instanceof Error ? jsonError.message : 'Invalid JSON response from extraction';
+            console.error('[tender-parser] Failed to parse JSON response:', {
+                message,
+                responseLength: response.text.length,
+                preview: response.text.substring(0, 2000),
+            });
+            throw new Error(message);
         }
 
         // Build raw items with AI classification

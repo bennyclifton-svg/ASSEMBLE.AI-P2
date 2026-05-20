@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { defineAction } from '../define';
 import type { ActionContext } from '../types';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { createWeeklyReportDraft } from '@/lib/weekly-report-draft/service';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;

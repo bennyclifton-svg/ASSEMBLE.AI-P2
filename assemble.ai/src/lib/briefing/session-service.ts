@@ -4,18 +4,11 @@ import {
     briefAttachments,
     briefingMessages,
     briefingSessions,
-    categories,
     documents,
-    fileAssets,
-    projectDetails,
-    projectProfiles,
     projects,
-    subcategories,
-    versions,
 } from '@/lib/db/pg-schema';
-import { projectObjectives } from '@/lib/db/objectives-schema';
-import { documentSetMembers } from '@/lib/db/rag-schema';
-import { ragDb } from '@/lib/db/rag-client';
+import { assembleContext } from '@/lib/context/orchestrator';
+import type { BriefingProjectData } from '@/lib/context/modules/briefing-project';
 import { DEFAULT_BRIEFING_COVERAGE, isComplete, normalizeCoverage } from './coverage-judge';
 import type {
     BriefingContextSnapshot,
@@ -24,15 +17,6 @@ import type {
     BriefingSessionRow,
     BriefingToolCallRecord,
 } from './types';
-
-function parseJson<T>(value: string | null | undefined, fallback: T): T {
-    if (!value) return fallback;
-    try {
-        return JSON.parse(value) as T;
-    } catch {
-        return fallback;
-    }
-}
 
 export function serializeBriefingSession(row: BriefingSessionRow | null) {
     if (!row) return null;
@@ -151,73 +135,35 @@ export async function updateSessionCoverage(
     return updated;
 }
 
-async function getRagStatuses(documentIds: string[]): Promise<Map<string, string>> {
-    const statuses = new Map<string, string>();
-    if (documentIds.length === 0) return statuses;
+function emptyBriefingProjectData(): BriefingProjectData {
+    return {
+        profile: null,
+        projectDetails: null,
+        objectives: [],
+        attachments: [],
+    };
+}
 
-    try {
-        const rows = await ragDb
-            .select({
-                documentId: documentSetMembers.documentId,
-                syncStatus: documentSetMembers.syncStatus,
-            })
-            .from(documentSetMembers)
-            .where(inArray(documentSetMembers.documentId, documentIds));
+async function assembleBriefingProjectData(projectId: string): Promise<BriefingProjectData> {
+    const assembled = await assembleContext({
+        projectId,
+        task: 'Assemble briefing project context',
+        contextType: 'briefing',
+        includeKnowledgeDomains: false,
+        includeAiMemory: false,
+    });
 
-        const rank: Record<string, number> = {
-            synced: 4,
-            processing: 3,
-            pending: 2,
-            failed: 1,
-        };
-        for (const row of rows) {
-            const next = row.syncStatus ?? 'pending';
-            const current = statuses.get(row.documentId);
-            if (!current || (rank[next] ?? 0) > (rank[current] ?? 0)) {
-                statuses.set(row.documentId, next);
-            }
-        }
-    } catch {
-        return statuses;
+    const briefingProject = assembled.rawModules.get('briefingProject');
+    if (!briefingProject?.success || !briefingProject.data) {
+        return emptyBriefingProjectData();
     }
 
-    return statuses;
+    return briefingProject.data as BriefingProjectData;
 }
 
 export async function listBriefAttachments(projectId: string): Promise<BriefingDocumentMetadata[]> {
-    const rows = await db
-        .select({
-            attachmentId: briefAttachments.id,
-            documentId: briefAttachments.documentId,
-            attachedAt: briefAttachments.attachedAt,
-            originalName: fileAssets.originalName,
-            drawingName: fileAssets.drawingName,
-            mimeType: fileAssets.mimeType,
-            ocrStatus: fileAssets.ocrStatus,
-            categoryName: categories.name,
-            subcategoryName: subcategories.name,
-        })
-        .from(briefAttachments)
-        .innerJoin(documents, eq(briefAttachments.documentId, documents.id))
-        .leftJoin(versions, eq(documents.latestVersionId, versions.id))
-        .leftJoin(fileAssets, eq(versions.fileAssetId, fileAssets.id))
-        .leftJoin(categories, eq(documents.categoryId, categories.id))
-        .leftJoin(subcategories, eq(documents.subcategoryId, subcategories.id))
-        .where(eq(briefAttachments.projectId, projectId))
-        .orderBy(asc(briefAttachments.attachedAt));
-
-    const ragStatuses = await getRagStatuses(rows.map((row) => row.documentId));
-
-    return rows.map((row) => ({
-        attachmentId: row.attachmentId,
-        documentId: row.documentId,
-        title: row.drawingName ?? row.originalName ?? 'Untitled document',
-        type: row.subcategoryName ?? row.categoryName ?? row.mimeType ?? null,
-        pageCount: null,
-        ocrStatus: row.ocrStatus ?? null,
-        ragStatus: ragStatuses.get(row.documentId) ?? null,
-        attachedAt: row.attachedAt,
-    }));
+    const projectContext = await assembleBriefingProjectData(projectId);
+    return projectContext.attachments;
 }
 
 export async function attachBriefDocuments(args: {
@@ -270,56 +216,17 @@ export async function buildContextSnapshot(
     projectId: string,
     session: BriefingSessionRow
 ): Promise<BriefingContextSnapshot> {
-    const [profile] = await db
-        .select()
-        .from(projectProfiles)
-        .where(eq(projectProfiles.projectId, projectId))
-        .limit(1);
-    const [details] = await db
-        .select()
-        .from(projectDetails)
-        .where(eq(projectDetails.projectId, projectId))
-        .limit(1);
-    const objectives = await db
-        .select({
-            id: projectObjectives.id,
-            objectiveType: projectObjectives.objectiveType,
-            text: projectObjectives.text,
-            status: projectObjectives.status,
-            source: projectObjectives.source,
-            sortOrder: projectObjectives.sortOrder,
-        })
-        .from(projectObjectives)
-        .where(
-            and(
-                eq(projectObjectives.projectId, projectId),
-                eq(projectObjectives.isDeleted, false)
-            )
-        )
-        .orderBy(asc(projectObjectives.objectiveType), asc(projectObjectives.sortOrder));
-
-    const messages = await listMessages(session.id);
-    const attachments = await listBriefAttachments(projectId);
+    const [projectContext, messages] = await Promise.all([
+        assembleBriefingProjectData(projectId),
+        listMessages(session.id),
+    ]);
 
     return {
         projectId,
-        profile: profile
-            ? {
-                id: profile.id,
-                buildingClass: profile.buildingClass,
-                projectType: profile.projectType,
-                subclass: parseJson(profile.subclass, []),
-                subclassOther: parseJson(profile.subclassOther, []),
-                scaleData: parseJson(profile.scaleData, {}),
-                complexity: parseJson(profile.complexity, {}),
-                workScope: parseJson(profile.workScope, []),
-                complexityScore: profile.complexityScore,
-                region: profile.region,
-            }
-            : null,
-        projectDetails: details ?? null,
-        objectives,
-        attachments,
+        profile: projectContext.profile,
+        projectDetails: projectContext.projectDetails,
+        objectives: projectContext.objectives,
+        attachments: projectContext.attachments,
         session,
         messages,
     };

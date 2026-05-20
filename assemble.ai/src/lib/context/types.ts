@@ -28,7 +28,8 @@ export type ModuleName =
   | 'ragDocuments'
   | 'projectInfo'
   | 'procurementDocs'
-  | 'attachedDocuments';
+  | 'attachedDocuments'
+  | 'briefingProject';
 
 /**
  * Context request from any AI consumer.
@@ -48,6 +49,7 @@ export interface ContextRequest {
     | 'report-section'
     | 'meeting-section'
     | 'inline-instruction'
+    | 'briefing'
     | 'trr'
     | 'note'
     | 'rft';
@@ -82,6 +84,9 @@ export interface ContextRequest {
 
   /** Override: explicitly request specific modules regardless of strategy */
   forceModules?: ModuleName[];
+
+  /** Add modules to the resolved strategy without replacing it */
+  additionalModules?: ModuleName[];
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { ProposedDiff } from '../approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 
 export interface AwaitingApprovalOutput {
     status: 'awaiting_approval';

@@ -2291,3 +2291,66 @@ button.sitewise-chip:disabled {
   background: var(--sw-rose);
   color: var(--sw-ink);
 }
+
+/* Editable objective list — single contentEditable <ol> per section.
+   Numbering rendered via CSS counters so the digits never become part of
+   the editable text. `counter-reset: sw-obj N` is set inline on each <ol>
+   so sections continue numbering from the previous one (Planning 1..n,
+   Functional n+1.., etc.). */
+.sw-obj-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  outline: none;
+}
+
+.sw-obj-list li {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  color: var(--sw-ink);
+  line-height: 1.4;
+}
+
+.sw-obj-list li + li {
+  margin-top: 6px;
+}
+
+.sw-obj-list li::before {
+  counter-increment: sw-obj;
+  content: counter(sw-obj) ".";
+  flex-shrink: 0;
+  min-width: 18px;
+  font-family: var(--sw-font-mono);
+  font-size: 11px;
+  color: var(--sw-muted);
+  user-select: none;
+}
+
+.sw-obj-list li:empty::after {
+  content: "\200B"; /* keep the line clickable when empty */
+}
+
+/* TipTap wraps each <li>'s text in a <p>. Flatten that <p> so it behaves
+   like an inline flex child alongside the ::before counter pseudo. Without
+   this, default <p> margins push the text below the number and break the
+   single-line bullet appearance. */
+.sw-obj-list li > p {
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* The ObjectiveListEditor wraps the TipTap content in a <div> that owns the
+   per-section counter-reset. Strip the default ProseMirror outline so the
+   editor blends into the surrounding card chrome. */
+.sw-obj-list-editor {
+  outline: none;
+}
+
+.sw-obj-list-editor:focus {
+  outline: none;
+}

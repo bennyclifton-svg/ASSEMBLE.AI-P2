@@ -44,6 +44,7 @@ export async function fetchPlanningContextNode(
             return {
                 planningContext: null,
                 transmittal: null,
+                documentSetIds: [],
                 status: 'failed',
                 errorMessage: `Project not found: ${state.projectId}`,
             };

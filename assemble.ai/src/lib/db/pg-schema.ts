@@ -19,14 +19,14 @@ export const categories = pgTable('categories', {
 export const subcategories = pgTable('subcategories', {
     id: text('id').primaryKey(),
     categoryId: text('category_id').references(() => categories.id).notNull(),
-    projectId: text('project_id').references(() => projects.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     isSystem: boolean('is_system').default(false),
     sortOrder: integer('sort_order').default(0),
 });
 
 export const categoryVisibility = pgTable('category_visibility', {
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     categoryId: text('category_id').references(() => categories.id).notNull(),
     isVisible: boolean('is_visible').notNull().default(true),
 }, (table) => [
@@ -35,7 +35,7 @@ export const categoryVisibility = pgTable('category_visibility', {
 
 export const documents = pgTable('documents', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     categoryId: text('category_id'),
     subcategoryId: text('subcategory_id'),
     latestVersionId: text('latest_version_id'),
@@ -63,7 +63,7 @@ export const fileAssets = pgTable('file_assets', {
 
 export const versions = pgTable('versions', {
     id: text('id').primaryKey(),
-    documentId: text('document_id').references(() => documents.id).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'cascade' }).notNull(),
     fileAssetId: text('file_asset_id').references(() => fileAssets.id).notNull(),
     versionNumber: integer('version_number').notNull(),
     uploadedBy: text('uploaded_by').default('User'),
@@ -72,9 +72,9 @@ export const versions = pgTable('versions', {
 
 export const transmittals = pgTable('transmittals', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }),
     subcategoryId: text('subcategory_id').references(() => subcategories.id),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     name: text('name').notNull(),
     status: text('status').default('DRAFT'),
     issuedAt: timestamp('issued_at'),
@@ -84,8 +84,8 @@ export const transmittals = pgTable('transmittals', {
 
 export const transmittalItems = pgTable('transmittal_items', {
     id: text('id').primaryKey(),
-    transmittalId: text('transmittal_id').references(() => transmittals.id).notNull(),
-    versionId: text('version_id').references(() => versions.id).notNull(),
+    transmittalId: text('transmittal_id').references(() => transmittals.id, { onDelete: 'cascade' }).notNull(),
+    versionId: text('version_id').references(() => versions.id, { onDelete: 'cascade' }).notNull(),
     addedAt: timestamp('added_at').defaultNow(),
 });
 
@@ -324,7 +324,7 @@ export const projects = pgTable('projects', {
 
 export const projectDetails = pgTable('project_details', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     projectName: text('project_name').notNull(),
     address: text('address').notNull(),
     legalAddress: text('legal_address'),
@@ -358,7 +358,7 @@ export const projectQuestionAnswers = pgTable('project_question_answers', {
 
 export const projectStages = pgTable('project_stages', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     stageNumber: integer('stage_number').notNull(),
     stageName: text('stage_name').notNull(),
     startDate: text('start_date'),
@@ -370,7 +370,7 @@ export const projectStages = pgTable('project_stages', {
 
 export const risks = pgTable('risks', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     title: text('title').notNull(),
     description: text('description'),
     likelihood: text('likelihood'),
@@ -384,7 +384,7 @@ export const risks = pgTable('risks', {
 
 export const stakeholders = pgTable('stakeholders', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     name: text('name').notNull(),
     role: text('role'),
     organization: text('organization'),
@@ -396,7 +396,7 @@ export const stakeholders = pgTable('stakeholders', {
 
 export const consultantDisciplines = pgTable('consultant_disciplines', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     disciplineName: text('discipline_name').notNull(),
     isEnabled: boolean('is_enabled').default(false),
     order: integer('order').notNull(),
@@ -409,7 +409,7 @@ export const consultantDisciplines = pgTable('consultant_disciplines', {
 
 export const consultantStatuses = pgTable('consultant_statuses', {
     id: text('id').primaryKey(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id).notNull(),
+    disciplineId: text('discipline_id').references(() => consultantDisciplines.id, { onDelete: 'cascade' }).notNull(),
     statusType: text('status_type').notNull(),
     isActive: boolean('is_active').default(false),
     completedAt: timestamp('completed_at'),
@@ -418,7 +418,7 @@ export const consultantStatuses = pgTable('consultant_statuses', {
 
 export const contractorTrades = pgTable('contractor_trades', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     tradeName: text('trade_name').notNull(),
     isEnabled: boolean('is_enabled').default(false),
     order: integer('order').notNull(),
@@ -431,7 +431,7 @@ export const contractorTrades = pgTable('contractor_trades', {
 
 export const contractorStatuses = pgTable('contractor_statuses', {
     id: text('id').primaryKey(),
-    tradeId: text('trade_id').references(() => contractorTrades.id).notNull(),
+    tradeId: text('trade_id').references(() => contractorTrades.id, { onDelete: 'cascade' }).notNull(),
     statusType: text('status_type').notNull(),
     isActive: boolean('is_active').default(false),
     completedAt: timestamp('completed_at'),
@@ -440,7 +440,7 @@ export const contractorStatuses = pgTable('contractor_statuses', {
 
 export const disciplineFeeItems = pgTable('discipline_fee_items', {
     id: text('id').primaryKey(),
-    disciplineId: text('discipline_id').references(() => consultantDisciplines.id).notNull(),
+    disciplineId: text('discipline_id').references(() => consultantDisciplines.id, { onDelete: 'cascade' }).notNull(),
     description: text('description').notNull(),
     sortOrder: integer('sort_order').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
@@ -449,7 +449,7 @@ export const disciplineFeeItems = pgTable('discipline_fee_items', {
 
 export const tradePriceItems = pgTable('trade_price_items', {
     id: text('id').primaryKey(),
-    tradeId: text('trade_id').references(() => contractorTrades.id).notNull(),
+    tradeId: text('trade_id').references(() => contractorTrades.id, { onDelete: 'cascade' }).notNull(),
     description: text('description').notNull(),
     sortOrder: integer('sort_order').notNull(),
     createdAt: timestamp('created_at').defaultNow(),
@@ -458,7 +458,7 @@ export const tradePriceItems = pgTable('trade_price_items', {
 
 export const revisionHistory = pgTable('revision_history', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     entityType: text('entity_type').notNull(),
     entityId: text('entity_id').notNull(),
     fieldName: text('field_name').notNull(),
@@ -496,7 +496,7 @@ export const gisCache = pgTable('gis_cache', {
 
 export const consultants = pgTable('consultants', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     companyName: text('company_name').notNull(),
     contactPerson: text('contact_person'),
     discipline: text('discipline').notNull(),
@@ -515,7 +515,7 @@ export const consultants = pgTable('consultants', {
 
 export const contractors = pgTable('contractors', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     companyName: text('company_name').notNull(),
     contactPerson: text('contact_person'),
     trade: text('trade').notNull(),
@@ -550,8 +550,8 @@ export const companies = pgTable('companies', {
 
 export const costLines = pgTable('cost_lines', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     section: text('section').notNull(),
     costCode: text('cost_code'),
     activity: text('activity').notNull(),
@@ -571,7 +571,7 @@ export const costLines = pgTable('cost_lines', {
 
 export const costLineAllocations = pgTable('cost_line_allocations', {
     id: text('id').primaryKey(),
-    costLineId: text('cost_line_id').references(() => costLines.id).notNull(),
+    costLineId: text('cost_line_id').references(() => costLines.id, { onDelete: 'cascade' }).notNull(),
     fiscalYear: integer('fiscal_year').notNull(),
     amountCents: bigint('amount_cents', { mode: 'number' }).default(0),
     createdAt: timestamp('created_at').defaultNow(),
@@ -580,8 +580,8 @@ export const costLineAllocations = pgTable('cost_line_allocations', {
 
 export const variations = pgTable('variations', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    costLineId: text('cost_line_id').references(() => costLines.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    costLineId: text('cost_line_id').references(() => costLines.id, { onDelete: 'set null' }),
     variationNumber: text('variation_number').notNull(),
     category: text('category').notNull(),
     description: text('description').notNull(),
@@ -600,9 +600,9 @@ export const variations = pgTable('variations', {
 
 export const invoices = pgTable('invoices', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    costLineId: text('cost_line_id').references(() => costLines.id),
-    variationId: text('variation_id').references(() => variations.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    costLineId: text('cost_line_id').references(() => costLines.id, { onDelete: 'set null' }),
+    variationId: text('variation_id').references(() => variations.id, { onDelete: 'set null' }),
     companyId: text('company_id').references(() => companies.id),
     fileAssetId: text('file_asset_id').references(() => fileAssets.id),
     invoiceDate: text('invoice_date').notNull(),
@@ -622,7 +622,7 @@ export const invoices = pgTable('invoices', {
 
 export const costLineComments = pgTable('cost_line_comments', {
     id: text('id').primaryKey(),
-    costLineId: text('cost_line_id').references(() => costLines.id).notNull(),
+    costLineId: text('cost_line_id').references(() => costLines.id, { onDelete: 'cascade' }).notNull(),
     columnKey: text('column_key').notNull(),
     commentText: text('comment_text').notNull(),
     createdBy: text('created_by').notNull(),
@@ -633,7 +633,7 @@ export const costLineComments = pgTable('cost_line_comments', {
 
 export const projectSnapshots = pgTable('project_snapshots', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     snapshotName: text('snapshot_name').notNull(),
     snapshotDate: text('snapshot_date').notNull(),
     snapshotData: text('snapshot_data').notNull(),
@@ -745,8 +745,8 @@ export const libraryDocuments = pgTable('library_documents', {
 
 export const addenda = pgTable('addenda', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     addendumNumber: integer('addendum_number').notNull(),
     content: text('content'),
     addendumDate: text('addendum_date'),
@@ -757,7 +757,7 @@ export const addenda = pgTable('addenda', {
 export const addendumTransmittals = pgTable('addendum_transmittals', {
     id: text('id').primaryKey(),
     addendumId: text('addendum_id').references(() => addenda.id, { onDelete: 'cascade' }).notNull(),
-    documentId: text('document_id').references(() => documents.id).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'cascade' }).notNull(),
     sortOrder: integer('sort_order').notNull().default(0),
     createdAt: timestamp('created_at').defaultNow(),
 });
@@ -768,8 +768,8 @@ export const addendumTransmittals = pgTable('addendum_transmittals', {
 
 export const rftNew = pgTable('rft_new', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     rftNumber: integer('rft_number').notNull().default(1),
     rftDate: text('rft_date'),
     objectivesVisible: boolean('objectives_visible').notNull().default(false),
@@ -781,7 +781,7 @@ export const rftNew = pgTable('rft_new', {
 export const rftNewTransmittals = pgTable('rft_new_transmittals', {
     id: text('id').primaryKey(),
     rftNewId: text('rft_new_id').references(() => rftNew.id, { onDelete: 'cascade' }).notNull(),
-    documentId: text('document_id').references(() => documents.id).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'cascade' }).notNull(),
     addedAt: timestamp('added_at').defaultNow(),
 });
 
@@ -792,8 +792,8 @@ export const rftNewTransmittals = pgTable('rft_new_transmittals', {
 // Evaluation Price instances (multi-instance with numbered tabs like RFT/TRR)
 export const evaluationPrice = pgTable('evaluation_price', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     evaluationPriceNumber: integer('evaluation_price_number').notNull().default(1),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
@@ -802,8 +802,8 @@ export const evaluationPrice = pgTable('evaluation_price', {
 // Evaluations (now used for non-price evaluation only)
 export const evaluations = pgTable('evaluations', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     deletedCostLineIds: text('deleted_cost_line_ids').default('[]'),
     recommendationState: text('recommendation_state').notNull().default('draft'),
     createdAt: timestamp('created_at').defaultNow(),
@@ -907,7 +907,7 @@ export const evaluationRows = pgTable('evaluation_rows', {
     description: text('description').notNull(),
     orderIndex: integer('order_index').notNull(),
     isSystemRow: boolean('is_system_row').default(false),
-    costLineId: text('cost_line_id').references(() => costLines.id),
+    costLineId: text('cost_line_id').references(() => costLines.id, { onDelete: 'set null' }),
     source: text('source').default('cost_plan'),
     sourceSubmissionId: text('source_submission_id').references(() => tenderSubmissions.id),
     aiStableKey: text('ai_stable_key'),
@@ -972,8 +972,8 @@ export const evaluationNonPriceCells = pgTable('evaluation_non_price_cells', {
 
 export const trr = pgTable('trr', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     evaluationPriceId: text('evaluation_price_id').references(() => evaluationPrice.id, { onDelete: 'set null' }),
     trrNumber: integer('trr_number').notNull().default(1),
     executiveSummary: text('executive_summary'),
@@ -988,7 +988,7 @@ export const trr = pgTable('trr', {
 export const trrTransmittals = pgTable('trr_transmittals', {
     id: text('id').primaryKey(),
     trrId: text('trr_id').references(() => trr.id, { onDelete: 'cascade' }).notNull(),
-    documentId: text('document_id').references(() => documents.id).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'cascade' }).notNull(),
     addedAt: timestamp('added_at').defaultNow(),
 });
 
@@ -998,7 +998,7 @@ export const trrTransmittals = pgTable('trr_transmittals', {
 
 export const programActivities = pgTable('program_activities', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     parentId: text('parent_id'),
     name: text('name').notNull(),
     startDate: text('start_date'),
@@ -1014,7 +1014,7 @@ export const programActivities = pgTable('program_activities', {
 
 export const programDependencies = pgTable('program_dependencies', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     fromActivityId: text('from_activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
     toActivityId: text('to_activity_id').references(() => programActivities.id, { onDelete: 'cascade' }).notNull(),
     type: text('type').notNull(), // 'FS' | 'SS' | 'FF'
@@ -1765,7 +1765,7 @@ export const projectProfilesRelations = relations(projectProfiles, ({ one }) => 
 export const objectivesTransmittals = pgTable('objectives_transmittals', {
     id: text('id').primaryKey(),
     objectivesId: text('objectives_id').references(() => profilerObjectives.id, { onDelete: 'cascade' }).notNull(),
-    documentId: text('document_id').references(() => documents.id).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'cascade' }).notNull(),
     addedAt: text('added_at'),
 });
 
@@ -1979,7 +1979,7 @@ export const stakeholderSubmissionStatusesRelations = relations(stakeholderSubmi
 
 export const notes = pgTable('notes', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
     title: text('title').notNull().default('New Note'),
     content: text('content'),
@@ -1999,7 +1999,7 @@ export const notes = pgTable('notes', {
 export const noteTransmittals = pgTable('note_transmittals', {
     id: text('id').primaryKey(),
     noteId: text('note_id').references(() => notes.id, { onDelete: 'cascade' }).notNull(),
-    documentId: text('document_id').references(() => documents.id).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'cascade' }).notNull(),
     addedAt: text('added_at'),
 });
 
@@ -2033,7 +2033,7 @@ export const noteTransmittalsRelations = relations(noteTransmittals, ({ one }) =
 
 export const meetingGroups = pgTable('meeting_groups', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
     groupNumber: integer('group_number').notNull().default(1),
     title: text('title').notNull().default('New Meeting'),
@@ -2047,7 +2047,7 @@ export const meetingGroups = pgTable('meeting_groups', {
 
 export const meetings = pgTable('meetings', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
     groupId: text('group_id').references(() => meetingGroups.id, { onDelete: 'cascade' }),
     title: text('title').notNull().default('New Meeting'),
@@ -2068,7 +2068,7 @@ export const meetingSections = pgTable('meeting_sections', {
     content: text('content'),
     sortOrder: integer('sort_order').notNull().default(0),
     parentSectionId: text('parent_section_id'),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
 });
@@ -2076,7 +2076,7 @@ export const meetingSections = pgTable('meeting_sections', {
 export const meetingAttendees = pgTable('meeting_attendees', {
     id: text('id').primaryKey(),
     meetingId: text('meeting_id').references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     adhocName: text('adhoc_name'),
     adhocFirm: text('adhoc_firm'),
     adhocGroup: text('adhoc_group'),
@@ -2089,7 +2089,7 @@ export const meetingAttendees = pgTable('meeting_attendees', {
 export const meetingTransmittals = pgTable('meeting_transmittals', {
     id: text('id').primaryKey(),
     meetingId: text('meeting_id').references(() => meetings.id, { onDelete: 'cascade' }).notNull(),
-    documentId: text('document_id').references(() => documents.id).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'cascade' }).notNull(),
     addedAt: text('added_at'),
 });
 
@@ -2164,7 +2164,7 @@ export const meetingTransmittalsRelations = relations(meetingTransmittals, ({ on
 
 export const reportGroups = pgTable('report_groups', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
     groupNumber: integer('group_number').notNull().default(1),
     title: text('title').notNull().default('New Report'),
@@ -2178,7 +2178,7 @@ export const reportGroups = pgTable('report_groups', {
 
 export const reports = pgTable('reports', {
     id: text('id').primaryKey(),
-    projectId: text('project_id').references(() => projects.id).notNull(),
+    projectId: text('project_id').references(() => projects.id, { onDelete: 'cascade' }).notNull(),
     organizationId: text('organization_id').references(() => organizations.id).notNull(),
     groupId: text('group_id').references(() => reportGroups.id, { onDelete: 'cascade' }),
     title: text('title').notNull().default('New Report'),
@@ -2201,7 +2201,7 @@ export const reportSections = pgTable('report_sections', {
     content: text('content'),
     sortOrder: integer('sort_order').notNull().default(0),
     parentSectionId: text('parent_section_id'),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     createdAt: text('created_at'),
     updatedAt: text('updated_at'),
 });
@@ -2209,7 +2209,7 @@ export const reportSections = pgTable('report_sections', {
 export const reportAttendees = pgTable('report_attendees', {
     id: text('id').primaryKey(),
     reportId: text('report_id').references(() => reports.id, { onDelete: 'cascade' }).notNull(),
-    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id),
+    stakeholderId: text('stakeholder_id').references(() => projectStakeholders.id, { onDelete: 'set null' }),
     adhocName: text('adhoc_name'),
     adhocFirm: text('adhoc_firm'),
     adhocGroup: text('adhoc_group'),
@@ -2221,7 +2221,7 @@ export const reportAttendees = pgTable('report_attendees', {
 export const reportTransmittals = pgTable('report_transmittals', {
     id: text('id').primaryKey(),
     reportId: text('report_id').references(() => reports.id, { onDelete: 'cascade' }).notNull(),
-    documentId: text('document_id').references(() => documents.id).notNull(),
+    documentId: text('document_id').references(() => documents.id, { onDelete: 'cascade' }).notNull(),
     addedAt: text('added_at'),
 });
 

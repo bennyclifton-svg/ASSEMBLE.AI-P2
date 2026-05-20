@@ -32,6 +32,8 @@ import {
 } from '../db';
 import { eq, and, asc, isNull } from 'drizzle-orm';
 import { getCategoryById, getCategoryByName } from '../constants/categories';
+import { formatModule } from '../context/formatter';
+import type { PlanningCardData } from '../context/modules/planning-card';
 
 // ============================================
 // Type Definitions
@@ -50,8 +52,10 @@ export interface ProjectDetailsContext {
 
 export interface ObjectiveContext {
     id: string;
+    planning?: string;
     functional?: string;
     quality?: string;
+    compliance?: string;
     budget?: string;
     program?: string;
 }
@@ -113,6 +117,7 @@ export interface PlanningContext {
     stakeholders: StakeholderContext[];
     disciplines: DisciplineContext[];
     trades: TradeContext[];
+    promptContext?: string;
 }
 
 // ============================================
@@ -172,7 +177,7 @@ export interface CostLineContext {
  * Fetch complete Planning Context for a project
  * This returns EXACT data from the Planning Card, not approximations
  */
-export async function fetchPlanningContext(projectId: string): Promise<PlanningContext | null> {
+export async function fetchPlanningContextSnapshot(projectId: string): Promise<PlanningContext | null> {
     // Fetch project
     const project = await db.query.projects.findFirst({
         where: eq(projects.id, projectId),
@@ -188,10 +193,26 @@ export async function fetchPlanningContext(projectId: string): Promise<PlanningC
         where: eq(projectDetails.projectId, projectId),
     });
 
-    // Fetch objectives
-    const objectives = await db.query.projectObjectives.findFirst({
-        where: eq(projectObjectives.projectId, projectId),
-    });
+    // Fetch objectives from the current per-row objectives model.
+    const objectiveRows = await db.select()
+        .from(projectObjectives)
+        .where(and(
+            eq(projectObjectives.projectId, projectId),
+            eq(projectObjectives.isDeleted, false)
+        ))
+        .orderBy(asc(projectObjectives.objectiveType), asc(projectObjectives.sortOrder));
+
+    const groupedObjectives: ObjectiveContext = {
+        id: objectiveRows[0]?.id ?? '',
+    };
+    for (const row of objectiveRows) {
+        const text = row.textPolished ?? row.text;
+        if (!text) continue;
+        const existing = groupedObjectives[row.objectiveType] ?? '';
+        groupedObjectives[row.objectiveType] = existing
+            ? `${existing}\n${text}`
+            : text;
+    }
 
     // Fetch stages (ordered by stage number)
     const stagesData = await db.select()
@@ -236,13 +257,7 @@ export async function fetchPlanningContext(projectId: string): Promise<PlanningC
             numberOfStories: details?.numberOfStories ?? undefined,
             buildingClass: details?.buildingClass ?? undefined,
         },
-        objectives: {
-            id: objectives?.id ?? '',
-            functional: objectives?.functional ?? undefined,
-            quality: objectives?.quality ?? undefined,
-            budget: objectives?.budget ?? undefined,
-            program: objectives?.program ?? undefined,
-        },
+        objectives: groupedObjectives,
         stages: stagesData.map(s => ({
             id: s.id,
             stageNumber: s.stageNumber,
@@ -286,6 +301,66 @@ export async function fetchPlanningContext(projectId: string): Promise<PlanningC
             scopeProgram: t.scopeProgram ?? undefined,
         })),
     };
+}
+
+function planningCardDataToContext(
+    data: PlanningCardData,
+    promptContext?: string
+): PlanningContext {
+    return {
+        projectId: data.projectId,
+        projectCode: data.projectCode ?? undefined,
+        details: data.details as unknown as ProjectDetailsContext,
+        objectives: data.objectives as unknown as ObjectiveContext,
+        stages: data.stages as unknown as StageContext[],
+        risks: data.risks as unknown as RiskContext[],
+        stakeholders: data.stakeholders as unknown as StakeholderContext[],
+        disciplines: data.disciplines as unknown as DisciplineContext[],
+        trades: data.trades as unknown as TradeContext[],
+        promptContext,
+    };
+}
+
+function planningContextToCardData(context: PlanningContext): PlanningCardData {
+    return {
+        projectId: context.projectId,
+        projectCode: context.projectCode ?? null,
+        details: context.details as unknown as Record<string, unknown>,
+        objectives: context.objectives as unknown as Record<string, unknown>,
+        stages: context.stages as unknown as Array<Record<string, unknown>>,
+        risks: context.risks as unknown as Array<Record<string, unknown>>,
+        stakeholders: context.stakeholders as unknown as Array<Record<string, unknown>>,
+        disciplines: context.disciplines as unknown as Array<Record<string, unknown>>,
+        trades: context.trades as unknown as Array<Record<string, unknown>>,
+    };
+}
+
+/**
+ * Fetch complete Planning Context through the unified context assembler.
+ *
+ * @deprecated Prefer calling `assembleContext()` directly. This adapter remains
+ * for legacy report-generation code that still expects `PlanningContext`.
+ */
+export async function fetchPlanningContext(projectId: string): Promise<PlanningContext | null> {
+    const { assembleContext, formatAssembledContextForPrompt } = await import('../context/orchestrator');
+    const assembled = await assembleContext({
+        projectId,
+        task: 'Fetch planning card context',
+        contextType: 'rft',
+        forceModules: ['planningCard'],
+        includeKnowledgeDomains: false,
+        includeAiMemory: false,
+    });
+
+    const planningCard = assembled.rawModules.get('planningCard');
+    if (!planningCard?.success || !planningCard.data) {
+        return null;
+    }
+
+    return planningCardDataToContext(
+        planningCard.data as PlanningCardData,
+        formatAssembledContextForPrompt(assembled)
+    );
 }
 
 /**
@@ -620,52 +695,15 @@ ${tableRows.join('\n')}
  * Returns a structured string representation
  */
 export function formatPlanningContextForPrompt(context: PlanningContext): string {
-    const sections: string[] = [];
-
-    // Project Details
-    sections.push(`## Project Details
-- **Project Name**: ${context.details.projectName}
-- **Address**: ${context.details.address}
-${context.details.buildingClass ? `- **Building Class**: ${context.details.buildingClass}` : ''}
-${context.details.numberOfStories ? `- **Stories**: ${context.details.numberOfStories}` : ''}
-${context.details.jurisdiction ? `- **Jurisdiction**: ${context.details.jurisdiction}` : ''}
-${context.details.zoning ? `- **Zoning**: ${context.details.zoning}` : ''}`);
-
-    // Objectives
-    if (context.objectives) {
-        sections.push(`## Project Objectives
-${context.objectives.functional ? `- **Functional**: ${context.objectives.functional}` : ''}
-${context.objectives.quality ? `- **Quality**: ${context.objectives.quality}` : ''}
-${context.objectives.budget ? `- **Budget**: ${context.objectives.budget}` : ''}
-${context.objectives.program ? `- **Program**: ${context.objectives.program}` : ''}`);
+    if (context.promptContext) {
+        return context.promptContext;
     }
 
-    // Stakeholders
-    if (context.stakeholders.length > 0) {
-        sections.push(`## Key Stakeholders
-${context.stakeholders.map(s =>
-            `- **${s.name}** (${s.role ?? 'Role not specified'})${s.organization ? ` - ${s.organization}` : ''}`
-        ).join('\n')}`);
-    }
-
-    // Risks
-    if (context.risks.length > 0) {
-        sections.push(`## Project Risks
-${context.risks.map(r =>
-            `- **${r.title}**: ${r.description ?? 'No description'}
-  - Likelihood: ${r.likelihood ?? 'Unknown'}, Impact: ${r.impact ?? 'Unknown'}
-  ${r.mitigation ? `- Mitigation: ${r.mitigation}` : ''}`
-        ).join('\n')}`);
-    }
-
-    // Active Disciplines
-    const activeDisciplines = context.disciplines.filter(d => d.isEnabled);
-    if (activeDisciplines.length > 0) {
-        sections.push(`## Active Disciplines
-${activeDisciplines.map(d => `- ${d.name}`).join('\n')}`);
-    }
-
-    return sections.join('\n\n').replace(/\n{3,}/g, '\n\n').trim();
+    return formatModule(
+        'planningCard',
+        planningContextToCardData(context),
+        'standard'
+    );
 }
 
 /**

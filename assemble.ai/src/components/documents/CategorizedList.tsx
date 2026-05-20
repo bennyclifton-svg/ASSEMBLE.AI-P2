@@ -27,9 +27,9 @@ function SyncStatusDiamond({ status }: { status: SyncStatus | null }) {
     }
 
     const colorMap = {
-        synced: 'text-[var(--color-accent-gold)]',
-        pending: 'text-[var(--color-accent-yellow)]',
-        processing: 'text-[var(--color-accent-yellow)]',
+        synced: 'text-[var(--sw-rose)]',
+        pending: 'text-[var(--sw-peach)]',
+        processing: 'text-[var(--sw-peach)]',
         failed: 'text-[var(--color-accent-coral)]',
     };
 
@@ -357,12 +357,12 @@ export function CategorizedList({ refreshTrigger, projectId, selectedIds: extern
         }
     }, [selectedIds, projectId, toast]);
 
-    // Check if any documents have pending/processing drawing extraction
+    // Only count actively-processing extractions. PENDING is the column
+    // default for every new file_asset and persists indefinitely when the
+    // worker isn't running or the queue add silently failed, which would
+    // otherwise leave the status banner spinning forever.
     const hasProcessingDrawings = useMemo(() =>
-        documents.some(doc =>
-            doc.drawingExtractionStatus === 'PROCESSING' ||
-            doc.drawingExtractionStatus === 'PENDING'
-        ),
+        documents.some(doc => doc.drawingExtractionStatus === 'PROCESSING'),
         [documents]
     );
 

@@ -332,6 +332,103 @@ Generate professional content that addresses the user's instructions. If no form
   }
 }
 
+function getContractorScopePromptTemplate(
+  mode: InputInterpretation,
+  hasRAG: boolean
+): string {
+  const ragSection = hasRAG
+    ? `## Retrieved Documents (Knowledge Source)
+{ragChunks}`
+    : `## Note
+No Knowledge Source documents are available for this project. Generate content from the project context, saved objectives, stakeholder context, and professional construction tendering practice.`;
+
+  const headingGuidance = `Use one flexible rich-text field. Choose only headings that are useful for the evidence available.
+Suitable headings include:
+- Narrative
+- Tender Summary
+- Scope Overview
+- Trade Scope
+- Planning and Authorities
+- Functional Requirements
+- Quality Requirements
+- Compliance Requirements
+- Tenderer Submission Requirements
+- Exclusions and Principal Responsibilities
+- Open Questions`;
+
+  const sourceDiscipline = `If retrieved documents contain RFT, specification, approval, drawing, or scope material, preserve project-specific dates, quantities, standards, approval references, exclusions, and responsibility splits. Do not invent missing facts.`;
+
+  switch (mode) {
+    case 'generate':
+    case 'focused': {
+      const focusSection = mode === 'focused' ? `
+
+## Focus Area
+{userInput}
+
+Focus the scope on this topic while still preserving material project obligations.` : '';
+
+      return `You are a senior Australian construction project manager preparing a contractor Request for Tender scope for {contextName}.
+
+## Project Context
+{projectContext}
+
+${ragSection}${focusSection}
+
+## Scope Structure
+${headingGuidance}
+
+## Instructions
+1. Generate a contractor-facing scope, not a consultant services brief.
+2. Do not use the headings "Services" or "Deliverables" unless the source document itself uses them.
+3. ${sourceDiscipline}
+4. Use concise paragraphs and bullet lists under clear headings.
+5. Make the scope useful for pricing and tender review: include what is included, key obligations, compliance requirements, tenderer submissions, and exclusions where known.
+6. Keep project objectives as inherited intent; translate them into package-specific scope only where the evidence supports it.
+7. Return only the rich text content. Do not return JSON or markdown code fences.`;
+    }
+
+    case 'enhance':
+      return `You are a senior Australian construction project manager refining a contractor Request for Tender scope for {contextName}.
+
+## Existing Scope
+{userInput}
+
+## Project Context
+{projectContext}
+
+${ragSection}
+
+## Instructions
+1. Preserve the user's existing intent, headings, and important wording.
+2. Improve the scope so it reads as a contractor-facing RFT scope, not a consultant services brief.
+3. ${sourceDiscipline}
+4. Add or rename headings only where it makes the scope clearer.
+5. Do not split the output into separate services and deliverables sections.
+6. Return only the improved rich text content. Do not return JSON or markdown code fences.`;
+
+    case 'instruction':
+      return `You are a senior Australian construction project manager preparing contractor Request for Tender scope content for {contextName}.
+
+## User Instructions
+{userInput}
+
+## Project Context
+{projectContext}
+
+${ragSection}
+
+## Scope Structure
+${headingGuidance}
+
+## Instructions
+1. Follow the user's instructions, but keep the output contractor-facing.
+2. Do not use the consultant headings "Services" and "Deliverables" unless explicitly requested.
+3. ${sourceDiscipline}
+4. Return only the rich text content. Do not return JSON or markdown code fences.`;
+  }
+}
+
 /**
  * Get the appropriate prompt template based on input mode and field type
  * @param fieldType - The type of field being generated
@@ -341,6 +438,10 @@ Generate professional content that addresses the user's instructions. If no form
  */
 export function getPromptTemplate(fieldType: FieldType, mode: InputInterpretation, hasRAG: boolean = true): string {
   const metadata = FIELD_METADATA[fieldType];
+
+  if (fieldType === 'scope.works') {
+    return getContractorScopePromptTemplate(mode, hasRAG);
+  }
 
   // Route RFT fields with bullet generation to the specialized prompt template
   if (metadata.bulletGeneration?.enabled) {

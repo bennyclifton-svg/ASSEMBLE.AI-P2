@@ -339,6 +339,7 @@ export async function POST(req: NextRequest) {
             projectContext.text,
             contextName,
             ragChunksContext,
+            body.fieldType,
             body.additionalContext,
             stakeholderContext,
             domainContext
@@ -346,7 +347,7 @@ export async function POST(req: NextRequest) {
 
         const { text } = await aiComplete({
             featureGroup: 'extraction',
-            maxTokens: 2000,
+            maxTokens: body.fieldType === 'scope.works' ? 3500 : 2000,
             messages: [{
                 role: 'user',
                 content: fullPrompt,
@@ -416,10 +417,10 @@ async function fetchProjectContext(projectId: string): Promise<ProjectContextRes
             .from(profilerObjectives)
             .where(eq(profilerObjectives.projectId, projectId));
 
-        // Fallback to legacy objectives if profilerObjectives not found
-        const [legacyObjectives] = !objectives
+        // Fallback to row-model objectives if profilerObjectives is not found.
+        const legacyObjectiveRows = !objectives
             ? await db.select().from(projectObjectives).where(eq(projectObjectives.projectId, projectId))
-            : [null];
+            : [];
 
         const lines: string[] = [];
         const profileTags: ProfileTagInput = {};
@@ -526,14 +527,20 @@ async function fetchProjectContext(projectId: string): Promise<ProjectContextRes
                     if (pc.content) lines.push(`Planning & Compliance Objectives: ${pc.content}`);
                 } catch { /* ignore parse errors */ }
             }
-        } else if (legacyObjectives) {
-            // Fallback to legacy objectives
+        } else if (legacyObjectiveRows.length > 0) {
+            // Fallback to row-model objectives
             lines.push('');
             lines.push('## Project Objectives');
-            if (legacyObjectives.functional) lines.push(`Functional Objectives: ${legacyObjectives.functional}`);
-            if (legacyObjectives.quality) lines.push(`Quality Objectives: ${legacyObjectives.quality}`);
-            if (legacyObjectives.budget) lines.push(`Budget Objectives: ${legacyObjectives.budget}`);
-            if (legacyObjectives.program) lines.push(`Program Objectives: ${legacyObjectives.program}`);
+            const grouped = legacyObjectiveRows.reduce<Record<string, string[]>>((acc, row) => {
+                const text = row.textPolished || row.text;
+                if (!text) return acc;
+                acc[row.objectiveType] = [...(acc[row.objectiveType] ?? []), text];
+                return acc;
+            }, {});
+            if (grouped.functional?.length) lines.push(`Functional Objectives: ${grouped.functional.join('; ')}`);
+            if (grouped.quality?.length) lines.push(`Quality Objectives: ${grouped.quality.join('; ')}`);
+            if (grouped.planning?.length) lines.push(`Planning Objectives: ${grouped.planning.join('; ')}`);
+            if (grouped.compliance?.length) lines.push(`Compliance Objectives: ${grouped.compliance.join('; ')}`);
         }
 
         return {
@@ -700,6 +707,9 @@ function buildRagQuery(
         case 'generate':
         default:
             // Use generic query based on field type and context
+            if (fieldType === 'scope.works') {
+                return `${contextName} request for tender scope of works pricing exclusions approvals compliance contractor obligations`;
+            }
             return `${contextName} ${metadata.contextLabel} requirements scope deliverables`;
     }
 }
@@ -713,6 +723,7 @@ function buildFullPrompt(
     projectContext: string,
     contextName: string,
     ragChunks: string,
+    fieldType: FieldType,
     additionalContext?: {
         firmName?: string;
         evaluationData?: object;
@@ -758,8 +769,13 @@ function buildFullPrompt(
         }
     }
 
-    // Add instruction to generate discipline-specific content
-    prompt += `\n\nIMPORTANT: Generate content that is SPECIFIC to the discipline/trade mentioned above (${contextName}). Do not generate a generic project brief - focus only on the services and deliverables relevant to this specific discipline. Generate only the content text directly. Do not include JSON formatting, markdown code blocks, or any wrapper structure. Just provide the professional text content.`;
+    const fieldLabel = FIELD_METADATA[fieldType]?.contextLabel ?? 'content';
+    const scopeInstruction = fieldType === 'scope.works'
+        ? 'Do not split contractor scope into separate consultant-style services and deliverables. Use package-specific scope headings where useful.'
+        : 'Focus only on the services and deliverables relevant to this specific discipline.';
+
+    // Add instruction to generate discipline/trade-specific content
+    prompt += `\n\nIMPORTANT: Generate ${fieldLabel} that is SPECIFIC to the discipline/trade mentioned above (${contextName}). Do not generate a generic project brief. ${scopeInstruction} Generate only the content text directly. Do not include JSON formatting, markdown code blocks, or any wrapper structure. Just provide the professional text content.`;
 
     return prompt;
 }

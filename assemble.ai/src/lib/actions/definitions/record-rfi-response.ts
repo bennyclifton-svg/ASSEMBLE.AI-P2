@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { drizzleRfiRepository, rfiService } from '@/lib/rfi/service';
 import {
     RFI_EVIDENCE_TARGET_TYPES,

@@ -1,12 +1,11 @@
 /**
  * Admin Models Page
  *
- * Four feature-group rows. Pick the provider and model for each:
- *   - extraction: pulling structured data from text (cost-line matching,
- *     non-price tender parsing, generate-field, planning extract-objectives).
- *   - generation: writing prose for the user (notes, meetings, reports,
- *     objectives generate/polish, inline /ai instructions, TRR sections,
- *     langgraph section generation).
+ * Three feature-group rows. Pick the provider and model for each:
+ *   - extraction: structured data pulled from text (cost-line matching, tender
+ *     parsing, retrieval field-fill, drawing-number extraction, planning).
+ *   - generation: prose written for the user — including brief objectives,
+ *     which do long full-document reads.
  *   - chat: the chat-dock agents (Orchestrator, Finance, Program, Design).
  *
  * Layout enforces super-admin via requireSuperAdminPage().
@@ -29,15 +28,11 @@ export interface ModelSettingsRow {
 const FEATURE_GROUP_LABELS: Partial<Record<FeatureGroup, { title: string; description: string }>> = {
     extraction: {
         title: 'Extraction',
-        description: 'Pulls structured data from text — cost-line matching, non-price tender parsing, planning extract-objectives, retrieval field-fill. Short prompts, high volume. Haiku-tier is appropriate. Note: PDF document extraction (drawings, contractor/consultant/planning intake, invoice/variation/tender ingestion) currently always uses Anthropic Claude regardless of this setting; that path will be unified in a future release.',
+        description: 'Structured data pulled from text. Short prompts, JSON or fielded output, high volume. Haiku-tier or gpt-4.1-mini is appropriate. Used by: Planning Authorities extract, Knowledge field-fill, Tender Evaluation parsing, RFT brief generation, invoice/variation cost-line matching, drawing-number extraction. (Invoice and variation document ingestion still call Anthropic Claude directly and don\'t respect this setting yet.)',
     },
     generation: {
         title: 'Generation',
-        description: 'Writes prose for the user — notes, meeting agendas, reports, objectives generate/polish, inline /ai instructions, TRR sections, langgraph section generation. Quality matters; Sonnet-tier recommended.',
-    },
-    objectives_generation: {
-        title: 'Objectives generation',
-        description: 'Generates and polishes Brief objectives. This includes full attached-document reads, so use a long-context model with a generous token allowance. Claude Sonnet or Claude Opus is recommended.',
+        description: 'Prose written for the user. Some calls include long full-document reads (Brief objectives). Quality matters — pick Sonnet-tier or better; a long-context model is recommended if you want polished objectives. Used by: Notes/Meetings/Reports drafts, weekly report drafts, TRR sections, inline /ai instructions, Brief objectives generate + polish, Langgraph workflow sections.',
     },
     chat: {
         title: 'Chat dock',

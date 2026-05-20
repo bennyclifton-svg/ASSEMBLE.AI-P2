@@ -64,7 +64,7 @@ export function SingleNotePanel({
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [isEditingTitle, setIsEditingTitle] = useState(false);
-    const [localTitle, setLocalTitle] = useState(note.title || 'New Note');
+    const [localTitle, setLocalTitle] = useState(note.title || 'New Record');
     const [isCopying, setIsCopying] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -73,7 +73,7 @@ export function SingleNotePanel({
 
     // Sync local title when note changes
     useEffect(() => {
-        setLocalTitle(note.title || 'New Note');
+        setLocalTitle(note.title || 'New Record');
     }, [note.id, note.title]);
 
     // Sync local date when note changes
@@ -101,7 +101,7 @@ export function SingleNotePanel({
     const handleTitleBlur = async () => {
         setIsEditingTitle(false);
         if (localTitle !== note.title) {
-            await onUpdate({ title: localTitle || 'New Note' });
+            await onUpdate({ title: localTitle || 'New Record' });
         }
     };
 
@@ -110,10 +110,10 @@ export function SingleNotePanel({
             e.preventDefault();
             setIsEditingTitle(false);
             if (localTitle !== note.title) {
-                onUpdate({ title: localTitle || 'New Note' });
+                onUpdate({ title: localTitle || 'New Record' });
             }
         } else if (e.key === 'Escape') {
-            setLocalTitle(note.title || 'New Note');
+            setLocalTitle(note.title || 'New Record');
             setIsEditingTitle(false);
         }
     };
@@ -263,11 +263,11 @@ export function SingleNotePanel({
                                     onClick={(e) => e.stopPropagation()}
                                     className="h-6 w-full min-w-0 bg-transparent text-sm font-medium text-inherit"
                                     style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
-                                    placeholder="New Note"
+                                    placeholder="New Record"
                                 />
                             ) : (
                                 <span className="block truncate text-sm font-medium text-inherit hover:text-[var(--color-accent-copper)] transition-colors">
-                                    {localTitle || 'New Note'}
+                                    {localTitle || 'New Record'}
                                 </span>
                             )}
                         </div>
@@ -420,11 +420,11 @@ export function SingleNotePanel({
                                     onClick={(e) => e.stopPropagation()}
                                     className="w-full h-full text-xs font-medium bg-transparent border-none outline-none focus:outline-none focus:ring-0 resize-none text-inherit text-center selection:bg-[var(--color-accent-copper)]/20 selection:text-inherit"
                                     style={{ boxShadow: 'none' }}
-                                    placeholder="New Note"
+                                    placeholder="New Record"
                                 />
                             ) : (
                                 <span className="block text-xs font-medium text-inherit hover:text-[var(--color-accent-copper)] line-clamp-6 transition-colors">
-                                    {localTitle || 'New Note'}
+                                    {localTitle || 'New Record'}
                                 </span>
                             )}
                         </div>
@@ -470,7 +470,7 @@ export function SingleNotePanel({
                             onClick={(e) => e.stopPropagation()}
                             className="flex-1 min-w-0 h-5 leading-5 text-sm font-semibold bg-transparent text-inherit p-0 m-0"
                             style={{ border: 'none', outline: 'none', boxShadow: 'none' }}
-                            placeholder="New Note"
+                            placeholder="New Record"
                         />
                     ) : (
                         <span
@@ -478,7 +478,7 @@ export function SingleNotePanel({
                             className="flex-1 min-w-0 h-5 leading-5 text-sm font-semibold text-inherit cursor-pointer hover:text-[var(--color-accent-copper)] truncate transition-colors"
                             title="Click to edit title"
                         >
-                            {localTitle || 'New Note'}
+                            {localTitle || 'New Record'}
                         </span>
                     )}
                     <div className="ml-3 hidden shrink-0 items-center gap-1.5 sm:flex">

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { emitChatEvent } from '@/lib/agents/events';
 import { emitProjectEvent } from '@/lib/agents/project-events';
 import { documentTitleSearchCondition } from '@/lib/agents/tools/document-search';
@@ -380,42 +380,16 @@ async function findOrCreateDocumentSet(
     return { id, name };
 }
 
-async function queueDocument(
-    doc: ResolvedDocument,
-    documentSetId: string
-): Promise<{ queued: true } | { queued: false; errorMessage: string }> {
-    if (!doc.storagePath) {
-        return { queued: false, errorMessage: 'Document has no stored file path for AI processing.' };
-    }
-    try {
-        const { addDocumentForProcessing } = await import('@/lib/queue/client');
-        await addDocumentForProcessing(
-            doc.id,
-            documentSetId,
-            doc.originalName ?? doc.name,
-            doc.storagePath
-        );
-        return { queued: true };
-    } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        console.warn('[sync_project_documents_to_ai] Failed to queue document for AI processing', {
-            documentId: doc.id,
-            documentSetId,
-            error: errorMessage,
-        });
-        return { queued: false, errorMessage };
-    }
-}
-
 async function applySync(
     ctx: ActionContext,
     input: SyncProjectDocumentsToAiInput
 ): Promise<SyncOutput> {
     const docs = await resolveDocuments(ctx, input);
     const documentSet = await findOrCreateDocumentSet(ctx, input);
-    const [{ ragDb }, { documentSetMembers, documentSets }] = await Promise.all([
+    const [{ ragDb }, { documentSetMembers, documentSets }, { queueRagDocumentForIngestion }] = await Promise.all([
         import('@/lib/db/rag-client'),
         import('@/lib/db/rag-schema'),
+        import('@/lib/rag/ingestion'),
     ]);
 
     const docIds = docs.map((doc) => doc.id);
@@ -440,53 +414,37 @@ async function applySync(
 
     for (const doc of docs) {
         const status = existing.get(doc.id);
-        if (status === 'synced' || status === 'processing' || status === 'pending') {
-            alreadySyncedOrQueued++;
-            continue;
-        }
-
-        if (status === 'failed') {
-            await ragDb
-                .update(documentSetMembers)
-                .set({
-                    syncStatus: 'pending',
-                    errorMessage: null,
-                    chunksCreated: 0,
-                    syncedAt: null,
-                })
-                .where(
-                    and(
-                        eq(documentSetMembers.documentSetId, documentSet.id),
-                        eq(documentSetMembers.documentId, doc.id)
-                    )
+        const queueResult = await queueRagDocumentForIngestion(ragDb, {
+            documentSetId: documentSet.id,
+            documentId: doc.id,
+            existingStatus: status ?? null,
+            existingMember: existing.has(doc.id),
+            createMemberId: makeId,
+            canQueue: Boolean(doc.storagePath),
+            unavailableMessage: 'Document has no stored file path for AI processing.',
+            now: () => now,
+            enqueue: async () => {
+                const { addDocumentForProcessing } = await import('@/lib/queue/client');
+                await addDocumentForProcessing(
+                    doc.id,
+                    documentSet.id,
+                    doc.originalName ?? doc.name,
+                    doc.storagePath!
                 );
-        } else {
-            await ragDb.insert(documentSetMembers).values({
-                id: makeId(),
-                documentSetId: documentSet.id,
-                documentId: doc.id,
-                syncStatus: 'pending',
-                createdAt: now,
-            });
-        }
+            },
+        });
 
-        const queueResult = await queueDocument(doc, documentSet.id);
-        if (queueResult.queued === true) {
+        if (queueResult.status === 'queued') {
             queuedForProcessing++;
+        } else if (queueResult.status === 'already_active') {
+            alreadySyncedOrQueued++;
         } else {
             queueFailed++;
-            await ragDb
-                .update(documentSetMembers)
-                .set({
-                    syncStatus: 'failed',
-                    errorMessage: queueResult.errorMessage,
-                })
-                .where(
-                    and(
-                        eq(documentSetMembers.documentSetId, documentSet.id),
-                        eq(documentSetMembers.documentId, doc.id)
-                    )
-                );
+            console.warn('[sync_project_documents_to_ai] Failed to queue document for AI processing', {
+                documentId: doc.id,
+                documentSetId: documentSet.id,
+                error: queueResult.errorMessage,
+            });
         }
     }
 

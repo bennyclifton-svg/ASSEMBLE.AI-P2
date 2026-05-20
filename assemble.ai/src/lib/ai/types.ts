@@ -9,7 +9,6 @@
 export const FEATURE_GROUPS = [
     'extraction',
     'generation',
-    'objectives_generation',
     'chat',
 ] as const;
 

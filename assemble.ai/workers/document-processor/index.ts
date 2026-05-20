@@ -9,6 +9,7 @@
 import { loadAppEnv } from '../../src/lib/env/load-app-env';
 import { assertSaasRuntimeConfig } from '../../src/lib/env/saas-runtime-config';
 import type { Job } from 'bullmq';
+import type { RagIngestionStage } from '../../src/lib/rag/ingestion';
 
 // Load environment variables FIRST - before any other imports
 loadAppEnv();
@@ -46,13 +47,12 @@ async function bootstrap() {
 
     const { Worker } = await import('bullmq');
     const { ragDb } = await import('../../src/lib/db/rag-client');
-    const { documentChunks, documentSetMembers } = await import('../../src/lib/db/rag-schema');
+    const { documentChunks } = await import('../../src/lib/db/rag-schema');
     const { parseDocument } = await import('../../src/lib/rag/parsing');
-    const { chunkDocument } = await import('../../src/lib/rag/chunking');
-    const { generateEmbedding, generateEmbeddings } = await import('../../src/lib/rag/embeddings');
-    const { batchItems, chunksToDocumentChunkRows, RAG_SYNC_STATUS } = await import('../../src/lib/rag/ingestion');
+    const { generateEmbedding } = await import('../../src/lib/rag/embeddings');
+    const { ingestProjectDocument } = await import('../../src/lib/rag/ingestion');
     const { QUEUE_NAMES, getConnection } = await import('../../src/lib/queue/client');
-    const { eq, and } = await import('drizzle-orm');
+    const { eq } = await import('drizzle-orm');
     const { storage } = await import('../../src/lib/storage');
 
     // Types
@@ -81,93 +81,51 @@ async function bootstrap() {
         console.log(`[worker] Processing document: ${filename} (${documentId}) from ${storagePath}`);
 
         try {
-            // Update sync status to processing
-            console.log(`[worker] Updating status to 'processing' for document ${documentId} in set ${documentSetId}`);
-            const processingResult = await ragDb
-                .update(documentSetMembers)
-                .set({ syncStatus: RAG_SYNC_STATUS.processing })
-                .where(
-                    and(
-                        eq(documentSetMembers.documentSetId, documentSetId),
-                        eq(documentSetMembers.documentId, documentId)
-                    )
-                );
-            console.log(`[worker] Status update result:`, processingResult);
+            const progressByStage: Partial<Record<RagIngestionStage, number>> = {
+                processing: 10,
+                loaded: 30,
+                embedded: 50,
+                persisted: 80,
+                synced: 100,
+            };
 
-            // Step 1: Read file from disk and parse document
-            job.updateProgress(10);
-            console.log(`[worker] Reading and parsing document: ${filename}`);
-            const buffer = await storage.get(storagePath);
-            const parsed = await parseDocument(buffer, filename);
-
-            // Step 2: Chunk document
-            job.updateProgress(30);
-            console.log(`[worker] Chunking document: ${filename}`);
-            const chunks = chunkDocument(parsed.content, documentId);
-            console.log(`[worker] Created ${chunks.length} chunks`);
-
-            // Step 3: Generate embeddings in batches
-            job.updateProgress(50);
-            console.log(`[worker] Generating embeddings for ${chunks.length} chunks`);
-
-            const chunkContents = chunks.map((chunk: { content: string }) => chunk.content);
-            const embeddingsResult = await generateEmbeddings(chunkContents);
-
-            // Step 4: Insert chunks with embeddings
-            job.updateProgress(80);
-            console.log(`[worker] Inserting chunks into database`);
-
-            const chunkRecords = chunksToDocumentChunkRows(
+            const result = await ingestProjectDocument({
+                client: ragDb,
+                documentSetId,
                 documentId,
-                chunks,
-                embeddingsResult.embeddings
-            );
+                loadContent: async () => {
+                    console.log(`[worker] Reading and parsing document: ${filename}`);
+                    const buffer = await storage.get(storagePath);
+                    const parsed = await parseDocument(buffer, filename);
+                    return parsed.content;
+                },
+                onStage: async (event) => {
+                    const progress = progressByStage[event.stage];
+                    if (progress !== undefined) await job.updateProgress(progress);
 
-            // Insert in batches
-            for (const batch of batchItems(chunkRecords)) {
-                await ragDb.insert(documentChunks).values(batch);
-            }
+                    if (event.stage === 'processing') {
+                        console.log(`[worker] Processing status set for ${filename}`);
+                    }
+                    if (event.stage === 'loaded') {
+                        console.log(`[worker] Parsed ${filename} (${event.details?.contentLength ?? 0} chars)`);
+                    }
+                    if (event.stage === 'chunked') {
+                        console.log(`[worker] Created ${event.details?.chunkCount ?? 0} chunks`);
+                    }
+                    if (event.stage === 'embedded') {
+                        console.log(
+                            `[worker] Generated embeddings for ${filename} (${event.details?.totalTokens ?? 0} tokens)`
+                        );
+                    }
+                    if (event.stage === 'persisted') {
+                        console.log(`[worker] Persisted chunks for ${filename}`);
+                    }
+                },
+            });
 
-            // Step 5: Update sync status to synced
-            job.updateProgress(100);
-            await ragDb
-                .update(documentSetMembers)
-                .set({
-                    syncStatus: RAG_SYNC_STATUS.synced,
-                    syncedAt: new Date(),
-                    chunksCreated: chunks.length,
-                })
-                .where(
-                    and(
-                        eq(documentSetMembers.documentSetId, documentSetId),
-                        eq(documentSetMembers.documentId, documentId)
-                    )
-                );
-
-            console.log(`[worker] Successfully processed document: ${filename}`);
+            console.log(`[worker] Successfully processed document: ${filename} (${result.chunks.length} chunks)`);
         } catch (error) {
             console.error(`[worker] Failed to process document: ${filename}`, error);
-
-            // Update sync status to failed
-            try {
-                console.log(`[worker] Updating status to 'failed' for document ${documentId} in set ${documentSetId}`);
-                const updateResult = await ragDb
-                    .update(documentSetMembers)
-                    .set({
-                        syncStatus: RAG_SYNC_STATUS.failed,
-                        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-                    })
-                    .where(
-                        and(
-                            eq(documentSetMembers.documentSetId, documentSetId),
-                            eq(documentSetMembers.documentId, documentId)
-                        )
-                    );
-                console.log(`[worker] Updated status to 'failed' for document ${documentId}`, updateResult);
-            } catch (updateError) {
-                console.error('[worker] Failed to update status to failed:', updateError);
-            }
-
             throw error;
         }
     }

@@ -138,6 +138,12 @@ export const CONTEXT_STRATEGIES: Record<string, ModuleRequirements> = {
     ],
   },
 
+  briefing: {
+    modules: [
+      { module: 'briefingProject', level: 'required', priority: 10 },
+    ],
+  },
+
   'meeting-section': {
     modules: [
       { module: 'profile', level: 'required', priority: 8 },

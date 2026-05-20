@@ -883,23 +883,17 @@ export type SectionContext =
  */
 export const SECTION_ORCHESTRATOR_MAP: Record<
     ReportSectionKey,
-    | 'fetchBriefContext'
-    | 'fetchProcurementContext'
-    | 'fetchCostContext'
-    | 'fetchProgrammeContext'
-    | 'fetchPlanningContext'
-    | 'fetchDesignContext'
-    | 'fetchConstructionContext'
+    | 'assembleContext'
     | null
 > = {
-    brief: 'fetchBriefContext',
-    summary: 'fetchBriefContext',
-    procurement: 'fetchProcurementContext',
-    planning_authorities: 'fetchPlanningContext',
-    design: 'fetchDesignContext',
-    construction: 'fetchConstructionContext',
-    cost_planning: 'fetchCostContext',
-    programme: 'fetchProgrammeContext',
+    brief: 'assembleContext',
+    summary: 'assembleContext',
+    procurement: 'assembleContext',
+    planning_authorities: 'assembleContext',
+    design: 'assembleContext',
+    construction: 'assembleContext',
+    cost_planning: 'assembleContext',
+    programme: 'assembleContext',
     other: null, // No specific orchestrator, uses general context
 };
 
@@ -929,6 +923,17 @@ import {
     contractors,
 } from '../db/pg-schema';
 import { eq, and, isNull, sql, gte, lte, or, desc, asc, inArray } from 'drizzle-orm';
+import {
+    assembleContext,
+    formatAssembledContextForPrompt,
+} from '../context/orchestrator';
+import type { AssembledContext, ModuleName } from '../context/types';
+import type { ProfileData } from '../context/modules/profile';
+import type { CostPlanData } from '../context/modules/cost-plan';
+import type { ProgramData } from '../context/modules/program';
+import type { RisksData } from '../context/modules/risks';
+import type { ProcurementData, StakeholderProcurementData } from '../context/modules/procurement';
+import type { ProjectInfoData } from '../context/modules/project-info';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -1006,6 +1011,101 @@ export function createBaseSectionContext(
         reportingPeriod,
         generatedAt: new Date().toISOString(),
         deltas: createEmptyDeltaSummary(),
+    };
+}
+
+function getAssembledModuleData<T>(
+    assembled: AssembledContext,
+    moduleName: ModuleName
+): T | null {
+    const result = assembled.rawModules.get(moduleName);
+    return result?.success && result.data ? (result.data as T) : null;
+}
+
+function assembleReportPromptContext(assembled: AssembledContext): string {
+    return formatAssembledContextForPrompt(assembled);
+}
+
+function mapProfileSummary(profile: ProfileData | null): ProfilerSummary | null {
+    if (!profile) return null;
+    return {
+        buildingClass: profile.buildingClass,
+        buildingClassDisplay: profile.buildingClassDisplay,
+        projectType: profile.projectType,
+        projectTypeDisplay: profile.projectTypeDisplay,
+        gfaSqm: profile.gfaSqm,
+        storeys: profile.storeys,
+        qualityTier: profile.qualityTier,
+        complexityScore: profile.complexityScore,
+        region: profile.region,
+    };
+}
+
+function mapCostSummary(costPlan: CostPlanData | null): CostPlanSummary {
+    return {
+        totalBudgetCents: costPlan?.totalBudgetCents ?? 0,
+        totalForecastCents: costPlan?.totalForecastCents ?? 0,
+        totalApprovedCents: costPlan?.totalApprovedContractCents ?? 0,
+        totalInvoicedCents: costPlan?.totalInvoicedCents ?? 0,
+        varianceCents: costPlan?.varianceCents ?? 0,
+        variancePercent: costPlan?.variancePercent ?? 0,
+        contingencyBudgetCents: costPlan?.contingency.budgetCents ?? 0,
+        contingencyUsedCents: costPlan?.contingency.usedCents ?? 0,
+        contingencyRemainingCents: costPlan?.contingency.remainingCents ?? 0,
+    };
+}
+
+function mapProgramStatus(program: ProgramData | null): ProgramStatus {
+    const currentStage =
+        program?.activities.find((activity) => activity.masterStage)?.masterStage ?? null;
+
+    return {
+        currentStage,
+        currentStageProgress: program?.percentComplete ?? 0,
+        nextMilestone: program?.nextMilestone
+            ? {
+                name: program.nextMilestone.name,
+                date: program.nextMilestone.date,
+                daysUntil: program.nextMilestone.daysUntil,
+            }
+            : null,
+        daysAheadOrBehind: 0,
+        totalActivities: program?.totalActivities ?? 0,
+        completedActivities: program?.completedActivities ?? 0,
+    };
+}
+
+function mapRiskSummary(risksData: RisksData | null): RiskSummary {
+    return {
+        totalCount: risksData?.totalCount ?? 0,
+        byStatus: risksData?.byStatus ?? { identified: 0, mitigated: 0, closed: 0 },
+        bySeverity: risksData?.bySeverity ?? { high: 0, medium: 0, low: 0 },
+        topActiveRisks:
+            risksData?.topActiveRisks.map((risk) => ({
+                id: risk.id,
+                title: risk.title,
+                severity: risk.severity,
+                likelihood: risk.likelihood,
+                impact: risk.impact,
+            })) ?? [],
+    };
+}
+
+function mapProcurementOverview(procurement: ProcurementData | null): ProcurementOverview {
+    const overview = procurement?.overview;
+    return {
+        consultants: {
+            total: overview?.consultantsTotal ?? 0,
+            awarded: overview?.consultantsAwarded ?? 0,
+            tendered: overview?.consultantsTendered ?? 0,
+            briefed: overview?.consultantsBriefed ?? 0,
+        },
+        contractors: {
+            total: overview?.contractorsTotal ?? 0,
+            awarded: overview?.contractorsAwarded ?? 0,
+            tendered: overview?.contractorsTendered ?? 0,
+            briefed: overview?.contractorsBriefed ?? 0,
+        },
     };
 }
 
@@ -1136,10 +1236,13 @@ export interface BriefContext {
 
     // Period-over-period changes
     deltas: PeriodDeltas;
+
+    /** Unified prompt text produced by assembleContext(); legacy formatters return this when present. */
+    promptContext?: string;
 }
 
 // Display name mappings for building classes
-const BUILDING_CLASS_DISPLAY: Record<string, string> = {
+const LEGACY_BUILDING_CLASS_DISPLAY: Record<string, string> = {
     residential: 'Residential',
     commercial: 'Commercial',
     industrial: 'Industrial',
@@ -1185,42 +1288,44 @@ export async function fetchBriefContext(
     projectId: string,
     reportingPeriod?: ReportingPeriod
 ): Promise<BriefContext> {
-    const generatedAt = new Date().toISOString();
+    const assembled = await assembleContext({
+        projectId,
+        task: 'Assemble brief report context',
+        contextType: 'report-section',
+        sectionKey: 'brief',
+        reportingPeriod,
+    });
 
-    // Fetch all data in parallel for performance
-    const [
-        projectData,
-        profilerData,
-        costData,
-        programData,
-        riskData,
-        procurementData,
-    ] = await Promise.all([
-        fetchProjectBasics(projectId),
-        fetchProfilerSummary(projectId),
-        fetchCostPlanSummary(projectId, reportingPeriod),
-        fetchProgramStatus(projectId),
-        fetchRiskSummary(projectId, reportingPeriod),
-        fetchProcurementOverview(projectId),
-    ]);
-
-    // Calculate period deltas if reporting period is provided
-    const deltas = reportingPeriod
-        ? await calculatePeriodDeltas(projectId, reportingPeriod)
-        : createEmptyPeriodDeltas();
+    const projectInfo = getAssembledModuleData<ProjectInfoData>(assembled, 'projectInfo');
+    const profilerData = mapProfileSummary(
+        getAssembledModuleData<ProfileData>(assembled, 'profile')
+    );
+    const costData = mapCostSummary(
+        getAssembledModuleData<CostPlanData>(assembled, 'costPlan')
+    );
+    const programData = mapProgramStatus(
+        getAssembledModuleData<ProgramData>(assembled, 'program')
+    );
+    const riskData = mapRiskSummary(
+        getAssembledModuleData<RisksData>(assembled, 'risks')
+    );
+    const procurementData = mapProcurementOverview(
+        getAssembledModuleData<ProcurementData>(assembled, 'procurement')
+    );
 
     return {
         projectId,
-        projectName: projectData.name,
-        projectCode: projectData.code,
+        projectName: projectInfo?.projectName ?? 'Unknown Project',
+        projectCode: null,
         reportingPeriod: reportingPeriod ?? null,
-        generatedAt,
+        generatedAt: new Date().toISOString(),
         profiler: profilerData,
         costPlan: costData,
         program: programData,
         risks: riskData,
         procurement: procurementData,
-        deltas,
+        deltas: createEmptyPeriodDeltas(),
+        promptContext: assembleReportPromptContext(assembled),
     };
 }
 
@@ -1278,7 +1383,7 @@ async function fetchProfilerSummary(projectId: string): Promise<ProfilerSummary 
 
         return {
             buildingClass,
-            buildingClassDisplay: BUILDING_CLASS_DISPLAY[buildingClass] ?? buildingClass,
+            buildingClassDisplay: LEGACY_BUILDING_CLASS_DISPLAY[buildingClass] ?? buildingClass,
             projectType,
             projectTypeDisplay: PROJECT_TYPE_DISPLAY[projectType] ?? projectType,
             gfaSqm,
@@ -1787,6 +1892,10 @@ function createEmptyPeriodDeltas(): PeriodDeltas {
  * @deprecated Use `assembleContext()` — formatting is handled by the unified orchestrator.
  */
 export function formatBriefContextForPrompt(context: BriefContext): string {
+    if (context.promptContext) {
+        return context.promptContext;
+    }
+
     const sections: string[] = [];
 
     // Header
@@ -1998,6 +2107,52 @@ export interface ProcurementContext {
 
     // Period-over-period changes
     deltas: ProcurementDeltas;
+
+    /** Unified prompt text produced by assembleContext(); legacy formatters return this when present. */
+    promptContext?: string;
+}
+
+function normalizeTenderStatus(status: string | null): TenderStatus | null {
+    return status && (TENDER_STATUS as readonly string[]).includes(status)
+        ? (status as TenderStatus)
+        : null;
+}
+
+function stagesFromCurrentStatus(currentStage: TenderStatus | null): StakeholderProcurementStatus['stages'] {
+    return {
+        brief: { isComplete: currentStage === 'brief', completedAt: null },
+        tender: { isComplete: currentStage === 'tender', completedAt: null },
+        rec: { isComplete: currentStage === 'rec', completedAt: null },
+        award: { isComplete: currentStage === 'award', completedAt: null },
+    };
+}
+
+function mapStakeholderProcurementStatus(
+    entry: StakeholderProcurementData,
+    group: 'consultant' | 'contractor'
+): StakeholderProcurementStatus {
+    const currentStage = normalizeTenderStatus(entry.currentStatus);
+    return {
+        id: entry.id,
+        name: entry.name,
+        disciplineOrTrade: entry.disciplineOrTrade ?? 'General',
+        group,
+        isEnabled: true,
+        stages: stagesFromCurrentStatus(currentStage),
+        currentStage,
+        awardedFirmName: entry.awardedFirm,
+        awardedFirmId: null,
+        budgetAllowanceCents: 0,
+        approvedContractCents: entry.awardedValue ?? 0,
+        variance: entry.awardedValue ?? 0,
+    };
+}
+
+function sumCostPlanBudget(costPlan: CostPlanData | null): number {
+    if (!costPlan) return 0;
+    return Object.values(costPlan.linesBySection)
+        .flat()
+        .reduce((sum, line) => sum + line.budgetCents, 0);
 }
 
 /**
@@ -2013,122 +2168,85 @@ export async function fetchProcurementContext(
     projectId: string,
     reportingPeriod?: ReportingPeriod
 ): Promise<ProcurementContext> {
-    const generatedAt = new Date().toISOString();
+    const assembled = await assembleContext({
+        projectId,
+        task: 'Assemble procurement report context',
+        contextType: 'report-section',
+        sectionKey: 'procurement',
+        reportingPeriod,
+    });
 
-    // Import rftNew for delta tracking
-    const { rftNew, companies } = await import('../db/pg-schema');
+    const projectInfo = getAssembledModuleData<ProjectInfoData>(assembled, 'projectInfo');
+    const profile = getAssembledModuleData<ProfileData>(assembled, 'profile');
+    const procurement = getAssembledModuleData<ProcurementData>(assembled, 'procurement');
+    const costPlan = getAssembledModuleData<CostPlanData>(assembled, 'costPlan');
 
-    // Fetch all data in parallel for performance
-    const [
-        projectData,
-        procurementRoute,
-        stakeholderData,
-        shortlistedData,
-        costLineData,
-    ] = await Promise.all([
-        fetchProjectBasics(projectId),
-        fetchProcurementRoute(projectId),
-        fetchStakeholderTenderData(projectId),
-        fetchShortlistedFirms(projectId),
-        fetchCostLinesByStakeholder(projectId),
-    ]);
-
-    // Process consultants and contractors
-    const consultants: StakeholderProcurementStatus[] = [];
-    const contractors: StakeholderProcurementStatus[] = [];
-    const awardedFirms: AwardedFirm[] = [];
-
-    for (const stakeholder of stakeholderData) {
-        const costLine = costLineData.get(stakeholder.id);
-        const budgetAllowanceCents = costLine?.budgetCents ?? 0;
-        const approvedContractCents = costLine?.approvedContractCents ?? 0;
-
-        const status: StakeholderProcurementStatus = {
-            id: stakeholder.id,
-            name: stakeholder.name,
-            disciplineOrTrade: stakeholder.disciplineOrTrade ?? 'General',
-            group: stakeholder.stakeholderGroup as 'consultant' | 'contractor',
-            isEnabled: stakeholder.isEnabled ?? true,
-            stages: {
-                brief: { isComplete: false, completedAt: null },
-                tender: { isComplete: false, completedAt: null },
-                rec: { isComplete: false, completedAt: null },
-                award: { isComplete: false, completedAt: null },
-            },
-            currentStage: null,
-            awardedFirmName: null,
-            awardedFirmId: null,
-            budgetAllowanceCents,
-            approvedContractCents,
-            variance: approvedContractCents - budgetAllowanceCents,
-        };
-
-        // Populate stages from tender statuses
-        for (const tenderStatus of stakeholder.tenderStatuses) {
-            const stageKey = tenderStatus.statusType as TenderStatus;
-            if (status.stages[stageKey]) {
-                status.stages[stageKey].isComplete = tenderStatus.isComplete ?? false;
-                status.stages[stageKey].completedAt = tenderStatus.completedAt?.toISOString() ?? null;
-            }
-        }
-
-        // Determine current stage (highest completed)
-        const stageOrder: TenderStatus[] = ['award', 'rec', 'tender', 'brief'];
-        for (const stage of stageOrder) {
-            if (status.stages[stage].isComplete) {
-                status.currentStage = stage;
-                break;
-            }
-        }
-
-        // Check if awarded and get firm details
-        if (status.stages.award.isComplete && stakeholder.companyId) {
-            status.awardedFirmId = stakeholder.companyId;
-            status.awardedFirmName = stakeholder.companyName ?? stakeholder.name;
-
-            // Add to awarded firms list
-            awardedFirms.push({
-                firmName: status.awardedFirmName,
-                firmId: stakeholder.companyId,
-                disciplineOrTrade: status.disciplineOrTrade,
-                type: status.group,
-                stakeholderId: stakeholder.id,
-                stakeholderName: stakeholder.name,
-                awardedValueCents: approvedContractCents,
-                budgetAllowanceCents,
-                varianceCents: approvedContractCents - budgetAllowanceCents,
-            });
-        }
-
-        // Add to appropriate list
-        if (stakeholder.stakeholderGroup === 'consultant') {
-            consultants.push(status);
-        } else if (stakeholder.stakeholderGroup === 'contractor') {
-            contractors.push(status);
-        }
-    }
-
-    // Calculate summary statistics
-    const summary = calculateProcurementSummary(consultants, contractors);
-
-    // Calculate period deltas if reporting period provided
-    const deltas = reportingPeriod
-        ? await calculateProcurementDeltas(projectId, reportingPeriod, stakeholderData)
-        : createEmptyProcurementDeltas();
+    const consultants =
+        procurement?.consultants.map((entry) =>
+            mapStakeholderProcurementStatus(entry, 'consultant')
+        ) ?? [];
+    const contractors =
+        procurement?.contractors.map((entry) =>
+            mapStakeholderProcurementStatus(entry, 'contractor')
+        ) ?? [];
+    const overview = procurement?.overview;
+    const totalAwardedCents = [
+        ...consultants,
+        ...contractors,
+    ].reduce((sum, entry) => sum + entry.approvedContractCents, 0);
+    const totalBudgetCents = sumCostPlanBudget(costPlan);
 
     return {
         projectId,
-        projectName: projectData.name,
+        projectName: projectInfo?.projectName ?? 'Unknown Project',
         reportingPeriod: reportingPeriod ?? null,
-        generatedAt,
-        procurementRoute,
-        procurementRouteDisplay: getProcurementRouteDisplay(procurementRoute),
+        generatedAt: new Date().toISOString(),
+        procurementRoute: profile?.procurementRoute ?? null,
+        procurementRouteDisplay: getProcurementRouteDisplay(profile?.procurementRoute),
         consultants,
         contractors,
-        summary,
-        shortlistedFirms: shortlistedData,
-        awardedFirms,
-        deltas,
+        summary: {
+            consultants: {
+                total: overview?.consultantsTotal ?? 0,
+                briefed: overview?.consultantsBriefed ?? 0,
+                tendered: overview?.consultantsTendered ?? 0,
+                recommended: 0,
+                awarded: overview?.consultantsAwarded ?? 0,
+            },
+            contractors: {
+                total: overview?.contractorsTotal ?? 0,
+                briefed: overview?.contractorsBriefed ?? 0,
+                tendered: overview?.contractorsTendered ?? 0,
+                recommended: 0,
+                awarded: overview?.contractorsAwarded ?? 0,
+            },
+            totalBudgetCents,
+            totalAwardedCents,
+            totalVarianceCents: totalAwardedCents - totalBudgetCents,
+        },
+        shortlistedFirms:
+            procurement?.shortlistedFirms.map((firm) => ({
+                firmName: firm.firmName,
+                firmId: null,
+                disciplineOrTrade: firm.disciplineOrTrade,
+                type: firm.type,
+                stakeholderId: '',
+                stakeholderName: '',
+            })) ?? [],
+        awardedFirms:
+            procurement?.awardedFirms.map((firm) => ({
+                firmName: firm.firmName,
+                firmId: null,
+                disciplineOrTrade: firm.disciplineOrTrade,
+                type: firm.type,
+                stakeholderId: '',
+                stakeholderName: '',
+                awardedValueCents: firm.value ?? 0,
+                budgetAllowanceCents: 0,
+                varianceCents: firm.value ?? 0,
+            })) ?? [],
+        deltas: createEmptyProcurementDeltas(),
+        promptContext: assembleReportPromptContext(assembled),
     };
 }
 
@@ -2461,6 +2579,10 @@ function createEmptyProcurementDeltas(): ProcurementDeltas {
  * @deprecated Use `assembleContext()` — formatting is handled by the unified orchestrator.
  */
 export function formatProcurementContextForPrompt(context: ProcurementContext): string {
+    if (context.promptContext) {
+        return context.promptContext;
+    }
+
     const sections: string[] = [];
 
     // Header

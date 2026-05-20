@@ -19,6 +19,7 @@ import type { PlanningCardData } from './modules/planning-card';
 import type { ProjectInfoData } from './modules/project-info';
 import type { ProcurementDocsData } from './modules/procurement-docs';
 import type { AttachedDocumentsData } from './modules/attached-documents';
+import type { BriefingProjectData } from './modules/briefing-project';
 
 /**
  * Maximum total tokens for all module context combined.
@@ -134,6 +135,8 @@ export function formatModule(
       return formatProcurementDocs(data as ProcurementDocsData, tier);
     case 'attachedDocuments':
       return formatAttachedDocuments(data as AttachedDocumentsData, tier);
+    case 'briefingProject':
+      return formatBriefingProject(data as BriefingProjectData, tier);
     default:
       return '';
   }
@@ -721,6 +724,63 @@ function formatAttachedDocuments(
     lines.push(
       `- ${doc.documentName}${doc.categoryName ? ` (${doc.categoryName})` : ''}`
     );
+  }
+
+  return lines.join('\n');
+}
+
+function formatBriefingProject(
+  data: BriefingProjectData,
+  tier: FormattingTier
+): string {
+  if (!data) {
+    return '## Briefing Project Context\nNo briefing context available.';
+  }
+
+  const lines = ['## Briefing Project Context'];
+
+  if (data.profile) {
+    lines.push('\n### Saved Profile');
+    lines.push(`- Building class: ${data.profile.buildingClass || 'Not set'}`);
+    lines.push(`- Project type: ${data.profile.projectType || 'Not set'}`);
+    if (data.profile.region) {
+      lines.push(`- Region: ${data.profile.region}`);
+    }
+    if (data.profile.complexityScore !== null) {
+      lines.push(`- Complexity score: ${data.profile.complexityScore}`);
+    }
+  }
+
+  if (data.projectDetails) {
+    lines.push('\n### Project Details');
+    if (data.projectDetails.projectName) {
+      lines.push(`- Project name: ${data.projectDetails.projectName}`);
+    }
+    if (data.projectDetails.address) {
+      lines.push(`- Address: ${data.projectDetails.address}`);
+    }
+    if (data.projectDetails.jurisdiction) {
+      lines.push(`- Jurisdiction: ${data.projectDetails.jurisdiction}`);
+    }
+  }
+
+  if (data.objectives.length > 0) {
+    lines.push(`\n### Existing Objectives (${data.objectives.length})`);
+    const objectivesToShow =
+      tier === 'summary' ? data.objectives.slice(0, 6) : data.objectives;
+    for (const objective of objectivesToShow) {
+      lines.push(
+        `- ${objective.objectiveType}: ${objective.text} (${objective.status}, ${objective.source})`
+      );
+    }
+  }
+
+  if (data.attachments.length > 0) {
+    lines.push(`\n### Attached Briefing Documents (${data.attachments.length})`);
+    for (const doc of data.attachments) {
+      const status = doc.ragStatus ?? doc.ocrStatus ?? 'unknown';
+      lines.push(`- ${doc.title} (${doc.type ?? 'document'}, ingest: ${status})`);
+    }
   }
 
   return lines.join('\n');

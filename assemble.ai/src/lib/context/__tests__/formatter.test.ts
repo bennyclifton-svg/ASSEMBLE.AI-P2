@@ -14,6 +14,7 @@ import type { CostPlanData } from '../modules/cost-plan';
 import type { ProgramData } from '../modules/program';
 import type { RisksData } from '../modules/risks';
 import type { ProfileData } from '../modules/profile';
+import type { BriefingProjectData } from '../modules/briefing-project';
 
 const makeModuleResult = <T>(
   moduleName: ModuleName,
@@ -166,6 +167,53 @@ describe('formatModule', () => {
     expect(result).toContain('Residential');
     expect(result).toContain('New Build');
     expect(result).toContain('NSW');
+  });
+
+  it('formats briefingProject with profile, objectives, and attached documents', () => {
+    const briefingProject: BriefingProjectData = {
+      profile: {
+        id: 'profile-1',
+        buildingClass: 'residential',
+        projectType: 'new',
+        subclass: [],
+        subclassOther: [],
+        scaleData: {},
+        complexity: {},
+        workScope: [],
+        complexityScore: 4,
+        region: 'NSW',
+      },
+      projectDetails: null,
+      objectives: [
+        {
+          id: 'objective-1',
+          objectiveType: 'functional',
+          text: 'Provide accessible common areas.',
+          status: 'draft',
+          source: 'briefing',
+          sortOrder: 1,
+        },
+      ],
+      attachments: [
+        {
+          attachmentId: 'attachment-1',
+          documentId: 'document-1',
+          title: 'Client brief.pdf',
+          type: 'Brief',
+          pageCount: null,
+          ocrStatus: 'complete',
+          ragStatus: 'synced',
+          attachedAt: '2026-05-20T00:00:00.000Z',
+        },
+      ],
+    };
+
+    const result = formatModule('briefingProject', briefingProject, 'standard');
+
+    expect(result).toContain('Briefing Project Context');
+    expect(result).toContain('residential');
+    expect(result).toContain('Provide accessible common areas.');
+    expect(result).toContain('Client brief.pdf');
   });
 
   it('formats cost plan at standard tier with key metrics', () => {

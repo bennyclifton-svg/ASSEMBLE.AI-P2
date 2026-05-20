@@ -88,7 +88,20 @@ describe('resolveStrategy', () => {
     expect(keys).toContain('trr');
     expect(keys).toContain('rft');
     expect(keys).toContain('note');
+    expect(keys).toContain('briefing');
     expect(keys).toContain('inline-instruction');
+  });
+
+  it('routes briefing through the briefingProject module', () => {
+    const { requirements } = resolveStrategy({
+      projectId: 'p1',
+      task: 'Start briefing',
+      contextType: 'briefing',
+    });
+
+    expect(requirements.modules).toEqual([
+      { module: 'briefingProject', level: 'required', priority: 10 },
+    ]);
   });
 });
 

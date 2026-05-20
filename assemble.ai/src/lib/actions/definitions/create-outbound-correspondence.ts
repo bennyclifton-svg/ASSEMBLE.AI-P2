@@ -7,7 +7,7 @@ import {
     correspondenceThreads,
     projectInboxes,
 } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { normalizeSubject } from '@/lib/correspondence/threading';
 import { defineAction } from '../define';
 

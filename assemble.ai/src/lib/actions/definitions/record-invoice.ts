@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { costLines, projectStakeholders } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { applyRecordInvoice } from '@/lib/agents/applicators';
 import {
     COST_LINE_AMBIGUITY_GAP,

@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { db, reports, reportGroups, reportSections } from '@/lib/db';
 import { defineAction } from '../define';
 import type { ActionContext } from '../types';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CONTENTS_TYPES = ['standard', 'detailed', 'custom'] as const;

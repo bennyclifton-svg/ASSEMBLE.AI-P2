@@ -83,7 +83,7 @@ describe('NotesPanel', () => {
             refetch: jest.fn(),
         });
 
-        createNote.mockResolvedValue(note({ id: 'created-1', type: 'review', title: 'New Note' }));
+        createNote.mockResolvedValue(note({ id: 'created-1', type: 'review', title: 'New Record' }));
         updateNote.mockResolvedValue(note({ id: 'updated-1', type: 'review', title: 'Updated record' }));
         copyNote.mockResolvedValue(note({ id: 'copied-1', type: 'review', title: 'Copied record' }));
 
@@ -121,7 +121,7 @@ describe('NotesPanel', () => {
         expect(screen.getByRole('button', { name: /^short$/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /^long$/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /^refresh record content$/i })).toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: /^new note$/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /^new record$/i })).toBeInTheDocument();
         expect(screen.getByText("No documents attached. Click 'Save' to select documents from the repository.")).toBeInTheDocument();
         await waitForBlankShellAutosaveWindow();
         expect(createNote).not.toHaveBeenCalled();
@@ -142,7 +142,7 @@ describe('NotesPanel', () => {
             expect(reviewRow).toHaveAttribute('aria-selected', 'false');
         });
         expect(screen.queryByText('Record type')).not.toBeInTheDocument();
-        expect(screen.getByRole('heading', { name: /^new note$/i })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: /^new record$/i })).toBeInTheDocument();
         await waitForBlankShellAutosaveWindow();
         expect(reviewRow).toHaveAttribute('aria-selected', 'false');
         expect(createNote).not.toHaveBeenCalled();

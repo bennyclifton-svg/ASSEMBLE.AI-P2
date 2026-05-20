@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { defineAction } from '../define';
 import type { ActionContext } from '../types';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { aiMemoryService } from '@/lib/ai-memory/service';
 import { AI_MEMORY_CATEGORIES, AI_MEMORY_CATEGORY_LABELS, AI_MEMORY_STATUSES, type AiMemorySource } from '@/types/ai-memory';
 

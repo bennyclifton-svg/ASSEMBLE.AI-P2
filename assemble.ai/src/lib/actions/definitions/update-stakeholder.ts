@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { projectStakeholders } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { defineAction } from '../define';
 import type { ActionApplyResult, ActionContext } from '../types';
 

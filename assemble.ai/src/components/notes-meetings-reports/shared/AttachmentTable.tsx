@@ -95,7 +95,7 @@ export function AttachmentTable({
                     {documents.map((doc, index) => (
                             <tr
                                 key={doc.id}
-                                className="border-t border-[var(--sw-rule-2)] hover:bg-[var(--sw-paper-2)]"
+                                className="border-t border-[var(--sw-rule-2)] hover:bg-[var(--sw-canvas)]"
                             >
                                 <td className={cn('text-[var(--sw-muted)]', cellPadding)}>
                                     {index + 1}

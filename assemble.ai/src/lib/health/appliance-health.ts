@@ -86,7 +86,7 @@ const COMPONENT_LABELS: Record<ApplianceComponentId, string> = {
     modelProviders: 'Model keys',
 };
 
-const FEATURE_GROUPS = ['extraction', 'generation', 'objectives_generation', 'chat'] as const;
+const FEATURE_GROUPS = ['extraction', 'generation', 'chat'] as const;
 
 const FALLBACK_MODEL_SETTINGS: ModelSettingRow[] = FEATURE_GROUPS.map((featureGroup) => ({
     featureGroup,

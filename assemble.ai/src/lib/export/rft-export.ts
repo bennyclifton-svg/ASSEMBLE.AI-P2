@@ -15,6 +15,7 @@ export interface RFTExportData {
     issuedDate: string;
     objectivesVisible: boolean;
     programVisible: boolean;
+    stakeholderGroup?: string | null;
     objectives: {
         planning: string[];
         functional: string[];
@@ -24,6 +25,9 @@ export interface RFTExportData {
     brief: {
         service: string; // HTML content
         deliverables: string; // HTML content
+    };
+    scope?: {
+        works: string; // HTML content
     };
     activities: {
         id: string;

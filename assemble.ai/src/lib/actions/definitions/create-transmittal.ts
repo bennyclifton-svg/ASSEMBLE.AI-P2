@@ -11,7 +11,7 @@ import {
     subcategories,
     versions,
 } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { applyCreateTransmittal } from '@/lib/agents/applicators';
 import { defineAction } from '../define';
 import type { ActionContext } from '../types';
@@ -280,6 +280,41 @@ function titleCase(value: string): string {
         .join(' ');
 }
 
+function stringArrayFromOutput(record: Record<string, unknown>, key: string): string[] {
+    const value = record[key];
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+}
+
+async function emitTransmittalProjectEvents(
+    ctx: ActionContext,
+    output: Record<string, unknown>
+): Promise<void> {
+    const { emitProjectEvent } = await import('@/lib/agents/project-events');
+    const id = typeof output.id === 'string' ? output.id : null;
+    const documentIds = [
+        ...stringArrayFromOutput(output, 'attachedDocumentIds'),
+        ...stringArrayFromOutput(output, 'documentIds'),
+    ].filter((documentId, index, all) => all.indexOf(documentId) === index);
+
+    if (output.transmittalTarget === 'note' && id) {
+        emitProjectEvent(ctx.projectId, {
+            type: 'entity_updated',
+            entity: 'note',
+            op: 'created',
+            id,
+        });
+    }
+
+    if (documentIds.length > 0) {
+        emitProjectEvent(ctx.projectId, {
+            type: 'document_selection_changed',
+            mode: 'replace',
+            documentIds,
+        });
+    }
+}
+
 async function resolveTransmittalProposal(ctx: ActionContext, input: CreateTransmittalInput) {
     const stakeholder = input.stakeholderId ? await resolveStakeholder(ctx, input.stakeholderId) : null;
     const docs = input.documentIds?.length
@@ -344,6 +379,7 @@ export const createTransmittalAction = defineAction<CreateTransmittalInput, Reco
     },
     agentAccess: ['design', 'orchestrator'],
     uiTarget: { tab: 'notes', focusEntity: 'transmittal' },
+    emitEvents: emitTransmittalProjectEvents,
     async prepareProposal(ctx, input) {
         const { proposedDiff, proposedInput } = await resolveTransmittalProposal(ctx, input);
         return {

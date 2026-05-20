@@ -18,59 +18,6 @@ import { loadAppEnv } from '../src/lib/env/load-app-env';
 // the database the app actually reads from in local development.
 loadAppEnv();
 
-// ============================================
-// Types
-// ============================================
-
-interface SeedFrontmatter {
-    domainSlug: string;
-    name: string;
-    domainType: string;
-    tags: string[];
-    version: string;
-    repoType: string;
-    applicableProjectTypes: string[];
-    applicableStates: string[];
-}
-
-// ============================================
-// Helpers
-// ============================================
-
-function parseFrontmatter(raw: string): { frontmatter: SeedFrontmatter; body: string } {
-    const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
-    if (!match) {
-        throw new Error('Missing or malformed YAML frontmatter');
-    }
-
-    const lines = match[1].split('\n').map((l) => l.replace(/\r$/, ''));
-    const body = match[2];
-    const fm: Record<string, string | string[]> = {};
-
-    for (const line of lines) {
-        const kv = line.match(/^(\w+):\s*(.*)$/);
-        if (!kv) continue;
-        const [, key, value] = kv;
-        const trimmed = value.trim();
-
-        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-            fm[key] = trimmed
-                .slice(1, -1)
-                .split(',')
-                .map((s) => s.trim().replace(/^["']|["']$/g, ''));
-        } else {
-            fm[key] = trimmed.replace(/^["']|["']$/g, '');
-        }
-    }
-
-    return { frontmatter: fm as unknown as SeedFrontmatter, body };
-}
-
-function hasRealContent(body: string): boolean {
-    const stripped = body.replace(/<!--[\s\S]*?-->/g, '').trim();
-    return stripped.length > 20;
-}
-
 function generateId(): string {
     return `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
@@ -81,13 +28,15 @@ function generateId(): string {
 
 async function main() {
     // Dynamic imports so rag-client sees the env vars loaded above
-    const { eq, and } = await import('drizzle-orm');
+    const { eq } = await import('drizzle-orm');
     const { ragDb, pool } = await import('../src/lib/db/rag-client');
-    const { documentSets, documentChunks, documentSetMembers } = await import('../src/lib/db/rag-schema');
+    const { documentSets } = await import('../src/lib/db/rag-schema');
     const { knowledgeDomainSources } = await import('../src/lib/db/knowledge-domain-sources-schema');
-    const { chunkSeedContent } = await import('../src/lib/rag/chunking');
-    const { generateEmbeddings } = await import('../src/lib/rag/embeddings');
-    const { chunksToDocumentChunkRows, RAG_SYNC_STATUS } = await import('../src/lib/rag/ingestion');
+    const {
+        hasSeedKnowledgeBodyContent,
+        ingestSeedKnowledgeDocument,
+        parseSeedKnowledgeMarkdown,
+    } = await import('../src/lib/rag/ingestion');
 
     const seedDir = resolve(process.cwd(), 'src/lib/constants/knowledge-seed');
     const databaseEnv = process.env.DATABASE_URL
@@ -119,7 +68,7 @@ async function main() {
     for (const file of files) {
         const filePath = join(seedDir, file);
         const raw = readFileSync(filePath, 'utf-8');
-        const { frontmatter: fm, body } = parseFrontmatter(raw);
+        const { frontmatter: fm, body } = parseSeedKnowledgeMarkdown(raw);
         const documentId = `seed:${file.replace(/\.md$/, '')}`;
 
         console.log(`[${fm.domainSlug}] ${fm.name} v${fm.version}`);
@@ -139,30 +88,13 @@ async function main() {
         }
 
         // 2. Check for real content (not just placeholder comments)
-        if (!hasRealContent(body)) {
+        if (!hasSeedKnowledgeBodyContent(body)) {
             console.log(`  Skip — placeholder file (no content body)`);
             skipped++;
             continue;
         }
 
-        // 3. Chunk the content
-        const chunks = chunkSeedContent(raw);
-        console.log(`  Chunked into ${chunks.length} chunk(s)`);
-
-        if (chunks.length === 0) {
-            console.log(`  Skip — no chunks produced`);
-            skipped++;
-            continue;
-        }
-
-        // 4. Generate embeddings via Voyage AI (batched at 128)
-        console.log(`  Generating embeddings...`);
-        const { embeddings, totalTokens } = await generateEmbeddings(
-            chunks.map((c) => c.content)
-        );
-        console.log(`  ${embeddings.length} embeddings (${totalTokens} tokens)`);
-
-        // 5. Upsert document_set
+        // 3. Upsert document_set
         const existingSet = await ragDb
             .select({ id: documentSets.id })
             .from(documentSets)
@@ -194,7 +126,7 @@ async function main() {
             });
         }
 
-        // 6. Upsert knowledge_domain_sources
+        // 4. Upsert knowledge_domain_sources
         const existingKds = await ragDb
             .select({ id: knowledgeDomainSources.id })
             .from(knowledgeDomainSources)
@@ -227,51 +159,16 @@ async function main() {
             });
         }
 
-        // 7. Delete old chunks for this seed document
-        await ragDb
-            .delete(documentChunks)
-            .where(eq(documentChunks.documentId, documentId));
+        // 5. Load, chunk, embed, persist, and mark sync state through one ingestion state machine.
+        const result = await ingestSeedKnowledgeDocument({
+            client: ragDb,
+            documentSetId: fm.domainSlug,
+            documentId,
+            createMemberId: () => `dsm_${generateId()}`,
+            loadContent: () => raw,
+        });
 
-        // 8. Insert new chunks with embeddings
-        const chunkRows = chunksToDocumentChunkRows(documentId, chunks, embeddings);
-
-        // Batch insert (drizzle handles array of values)
-        await ragDb.insert(documentChunks).values(chunkRows);
-
-        // 9. Upsert document_set_members
-        const existingMember = await ragDb
-            .select({ id: documentSetMembers.id })
-            .from(documentSetMembers)
-            .where(
-                and(
-                    eq(documentSetMembers.documentSetId, fm.domainSlug),
-                    eq(documentSetMembers.documentId, documentId)
-                )
-            )
-            .limit(1);
-
-        if (existingMember.length > 0) {
-            await ragDb
-                .update(documentSetMembers)
-                .set({
-                    syncStatus: RAG_SYNC_STATUS.synced,
-                    syncedAt: new Date(),
-                    chunksCreated: chunks.length,
-                    errorMessage: null,
-                })
-                .where(eq(documentSetMembers.id, existingMember[0].id));
-        } else {
-            await ragDb.insert(documentSetMembers).values({
-                id: `dsm_${generateId()}`,
-                documentSetId: fm.domainSlug,
-                documentId,
-                syncStatus: RAG_SYNC_STATUS.synced,
-                syncedAt: new Date(),
-                chunksCreated: chunks.length,
-            });
-        }
-
-        console.log(`  Ingested ${chunks.length} chunks`);
+        console.log(`  Ingested ${result.chunks.length} chunks (${result.totalTokens} tokens)`);
         ingested++;
     }
 

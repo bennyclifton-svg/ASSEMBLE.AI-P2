@@ -3,9 +3,8 @@
  *
  * MUTATING. Does not write directly. Reads the current row, builds a
  * before/after diff, and inserts an approvals row via proposeApproval().
- * The user clicks Approve/Reject in the chat dock; the actual mutation
- * happens in src/app/api/chat/approvals/[id]/respond/route.ts under
- * optimistic-locking.
+ * The user clicks Approve/Reject in the chat dock; the action approval
+ * lifecycle applies the mutation under optimistic-locking.
  *
  * Phase 3 first mutating tool. Acts as the template for future ones
  * (create_variation, update_milestone_dates, etc.).
@@ -13,10 +12,11 @@
 
 import { db } from '@/lib/db';
 import { costLines } from '@/lib/db/pg-schema';
+import { moneyDiffLabel, proposeApproval } from '@/lib/actions/proposals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { and, eq, isNull } from 'drizzle-orm';
 import { registerTool, type AgentToolDefinition } from './catalog';
 import { assertProjectOrg, type ToolContext } from './_context';
-import { proposeApproval, moneyDiffLabel, type ProposedDiff } from '../approvals';
 
 interface UpdateCostLineInput {
     id: string;
@@ -216,8 +216,8 @@ const definition: AgentToolDefinition<UpdateCostLineInput, UpdateCostLineOutput>
             changes.push({
                 field: key as string,
                 label: FIELD_LABELS[key as string] ?? (key as string),
-                before: isMoney ? moneyDiffLabel(Number(current ?? 0), Number(current ?? 0)).split(' → ')[0] : current,
-                after: isMoney ? moneyDiffLabel(Number(current ?? 0), Number(next as number)).split(' → ')[1] : next,
+                before: isMoney ? moneyDiffLabel(Number(current ?? 0), Number(current ?? 0)).split(' \u2192 ')[0] : current,
+                after: isMoney ? moneyDiffLabel(Number(current ?? 0), Number(next as number)).split(' \u2192 ')[1] : next,
             });
         }
 

@@ -12,7 +12,7 @@ import {
     subcategories,
     versions,
 } from '@/lib/db/pg-schema';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { applyUpdateNote } from '@/lib/agents/applicators';
 import type { ActionApplyResult, ActionContext } from '../types';
 import { defineAction } from '../define';

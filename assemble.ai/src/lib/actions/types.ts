@@ -1,5 +1,4 @@
 import type { z } from 'zod';
-import type { ProposedDiff } from '@/lib/agents/approvals';
 import type { ProjectEntity, ProjectEntityOp } from '@/lib/agents/project-events';
 
 export type ActionActorKind = 'user' | 'agent' | 'workflow' | 'system' | 'ai';
@@ -39,6 +38,26 @@ export interface ActionUiTarget {
     focusEntity?: string;
 }
 
+/**
+ * Structured diff payload. Keep it self-contained so the UI can render
+ * before/after without follow-up DB lookups.
+ */
+export interface ProposedDiff {
+    /** Logical entity name (e.g., 'cost_line', 'variation'). */
+    entity: string;
+    /** Primary key of the entity being changed (or null for create). */
+    entityId: string | null;
+    /** Short human-readable summary line for the UI title. */
+    summary: string;
+    /** Field-level changes. Each entry: name, before, after. */
+    changes: Array<{
+        field: string;
+        label: string;
+        before: unknown;
+        after: unknown;
+    }>;
+}
+
 export interface ActionDefinition<TInput = unknown, TOutput = unknown> {
     id: string;
     /** Provider-safe generated tool name. Dotted action ids are not exposed directly as LLM tools. */
@@ -50,6 +69,7 @@ export interface ActionDefinition<TInput = unknown, TOutput = unknown> {
     defaultPolicy?: ActionPolicy;
     agentAccess?: string[];
     emits?: Array<ActionEmit<TOutput>>;
+    emitEvents?: (ctx: ActionContext, output: TOutput) => void | Promise<void>;
     uiTarget?: ActionUiTarget;
     preview?: (ctx: ActionContext, input: TInput) => Promise<ProposedDiff> | ProposedDiff;
     prepareProposal?: (

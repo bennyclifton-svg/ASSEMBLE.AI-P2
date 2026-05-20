@@ -117,6 +117,21 @@ export async function countWorkspaceProjects(organizationId: string): Promise<nu
     return Number(result?.value ?? 0);
 }
 
+async function isSuperAdminUser(userId: string): Promise<boolean> {
+    const [{ db }, { user: userTable }, { eq }] = await Promise.all([
+        import('@/lib/db'),
+        import('@/lib/db/auth-schema'),
+        import('drizzle-orm'),
+    ]);
+
+    const [row] = await db
+        .select({ isSuperAdmin: userTable.isSuperAdmin })
+        .from(userTable)
+        .where(eq(userTable.id, userId));
+
+    return row?.isSuperAdmin === true;
+}
+
 export async function requireProjectCreationAllowedForWorkspace(args: {
     userId: string;
     organizationId: string;
@@ -144,6 +159,16 @@ export async function requireProjectCreationAllowedForWorkspace(args: {
             allowed: false,
             entitlement,
             response: createEntitlementDeniedResponse(entitlement, ENTITLEMENT_ACTIONS.WRITE),
+        };
+    }
+
+    if (await isSuperAdminUser(args.userId)) {
+        const currentProjectCount = await countWorkspaceProjects(args.organizationId);
+        return {
+            allowed: true,
+            entitlement,
+            currentProjectCount,
+            maxProjects: -1,
         };
     }
 

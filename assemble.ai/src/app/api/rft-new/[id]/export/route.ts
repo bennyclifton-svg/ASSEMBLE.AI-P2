@@ -102,7 +102,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // 5. Fetch Brief Data & Cost Lines (filtered by stakeholder)
         let briefService = '';
         let briefDeliverables = '';
+        let scopeWorks = '';
         let contextName = '';
+        let stakeholderGroup: string | null = null;
         let feeItems: { activity: string }[] = [];
 
         if (report.stakeholderId) {
@@ -122,6 +124,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 briefDeliverables = stakeholder.briefDeliverablesViewMode === 'long'
                     ? (stakeholder.briefDeliverablesPolished || stakeholder.briefDeliverables || '')
                     : (stakeholder.briefDeliverables || '');
+                scopeWorks = stakeholder.scopeWorks || '';
+                stakeholderGroup = stakeholder.stakeholderGroup || null;
                 contextName = stakeholder.name;
             }
 
@@ -171,10 +175,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             issuedDate,
             objectivesVisible: report.objectivesVisible,
             programVisible: report.programVisible,
+            stakeholderGroup,
             objectives: objectivesByType,
             brief: {
                 service: briefService,
                 deliverables: briefDeliverables,
+            },
+            scope: {
+                works: scopeWorks,
             },
             activities: activities.map(a => ({
                 id: a.id,

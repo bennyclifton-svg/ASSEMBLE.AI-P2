@@ -24,7 +24,7 @@ jest.mock('../_context', () => ({
     assertProjectOrg: (...args: unknown[]) => mockAssertProjectOrg(...args),
     CrossTenantAccessError: class CrossTenantAccessError extends Error {},
 }));
-jest.mock('../../approvals', () => ({
+jest.mock('@/lib/actions/proposals', () => ({
     proposeApproval: (...args: unknown[]) => mockProposeApproval(...args),
     moneyDiffLabel: (before: number, after: number) => {
         const format = (cents: number) =>

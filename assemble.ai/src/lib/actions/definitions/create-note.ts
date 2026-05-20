@@ -7,14 +7,12 @@ import {
     contractorTrades,
     documents,
     fileAssets,
-    notes,
-    noteTransmittals,
     subcategories,
     versions,
 } from '@/lib/db/pg-schema';
+import { createCommunicationNote } from '@/lib/communication/artifacts';
 import { defineAction } from '../define';
-import type { ActionContext } from '../types';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 
 const NOTE_COLORS = ['purple', 'orange', 'pink', 'blue'] as const;
 const NOTE_TYPES = ['rfi', 'notice', 'eot', 'defect', 'variation', 'risk', 'transmittal', 'review', 'note'] as const;
@@ -107,25 +105,6 @@ const inputSchema = z
     });
 
 type CreateNoteInput = z.infer<typeof inputSchema>;
-
-async function validateProjectDocuments(
-    ctx: ActionContext,
-    documentIds: string[] | undefined
-): Promise<string[]> {
-    const ids = Array.from(new Set(documentIds ?? []));
-    if (ids.length === 0) return [];
-
-    const rows = await db
-        .select({ id: documents.id })
-        .from(documents)
-        .where(and(eq(documents.projectId, ctx.projectId), inArray(documents.id, ids)));
-    const found = new Set(rows.map((row) => row.id));
-    const missing = ids.filter((id) => !found.has(id));
-    if (missing.length > 0) {
-        throw new Error(`Document(s) not found in this project: ${missing.join(', ')}`);
-    }
-    return ids;
-}
 
 function formatDocumentIds(value: unknown, documentNames: Map<string, string>): unknown {
     if (!Array.isArray(value)) return value;
@@ -227,39 +206,8 @@ export const createNoteAction = defineAction<CreateNoteInput, Record<string, unk
             input: proposalInput,
         };
     },
-    async apply(ctx, input) {
-        const documentIds = await validateProjectDocuments(ctx, input.documentIds);
-        const id = crypto.randomUUID();
-        const now = new Date().toISOString();
-        const values = {
-            id,
-            projectId: ctx.projectId,
-            organizationId: ctx.organizationId,
-            title: input.title,
-            content: input.content ?? null,
-            isStarred: input.isStarred ?? false,
-            color: input.color ?? 'purple',
-            type: input.type ?? 'note',
-            status: input.status ?? 'open',
-            noteDate: input.noteDate ?? null,
-            rowVersion: 1,
-            createdAt: now,
-            updatedAt: now,
-        };
-
-        await db.transaction(async (tx) => {
-            await tx.insert(notes).values(values);
-            for (const documentId of documentIds) {
-                await tx.insert(noteTransmittals).values({
-                    id: crypto.randomUUID(),
-                    noteId: id,
-                    documentId,
-                    addedAt: now,
-                });
-            }
-        });
-
-        return { ...values, attachedDocumentIds: documentIds };
+    applyResult(ctx, input) {
+        return createCommunicationNote(ctx, input);
     },
 });
 

@@ -37,6 +37,13 @@ export {
     runAction,
 } from './dispatch';
 export {
+    moneyDiffLabel,
+    proposeApproval,
+    type ActionProposalContext,
+    type ProposalResult,
+    type ProposeApprovalArgs,
+} from './proposals';
+export {
     clearActionRegistryForTests,
     getAction,
     getActionByToolName,
@@ -55,4 +62,5 @@ export type {
     ActionListFilter,
     ActionPolicy,
     ActionUiTarget,
+    ProposedDiff,
 } from './types';

@@ -22,6 +22,8 @@ interface CategoryUploadTilesProps {
     filterBySyncedOnly?: boolean;
     /** Callback when filter changes. */
     onFilterChange?: (categoryId: string | null, subcategoryId?: string | null, syncedOnly?: boolean) => void;
+    /** Whether the Ingest source is currently processing documents. */
+    isIngesting?: boolean;
 }
 
 export function CategoryUploadTiles({
@@ -34,6 +36,7 @@ export function CategoryUploadTiles({
     filterSubcategoryId,
     filterBySyncedOnly,
     onFilterChange,
+    isIngesting = false,
 }: CategoryUploadTilesProps) {
     const { categories, isLoading } = useActiveCategories(projectId);
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
@@ -138,6 +141,7 @@ export function CategoryUploadTiles({
                                 hasSelection={hasSelection}
                                 isSelected={expandedCategories.has(category.id)}
                                 isFiltered={isKnowledgeCategory ? filterBySyncedOnly : (filterCategoryId === category.id && !filterSubcategoryId)}
+                                isIngesting={isKnowledgeCategory && isIngesting}
                             />
                         </div>
                     );

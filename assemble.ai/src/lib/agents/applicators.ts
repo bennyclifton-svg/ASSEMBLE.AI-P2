@@ -13,22 +13,13 @@
 
 import { db } from '@/lib/db';
 import {
-    addenda,
-    addendumTransmittals,
     costLines,
-    documents,
     invoices,
     meetingGroups,
     meetings,
     meetingSections,
-    notes,
-    noteTransmittals,
     programActivities,
-    projectStakeholders,
     risks,
-    subcategories,
-    transmittalItems,
-    transmittals,
     variations,
 } from '@/lib/db/pg-schema';
 import {
@@ -39,10 +30,14 @@ import {
 } from '@/lib/db/objectives-schema';
 import { generateVariationNumber } from '@/lib/calculations/cost-plan-formulas';
 import { STANDARD_AGENDA_SECTIONS } from '@/lib/constants/sections';
-import { and, desc, eq, inArray, isNull, max, or, sql } from 'drizzle-orm';
+import {
+    createAddendumArtifact,
+    createTransmittalArtifact,
+    updateCommunicationNote,
+    type UpdateCommunicationNoteInput,
+} from '@/lib/communication/artifacts';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { getActionByToolName } from '@/lib/actions/registry';
-import type { ActionContext } from '@/lib/actions/types';
 
 export interface ApplyContext {
     organizationId: string;
@@ -60,38 +55,6 @@ export type ApplyResult =
 type DbClient = Pick<typeof db, 'select' | 'insert' | 'update'>;
 const VALID_VARIATION_STATUSES = ['Forecast', 'Approved', 'Rejected', 'Withdrawn'] as const;
 type ValidVariationStatus = (typeof VALID_VARIATION_STATUSES)[number];
-let actionsLoaded = false;
-
-async function ensureActionsRegistered(): Promise<void> {
-    if (actionsLoaded) return;
-    await Promise.all([
-        import('@/lib/actions/definitions/add-tender-firms'),
-        import('@/lib/actions/definitions/create-note'),
-        import('@/lib/actions/definitions/create-cost-line'),
-        import('@/lib/actions/definitions/create-meeting'),
-        import('@/lib/actions/definitions/create-outbound-correspondence'),
-        import('@/lib/actions/definitions/create-report'),
-        import('@/lib/actions/definitions/create-rfi'),
-        import('@/lib/actions/definitions/create-program-activity'),
-        import('@/lib/actions/definitions/create-program-milestone'),
-        import('@/lib/actions/definitions/create-risk'),
-        import('@/lib/actions/definitions/replace-program'),
-        import('@/lib/actions/definitions/record-invoice'),
-        import('@/lib/actions/definitions/create-transmittal'),
-        import('@/lib/actions/definitions/create-variation'),
-        import('@/lib/actions/definitions/attach-documents-to-note'),
-        import('@/lib/actions/definitions/set-project-objectives'),
-        import('@/lib/actions/definitions/update-cost-line'),
-        import('@/lib/actions/definitions/update-note'),
-        import('@/lib/actions/definitions/update-program-activity'),
-        import('@/lib/actions/definitions/update-program-milestone'),
-        import('@/lib/actions/definitions/update-rft-brief'),
-        import('@/lib/actions/definitions/update-risk'),
-        import('@/lib/actions/definitions/update-stakeholder'),
-        import('@/lib/actions/definitions/update-variation'),
-    ]);
-    actionsLoaded = true;
-}
 
 function inputVariationStatus(input: Record<string, unknown>): ValidVariationStatus | null {
     const status = inputString(input, 'status') || 'Forecast';
@@ -106,83 +69,8 @@ export async function applyApproval(args: {
     expectedRowVersion: number | null;
     ctx: ApplyContext;
 }): Promise<ApplyResult> {
-    let action = getActionByToolName(args.toolName);
-    if (!action) {
-        await ensureActionsRegistered();
-        action = getActionByToolName(args.toolName);
-    }
-    if (action) {
-        if (!action.apply && !action.applyResult) {
-            throw new Error(`Action-backed approval "${action.id}" has no apply handler`);
-        }
-        const parsed = action.inputSchema.safeParse(args.input);
-        if (!parsed.success) {
-            const compatibleResult = legacyCompatibleInvalidActionInput(action.id, args.input);
-            if (compatibleResult) return compatibleResult;
-            return {
-                kind: 'gone',
-                reason: `Invalid input for action "${action.id}": ${parsed.error.message}`,
-            };
-        }
-        const actionCtx: ActionContext = {
-            userId: args.ctx.userId ?? 'approval',
-            organizationId: args.ctx.organizationId,
-            projectId: args.ctx.projectId,
-            actorKind: args.ctx.userId ? 'user' : 'system',
-            actorId: args.ctx.userId ?? 'approval',
-            threadId: args.ctx.threadId ?? null,
-            runId: args.ctx.runId ?? null,
-        };
-        let output: unknown;
-        try {
-            if (action.applyResult) {
-                return action.applyResult(actionCtx, parsed.data, {
-                    expectedRowVersion: args.expectedRowVersion,
-                }) as Promise<ApplyResult>;
-            }
-            output = await action.apply!(actionCtx, parsed.data, {
-                expectedRowVersion: args.expectedRowVersion,
-            });
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            if (message.startsWith('Document(s) not found in this project:')) {
-                return { kind: 'gone', reason: message };
-            }
-            throw err;
-        }
-        return { kind: 'applied', output: output as Record<string, unknown> };
-    }
-
-    switch (args.toolName) {
-        case 'create_cost_line':
-            return applyCreateCostLine(args.input, args.ctx);
-        case 'record_invoice':
-            return applyRecordInvoice(args.input, args.ctx);
-        case 'create_risk':
-            return applyCreateRisk(args.input, args.ctx);
-        case 'update_risk':
-            return applyUpdateRisk(args.input, args.expectedRowVersion, args.ctx);
-        case 'update_variation':
-            return applyUpdateVariation(args.input, args.expectedRowVersion, args.ctx);
-        case 'create_meeting':
-            return applyCreateMeeting(args.input, args.ctx);
-        default:
-            throw new Error(`No applicator registered for tool "${args.toolName}"`);
-    }
-}
-
-function legacyCompatibleInvalidActionInput(actionId: string, rawInput: unknown): ApplyResult | null {
-    const input = asInput(rawInput);
-    if (actionId === 'finance.variations.create' && input.status !== undefined) {
-        return {
-            kind: 'gone',
-            reason: 'Invalid variation status. Use Forecast, Approved, Rejected, or Withdrawn.',
-        };
-    }
-    if (actionId === 'planning.objectives.set') {
-        return { kind: 'gone', reason: 'No objective sections were supplied.' };
-    }
-    return null;
+    const { applyApproval: applyActionApproval } = await import('@/lib/actions/apply');
+    return applyActionApproval(args);
 }
 
 /**
@@ -402,259 +290,25 @@ function conflictReason(entity: string, currentVersion: number | null, expectedV
     return `The ${entity} was changed by someone else (version is now ${currentVersion}, agent proposed against version ${expectedVersion}). Re-read the row and propose again.`;
 }
 
-async function validateProjectDocuments(
-    documentIds: string[],
-    ctx: ApplyContext,
-    client: DbClient = db
-): Promise<{ ok: true; ids: string[] } | { ok: false; reason: string }> {
-    const ids = Array.from(new Set(documentIds.filter(Boolean)));
-    if (ids.length === 0) return { ok: true, ids: [] };
-
-    const rows = await client
-        .select({ id: documents.id })
-        .from(documents)
-        .where(and(eq(documents.projectId, ctx.projectId), inArray(documents.id, ids)));
-
-    const found = new Set(rows.map((row) => row.id));
-    const missing = ids.filter((id) => !found.has(id));
-    if (missing.length > 0) {
-        return {
-            ok: false,
-            reason: `Document(s) not found in this project: ${missing.join(', ')}`,
-        };
-    }
-    return { ok: true, ids };
-}
-
 export async function applyCreateAddendum(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
     const input = asInput(rawInput);
-    const stakeholderId = inputString(input, 'stakeholderId');
-    const content = inputString(input, 'content');
-    if (!stakeholderId || !content) {
-        return { kind: 'gone', reason: 'Missing stakeholder or content on proposed addendum.' };
-    }
-
-    const [stakeholder] = await db
-        .select({ id: projectStakeholders.id })
-        .from(projectStakeholders)
-        .where(
-            and(
-                eq(projectStakeholders.id, stakeholderId),
-                eq(projectStakeholders.projectId, ctx.projectId),
-                isNull(projectStakeholders.deletedAt)
-            )
-        )
-        .limit(1);
-    if (!stakeholder) {
-        return { kind: 'gone', reason: 'Stakeholder no longer exists in this project.' };
-    }
-
-    const documentCheck = await validateProjectDocuments(inputStringArray(input, 'documentIds'), ctx);
-    if (documentCheck.ok === false) return { kind: 'gone', reason: documentCheck.reason };
-
-    const addendumDate = inputOptionalString(input, 'addendumDate') ?? null;
-    const id = uuidv4();
-    const now = new Date();
-
-    const output = await db.transaction(async (tx) => {
-        const [existing] = await tx
-            .select({ maxNum: max(addenda.addendumNumber) })
-            .from(addenda)
-            .where(and(eq(addenda.projectId, ctx.projectId), eq(addenda.stakeholderId, stakeholderId)))
-            .limit(1);
-
-        const addendumNumber = Number(existing?.maxNum ?? 0) + 1;
-        const values = {
-            id,
-            projectId: ctx.projectId,
-            stakeholderId,
-            addendumNumber,
-            content,
-            addendumDate,
-            createdAt: now,
-            updatedAt: now,
-        };
-
-        await tx.insert(addenda).values(values);
-
-        if (documentCheck.ids.length > 0) {
-            await tx.insert(addendumTransmittals).values(
-                documentCheck.ids.map((documentId, index) => ({
-                    id: uuidv4(),
-                    addendumId: id,
-                    documentId,
-                    sortOrder: index,
-                    createdAt: now,
-                }))
-            );
-        }
-
-        return {
-            ...values,
-            attachedDocumentIds: documentCheck.ids,
-            transmittalCount: documentCheck.ids.length,
-        } as unknown as Record<string, unknown>;
+    return createAddendumArtifact(ctx, {
+        stakeholderId: inputString(input, 'stakeholderId'),
+        content: inputString(input, 'content'),
+        documentIds: inputStringArray(input, 'documentIds'),
+        addendumDate: inputOptionalString(input, 'addendumDate') ?? null,
     });
-
-    return { kind: 'applied', output };
 }
 
 export async function applyCreateTransmittal(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {
     const input = asInput(rawInput);
-    const name = inputString(input, 'name');
-    if (!name) return { kind: 'gone', reason: 'Missing transmittal name.' };
-
-    const stakeholderId = inputOptionalString(input, 'stakeholderId') ?? null;
-    const subcategoryId = inputOptionalString(input, 'subcategoryId') ?? null;
-    const rawDestination = inputOptionalString(input, 'destination') ?? null;
-    if (rawDestination && rawDestination !== 'note' && rawDestination !== 'project') {
-        return { kind: 'gone', reason: 'Unknown transmittal destination.' };
-    }
-    const destination = rawDestination ?? (stakeholderId || subcategoryId ? 'project' : 'note');
-
-    if (stakeholderId) {
-        const [stakeholder] = await db
-            .select({ id: projectStakeholders.id })
-            .from(projectStakeholders)
-            .where(
-                and(
-                    eq(projectStakeholders.id, stakeholderId),
-                    eq(projectStakeholders.projectId, ctx.projectId),
-                    isNull(projectStakeholders.deletedAt)
-                )
-            )
-            .limit(1);
-        if (!stakeholder) {
-            return { kind: 'gone', reason: 'Stakeholder no longer exists in this project.' };
-        }
-    }
-
-    if (subcategoryId) {
-        const [subcategory] = await db
-            .select({ id: subcategories.id })
-            .from(subcategories)
-            .where(
-                and(
-                    eq(subcategories.id, subcategoryId),
-                    or(eq(subcategories.projectId, ctx.projectId), isNull(subcategories.projectId))
-                )
-            )
-            .limit(1);
-        if (!subcategory) {
-            return { kind: 'gone', reason: 'Subcategory no longer exists in this project.' };
-        }
-    }
-
-    if (destination === 'project' && !stakeholderId && !subcategoryId) {
-        return {
-            kind: 'gone',
-            reason:
-                'Project transmittals require a stakeholder or subcategory target. Use a Notes section transmittal for untargeted drawing sets.',
-        };
-    }
-
-    const documentIds = inputStringArray(input, 'documentIds');
-    if (documentIds.length === 0) {
-        return { kind: 'gone', reason: 'No documents were supplied for the transmittal.' };
-    }
-
-    const rows = await db
-        .select({
-            id: documents.id,
-            latestVersionId: documents.latestVersionId,
-        })
-        .from(documents)
-        .where(and(eq(documents.projectId, ctx.projectId), inArray(documents.id, documentIds)));
-
-    const byId = new Map(rows.map((row) => [row.id, row.latestVersionId]));
-    const missing = documentIds.filter((id) => !byId.has(id));
-    if (missing.length > 0) {
-        return {
-            kind: 'gone',
-            reason: `Document(s) not found in this project: ${missing.join(', ')}`,
-        };
-    }
-
-    const withoutVersion = documentIds.filter((id) => !byId.get(id));
-    if (withoutVersion.length > 0) {
-        return {
-            kind: 'gone',
-            reason: `Document(s) do not have a latest version: ${withoutVersion.join(', ')}`,
-        };
-    }
-
-    const id = uuidv4();
-    if (destination === 'note') {
-        const now = new Date().toISOString();
-        const output = await db.transaction(async (tx) => {
-            const values = {
-                id,
-                projectId: ctx.projectId,
-                organizationId: ctx.organizationId,
-                title: name,
-                content: null,
-                isStarred: false,
-                color: 'green',
-                type: 'transmittal',
-                status: 'open',
-                noteDate: null,
-                rowVersion: 1,
-                createdAt: now,
-                updatedAt: now,
-            };
-
-            await tx.insert(notes).values(values);
-            await tx.insert(noteTransmittals).values(
-                documentIds.map((documentId) => ({
-                    id: uuidv4(),
-                    noteId: id,
-                    documentId,
-                    addedAt: now,
-                }))
-            );
-
-            return {
-                ...values,
-                transmittalTarget: 'note',
-                attachedDocumentIds: documentIds,
-                documentCount: documentIds.length,
-            } as unknown as Record<string, unknown>;
-        });
-
-        return { kind: 'applied', output };
-    }
-
-    const now = new Date();
-    const output = await db.transaction(async (tx) => {
-        const values = {
-            id,
-            projectId: ctx.projectId,
-            stakeholderId,
-            subcategoryId,
-            name,
-            status: 'DRAFT',
-            createdAt: now,
-            updatedAt: now,
-        };
-
-        await tx.insert(transmittals).values(values);
-        await tx.insert(transmittalItems).values(
-            documentIds.map((documentId) => ({
-                id: uuidv4(),
-                transmittalId: id,
-                versionId: byId.get(documentId)!,
-            }))
-        );
-
-        return {
-            ...values,
-            transmittalTarget: 'project',
-            documentIds,
-            documentCount: documentIds.length,
-        } as unknown as Record<string, unknown>;
+    return createTransmittalArtifact(ctx, {
+        name: inputString(input, 'name'),
+        documentIds: inputStringArray(input, 'documentIds'),
+        stakeholderId: inputOptionalString(input, 'stakeholderId') ?? null,
+        subcategoryId: inputOptionalString(input, 'subcategoryId') ?? null,
+        destination: inputOptionalString(input, 'destination') ?? null,
     });
-
-    return { kind: 'applied', output };
 }
 
 async function validateProjectCostLineId(
@@ -683,31 +337,6 @@ async function validateProjectCostLineId(
     return { ok: true };
 }
 
-async function attachDocumentsToNote(
-    noteId: string,
-    documentIds: string[],
-    client: DbClient = db
-): Promise<void> {
-    if (documentIds.length === 0) return;
-
-    const existingRows = await client
-        .select({ documentId: noteTransmittals.documentId })
-        .from(noteTransmittals)
-        .where(eq(noteTransmittals.noteId, noteId));
-    const existing = new Set(existingRows.map((row) => row.documentId));
-    const now = new Date().toISOString();
-
-    for (const documentId of documentIds) {
-        if (existing.has(documentId)) continue;
-        await client.insert(noteTransmittals).values({
-            id: uuidv4(),
-            noteId,
-            documentId,
-            addedAt: now,
-        });
-    }
-}
-
 export async function applyUpdateNote(
     rawInput: unknown,
     expectedRowVersion: number | null,
@@ -715,59 +344,17 @@ export async function applyUpdateNote(
 ): Promise<ApplyResult> {
     const input = asInput(rawInput);
     const id = inputString(input, 'id');
-    if (!id) return { kind: 'gone', reason: 'Missing note id' };
-
-    const documentCheck = await validateProjectDocuments(inputStringArray(input, 'attachDocumentIds'), ctx);
-    if (documentCheck.ok === false) return { kind: 'gone', reason: documentCheck.reason };
-
-    const updateData: Record<string, unknown> = {
-        updatedAt: new Date().toISOString(),
-        rowVersion: sql`${notes.rowVersion} + 1`,
+    const noteInput: UpdateCommunicationNoteInput = {
+        id,
+        attachDocumentIds: inputStringArray(input, 'attachDocumentIds'),
     };
     for (const key of ['title', 'content', 'color', 'type', 'status', 'noteDate'] as const) {
-        if (input[key] !== undefined) updateData[key] = inputNullableString(input, key);
+        if (input[key] !== undefined) noteInput[key] = inputNullableString(input, key);
     }
     const isStarred = inputOptionalBoolean(input, 'isStarred');
-    if (isStarred !== undefined) updateData.isStarred = isStarred;
+    if (isStarred !== undefined) noteInput.isStarred = isStarred;
 
-    const conditions = [
-        eq(notes.id, id),
-        eq(notes.projectId, ctx.projectId),
-        eq(notes.organizationId, ctx.organizationId),
-        isNull(notes.deletedAt),
-    ];
-    if (expectedRowVersion !== null) conditions.push(eq(notes.rowVersion, expectedRowVersion));
-
-    const updateResult = await db.transaction(async (tx) => {
-        const updated = await tx.update(notes).set(updateData).where(and(...conditions)).returning();
-        if (updated.length !== 1) return null;
-        await attachDocumentsToNote(id, documentCheck.ids, tx);
-        return {
-            ...(updated[0] as Record<string, unknown>),
-            attachedDocumentIds: documentCheck.ids,
-        } as Record<string, unknown>;
-    });
-    if (updateResult) {
-        return {
-            kind: 'applied',
-            output: updateResult,
-        };
-    }
-
-    const [stillThere] = await db
-        .select({ id: notes.id, rowVersion: notes.rowVersion })
-        .from(notes)
-        .where(
-            and(
-                eq(notes.id, id),
-                eq(notes.projectId, ctx.projectId),
-                eq(notes.organizationId, ctx.organizationId),
-                isNull(notes.deletedAt)
-            )
-        )
-        .limit(1);
-    if (!stillThere) return { kind: 'gone', reason: 'Note no longer exists.' };
-    return { kind: 'conflict', reason: conflictReason('note', stillThere.rowVersion, expectedRowVersion) };
+    return updateCommunicationNote(ctx, noteInput, expectedRowVersion);
 }
 
 export async function applyCreateRisk(rawInput: unknown, ctx: ApplyContext): Promise<ApplyResult> {

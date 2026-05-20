@@ -512,6 +512,7 @@ export function DocumentRepository({ projectId, selectedIds, onSelectionChange }
                     filterSubcategoryId={filterSubcategoryId}
                     filterBySyncedOnly={filterBySyncedOnly}
                     onFilterChange={handleFilterChange}
+                    isIngesting={bgStatus.ingestingCount > 0}
                 />
             </div>
 

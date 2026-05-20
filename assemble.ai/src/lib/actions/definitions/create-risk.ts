@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ProposedDiff } from '@/lib/agents/approvals';
+import type { ProposedDiff } from '@/lib/actions/types';
 import { applyCreateRisk } from '@/lib/agents/applicators';
 import { defineAction } from '../define';
 

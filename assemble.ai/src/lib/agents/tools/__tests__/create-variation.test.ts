@@ -17,7 +17,7 @@ jest.mock('../_context', () => ({
 }));
 jest.mock('@/lib/agents/project-events', () => ({ emitProjectEvent: jest.fn() }));
 
-jest.mock('../../approvals', () => ({
+jest.mock('@/lib/actions/proposals', () => ({
     proposeApproval: (...args: unknown[]) => mockProposeApproval(...args),
 }));
 jest.mock('uuid', () => ({ v4: () => 'test-id' }));

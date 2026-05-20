@@ -1474,27 +1474,42 @@ export async function exportRFTNewToDOCX(data: RFTExportData): Promise<Buffer> {
     children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
   }
 
-  // ===== 3. BRIEF SECTION =====
+  // ===== 3. BRIEF / SCOPE SECTION =====
+  const isContractorRft = data.stakeholderGroup === 'contractor';
   children.push(new Paragraph({
-    children: [new TextRun({ text: 'BRIEF', bold: true, size: 20, color: RFT_COLORS.darkHex })],
+    children: [new TextRun({ text: isContractorRft ? 'SCOPE' : 'BRIEF', bold: true, size: 20, color: RFT_COLORS.darkHex })],
     spacing: { before: 100, after: 100 },
   }));
 
-  const svcBlocks = parseHtmlContent(data.brief.service);
-  const delBlocks = parseHtmlContent(data.brief.deliverables);
-  const svcParas = blocksToDocxParagraphs(svcBlocks);
-  const delParas = blocksToDocxParagraphs(delBlocks);
+  if (isContractorRft) {
+    const scopeBlocks = parseHtmlContent(data.scope?.works ?? '');
+    const scopeParas = blocksToDocxParagraphs(scopeBlocks);
 
-  children.push(rftTable([
-    new TableRow({ children: [
-      rftHeaderCell('Service', { width: 50 }),
-      rftHeaderCell('Deliverables', { width: 50 }),
-    ]}),
-    new TableRow({ children: [
-      rftContentCell(svcParas, 50),
-      rftContentCell(delParas, 50),
-    ]}),
-  ]));
+    children.push(rftTable([
+      new TableRow({ children: [
+        rftHeaderCell('Scope of Works', { width: 100 }),
+      ]}),
+      new TableRow({ children: [
+        rftContentCell(scopeParas, 100),
+      ]}),
+    ]));
+  } else {
+    const svcBlocks = parseHtmlContent(data.brief.service);
+    const delBlocks = parseHtmlContent(data.brief.deliverables);
+    const svcParas = blocksToDocxParagraphs(svcBlocks);
+    const delParas = blocksToDocxParagraphs(delBlocks);
+
+    children.push(rftTable([
+      new TableRow({ children: [
+        rftHeaderCell('Service', { width: 50 }),
+        rftHeaderCell('Deliverables', { width: 50 }),
+      ]}),
+      new TableRow({ children: [
+        rftContentCell(svcParas, 50),
+        rftContentCell(delParas, 50),
+      ]}),
+    ]));
+  }
 
   children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
 
@@ -1617,9 +1632,9 @@ export async function exportRFTNewToDOCX(data: RFTExportData): Promise<Buffer> {
   children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
   } // end of programVisible block
 
-  // ===== 5. FEE SECTION =====
+  // ===== 5. FEE / PRICE SECTION =====
   children.push(new Paragraph({
-    children: [new TextRun({ text: 'FEE', bold: true, size: 20, color: RFT_COLORS.darkHex })],
+    children: [new TextRun({ text: isContractorRft ? 'PRICE' : 'FEE', bold: true, size: 20, color: RFT_COLORS.darkHex })],
     spacing: { before: 100, after: 100 },
   }));
 
